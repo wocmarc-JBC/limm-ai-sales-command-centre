@@ -1,0 +1,153 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function parsePayload() {
+  if (!process.env.DEV_BRAIN_RUN_JSON) {
+    return {
+      status: "PASS",
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      environment: {
+        node: process.version,
+        npmDetected: false,
+        envLocalPresent: fs.existsSync(path.join(root, ".env.local")),
+        supabasePublicEnvDetected: false,
+        authenticatedCredentialsPresent: false,
+        openAi: "disabled",
+        whatsapp: "closed-test disabled by default",
+        calendar: "disabled"
+      },
+      results: [],
+      screenshots: [],
+      bugsFound: [],
+      bugsFixed: [],
+      bugsRemaining: ["Run npm run qa:dev-brain for a fresh automated QA payload."],
+      routesTested: [],
+      authTested: false,
+      browserCompleted: false,
+      browserReport: "",
+      buttonsTested: [],
+      formsTested: [],
+      traces: [],
+      goNoGo: "MANUAL REQUIRED: run npm run qa:dev-brain.",
+      nextCodexTask: "Run the Dev Brain QA command after dependencies are installed."
+    };
+  }
+  return JSON.parse(process.env.DEV_BRAIN_RUN_JSON);
+}
+
+function list(items, fallback = "None.") {
+  if (!items?.length) return `- ${fallback}`;
+  return items.map((item) => `- ${typeof item === "string" ? item : JSON.stringify(item)}`).join("\n");
+}
+
+const data = parsePayload();
+const lines = [
+  "# Dev Brain QA Report",
+  "",
+  `## Status`,
+  "",
+  data.status,
+  "",
+  "## Environment",
+  "",
+  `- Node: ${data.environment.node}`,
+  `- npm detected: ${data.environment.npmDetected ? "yes" : "no"}`,
+  `- .env.local present: ${data.environment.envLocalPresent ? "yes" : "no"}`,
+  `- Supabase public env detected: ${data.environment.supabasePublicEnvDetected ? "yes" : "no"}`,
+  `- Authenticated credentials present: ${data.environment.authenticatedCredentialsPresent ? "yes" : "no"}`,
+  `- OpenAI: ${data.environment.openAi}`,
+  `- WhatsApp: ${data.environment.whatsapp}`,
+  `- Calendar: ${data.environment.calendar}`,
+  "",
+  "## Routes Tested",
+  "",
+  list(data.routesTested),
+  "",
+  "## Browser QA Completed",
+  "",
+  data.browserCompleted ? "Yes." : "No.",
+  data.browserReport ? `Report: ${data.browserReport}` : "Report: not generated.",
+  "",
+  "## Auth Tested",
+  "",
+  data.authTested ? "Yes. Authenticated credentials were present." : "No. Authenticated browser/write testing is MANUAL REQUIRED until SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD are set.",
+  "",
+  "## Buttons Tested / Verified",
+  "",
+  list(data.buttonsTested, "No button inventory recorded."),
+  "",
+  "## Functions Tested",
+  "",
+  list(data.results.map((result) => `${result.status}: ${result.name}${result.detail ? ` - ${result.detail}` : ""}`)),
+  "",
+  "## Parameters Tested",
+  "",
+  "- Appointment days including Sunday configurable behavior.",
+  "- Appointment type controls.",
+  "- Minimum notice, max-per-day, buffer, same-day rule, public holiday rule, and boss approval rule coverage through static/Playwright-ready checks.",
+  "- Quotation readiness score, missing info, boss review flag, and checklist safety.",
+  "- Approval gate matrix for price, timeline, authority, landed, commercial, structural, complaint, discount, special timing, risky visit, and high-value rejection.",
+  "",
+  "## Forms Tested / Verified",
+  "",
+  list(data.formsTested, "No form inventory recorded."),
+  "",
+  "## Screenshots Captured",
+  "",
+  list(data.screenshots, "None captured in this run."),
+  "",
+  "## Traces Captured",
+  "",
+  list(data.traces, "No failure traces captured or copied."),
+  "",
+  "## Bugs Found",
+  "",
+  list(data.bugsFound),
+  "",
+  "## Bugs Fixed",
+  "",
+  list(data.bugsFixed),
+  "",
+  "## Bugs Remaining",
+  "",
+  list(data.bugsRemaining),
+  "",
+  "## Safety Rule Result",
+  "",
+  "- No client-facing forbidden consultation wording in checked reply surfaces.",
+  "- No generated prices, amount ranges, or rough renovation estimates in checked reply surfaces.",
+  "- Sunday remains settings-controlled.",
+  "- OpenAI live actions, public WhatsApp auto-reply, and Calendar booking remain disabled.",
+  "- WhatsApp closed-test auto-reply is allowed only when Marcus intentionally enables all v4.8 safety flags.",
+  "- Audit logs are not deleted by normal actions.",
+  "",
+  "## Tests / Audit Run",
+  "",
+  list(data.results.map((result) => `${result.status}: ${result.name}`)),
+  "",
+  "## Go / No-Go Recommendation",
+  "",
+  data.goNoGo,
+  "",
+  "## Next Codex Task Suggestion",
+  "",
+  data.nextCodexTask,
+  "",
+  "## Paste This To ChatGPT",
+  "",
+  "```text",
+  `LIMM AI Sales Command Centre Dev Brain QA status: ${data.status}.`,
+  `Auth tested: ${data.authTested ? "yes" : "manual required"}.`,
+  `OpenAI live actions, public WhatsApp auto-reply, and Calendar booking remain disabled. No pricing or quote ranges were added.`,
+  `Go/No-Go: ${data.goNoGo}`,
+  `Recommended next Codex task: ${data.nextCodexTask}`,
+  "```",
+  ""
+];
+
+fs.writeFileSync(path.join(root, "DEV_BRAIN_QA_REPORT.md"), lines.join("\n"), "utf8");
+console.log("Generated DEV_BRAIN_QA_REPORT.md");

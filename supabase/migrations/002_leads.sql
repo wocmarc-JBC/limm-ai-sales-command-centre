@@ -1,0 +1,22 @@
+create table if not exists leads (
+  id uuid primary key default gen_random_uuid(),
+  client_name text not null default '',
+  phone text not null default '',
+  source text not null default '',
+  division text not null default 'LIMM Works',
+  property_type text not null default '',
+  service_type text not null default '',
+  scope_summary text not null default '',
+  lead_score integer not null default 0 check (lead_score between 0 and 100),
+  lead_category text not null default 'Cold',
+  status text not null default 'New Enquiry',
+  missing_info jsonb not null default '[]'::jsonb,
+  ai_recommended_next_action text not null default '',
+  boss_approval_needed boolean not null default false,
+  appointment_readiness integer not null default 0 check (appointment_readiness between 0 and 100),
+  quotation_readiness integer not null default 0 check (quotation_readiness between 0 and 100),
+  risk_flags jsonb not null default '[]'::jsonb,
+  preferred_contact_time text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);

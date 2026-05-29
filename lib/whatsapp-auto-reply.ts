@@ -1,0 +1,303 @@
+import "server-only";
+
+import { WhatsAppCloudApiAdapter, type WhatsAppAdapter } from "@/lib/adapters/whatsapp-adapter";
+import { openAiBrainDryRunAdapter } from "@/lib/adapters/openai-adapter";
+import { createAuditLog } from "@/lib/data/audit-repository";
+import {
+  countRecentWhatsAppAutoReplies,
+  findLeadMessageByProviderId,
+  saveLeadMessage,
+  upsertWhatsAppLead
+} from "@/lib/data/lead-messages-repository";
+import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
+import { getWhatsAppRuntime, normalizeWhatsAppPhone } from "@/lib/whatsapp-config";
+import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
+import { validateWhatsAppAutoReply, WHATSAPP_SAFE_FALLBACK_REPLY } from "@/lib/whatsapp-safety";
+
+export type WhatsAppInboundHandleResult = {
+  providerMessageId: string;
+  leadId?: string;
+  status:
+    | "ignored_duplicate"
+    | "ignored_disabled"
+    | "ignored_own_number"
+    | "saved_inbound"
+    | "auto_reply_sent"
+    | "auto_reply_blocked"
+    | "auto_reply_disabled"
+    | "auto_reply_failed";
+  reason: string;
+  reply?: string;
+};
+
+function tenMinutesAgoIso() {
+  return new Date(Date.now() - 10 * 60 * 1000).toISOString();
+}
+
+async function auditWhatsApp(input: {
+  action: string;
+  leadId: string;
+  summary: string;
+  metadata?: Record<string, unknown>;
+  afterData?: Record<string, unknown> | null;
+}) {
+  await createAuditLog({
+    actorType: "system",
+    actorName: "WhatsApp Closed Test",
+    action: input.action,
+    entityType: "lead",
+    entityId: input.leadId,
+    summary: input.summary,
+    beforeData: null,
+    afterData: input.afterData ?? null,
+    metadata: {
+      channel: "whatsapp",
+      closedTest: true,
+      noPublicAutoReply: true,
+      noCalendarBooking: true,
+      noPricing: true,
+      ...(input.metadata ?? {})
+    }
+  });
+}
+
+async function buildDraftReply(lead: Awaited<ReturnType<typeof upsertWhatsAppLead>>) {
+  const openAi = getOpenAiBrainRuntime();
+  if (!openAi.canCallOpenAi) return WHATSAPP_SAFE_FALLBACK_REPLY;
+
+  const recommendation = await openAiBrainDryRunAdapter.draftRecommendation({ lead });
+  const draft = recommendation.decision.client_reply || WHATSAPP_SAFE_FALLBACK_REPLY;
+  const check = validateWhatsAppAutoReply(draft);
+  return check.ok ? draft : WHATSAPP_SAFE_FALLBACK_REPLY;
+}
+
+export async function handleWhatsAppInboundMessage(
+  message: ParsedWhatsAppMessage,
+  adapter: WhatsAppAdapter = new WhatsAppCloudApiAdapter()
+): Promise<WhatsAppInboundHandleResult> {
+  const runtime = getWhatsAppRuntime();
+  const providerMessageId = message.providerMessageId || `missing-provider-id-${Date.now()}`;
+  const senderPhone = normalizeWhatsAppPhone(message.senderPhone);
+
+  if (!runtime.liveInboundEnabled) {
+    return {
+      providerMessageId,
+      status: "ignored_disabled",
+      reason: "WHATSAPP_LIVE_INBOUND_ENABLED is false."
+    };
+  }
+
+  const duplicate = await findLeadMessageByProviderId(providerMessageId);
+  if (duplicate) {
+    return {
+      providerMessageId,
+      leadId: duplicate.leadId,
+      status: "ignored_duplicate",
+      reason: "Provider message id was already processed."
+    };
+  }
+
+  if (runtime.businessNumber && senderPhone === runtime.businessNumber) {
+    return {
+      providerMessageId,
+      status: "ignored_own_number",
+      reason: "Inbound sender matches configured WhatsApp business number."
+    };
+  }
+
+  const inboundBody = message.text || `[Unsupported WhatsApp ${message.type || "message"} received]`;
+  const lead = await upsertWhatsAppLead({
+    phone: senderPhone,
+    contactName: message.contactName,
+    latestMessage: inboundBody
+  });
+
+  await saveLeadMessage({
+    leadId: lead.id,
+    direction: "inbound",
+    body: inboundBody,
+    safeToSend: false,
+    providerMessageId,
+    providerTimestamp: message.timestamp,
+    whatsappStatus: "received",
+    metadata: {
+      messageType: message.type,
+      businessPhoneNumberId: message.businessPhoneNumberId,
+      providerMessageId
+    }
+  });
+
+  await auditWhatsApp({
+    action: "whatsapp_inbound_received",
+    leadId: lead.id,
+    summary: "WhatsApp inbound message received and saved for closed-test review.",
+    metadata: { providerMessageId, messageType: message.type }
+  });
+
+  if (!message.text || message.type !== "text") {
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_disabled",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply disabled for unsupported or empty inbound message.",
+      metadata: { providerMessageId, reason: "unsupported_or_empty_message" }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Unsupported or empty inbound message was saved, but no auto-reply was sent."
+    };
+  }
+
+  await auditWhatsApp({
+    action: "whatsapp_auto_reply_requested",
+    leadId: lead.id,
+    summary: "WhatsApp closed-test auto-reply requested and safety-gated.",
+    metadata: { providerMessageId }
+  });
+
+  if (!runtime.testAutoReplyEnabled) {
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_disabled",
+      leadId: lead.id,
+      summary: "WhatsApp closed-test auto-reply disabled by kill switch.",
+      metadata: { providerMessageId, reason: "WHATSAPP_TEST_AUTO_REPLY_ENABLED=false" }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "WHATSAPP_TEST_AUTO_REPLY_ENABLED is false."
+    };
+  }
+
+  if (runtime.publicAutoReplyEnabled || !runtime.testMode) {
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_disabled",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply disabled because public mode or non-test mode was detected.",
+      metadata: { providerMessageId, publicAutoReplyEnabled: runtime.publicAutoReplyEnabled, testMode: runtime.testMode }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Closed-test guard requires public auto-reply false and test mode true."
+    };
+  }
+
+  if (!runtime.credentialsReady) {
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_disabled",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply disabled because Cloud API credentials are missing.",
+      metadata: { providerMessageId, reason: "missing_credentials" }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "WhatsApp credentials missing."
+    };
+  }
+
+  const recentReplyCount = await countRecentWhatsAppAutoReplies(lead.id, tenMinutesAgoIso());
+  if (recentReplyCount >= 3) {
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_disabled",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply disabled by 10-minute rate limit.",
+      metadata: { providerMessageId, recentReplyCount, limit: 3 }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Rate limit reached: maximum 3 auto-replies per lead within 10 minutes."
+    };
+  }
+
+  const reply = await buildDraftReply(lead);
+  const safety = validateWhatsAppAutoReply(reply);
+  if (!safety.ok) {
+    await saveLeadMessage({
+      leadId: lead.id,
+      direction: "outbound",
+      body: reply,
+      safeToSend: false,
+      whatsappStatus: "blocked",
+      metadata: { providerMessageId, safety }
+    });
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_blocked_unsafe",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply blocked by safety validator.",
+      metadata: { providerMessageId, safety }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_blocked",
+      reason: safety.errors.join("; "),
+      reply
+    };
+  }
+
+  try {
+    const sent = await adapter.sendReply(senderPhone, reply);
+    await saveLeadMessage({
+      leadId: lead.id,
+      direction: "outbound",
+      body: reply,
+      safeToSend: true,
+      providerMessageId: sent.providerMessageId || undefined,
+      whatsappStatus: "sent",
+      metadata: {
+        inboundProviderMessageId: providerMessageId,
+        outboundProviderMessageId: sent.providerMessageId,
+        mode: sent.mode
+      }
+    });
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_sent",
+      leadId: lead.id,
+      summary: "WhatsApp closed-test auto-reply sent after safety validation.",
+      metadata: { providerMessageId, outboundProviderMessageId: sent.providerMessageId }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_sent",
+      reason: "Closed-test auto-reply sent after safety validation.",
+      reply
+    };
+  } catch (error) {
+    await saveLeadMessage({
+      leadId: lead.id,
+      direction: "outbound",
+      body: reply,
+      safeToSend: false,
+      whatsappStatus: "failed",
+      metadata: {
+        inboundProviderMessageId: providerMessageId,
+        error: error instanceof Error ? error.message : "Unknown WhatsApp send failure"
+      }
+    });
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_failed",
+      leadId: lead.id,
+      summary: "WhatsApp closed-test auto-reply failed. No retry loop was started.",
+      metadata: {
+        providerMessageId,
+        error: error instanceof Error ? error.message : "Unknown WhatsApp send failure"
+      }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_failed",
+      reason: error instanceof Error ? error.message : "Unknown WhatsApp send failure",
+      reply
+    };
+  }
+}

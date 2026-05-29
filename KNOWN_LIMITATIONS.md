@@ -1,0 +1,51 @@
+# Known Limitations - v4.9 Deployment Readiness
+
+This version is approved for controlled internal use, not full public production.
+
+## Disabled Integrations
+
+- OpenAI live brain is disabled. OpenAI dry-run remains boss-review only when intentionally enabled.
+- WhatsApp public production auto-reply is disabled. v4.8/v4.9 allows only Marcus-only closed test auto-reply behind kill switches.
+- Calendar live booking is disabled.
+- Real file upload is disabled or placeholder-only.
+- Review route is disabled by default.
+
+## Sales And Quotation Limits
+
+- The app does not auto-generate prices.
+- The app does not generate quote ranges.
+- The app does not generate rough estimates.
+- The app does not promise authority approval.
+- The app does not promise exact completion dates.
+- The app does not give final structural, legal, or submission advice.
+
+Quotation readiness is only an internal readiness tool. Marcus still needs to review scope, drawings, site conditions, materials, access, authority or management requirements, and risk before any actual quotation is prepared.
+
+## Operational Limits
+
+- Use controlled internal testing first.
+- Do not treat this as a public production deployment.
+- No WhatsApp blasting exists or should be added.
+- v4.8 WhatsApp closed test requires `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false` and `WHATSAPP_TEST_MODE=true`.
+- Emergency off is `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false`.
+- v4.9 Vercel deployment is only webhook-ready until Meta verifies the callback URL and inbound logging is confirmed.
+- Expected future lead volume is around 60 leads per month.
+- The system is designed to stay lean for future running cost control.
+
+## Technical Limits
+
+- Supabase credentials must stay in `.env.local` and must not be committed.
+- Service role keys must not be used in frontend code.
+- The app can run in Mock Mode if Supabase variables are missing.
+- Live authenticated tests require `SUPABASE_TEST_EMAIL` and `SUPABASE_TEST_PASSWORD` only when Marcus intentionally runs them.
+- Audit logs should not be deleted through normal app actions.
+
+## What To Verify Manually
+
+- Marcus can login as boss.
+- Leads are visible.
+- Appointment settings save correctly.
+- Sunday enable/disable behaves as expected.
+- Audit logs show recent actions.
+- Follow-ups and quotation readiness pages load.
+- Review route is unavailable unless explicitly enabled for review.
