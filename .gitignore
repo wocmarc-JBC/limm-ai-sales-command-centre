@@ -8,6 +8,8 @@ dist/
 .vercel/
 test-results/
 playwright-report/
+screenshots/
+.codex-tools/
 *.log
 .DS_Store
 Thumbs.db
