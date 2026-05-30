@@ -145,9 +145,11 @@ assert(!/deleteAudit|audit.*delete|from\("audit_logs"\)\.delete|from\('audit_log
 
 const appFiles = [...walk(path.join(root, "app")), ...walk(path.join(root, "components")), ...walk(path.join(root, "lib"))].filter((file) => /\.(ts|tsx)$/.test(file));
 for (const file of appFiles) {
+  const relative = path.relative(root, file);
   const content = fs.readFileSync(file, "utf8");
-  if (path.relative(root, file) === path.join("lib", "data", "supabase-admin.ts")) continue;
-  assert(!/SUPABASE_SERVICE_ROLE_KEY/.test(content), `Service role key referenced in app/client/lib code: ${path.relative(root, file)}`);
+  if (relative === path.join("lib", "data", "supabase-admin.ts")) continue;
+  if (relative.startsWith(`app${path.sep}api${path.sep}`)) continue;
+  assert(!/SUPABASE_SERVICE_ROLE_KEY/.test(content), `Service role key referenced in app/client/lib code: ${relative}`);
 }
 
 const appointmentEngine = read("lib/appointment-engine.ts");

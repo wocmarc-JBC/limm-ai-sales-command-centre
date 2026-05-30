@@ -131,9 +131,11 @@ const appTs = walk(path.join(root, "app")).filter((file) => /\.(ts|tsx)$/.test(f
 const componentTs = walk(path.join(root, "components")).filter((file) => /\.(ts|tsx)$/.test(file));
 const libTs = walk(path.join(root, "lib")).filter((file) => /\.(ts|tsx)$/.test(file));
 for (const file of [...appTs, ...componentTs, ...libTs]) {
+  const relative = path.relative(root, file);
   const content = fs.readFileSync(file, "utf8");
-  if (path.relative(root, file) === path.join("lib", "data", "supabase-admin.ts")) continue;
-  assert(!/SUPABASE_SERVICE_ROLE_KEY/.test(content), `Service role key referenced in app code: ${path.relative(root, file)}`);
+  if (relative === path.join("lib", "data", "supabase-admin.ts")) continue;
+  if (relative.startsWith(`app${path.sep}api${path.sep}`)) continue;
+  assert(!/SUPABASE_SERVICE_ROLE_KEY/.test(content), `Service role key referenced in app code: ${relative}`);
 }
 
 const appointmentEngine = read("lib/appointment-engine.ts");

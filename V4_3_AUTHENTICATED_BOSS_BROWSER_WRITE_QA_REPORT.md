@@ -1,11 +1,11 @@
 # v4.3 Authenticated Boss-Write Browser QA Report
 
-Run marker: v4_2_browser_human_test_2026-05-30T08-44-22-168Z
-Generated: 2026-05-30T08:49:44.106Z
+Run marker: v4_2_browser_human_test_2026-05-30T09-14-37-101Z
+Generated: 2026-05-30T09:21:09.725Z
 
 ## Status PASS/FAIL
 
-FAIL
+MANUAL REQUIRED
 
 ## Authenticated Browser QA Completed
 
@@ -41,7 +41,7 @@ No.
 
 ## Screenshots Folder
 
-screenshots/v4_2_browser_human_test_2026-05-30T08-44-22-168Z
+screenshots/v4_2_browser_human_test_2026-05-30T09-14-37-101Z
 
 - No v4.3 screenshots recorded.
 
@@ -73,7 +73,8 @@ screenshots/v4_2_browser_human_test_2026-05-30T08-44-22-168Z
 
 ## Notes
 
-- None.
+- SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD are missing. Password was not printed or stored.
+- SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD are required for v4.3 authenticated boss-write QA.
 
 ## Go / No-Go Recommendation
 

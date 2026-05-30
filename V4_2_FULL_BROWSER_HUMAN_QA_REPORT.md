@@ -1,19 +1,19 @@
 # v4.2 Full Browser Human QA Report
 
-Run marker: v4_2_browser_human_test_2026-05-30T08-44-22-168Z
-Generated: 2026-05-30T08:49:44.104Z
+Run marker: v4_2_browser_human_test_2026-05-30T09-14-37-101Z
+Generated: 2026-05-30T09:21:09.723Z
 
 ## Status PASS/FAIL
 
-FAIL
+PASS WITH MANUAL AUTH REQUIRED
 
 ## Browser QA Completed
 
-No.
+Yes.
 
 ## Playwright Install Status
 
-- @playwright/test package: missing
+- @playwright/test package: installed
 - Chromium browser: available or no missing-browser error detected
 - Exact browser setup command for Marcus PowerShell: npm.cmd install, then npx.cmd playwright install chromium
 
@@ -23,37 +23,142 @@ MANUAL REQUIRED. SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD were not present
 
 ## Routes Tested
 
+- / (desktop-chromium)
+- /login (desktop-chromium)
+- /leads (desktop-chromium)
+- /leads/lead-001 (desktop-chromium)
+- /appointments (desktop-chromium)
+- /appointment-settings (desktop-chromium)
+- /approvals (desktop-chromium)
+- /followups (desktop-chromium)
+- /quotation-readiness (desktop-chromium)
+- /client-files (desktop-chromium)
+- /reports (desktop-chromium)
+- /settings (desktop-chromium)
+- /audit-log (desktop-chromium)
+- /review-chatgpt-ui (desktop-chromium)
+- / (mobile-chromium)
+- /login (mobile-chromium)
+- /leads (mobile-chromium)
+- /leads/lead-001 (mobile-chromium)
 - /appointments (mobile-chromium)
 - /appointment-settings (mobile-chromium)
+- /approvals (mobile-chromium)
+- /followups (mobile-chromium)
+- /quotation-readiness (mobile-chromium)
+- /client-files (mobile-chromium)
+- /reports (mobile-chromium)
+- /settings (mobile-chromium)
+- /audit-log (mobile-chromium)
+- /review-chatgpt-ui (mobile-chromium)
+- / (tablet-chromium)
+- /login (tablet-chromium)
+- /leads (tablet-chromium)
+- /leads/lead-001 (tablet-chromium)
+- /appointments (tablet-chromium)
+- /appointment-settings (tablet-chromium)
+- /approvals (tablet-chromium)
+- /followups (tablet-chromium)
+- /quotation-readiness (tablet-chromium)
+- /client-files (tablet-chromium)
+- /reports (tablet-chromium)
+- /settings (tablet-chromium)
+- /audit-log (tablet-chromium)
+- /review-chatgpt-ui (tablet-chromium)
 
 ## Buttons Clicked / Verified
 
-- No visible buttons recorded.
+- Sign In
 
 ## Forms / Parameters Tested
 
-- No forms recorded.
+- Email | Password | Sign In
 
 ## Screenshots Captured
 
-Folder: screenshots/v4_2_browser_human_test_2026-05-30T08-44-22-168Z
+Folder: screenshots/v4_2_browser_human_test_2026-05-30T09-14-37-101Z
 
-- screenshots\v4_2_browser_human_test_2026-05-30T08-44-22-168Z\mobile-chromium-route-appointments.png
-- screenshots\v4_2_browser_human_test_2026-05-30T08-44-22-168Z\mobile-chromium-failed-route-appointment-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-dashboard.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-leads.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-leads-lead-001.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-appointments.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-appointment-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-approvals.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-followups.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-quotation-readiness.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-client-files.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-reports.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-audit-log.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-review-chatgpt-ui.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-review-route-disabled.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-dashboard.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-leads.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-leads-lead-001.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-appointments.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-appointment-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-approvals.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-followups.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-quotation-readiness.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-client-files.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-reports.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-audit-log.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-review-chatgpt-ui.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-review-route-disabled.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-dashboard.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-leads.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-leads-lead-001.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-appointments.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-appointment-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-approvals.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-followups.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-quotation-readiness.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-client-files.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-reports.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-audit-log.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-review-chatgpt-ui.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-review-route-disabled.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-login.png
 
 ## Traces Captured If Failures
 
-- screenshots/v4_2_browser_human_test_2026-05-30T08-44-22-168Z/traces/1780130983966-trace.zip
+- No trace artifacts copied. If the run failed before Playwright launched, there may be no trace.
 
 ## Bugs Found
 
-- Playwright browser QA exited non-zero. See V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md and test-results/playwright.
-- route human check /appointment-settings (mobile-chromium) failed: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeLessThan[2m([22m[32mexpected[39m[2m)[22m
-
-Expected: < [32m500[39m
-Received:   [31m500[39m
-- Console error: /appointment-settings (mobile-chromium): Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-- Visible error text: /appointment-settings (mobile-chromium): Internal Server Error
+- Console error: /login (desktop-chromium): Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+- Console error: /login (desktop-chromium): TypeError: Failed to fetch
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/helpers.js:121:25)
+    at _handleRequest (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:122:24)
+    at _request (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:112:24)
+    at SupabaseAuthClient.signInWithPassword (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:825:81)
+    at submit (webpack-internal:///(app-pages-browser)/./components/auth/LoginForm.tsx:34:137)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12837:12)
+    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12738:25)
+    at startHostTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12834:3)
+    at submitForm (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:29585:5)
+    at HTMLUnknownElement.callCallback (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20614:16)
+    at invokeGuardedCallback (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20689:29)
+    at invokeGuardedCallbackAndCatchFirstError (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20703:25)
+    at executeDispatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32128:3)
+    at processDispatchQueueItemsInOrder (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32160:7)
+    at processDispatchQueue (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32173:5)
+    at dispatchEventsForPlugins (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32184:3)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32374:12)
+    at batchedUpdates$1 (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24953:12)
+    at batchedUpdates (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:28844:12)
+    at dispatchEventForPluginEventSystem (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32373:3)
+    at dispatchEvent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:30141:5)
+    at dispatchDiscreteEvent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:30112:5)
+- Visible error text: /login (desktop-chromium): Failed to fetch
 
 ## Bugs Fixed
 
@@ -64,7 +169,6 @@ Received:   [31m500[39m
 ## Bugs Remaining
 
 - Authenticated boss-write flows, persistence checks, and live audit-log write checks remain MANUAL REQUIRED until SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD are supplied.
-- Browser QA did not complete in this run. Fix the Playwright failure above and rerun npm.cmd run qa:browser.
 
 ## Safety Rule Result
 
@@ -116,7 +220,7 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - CURRENT_STATUS.md:57 contains "rough estimate"
 - CURRENT_STATUS.md:57 contains "estimated price"
 - CURRENT_STATUS.md:57 contains "package price"
-- DEV_BRAIN_QA_REPORT.md:221 contains "quote range"
+- DEV_BRAIN_QA_REPORT.md:223 contains "quote range"
 - INTERNAL_LAUNCH_CHECKLIST.md:63 contains "quote range"
 - INTERNAL_LAUNCH_CHECKLIST.md:28 contains "rough estimate"
 - INTERNAL_LAUNCH_CHECKLIST.md:63 contains "package price"
@@ -174,25 +278,25 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - scripts/generate_v4_2_browser_report.mjs:92 contains "SUPABASE_SERVICE_ROLE_KEY"
 - scripts/generate_v4_2_browser_report.mjs:93 contains "Sunday blocked"
 - scripts/generate_v4_2_browser_report.mjs:94 contains "hardcoded Sunday"
-- scripts/test_v3_auth_rls_static.mjs:144 contains "free consultation"
-- scripts/test_v3_auth_rls_static.mjs:149 contains "quote range"
-- scripts/test_v3_auth_rls_static.mjs:136 contains "service_role"
-- scripts/test_v3_auth_rls_static.mjs:136 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v3_auth_rls_static.mjs:140 contains "hardcoded Sunday"
+- scripts/test_v3_auth_rls_static.mjs:146 contains "free consultation"
+- scripts/test_v3_auth_rls_static.mjs:151 contains "quote range"
+- scripts/test_v3_auth_rls_static.mjs:138 contains "service_role"
+- scripts/test_v3_auth_rls_static.mjs:138 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v3_auth_rls_static.mjs:142 contains "hardcoded Sunday"
 - scripts/test_v3_foundation.mjs:80 contains "free consultation"
 - scripts/test_v3_foundation.mjs:86 contains "quote range"
 - scripts/test_v3_foundation.mjs:89 contains "package price"
-- scripts/test_v3_live_setup_static.mjs:158 contains "free consultation"
-- scripts/test_v3_live_setup_static.mjs:163 contains "quote range"
+- scripts/test_v3_live_setup_static.mjs:160 contains "free consultation"
+- scripts/test_v3_live_setup_static.mjs:165 contains "quote range"
 - scripts/test_v3_live_setup_static.mjs:106 contains "service_role"
 - scripts/test_v3_live_setup_static.mjs:106 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v3_live_setup_static.mjs:154 contains "hardcoded Sunday"
+- scripts/test_v3_live_setup_static.mjs:156 contains "hardcoded Sunday"
 - scripts/test_v3_review_route_static.mjs:43 contains "free consultation"
 - scripts/test_v3_review_route_static.mjs:44 contains "quote range"
 - scripts/test_v3_review_route_static.mjs:44 contains "rough estimate"
 - scripts/test_v3_review_route_static.mjs:44 contains "package price"
-- scripts/test_v3_supabase_layer.mjs:119 contains "free consultation"
-- scripts/test_v3_supabase_layer.mjs:113 contains "quote range"
+- scripts/test_v3_supabase_layer.mjs:120 contains "free consultation"
+- scripts/test_v3_supabase_layer.mjs:114 contains "quote range"
 - scripts/test_v3_supabase_layer.mjs:56 contains "service_role"
 - scripts/test_v3_supabase_layer.mjs:56 contains "SUPABASE_SERVICE_ROLE_KEY"
 - scripts/test_v4_1_dev_brain_static.mjs:105 contains "quote range"
@@ -222,8 +326,8 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - scripts/test_v4_launch_candidate.mjs:67 contains "quote range"
 - scripts/test_v4_launch_candidate.mjs:67 contains "rough estimate"
 - scripts/test_v4_launch_candidate.mjs:67 contains "package price"
-- scripts/test_v4_launch_candidate.mjs:116 contains "service_role"
-- scripts/test_v4_launch_candidate.mjs:116 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v4_launch_candidate.mjs:117 contains "service_role"
+- scripts/test_v4_launch_candidate.mjs:117 contains "SUPABASE_SERVICE_ROLE_KEY"
 - scripts/test_v4_launch_candidate.mjs:78 contains "hardcoded Sunday"
 - scripts/verify_live_supabase_schema.mjs:54 contains "hardcoded Sunday"
 - START_HERE_INTERNAL_LAUNCH.md:25 contains "quote range"
@@ -271,14 +375,14 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - V4_0_LIVE_FUNCTIONAL_TEST_REPORT.md:82 contains "hardcoded Sunday"
 - V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:211 contains "free consultation"
 - V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:178 contains "quote range"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:227 contains "price range"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:216 contains "rough estimate"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:217 contains "estimated price"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:218 contains "package price"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:231 contains "price range"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:220 contains "rough estimate"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:221 contains "estimated price"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:222 contains "package price"
 - V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:209 contains "service_role"
 - V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:210 contains "SUPABASE_SERVICE_ROLE_KEY"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:244 contains "Sunday blocked"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:265 contains "hardcoded Sunday"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:248 contains "Sunday blocked"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:269 contains "hardcoded Sunday"
 - V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md:70 contains "quote range"
 - V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md:70 contains "rough estimate"
 - V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md:70 contains "estimated price"
@@ -311,10 +415,11 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:23 contains "service_role"
 - WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:23 contains "SUPABASE_SERVICE_ROLE_KEY"
 - node_modules is present in the working folder
+- .next is present in the working folder
 
 ## Go / No-Go Recommendation
 
-NO-GO. Browser QA must complete before this can be treated as done.
+GO for unauthenticated/review browser coverage only; NO-GO for authenticated live boss-write launch until manual auth tests run.
 
 ## What Marcus Must Manually Verify
 
@@ -324,4 +429,4 @@ NO-GO. Browser QA must complete before this can be treated as done.
 
 ## Recommended Next Phase
 
-Fix the remaining browser QA failure and rerun v4.2 browser QA before moving forward.
+Confirm authenticated boss-write browser QA, then run the v4.4 internal launch gate and keep the review route disabled by default.

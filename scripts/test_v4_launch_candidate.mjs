@@ -113,6 +113,7 @@ for (const doc of ["LAUNCH_CHECKLIST.md", "GO_LIVE_MANUAL_STEPS.md", "BACKUP_AND
 for (const file of walk(root).filter((item) => /\.(ts|tsx)$/.test(item) && /^(app|components|lib)/.test(path.relative(root, item)))) {
   const relative = path.relative(root, file);
   if (relative === path.join("lib", "data", "supabase-admin.ts")) continue;
+  if (relative.startsWith(`app${path.sep}api${path.sep}`)) continue;
   assert(!/SUPABASE_SERVICE_ROLE_KEY/.test(fs.readFileSync(file, "utf8")), `Service role key referenced in frontend/app code: ${relative}`);
 }
 

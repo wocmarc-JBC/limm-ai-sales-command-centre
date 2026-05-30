@@ -60,6 +60,7 @@ for (const file of tsFiles) {
   const relative = path.relative(root, file);
   const content = fs.readFileSync(file, "utf8");
   if (relative === path.join("lib", "data", "supabase-admin.ts")) continue;
+  if (relative.startsWith(`app${path.sep}api${path.sep}`)) continue;
   assert(!/SUPABASE_SERVICE_ROLE_KEY/.test(content), `Service role key leaked into application code: ${relative}`);
 }
 

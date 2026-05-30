@@ -10,12 +10,12 @@ v4.9 Live Deployment to Vercel + Production Webhook Readiness.
 
 ## Tests / Audit Status
 
-Status: FAIL
-Browser QA: Playwright browser QA did not complete.
+Status: PASS WITH MANUAL AUTH REQUIRED
+Browser QA: Playwright browser QA completed.
 
 ## Open Issues
 
-- Playwright browser QA must pass before v4.2 can be marked done.
+- Run npm run qa:dev-brain for current open issues.
 
 ## Safety Status
 
@@ -33,19 +33,19 @@ Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
 
 ## Browser QA Status
 
-Playwright browser QA did not complete.
+Playwright browser QA completed.
 Report: V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md
 
 ## Next Recommended Action
 
-Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward.
+Deploy the CRM to Vercel, verify the production WhatsApp webhook, then keep public auto-reply disabled until Marcus confirms closed-test inbound logging.
 
 ## Marcus Paste Block For ChatGPT
 
 ```text
 We are continuing LIMM AI Sales Command Centre v4.9 Vercel deployment and production WhatsApp webhook readiness.
-Latest Dev Brain QA status: FAIL.
-Playwright browser QA did not complete.
+Latest Dev Brain QA status: PASS WITH MANUAL AUTH REQUIRED.
+Playwright browser QA completed.
 Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
 OpenAI dry-run remains boss-review only. Public WhatsApp auto-reply, Calendar booking, and auto pricing are still disabled.
 Please review V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md, VERCEL_DEPLOYMENT_GUIDE.md, and META_WHATSAPP_WEBHOOK_LIVE_SETUP.md, then guide Marcus through Vercel deployment and webhook verification.
