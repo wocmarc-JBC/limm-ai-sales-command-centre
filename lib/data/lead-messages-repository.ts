@@ -7,14 +7,18 @@ import { getSupabaseServerClient } from "./supabase-server";
 import type { Lead, LeadMessage, LeadMessageDirection } from "@/lib/types";
 
 function getSupabaseWriteClient() {
-  return getSupabaseAdminClient() ?? getSupabaseServerClient();
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    throw new Error("Supabase server-only admin credentials are required for WhatsApp webhook writes.");
+  }
+  return supabase;
 }
 
 export async function findLeadMessageByProviderId(providerMessageId: string) {
   if (!providerMessageId) return null;
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();
-    const { data, error } = await supabase!
+    const { data, error } = await supabase
       .from("lead_messages")
       .select("*")
       .eq("provider_message_id", providerMessageId)
@@ -30,7 +34,7 @@ export async function upsertWhatsAppLead(input: { phone: string; contactName?: s
   const now = new Date().toISOString();
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();
-    const existing = await supabase!
+    const existing = await supabase
       .from("leads")
       .select("*")
       .eq("phone", input.phone)
@@ -39,7 +43,7 @@ export async function upsertWhatsAppLead(input: { phone: string; contactName?: s
       .maybeSingle();
 
     if (existing.data && !existing.error) {
-      const { data, error } = await supabase!
+      const { data, error } = await supabase
         .from("leads")
         .update({
           client_name: existing.data.client_name || input.contactName || "WhatsApp Lead",
@@ -54,7 +58,7 @@ export async function upsertWhatsAppLead(input: { phone: string; contactName?: s
       return mapLeadRow(data);
     }
 
-    const { data, error } = await supabase!
+    const { data, error } = await supabase
       .from("leads")
       .insert({
         client_name: input.contactName || "WhatsApp Lead",
@@ -141,7 +145,7 @@ export async function saveLeadMessage(input: {
   const now = new Date().toISOString();
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();
-    const { data, error } = await supabase!
+    const { data, error } = await supabase
       .from("lead_messages")
       .insert({
         lead_id: input.leadId,
@@ -198,7 +202,7 @@ export async function listLeadMessages(leadId: string) {
 export async function countRecentWhatsAppAutoReplies(leadId: string, sinceIso: string) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();
-    const { count, error } = await supabase!
+    const { count, error } = await supabase
       .from("lead_messages")
       .select("id", { count: "exact", head: true })
       .eq("lead_id", leadId)

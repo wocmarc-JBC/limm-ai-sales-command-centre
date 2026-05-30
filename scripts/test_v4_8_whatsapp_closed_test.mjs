@@ -67,6 +67,9 @@ assert(route.includes("hub.challenge") && route.includes("hub.verify_token"), "W
 assert(route.includes("status: 403"), "Webhook GET must reject bad verify token.");
 assert(route.includes("parseWhatsAppInbound"), "Webhook POST must parse WhatsApp payloads.");
 assert(route.includes("handleWhatsAppInboundMessage"), "Webhook POST must delegate to closed-test handler.");
+assert(route.includes("whatsapp_webhook_received"), "Webhook POST must log receipt safely.");
+assert(route.includes("whatsapp_payload_parsed"), "Webhook POST must log parse count safely.");
+assert(route.includes("status: 500"), "Webhook POST must return 500 when required processing fails.");
 
 const parser = read("lib/whatsapp-parser.ts");
 for (const phrase of ["senderPhone", "providerMessageId", "timestamp", "text", "businessPhoneNumberId"]) {
@@ -121,6 +124,16 @@ for (const action of [
 ]) {
   assert(service.includes(action), `WhatsApp service missing audit action: ${action}`);
 }
+for (const stage of [
+  "whatsapp_auto_reply_enabled_state",
+  "whatsapp_lead_upserted",
+  "whatsapp_inbound_message_saved",
+  "whatsapp_audit_written",
+  "whatsapp_auto_reply_sent",
+  "whatsapp_webhook_error"
+]) {
+  assert(service.includes(stage) || route.includes(stage), `WhatsApp live debug log missing: ${stage}`);
+}
 for (const guard of [
   "!runtime.liveInboundEnabled",
   "!runtime.testAutoReplyEnabled",
@@ -136,6 +149,42 @@ for (const guard of [
   assert(service.includes(guard), `WhatsApp service missing closed-test guard: ${guard}`);
 }
 assert(!/setInterval|setTimeout\s*\(/.test(service), "WhatsApp service must not create retry loops.");
+const flowStart = service.indexOf("export async function handleWhatsAppInboundMessage");
+const dedupeIndex = service.indexOf("findLeadMessageByProviderId", flowStart);
+const leadIndex = service.indexOf("upsertWhatsAppLead", dedupeIndex);
+const inboundSaveIndex = service.indexOf("saveLeadMessage({", leadIndex);
+const inboundAuditIndex = service.indexOf("action: \"whatsapp_inbound_received\"", inboundSaveIndex);
+const replyRequestedIndex = service.indexOf("action: \"whatsapp_auto_reply_requested\"", inboundAuditIndex);
+const safetyIndex = service.indexOf("validateWhatsAppAutoReply(reply)", replyRequestedIndex);
+const sendIndex = service.indexOf("adapter.sendReply", safetyIndex);
+const outboundSaveIndex = service.indexOf("direction: \"outbound\"", sendIndex);
+const sentAuditIndex = service.indexOf("action: \"whatsapp_auto_reply_sent\"", outboundSaveIndex);
+for (const [label, index] of Object.entries({
+  flowStart,
+  dedupeIndex,
+  leadIndex,
+  inboundSaveIndex,
+  inboundAuditIndex,
+  replyRequestedIndex,
+  safetyIndex,
+  sendIndex,
+  outboundSaveIndex,
+  sentAuditIndex
+})) {
+  assert(index >= 0, `WhatsApp flow order is missing ${label}.`);
+}
+assert(
+  flowStart < dedupeIndex &&
+    dedupeIndex < leadIndex &&
+    leadIndex < inboundSaveIndex &&
+    inboundSaveIndex < inboundAuditIndex &&
+    inboundAuditIndex < replyRequestedIndex &&
+    replyRequestedIndex < safetyIndex &&
+    safetyIndex < sendIndex &&
+    sendIndex < outboundSaveIndex &&
+    outboundSaveIndex < sentAuditIndex,
+  "WhatsApp inbound/save/audit/send flow order is wrong."
+);
 
 const messageRepo = read("lib/data/lead-messages-repository.ts");
 for (const phrase of [
@@ -149,6 +198,12 @@ for (const phrase of [
 ]) {
   assert(messageRepo.includes(phrase), `Lead message repository missing ${phrase}`);
 }
+assert(messageRepo.includes("Supabase server-only admin credentials are required for WhatsApp webhook writes"), "WhatsApp webhook writes must require server-only admin credentials.");
+assert(!messageRepo.includes("getSupabaseAdminClient() ?? getSupabaseServerClient()"), "WhatsApp webhook writes must not fall back to unauthenticated server client.");
+
+const auditRepo = read("lib/data/audit-repository.ts");
+assert(auditRepo.includes("input.actorType === \"system\""), "System audit logs must use server-only admin path.");
+assert(auditRepo.includes("Supabase server-only admin credentials are required for system audit logs"), "System audit logs must fail clearly when server-only admin credentials are missing.");
 
 const migration = read("supabase/migrations/018_v4_8_whatsapp_closed_test.sql");
 for (const phrase of ["provider_message_id", "provider_timestamp", "whatsapp_status", "metadata", "lead_messages_provider_message_id_unique"]) {

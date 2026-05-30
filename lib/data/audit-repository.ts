@@ -83,6 +83,31 @@ export async function createAuditLog(input: AuditInput) {
   };
 
   if (getDataMode() === "Supabase Mode") {
+    const admin = getSupabaseAdminClient();
+    if (input.actorType === "system") {
+      if (!admin) {
+        throw new Error("Supabase server-only admin credentials are required for system audit logs.");
+      }
+      const { error: adminError } = await admin.from("audit_logs").insert({
+        id: audit.id,
+        actor: audit.actor,
+        actor_type: audit.actorType,
+        actor_name: audit.actorName,
+        actor_email: audit.actorEmail,
+        actor_id: audit.actorId,
+        action: audit.action,
+        entity_type: audit.entityType,
+        entity_id: audit.entityId,
+        summary: audit.summary,
+        before_data: audit.beforeData,
+        after_data: audit.afterData,
+        metadata: audit.metadata,
+        created_at: audit.createdAt
+      });
+      if (!adminError) return audit;
+      throw new Error(`Audit log insert failed for ${audit.action}: ${adminError.message}`);
+    }
+
     const supabase = getSupabaseServerClient();
     const insertPayload = {
       id: audit.id,
@@ -102,7 +127,6 @@ export async function createAuditLog(input: AuditInput) {
     };
     const { error } = await supabase!.from("audit_logs").insert(insertPayload);
     if (!error) return audit;
-    const admin = getSupabaseAdminClient();
     if (admin) {
       const { error: adminError } = await admin.from("audit_logs").insert(insertPayload);
       if (!adminError) return audit;

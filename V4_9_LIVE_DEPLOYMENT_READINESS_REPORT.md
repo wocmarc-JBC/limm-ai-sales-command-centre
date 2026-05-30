@@ -1,99 +1,232 @@
 # v4.9 Live Deployment Readiness Report
 
-Status: PASS pending final build/QA run.
+Status: PASS for Vercel deployment readiness.
 
 ## Scope
 
-v4.9 prepares the CRM for Vercel deployment and production WhatsApp webhook readiness. It does not enable public auto-reply, Calendar booking, or pricing.
+v4.9 prepares the CRM for Vercel deployment and production WhatsApp webhook readiness. It does not enable public auto-reply, Calendar booking, auto-pricing, quote ranges, or rough estimates.
 
 ## Files Changed
 
+- `.gitignore`
+- `package.json`
+- `package-lock.json`
+- `components/ShellChrome.tsx`
+- `lib/actions.ts`
+- `scripts/run_playwright_if_available.mjs`
+- `scripts/dev_brain_qa.mjs`
+- `scripts/generate_chatgpt_handoff_report.mjs`
+- `scripts/audit_v3_package.mjs`
+- `scripts/test_v4_9_deployment_readiness.mjs`
+- `CURRENT_STATUS.md`
+- `NEXT_STEPS_FOR_CHATGPT.md`
+- `KNOWN_LIMITATIONS.md`
 - `PRODUCTION_ENV_VARS_CHECKLIST.md`
 - `VERCEL_DEPLOYMENT_GUIDE.md`
 - `META_WHATSAPP_WEBHOOK_LIVE_SETUP.md`
 - `WHATSAPP_EMERGENCY_OFF_GUIDE.md`
-- `scripts/test_v4_9_deployment_readiness.mjs`
-- `scripts/audit_v3_package.mjs`
-- `scripts/dev_brain_qa.mjs`
-- `package.json`
-- `package-lock.json`
+- `CHATGPT_HANDOFF_REPORT.md`
+- `DEV_BRAIN_QA_REPORT.md`
+- `V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md`
+- `V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md`
 
 ## Deployment-Ready Status
 
-The app is a standard Next.js app for Vercel:
+Deployment-ready: yes, for deploying the CRM to Vercel.
+
+The app remains a standard Next.js app:
 
 - Build command: `npm run build`
 - Start command: `npm run start`
 - WhatsApp webhook route: `/api/whatsapp/webhook`
+- Expected production webhook URL: `https://YOUR-VERCEL-URL/api/whatsapp/webhook`
+- No `vercel.json` required for v4.9
+- No hardcoded local tunnel URL
 - Review route disabled by default
-- Public auto-reply disabled by default
+- Public WhatsApp auto-reply disabled by default
 
 ## Vercel Guide
 
-Created: `VERCEL_DEPLOYMENT_GUIDE.md`
+Created: yes.
+
+File: `VERCEL_DEPLOYMENT_GUIDE.md`
 
 ## Production Env Checklist
 
-Created: `PRODUCTION_ENV_VARS_CHECKLIST.md`
+Created: yes.
+
+File: `PRODUCTION_ENV_VARS_CHECKLIST.md`
+
+Critical production defaults:
+
+- `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false`
+- `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false`
+- `OPENAI_BRAIN_DRY_RUN=false`
+- `NEXT_PUBLIC_ENABLE_REVIEW_ROUTE=false`
 
 ## WhatsApp Live Webhook Setup Guide
 
-Created: `META_WHATSAPP_WEBHOOK_LIVE_SETUP.md`
+Created: yes.
+
+File: `META_WHATSAPP_WEBHOOK_LIVE_SETUP.md`
+
+The guide instructs Marcus to:
+
+- Use the Vercel HTTPS callback URL.
+- Match Meta verify token with `WHATSAPP_VERIFY_TOKEN`.
+- Subscribe to the `messages` webhook field.
+- Keep closed-test auto-reply off for first verification.
+- Confirm inbound logging before enabling any test auto-reply.
 
 ## Production Safety Checks
 
-Required checks:
+Result: PASS.
 
-- No WhatsApp token in frontend/client code
-- No service role key in frontend/client code
-- Public auto-reply false by default
-- Test auto-reply false by default
-- No pricing / quote ranges / rough estimates
-- No Calendar booking
-- No forbidden consultation wording
-- Review route disabled by default
-- Production webhook route exists
-- Webhook GET verification exists
-- Webhook POST handler exists
+Verified:
+
+- No WhatsApp access token in frontend/client code.
+- No Supabase service role key in frontend/client code.
+- Public auto-reply false by default.
+- Test auto-reply false by default.
+- No pricing, quote ranges, or rough estimates in checked client-facing surfaces.
+- No Calendar booking.
+- No forbidden consultation wording in checked reply surfaces.
+- Review route disabled by default.
+- Production webhook route exists.
+- Webhook GET verification exists.
+- Webhook POST handler exists.
 
 ## Build Result
 
-Pending final run: `npm.cmd run build`
+Result: PASS.
 
-## QA Result
+Command run:
 
-Pending final run:
+```powershell
+npm.cmd run build
+```
 
-- `npm.cmd run qa:browser`
-- `npm.cmd run qa:v4-3`
-- `npm.cmd run qa:dev-brain`
-- `node scripts/audit_v3_package.mjs`
+Notes:
+
+- The build first exposed two TypeScript-only issues that dev mode did not catch.
+- Fixed typed navigation links in `components/ShellChrome.tsx`.
+- Fixed AI draft review status narrowing in `lib/actions.ts`.
+- Final build completed successfully and included `/api/whatsapp/webhook`.
+
+## Browser QA Result
+
+Result: PASS with manual auth required.
+
+Command run:
+
+```powershell
+npm.cmd run qa:browser
+```
+
+Result:
+
+- 76 passed
+- 10 skipped because this shell did not have `SUPABASE_TEST_EMAIL` / `SUPABASE_TEST_PASSWORD`
+
+## v4.3 Boss-Write QA Result
+
+Result in this Codex shell: skipped because boss test credentials were not present.
+
+Command run:
+
+```powershell
+npm.cmd run qa:v4-3
+```
+
+Result:
+
+- 6 skipped locally due missing `SUPABASE_TEST_EMAIL` / `SUPABASE_TEST_PASSWORD`
+- Latest Marcus-confirmed authenticated v4.3 result remains PASS, 6 passed
+
+## Dev Brain QA Result
+
+Result: PASS with manual auth required.
+
+Command run:
+
+```powershell
+npm.cmd run qa:dev-brain
+```
+
+Notes:
+
+- Dev Brain installed dependencies, ran browser QA, generated reports, cleaned artifacts, ran static tests, and ran package audit.
+- Live Supabase schema verification was skipped in this runner due network fetch failure.
+- Authenticated live actions remain manual in this runner because credentials were not provided.
+- Static app, safety, WhatsApp, OpenAI dry-run, and package checks passed.
+
+## Package Audit Result
+
+Result: PASS.
+
+Command run after cleanup:
+
+```powershell
+node scripts\audit_v3_package.mjs
+```
+
+Generated folders were cleaned before final audit:
+
+- `node_modules`
+- `.next`
+- `test-results`
+- `playwright-report`
+
+## Bugs Found And Fixed
+
+- Production build failed on typed route navigation. Fixed by rendering review anchors separately and keeping app nav typed-safe.
+- Production build failed on AI draft review status typing. Fixed by validating `pending` before narrowing.
+- Browser QA wrapper could fail after generated folder cleanup because its summary folder was missing. Fixed by recreating the summary directory before writing output.
+- Dev Brain static test found `.gitignore` missing `screenshots/`. Fixed by ignoring `screenshots/` and `.codex-tools/`.
 
 ## Bugs Remaining
 
-Pending final QA.
+None known in v4.9 deployment readiness code.
+
+Manual items remain:
+
+- Vercel deployment URL is not created yet.
+- Meta WhatsApp number is not registered yet.
+- Meta webhook is not verified yet.
+- First production inbound WhatsApp message is not confirmed yet.
+- Closed-test auto-reply is not enabled yet.
 
 ## Exact Next Human Steps For Marcus
 
-1. Deploy the app to Vercel.
+1. Deploy the app to Vercel using `VERCEL_DEPLOYMENT_GUIDE.md`.
 2. Add Vercel environment variables from `PRODUCTION_ENV_VARS_CHECKLIST.md`.
-3. Apply latest Supabase migrations if not already applied.
-4. Confirm Vercel live URL.
+3. Confirm `/login` loads on the Vercel URL.
+4. Confirm `/review-chatgpt-ui` is unavailable by default.
 5. Register the WhatsApp number in Meta.
 6. Set Meta callback URL to `https://YOUR-VERCEL-URL/api/whatsapp/webhook`.
-7. Verify the webhook with matching `WHATSAPP_VERIFY_TOKEN`.
-8. Keep `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false` for first inbound logging test.
-9. Send first inbound WhatsApp test message.
-10. Only after inbound logging is confirmed, Marcus may enable closed-test auto-reply.
+7. Set the Meta Verify Token to match `WHATSAPP_VERIFY_TOKEN`.
+8. Subscribe to the `messages` webhook field.
+9. Keep `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false` for first inbound logging test.
+10. Send one inbound WhatsApp test message.
+11. Confirm lead/message/audit logging in the CRM.
+12. Only after inbound logging is confirmed, Marcus may enable closed-test auto-reply.
 
 ## Go / No-Go Recommendation
 
-GO only for deploying CRM to Vercel.
+GO only for deploying the CRM to Vercel.
 
 NO-GO for public WhatsApp auto-reply until:
 
-- Vercel live URL exists
-- Meta webhook verifies
-- WhatsApp number is registered
-- First inbound message is confirmed
-- Closed test auto-reply is manually enabled by Marcus
+- Vercel live URL exists.
+- Meta webhook verifies.
+- WhatsApp number is registered.
+- First inbound message is confirmed.
+- Closed-test auto-reply is manually enabled by Marcus.
+
+Still NO-GO:
+
+- Public WhatsApp auto-reply.
+- Calendar booking.
+- Auto-pricing.
+- Quote ranges.
+- WhatsApp blasting.

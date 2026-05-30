@@ -34,6 +34,18 @@ function tenMinutesAgoIso() {
   return new Date(Date.now() - 10 * 60 * 1000).toISOString();
 }
 
+function safeError(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown WhatsApp webhook failure";
+}
+
+function logWhatsApp(stage: string, metadata: Record<string, unknown> = {}) {
+  console.info(stage, metadata);
+}
+
+function logWhatsAppError(stage: string, metadata: Record<string, unknown> = {}) {
+  console.error("whatsapp_webhook_error", { stage, ...metadata });
+}
+
 async function auditWhatsApp(input: {
   action: string;
   leadId: string;
@@ -41,24 +53,30 @@ async function auditWhatsApp(input: {
   metadata?: Record<string, unknown>;
   afterData?: Record<string, unknown> | null;
 }) {
-  await createAuditLog({
-    actorType: "system",
-    actorName: "WhatsApp Closed Test",
-    action: input.action,
-    entityType: "lead",
-    entityId: input.leadId,
-    summary: input.summary,
-    beforeData: null,
-    afterData: input.afterData ?? null,
-    metadata: {
-      channel: "whatsapp",
-      closedTest: true,
-      noPublicAutoReply: true,
-      noCalendarBooking: true,
-      noPricing: true,
-      ...(input.metadata ?? {})
-    }
-  });
+  try {
+    await createAuditLog({
+      actorType: "system",
+      actorName: "WhatsApp Closed Test",
+      action: input.action,
+      entityType: "lead",
+      entityId: input.leadId,
+      summary: input.summary,
+      beforeData: null,
+      afterData: input.afterData ?? null,
+      metadata: {
+        channel: "whatsapp",
+        closedTest: true,
+        noPublicAutoReply: true,
+        noCalendarBooking: true,
+        noPricing: true,
+        ...(input.metadata ?? {})
+      }
+    });
+  } catch (error) {
+    logWhatsAppError("audit_insert", { action: input.action, leadId: input.leadId, reason: safeError(error) });
+    throw error;
+  }
+  logWhatsApp("whatsapp_audit_written", { action: input.action, leadId: input.leadId });
 }
 
 async function buildDraftReply(lead: Awaited<ReturnType<typeof upsertWhatsAppLead>>) {
@@ -79,6 +97,15 @@ export async function handleWhatsAppInboundMessage(
   const providerMessageId = message.providerMessageId || `missing-provider-id-${Date.now()}`;
   const senderPhone = normalizeWhatsAppPhone(message.senderPhone);
 
+  logWhatsApp("whatsapp_auto_reply_enabled_state", {
+    providerMessageId,
+    liveInboundEnabled: runtime.liveInboundEnabled,
+    testAutoReplyEnabled: runtime.testAutoReplyEnabled,
+    publicAutoReplyEnabled: runtime.publicAutoReplyEnabled,
+    testMode: runtime.testMode,
+    credentialsReady: runtime.credentialsReady
+  });
+
   if (!runtime.liveInboundEnabled) {
     return {
       providerMessageId,
@@ -87,7 +114,13 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
-  const duplicate = await findLeadMessageByProviderId(providerMessageId);
+  let duplicate: Awaited<ReturnType<typeof findLeadMessageByProviderId>>;
+  try {
+    duplicate = await findLeadMessageByProviderId(providerMessageId);
+  } catch (error) {
+    logWhatsAppError("dedupe_lookup", { providerMessageId, reason: safeError(error) });
+    throw error;
+  }
   if (duplicate) {
     return {
       providerMessageId,
@@ -106,26 +139,39 @@ export async function handleWhatsAppInboundMessage(
   }
 
   const inboundBody = message.text || `[Unsupported WhatsApp ${message.type || "message"} received]`;
-  const lead = await upsertWhatsAppLead({
-    phone: senderPhone,
-    contactName: message.contactName,
-    latestMessage: inboundBody
-  });
+  let lead: Awaited<ReturnType<typeof upsertWhatsAppLead>>;
+  try {
+    lead = await upsertWhatsAppLead({
+      phone: senderPhone,
+      contactName: message.contactName,
+      latestMessage: inboundBody
+    });
+    logWhatsApp("whatsapp_lead_upserted", { providerMessageId, leadId: lead.id });
+  } catch (error) {
+    logWhatsAppError("lead_upsert", { providerMessageId, reason: safeError(error) });
+    throw error;
+  }
 
-  await saveLeadMessage({
-    leadId: lead.id,
-    direction: "inbound",
-    body: inboundBody,
-    safeToSend: false,
-    providerMessageId,
-    providerTimestamp: message.timestamp,
-    whatsappStatus: "received",
-    metadata: {
-      messageType: message.type,
-      businessPhoneNumberId: message.businessPhoneNumberId,
-      providerMessageId
-    }
-  });
+  try {
+    await saveLeadMessage({
+      leadId: lead.id,
+      direction: "inbound",
+      body: inboundBody,
+      safeToSend: false,
+      providerMessageId,
+      providerTimestamp: message.timestamp,
+      whatsappStatus: "received",
+      metadata: {
+        messageType: message.type,
+        businessPhoneNumberId: message.businessPhoneNumberId,
+        providerMessageId
+      }
+    });
+    logWhatsApp("whatsapp_inbound_message_saved", { providerMessageId, leadId: lead.id });
+  } catch (error) {
+    logWhatsAppError("inbound_message_save", { providerMessageId, leadId: lead.id, reason: safeError(error) });
+    throw error;
+  }
 
   await auditWhatsApp({
     action: "whatsapp_inbound_received",
@@ -245,6 +291,7 @@ export async function handleWhatsAppInboundMessage(
 
   try {
     const sent = await adapter.sendReply(senderPhone, reply);
+    logWhatsApp("whatsapp_auto_reply_sent", { providerMessageId, leadId: lead.id, outboundProviderMessageId: sent.providerMessageId || "" });
     await saveLeadMessage({
       leadId: lead.id,
       direction: "outbound",
@@ -272,6 +319,7 @@ export async function handleWhatsAppInboundMessage(
       reply
     };
   } catch (error) {
+    logWhatsAppError("auto_reply_send", { providerMessageId, leadId: lead.id, reason: safeError(error) });
     await saveLeadMessage({
       leadId: lead.id,
       direction: "outbound",

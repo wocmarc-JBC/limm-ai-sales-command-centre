@@ -24,10 +24,16 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
+    console.error("whatsapp_webhook_error", { stage: "json_parse", reason: "Invalid JSON payload." });
     return NextResponse.json({ ok: false, error: "Invalid JSON payload." }, { status: 400 });
   }
 
+  console.info("whatsapp_webhook_received", {
+    objectType: typeof payload === "object" && payload !== null ? "object" : typeof payload
+  });
+
   const messages = parseWhatsAppInbound(payload);
+  console.info("whatsapp_payload_parsed", { messageCount: messages.length });
   if (!messages.length) {
     return NextResponse.json({ ok: true, ignored: true, reason: "No supported WhatsApp message found." });
   }
@@ -37,11 +43,20 @@ export async function POST(request: NextRequest) {
     try {
       results.push(await handleWhatsAppInboundMessage(message));
     } catch (error) {
-      results.push({
+      const reason = error instanceof Error ? error.message : "Unknown WhatsApp webhook failure.";
+      console.error("whatsapp_webhook_error", {
+        stage: "message_processing",
         providerMessageId: message.providerMessageId,
-        status: "auto_reply_failed",
-        reason: error instanceof Error ? error.message : "Unknown WhatsApp webhook failure."
+        reason
       });
+      return NextResponse.json(
+        {
+          ok: false,
+          providerMessageId: message.providerMessageId,
+          error: reason
+        },
+        { status: 500 }
+      );
     }
   }
 
