@@ -93,6 +93,7 @@ const requiredScripts = [
   "scripts/test_v4_6_openai_dry_run.mjs",
   "scripts/test_v4_7_openai_boss_review_ux.mjs",
   "scripts/test_v4_8_whatsapp_closed_test.mjs",
+  "scripts/test_v4_8_live_diagnostics_static.mjs",
   "scripts/test_v4_9_deployment_readiness.mjs"
 ];
 

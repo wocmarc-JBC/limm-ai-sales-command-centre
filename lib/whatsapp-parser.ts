@@ -8,6 +8,16 @@ export type ParsedWhatsAppMessage = {
   businessPhoneNumberId: string;
 };
 
+function parseProviderTimestamp(timestamp: unknown) {
+  if (timestamp === null || timestamp === undefined || timestamp === "") return null;
+  const seconds = Number(timestamp);
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+
+  const date = new Date(seconds * 1000);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
 export function parseWhatsAppInbound(payload: any): ParsedWhatsAppMessage[] {
   const parsed: ParsedWhatsAppMessage[] = [];
   const entries = Array.isArray(payload?.entry) ? payload.entry : [];
@@ -27,7 +37,7 @@ export function parseWhatsAppInbound(payload: any): ParsedWhatsAppMessage[] {
         parsed.push({
           senderPhone,
           providerMessageId,
-          timestamp: message?.timestamp ? new Date(Number(message.timestamp) * 1000).toISOString() : null,
+          timestamp: parseProviderTimestamp(message?.timestamp),
           text,
           type,
           contactName: String(contact?.profile?.name ?? ""),

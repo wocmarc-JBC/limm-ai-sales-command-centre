@@ -237,7 +237,7 @@ for (const phrase of [
 const frontendFiles = [
   ...walk(path.join(root, "app")),
   ...walk(path.join(root, "components"))
-].filter((file) => /\.(ts|tsx)$/.test(file));
+].filter((file) => /\.(ts|tsx)$/.test(file) && !path.relative(root, file).startsWith(`app${path.sep}api${path.sep}`));
 for (const file of frontendFiles) {
   const relative = path.relative(root, file);
   const content = fs.readFileSync(file, "utf8");

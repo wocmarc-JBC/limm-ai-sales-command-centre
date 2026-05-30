@@ -107,6 +107,7 @@ export async function handleWhatsAppInboundMessage(
   });
 
   if (!runtime.liveInboundEnabled) {
+    logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, reason: "WHATSAPP_LIVE_INBOUND_ENABLED=false" });
     return {
       providerMessageId,
       status: "ignored_disabled",
@@ -121,6 +122,7 @@ export async function handleWhatsAppInboundMessage(
     logWhatsAppError("dedupe_lookup", { providerMessageId, reason: safeError(error) });
     throw error;
   }
+  logWhatsApp("whatsapp_dedupe_checked", { providerMessageId, duplicate: Boolean(duplicate) });
   if (duplicate) {
     return {
       providerMessageId,
@@ -131,6 +133,7 @@ export async function handleWhatsAppInboundMessage(
   }
 
   if (runtime.businessNumber && senderPhone === runtime.businessNumber) {
+    logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, reason: "own_business_number" });
     return {
       providerMessageId,
       status: "ignored_own_number",
@@ -141,6 +144,7 @@ export async function handleWhatsAppInboundMessage(
   const inboundBody = message.text || `[Unsupported WhatsApp ${message.type || "message"} received]`;
   let lead: Awaited<ReturnType<typeof upsertWhatsAppLead>>;
   try {
+    logWhatsApp("whatsapp_lead_upsert_started", { providerMessageId });
     lead = await upsertWhatsAppLead({
       phone: senderPhone,
       contactName: message.contactName,
@@ -153,6 +157,7 @@ export async function handleWhatsAppInboundMessage(
   }
 
   try {
+    logWhatsApp("whatsapp_inbound_message_save_started", { providerMessageId, leadId: lead.id });
     await saveLeadMessage({
       leadId: lead.id,
       direction: "inbound",
@@ -173,6 +178,7 @@ export async function handleWhatsAppInboundMessage(
     throw error;
   }
 
+  logWhatsApp("whatsapp_inbound_audit_started", { providerMessageId, leadId: lead.id });
   await auditWhatsApp({
     action: "whatsapp_inbound_received",
     leadId: lead.id,
@@ -181,6 +187,7 @@ export async function handleWhatsAppInboundMessage(
   });
 
   if (!message.text || message.type !== "text") {
+    logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "unsupported_or_empty_message" });
     await auditWhatsApp({
       action: "whatsapp_auto_reply_disabled",
       leadId: lead.id,
@@ -203,6 +210,7 @@ export async function handleWhatsAppInboundMessage(
   });
 
   if (!runtime.testAutoReplyEnabled) {
+    logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "WHATSAPP_TEST_AUTO_REPLY_ENABLED=false" });
     await auditWhatsApp({
       action: "whatsapp_auto_reply_disabled",
       leadId: lead.id,
@@ -218,6 +226,13 @@ export async function handleWhatsAppInboundMessage(
   }
 
   if (runtime.publicAutoReplyEnabled || !runtime.testMode) {
+    logWhatsApp("whatsapp_auto_reply_disabled", {
+      providerMessageId,
+      leadId: lead.id,
+      reason: "closed_test_guard",
+      publicAutoReplyEnabled: runtime.publicAutoReplyEnabled,
+      testMode: runtime.testMode
+    });
     await auditWhatsApp({
       action: "whatsapp_auto_reply_disabled",
       leadId: lead.id,
@@ -233,6 +248,7 @@ export async function handleWhatsAppInboundMessage(
   }
 
   if (!runtime.credentialsReady) {
+    logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "missing_credentials" });
     await auditWhatsApp({
       action: "whatsapp_auto_reply_disabled",
       leadId: lead.id,
@@ -249,6 +265,7 @@ export async function handleWhatsAppInboundMessage(
 
   const recentReplyCount = await countRecentWhatsAppAutoReplies(lead.id, tenMinutesAgoIso());
   if (recentReplyCount >= 3) {
+    logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "rate_limit", recentReplyCount });
     await auditWhatsApp({
       action: "whatsapp_auto_reply_disabled",
       leadId: lead.id,
@@ -263,9 +280,13 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
+  logWhatsApp("whatsapp_auto_reply_generate_started", { providerMessageId, leadId: lead.id });
   const reply = await buildDraftReply(lead);
+  logWhatsApp("whatsapp_auto_reply_generated", { providerMessageId, leadId: lead.id, characterCount: reply.length });
+  logWhatsApp("whatsapp_auto_reply_validation_started", { providerMessageId, leadId: lead.id });
   const safety = validateWhatsAppAutoReply(reply);
   if (!safety.ok) {
+    logWhatsApp("whatsapp_auto_reply_blocked_unsafe", { providerMessageId, leadId: lead.id, errorCount: safety.errors.length });
     await saveLeadMessage({
       leadId: lead.id,
       direction: "outbound",
@@ -288,8 +309,10 @@ export async function handleWhatsAppInboundMessage(
       reply
     };
   }
+  logWhatsApp("whatsapp_auto_reply_validation_passed", { providerMessageId, leadId: lead.id });
 
   try {
+    logWhatsApp("whatsapp_auto_reply_send_started", { providerMessageId, leadId: lead.id });
     const sent = await adapter.sendReply(senderPhone, reply);
     logWhatsApp("whatsapp_auto_reply_sent", { providerMessageId, leadId: lead.id, outboundProviderMessageId: sent.providerMessageId || "" });
     await saveLeadMessage({

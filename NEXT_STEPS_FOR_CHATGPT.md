@@ -55,3 +55,24 @@ node scripts/audit_v3_package.mjs
 - Do not add WhatsApp broadcast or blasting.
 - Do not hardcode secrets.
 - Do not mark full production GO before backups, monitoring, and deployment hardening are complete.
+
+---
+
+# Live Integration Rule
+
+For any real external integration such as WhatsApp, Meta, Calendar, payment, email, OpenAI actions, SMS, webhook, or client-facing automation, do not treat Codex PASS, local QA, browser QA, build PASS, package audit, or webhook GET verification as production proof.
+
+Before Marcus tests any live action, the deployed production app must have:
+- production health endpoint
+- deployed version marker
+- safe env booleans
+- first-line production logs
+- phase-by-phase logs
+- safe JSON errors
+- no top-level env/import crashes
+- server-only secret proof
+- audit log proof
+- kill switch and rollback guide
+
+Full rule: see `LIVE_INTEGRATION_PRODUCTION_PROOF_PLAYBOOK.md`.
+

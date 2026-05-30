@@ -50,6 +50,7 @@ for (const required of [
   "V4_6_OPENAI_BRAIN_DRY_RUN_REPORT.md",
   "V4_7_OPENAI_DRY_RUN_BOSS_REVIEW_UX_REPORT.md",
   "V4_8_WHATSAPP_LIVE_CLOSED_TEST_REPORT.md",
+  "V4_8_WHATSAPP_LIVE_DIAGNOSTIC_FIX_REPORT.md",
   "V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md",
   "WHATSAPP_LIVE_TEST_SETUP_GUIDE.md",
   "WHATSAPP_EMERGENCY_OFF_GUIDE.md",
@@ -101,6 +102,8 @@ for (const required of [
   "lib/data/settings-repository.ts",
   "lib/data/lead-messages-repository.ts",
   "app/api/whatsapp/webhook/route.ts",
+  "app/api/whatsapp/health/route.ts",
+  "app/api/whatsapp/debug-parse/route.ts",
   "scripts/test_v3_supabase_layer.mjs",
   "scripts/test_v3_auth_rls_static.mjs",
   "scripts/test_v3_live_setup_static.mjs",
@@ -140,6 +143,9 @@ for (const required of [
   "scripts/test_v4_6_openai_dry_run.mjs",
   "scripts/test_v4_7_openai_boss_review_ux.mjs",
   "scripts/test_v4_8_whatsapp_closed_test.mjs",
+  "scripts/test_v4_8_live_diagnostics_static.mjs",
+  "scripts/test_v4_8_whatsapp_live_payload.mjs",
+  "scripts/check_v4_8_vercel_whatsapp_health.mjs",
   "scripts/test_v4_9_deployment_readiness.mjs",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql"
 ]) {
@@ -177,10 +183,14 @@ for (const file of textFiles) {
 for (const file of relativePaths.filter((item) => /\.(ts|tsx)$/i.test(item))) {
   const content = fs.readFileSync(path.join(root, file), "utf8");
   if (file === path.join("lib", "data", "supabase-admin.ts")) continue;
+  if (file.startsWith(`app${path.sep}api${path.sep}`)) continue;
   assert(!/SUPABASE_SERVICE_ROLE_KEY/.test(content), `Server service role key referenced in application code: ${file}`);
 }
 
-for (const file of relativePaths.filter((item) => /^app[\\/].*\.(ts|tsx)$/i.test(item) || /^components[\\/].*\.(ts|tsx)$/i.test(item))) {
+for (const file of relativePaths.filter((item) => {
+  if (item.startsWith(`app${path.sep}api${path.sep}`)) return false;
+  return /^app[\\/].*\.(ts|tsx)$/i.test(item) || /^components[\\/].*\.(ts|tsx)$/i.test(item);
+})) {
   const content = fs.readFileSync(path.join(root, file), "utf8");
   assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(content), `WhatsApp secret/server credential referenced in frontend/app route: ${file}`);
 }
@@ -329,7 +339,18 @@ assert(whatsappRoute.includes("handleWhatsAppInboundMessage"), "WhatsApp webhook
 assert(whatsappRoute.includes('runtime = "nodejs"'), "WhatsApp production webhook must use Node.js runtime.");
 assert(/export\s+async\s+function\s+GET/.test(whatsappRoute), "WhatsApp production webhook GET handler missing.");
 assert(/export\s+async\s+function\s+POST/.test(whatsappRoute), "WhatsApp production webhook POST handler missing.");
+assert(whatsappRoute.includes("whatsapp_webhook_received_start"), "WhatsApp webhook must log first-line production diagnostic marker.");
+assert(whatsappRoute.includes("config_error") && whatsappRoute.includes("missing"), "WhatsApp webhook must return safe config_error JSON.");
+assert(whatsappRoute.includes("unsupported_or_status_payload"), "WhatsApp webhook must safely ignore unsupported/status-only payloads.");
 assert(!/localhost|127\.0\.0\.1|trycloudflare|pinggy/i.test(whatsappRoute), "WhatsApp production webhook must not hardcode local tunnel URLs.");
+const whatsappHealthRoute = read("app/api/whatsapp/health/route.ts");
+for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessToken", "testAutoReplyEnabled"]) {
+  assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
+}
+assert(!/return\s+process\.env/.test(whatsappHealthRoute), "WhatsApp health route must not return raw env values.");
+const whatsappDebugRoute = read("app/api/whatsapp/debug-parse/route.ts");
+assert(whatsappDebugRoute.includes("debug_endpoint_disabled"), "WhatsApp debug parse route must be disabled behind a safe flag.");
+assert(!/saveLeadMessage|upsertWhatsAppLead|sendReply|createAuditLog/.test(whatsappDebugRoute), "WhatsApp debug parse route must not write data or send messages.");
 const whatsappConfig = read("lib/whatsapp-config.ts");
 for (const phrase of ["WHATSAPP_LIVE_INBOUND_ENABLED", "WHATSAPP_TEST_AUTO_REPLY_ENABLED", "WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED", "WHATSAPP_TEST_MODE", "!publicAutoReplyEnabled"]) {
   assert(whatsappConfig.includes(phrase), `WhatsApp config missing ${phrase}`);
