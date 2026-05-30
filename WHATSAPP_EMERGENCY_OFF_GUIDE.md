@@ -31,12 +31,11 @@ If you need an immediate hard stop:
 Settings/System Health should show:
 
 - WhatsApp test auto-reply: Disabled by default
-- WhatsApp public auto-reply: Disabled
-- WhatsApp closed-test posture: gated or disabled
+- WhatsApp auto-reply posture: gated or disabled
+- WhatsApp public auto-reply: either disabled for closed test, or enabled only when Marcus-approved live mode is intended
 
 ## What Remains Disabled
 
-- Public auto-reply
 - WhatsApp blasting
 - Calendar booking
 - Auto-pricing

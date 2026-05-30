@@ -11,6 +11,8 @@ export type WhatsAppRuntime = {
   businessNumber: string;
   graphVersion: string;
   closedTestAutoReplyAllowed: boolean;
+  liveAutoReplyApproved: boolean;
+  autoReplyModeAllowed: boolean;
   credentialsReady: boolean;
   statusLabel: string;
 };
@@ -40,6 +42,15 @@ export function getWhatsAppRuntime(): WhatsAppRuntime {
     !publicAutoReplyEnabled &&
     testMode &&
     credentialsReady;
+  const liveAutoReplyApproved =
+    liveInboundEnabled &&
+    testAutoReplyEnabled &&
+    publicAutoReplyEnabled &&
+    !testMode &&
+    credentialsReady;
+  const autoReplyModeAllowed =
+    (!publicAutoReplyEnabled && testMode) ||
+    (publicAutoReplyEnabled && !testMode);
 
   return {
     liveInboundEnabled,
@@ -52,9 +63,13 @@ export function getWhatsAppRuntime(): WhatsAppRuntime {
     businessNumber: normalizeWhatsAppPhone(process.env.WHATSAPP_BUSINESS_NUMBER ?? ""),
     graphVersion: process.env.WHATSAPP_GRAPH_VERSION || "v20.0",
     closedTestAutoReplyAllowed,
+    liveAutoReplyApproved,
+    autoReplyModeAllowed,
     credentialsReady,
     statusLabel: closedTestAutoReplyAllowed
       ? "WhatsApp live closed test mode"
+      : liveAutoReplyApproved
+        ? "WhatsApp Marcus-approved live auto-reply mode"
       : liveInboundEnabled
         ? "WhatsApp inbound enabled; auto-reply gated"
         : "WhatsApp disabled by default"

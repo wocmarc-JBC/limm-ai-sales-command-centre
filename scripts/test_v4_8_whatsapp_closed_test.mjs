@@ -83,6 +83,8 @@ for (const phrase of [
   "publicAutoReplyEnabled",
   "testMode",
   "closedTestAutoReplyAllowed",
+  "liveAutoReplyApproved",
+  "autoReplyModeAllowed",
   "!publicAutoReplyEnabled",
   "credentialsReady",
   "WhatsApp disabled by default"
@@ -137,8 +139,7 @@ for (const stage of [
 for (const guard of [
   "!runtime.liveInboundEnabled",
   "!runtime.testAutoReplyEnabled",
-  "runtime.publicAutoReplyEnabled",
-  "!runtime.testMode",
+  "!runtime.autoReplyModeAllowed",
   "!runtime.credentialsReady",
   "recentReplyCount >= 3",
   "findLeadMessageByProviderId",
@@ -213,9 +214,9 @@ assert(read("supabase/MIGRATION_ORDER.md").includes("018_v4_8_whatsapp_closed_te
 
 const leadDetail = read("app/leads/[id]/page.tsx");
 for (const phrase of [
-  "WhatsApp Closed Test",
-  "WhatsApp live closed test mode",
-  "Public auto-reply disabled",
+  "WhatsApp Auto-Reply",
+  "Marcus-approved live mode",
+  "Public auto-reply enabled by Marcus",
   "No pricing / no Calendar booking",
   "Auto-reply audit trail",
   "listLeadMessages"
@@ -229,7 +230,7 @@ for (const phrase of [
   "WhatsApp test auto-reply",
   "WhatsApp public auto-reply",
   "WhatsApp credentials",
-  "WhatsApp closed-test posture"
+  "WhatsApp auto-reply posture"
 ]) {
   assert(settings.includes(phrase), `Settings/System Health missing WhatsApp status: ${phrase}`);
 }

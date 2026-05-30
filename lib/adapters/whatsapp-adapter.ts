@@ -27,7 +27,7 @@ export class WhatsAppCloudApiAdapter implements WhatsAppAdapter {
   async sendReply(to: string, body: string): Promise<WhatsAppReply> {
     const runtime = getWhatsAppRuntime();
     if (!runtime.credentialsReady) {
-      throw new Error("WhatsApp credentials are not configured for closed-test send.");
+      throw new Error("WhatsApp credentials are not configured for auto-reply send.");
     }
 
     const response = await fetch(

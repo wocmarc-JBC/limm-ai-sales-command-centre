@@ -1,6 +1,6 @@
 # Meta WhatsApp Webhook Live Setup
 
-Status: webhook readiness only. The WhatsApp number is not registered yet, so Meta connection cannot be completed until the number is ready.
+Status: Marcus-approved live mode for WhatsApp auto-reply.
 
 ## 1. Use The Vercel HTTPS URL
 
@@ -22,18 +22,18 @@ WHATSAPP_VERIFY_TOKEN=
 
 In Meta, paste the exact same value into the webhook Verify Token field.
 
-## 3. First Verification Safety Mode
+## 3. Marcus-Approved Live Mode
 
-For first webhook verification, keep:
+Use:
 
 ```text
 WHATSAPP_LIVE_INBOUND_ENABLED=true
-WHATSAPP_TEST_AUTO_REPLY_ENABLED=false
-WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false
-WHATSAPP_TEST_MODE=true
+WHATSAPP_TEST_AUTO_REPLY_ENABLED=true
+WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true
+WHATSAPP_TEST_MODE=false
 ```
 
-This allows webhook verification and inbound readiness without sending auto-replies.
+This enables Marcus-approved live auto-reply for the current WhatsApp number. It remains reply-only, safety-gated, audited, and controlled by the emergency kill switch.
 
 ## 4. Subscribe Field
 
@@ -43,7 +43,7 @@ In Meta WhatsApp webhook settings, subscribe to:
 messages
 ```
 
-## 5. Confirm Inbound Logging First
+## 5. Confirm Inbound Logging And Auto-Reply
 
 After the WhatsApp number is registered and Meta webhook verifies:
 
@@ -51,23 +51,15 @@ After the WhatsApp number is registered and Meta webhook verifies:
 2. Confirm the lead is created/updated in the CRM.
 3. Confirm inbound lead message is saved.
 4. Confirm audit log includes `whatsapp_inbound_received`.
+5. Confirm audit log includes `whatsapp_auto_reply_sent` or an exact blocked/failed reason.
 
-## 6. Enable Closed-Test Auto-Reply Only After Inbound Works
+## 6. Closed Test Alternative
 
-Only after inbound logging is confirmed, Marcus may set:
-
-```text
-WHATSAPP_TEST_AUTO_REPLY_ENABLED=true
-```
-
-Then redeploy/restart.
-
-Do not enable test auto-reply before the first inbound message is confirmed in the CRM.
-
-Keep:
+Closed test remains supported with:
 
 ```text
 WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false
+WHATSAPP_TEST_MODE=true
 ```
 
 ## 7. Emergency Off
@@ -87,7 +79,6 @@ If needed:
 
 ## No-Go Items
 
-- Public auto-reply.
 - Calendar booking.
 - Auto-pricing.
 - Quote ranges.

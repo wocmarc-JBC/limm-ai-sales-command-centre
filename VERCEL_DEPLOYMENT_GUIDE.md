@@ -1,6 +1,6 @@
 # Vercel Deployment Guide
 
-Status: v4.9 deployment readiness for internal CRM and WhatsApp closed-test webhook.
+Status: v4.9 deployment readiness for internal CRM and Marcus-approved live WhatsApp webhook.
 
 ## 1. Import Project
 
@@ -40,18 +40,19 @@ Add all required variables from:
 PRODUCTION_ENV_VARS_CHECKLIST.md
 ```
 
-Critical safety values for first deployment:
+Critical safety values for Marcus-approved live mode:
 
 ```text
-WHATSAPP_TEST_AUTO_REPLY_ENABLED=false
-WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false
+WHATSAPP_TEST_AUTO_REPLY_ENABLED=true
+WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true
+WHATSAPP_TEST_MODE=false
 OPENAI_BRAIN_DRY_RUN=false
 NEXT_PUBLIC_ENABLE_REVIEW_ROUTE=false
 ```
 
 Do not expose `SUPABASE_SERVICE_ROLE_KEY` or `WHATSAPP_ACCESS_TOKEN` in any `NEXT_PUBLIC_` variable.
 
-No public WhatsApp auto-reply is enabled in v4.9.
+WhatsApp remains reply-only, safety-gated, and kill-switch controlled.
 
 ## 4. Deploy
 
@@ -89,7 +90,6 @@ After changing Vercel environment variables:
 
 ## 7. What Remains Disabled
 
-- Public WhatsApp auto-reply.
 - Calendar booking.
 - Auto-pricing.
 - Quote ranges.

@@ -4,7 +4,7 @@ Status: PASS for Vercel deployment readiness.
 
 ## Scope
 
-v4.9 prepares the CRM for Vercel deployment and production WhatsApp webhook readiness. It does not enable public auto-reply, Calendar booking, auto-pricing, quote ranges, or rough estimates.
+v4.9 prepares the CRM for Vercel deployment and production WhatsApp webhook readiness. Marcus has since approved live WhatsApp auto-reply for the current number only. Calendar booking, auto-pricing, quote ranges, rough estimates, blasting, and approval bypass remain disabled.
 
 ## Files Changed
 
@@ -43,7 +43,7 @@ The app remains a standard Next.js app:
 - No `vercel.json` required for v4.9
 - No hardcoded local tunnel URL
 - Review route disabled by default
-- Public WhatsApp auto-reply disabled by default
+- Public WhatsApp auto-reply disabled by default unless Marcus explicitly enables approved live mode in deployment env vars
 
 ## Vercel Guide
 
@@ -57,7 +57,7 @@ Created: yes.
 
 File: `PRODUCTION_ENV_VARS_CHECKLIST.md`
 
-Critical production defaults:
+Critical safe defaults:
 
 - `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false`
 - `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false`
@@ -75,8 +75,8 @@ The guide instructs Marcus to:
 - Use the Vercel HTTPS callback URL.
 - Match Meta verify token with `WHATSAPP_VERIFY_TOKEN`.
 - Subscribe to the `messages` webhook field.
-- Keep closed-test auto-reply off for first verification.
-- Confirm inbound logging before enabling any test auto-reply.
+- Use Marcus-approved live mode only after confirming health booleans.
+- Confirm inbound logging, outbound message save, and audit logs after the first live test message.
 
 ## Production Safety Checks
 
@@ -86,7 +86,7 @@ Verified:
 
 - No WhatsApp access token in frontend/client code.
 - No Supabase service role key in frontend/client code.
-- Public auto-reply false by default.
+- Public auto-reply false by default, and Marcus-approved live mode explicitly documented.
 - Test auto-reply false by default.
 - No pricing, quote ranges, or rough estimates in checked client-facing surfaces.
 - No Calendar booking.
@@ -194,7 +194,7 @@ Manual items remain:
 - Meta WhatsApp number is not registered yet.
 - Meta webhook is not verified yet.
 - First production inbound WhatsApp message is not confirmed yet.
-- Closed-test auto-reply is not enabled yet.
+- Marcus-approved live auto-reply must be confirmed after redeploy using `/api/whatsapp/health` and one live WhatsApp test message.
 
 ## Exact Next Human Steps For Marcus
 
@@ -206,26 +206,27 @@ Manual items remain:
 6. Set Meta callback URL to `https://YOUR-VERCEL-URL/api/whatsapp/webhook`.
 7. Set the Meta Verify Token to match `WHATSAPP_VERIFY_TOKEN`.
 8. Subscribe to the `messages` webhook field.
-9. Keep `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false` for first inbound logging test.
+9. Confirm `/api/whatsapp/health` shows the required live-mode booleans.
 10. Send one inbound WhatsApp test message.
 11. Confirm lead/message/audit logging in the CRM.
-12. Only after inbound logging is confirmed, Marcus may enable closed-test auto-reply.
+12. Confirm WhatsApp auto-reply is sent or an exact blocked/failed reason is audited.
 
 ## Go / No-Go Recommendation
 
 GO only for deploying the CRM to Vercel.
 
-NO-GO for public WhatsApp auto-reply until:
+GO for Marcus-approved live WhatsApp auto-reply only after:
 
 - Vercel live URL exists.
 - Meta webhook verifies.
 - WhatsApp number is registered.
+- `/api/whatsapp/health` confirms required booleans.
 - First inbound message is confirmed.
-- Closed-test auto-reply is manually enabled by Marcus.
+- Auto-reply sent, blocked, or failed status is visible in audit logs.
 
 Still NO-GO:
 
-- Public WhatsApp auto-reply.
+- WhatsApp blasting or any non-reply campaign sending.
 - Calendar booking.
 - Auto-pricing.
 - Quote ranges.

@@ -33,8 +33,7 @@ function getMissingWebhookConfig() {
   if (envMissing("SUPABASE_SERVICE_ROLE_KEY")) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (envMissing("WHATSAPP_VERIFY_TOKEN")) missing.push("WHATSAPP_VERIFY_TOKEN");
   if (!runtime.liveInboundEnabled) missing.push("WHATSAPP_LIVE_INBOUND_ENABLED=true");
-  if (runtime.publicAutoReplyEnabled) missing.push("WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false");
-  if (!runtime.testMode) missing.push("WHATSAPP_TEST_MODE=true");
+  if (!runtime.autoReplyModeAllowed) missing.push("WHATSAPP_AUTO_REPLY_MODE_VALID");
 
   if (runtime.testAutoReplyEnabled) {
     if (envMissing("WHATSAPP_PHONE_NUMBER_ID")) missing.push("WHATSAPP_PHONE_NUMBER_ID");

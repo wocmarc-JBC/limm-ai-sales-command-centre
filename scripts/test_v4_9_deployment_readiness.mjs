@@ -72,9 +72,9 @@ for (const required of [
   "SUPABASE_SERVICE_ROLE_KEY=",
   "SERVER ONLY",
   "WHATSAPP_LIVE_INBOUND_ENABLED=true",
-  "WHATSAPP_TEST_AUTO_REPLY_ENABLED=false",
-  "WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false",
-  "WHATSAPP_TEST_MODE=true",
+  "WHATSAPP_TEST_AUTO_REPLY_ENABLED=true",
+  "WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true",
+  "WHATSAPP_TEST_MODE=false",
   "WHATSAPP_VERIFY_TOKEN=",
   "WHATSAPP_PHONE_NUMBER_ID=",
   "WHATSAPP_ACCESS_TOKEN=",
@@ -91,7 +91,7 @@ for (const required of [
   "Build command: `npm run build`",
   "https://YOUR-VERCEL-URL/api/whatsapp/webhook",
   "Redeploy",
-  "No public WhatsApp auto-reply"
+  "Marcus-approved live mode"
 ]) {
   assert(vercelGuide.includes(required), `Vercel guide missing: ${required}`);
 }
@@ -101,8 +101,8 @@ for (const required of [
   "https://YOUR-VERCEL-URL/api/whatsapp/webhook",
   "WHATSAPP_VERIFY_TOKEN",
   "messages",
-  "WHATSAPP_TEST_AUTO_REPLY_ENABLED=false",
-  "enable test auto-reply"
+  "WHATSAPP_TEST_AUTO_REPLY_ENABLED=true",
+  "Marcus-approved live mode"
 ]) {
   assert(metaGuide.includes(required), `Meta webhook setup guide missing: ${required}`);
 }

@@ -51,6 +51,7 @@ for (const required of [
   "V4_7_OPENAI_DRY_RUN_BOSS_REVIEW_UX_REPORT.md",
   "V4_8_WHATSAPP_LIVE_CLOSED_TEST_REPORT.md",
   "V4_8_WHATSAPP_LIVE_DIAGNOSTIC_FIX_REPORT.md",
+  "V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md",
   "V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md",
   "WHATSAPP_LIVE_TEST_SETUP_GUIDE.md",
   "WHATSAPP_EMERGENCY_OFF_GUIDE.md",
@@ -352,7 +353,7 @@ const whatsappDebugRoute = read("app/api/whatsapp/debug-parse/route.ts");
 assert(whatsappDebugRoute.includes("debug_endpoint_disabled"), "WhatsApp debug parse route must be disabled behind a safe flag.");
 assert(!/saveLeadMessage|upsertWhatsAppLead|sendReply|createAuditLog/.test(whatsappDebugRoute), "WhatsApp debug parse route must not write data or send messages.");
 const whatsappConfig = read("lib/whatsapp-config.ts");
-for (const phrase of ["WHATSAPP_LIVE_INBOUND_ENABLED", "WHATSAPP_TEST_AUTO_REPLY_ENABLED", "WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED", "WHATSAPP_TEST_MODE", "!publicAutoReplyEnabled"]) {
+for (const phrase of ["WHATSAPP_LIVE_INBOUND_ENABLED", "WHATSAPP_TEST_AUTO_REPLY_ENABLED", "WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED", "WHATSAPP_TEST_MODE", "!publicAutoReplyEnabled", "liveAutoReplyApproved", "autoReplyModeAllowed"]) {
   assert(whatsappConfig.includes(phrase), `WhatsApp config missing ${phrase}`);
 }
 const envExample = read(".env.example");
@@ -374,6 +375,7 @@ for (const phrase of ["whatsapp_inbound_received", "whatsapp_auto_reply_sent", "
 }
 const whatsappDocs = read("WHATSAPP_LIVE_TEST_SETUP_GUIDE.md") + read("WHATSAPP_EMERGENCY_OFF_GUIDE.md");
 assert(whatsappDocs.includes("WHATSAPP_TEST_AUTO_REPLY_ENABLED=false"), "WhatsApp emergency kill switch doc missing.");
+assert(whatsappDocs.includes("WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true"), "WhatsApp docs must include Marcus-approved live mode.");
 assert(read("supabase/MIGRATION_ORDER.md").includes("018_v4_8_whatsapp_closed_test.sql"), "Migration order missing v4.8 WhatsApp migration.");
 
 const deploymentDocs = read("PRODUCTION_ENV_VARS_CHECKLIST.md") + read("VERCEL_DEPLOYMENT_GUIDE.md") + read("META_WHATSAPP_WEBHOOK_LIVE_SETUP.md");
@@ -382,8 +384,8 @@ for (const phrase of [
   "Build command: `npm run build`",
   "SUPABASE_SERVICE_ROLE_KEY=",
   "SERVER ONLY",
-  "WHATSAPP_TEST_AUTO_REPLY_ENABLED=false",
-  "WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false"
+  "WHATSAPP_TEST_AUTO_REPLY_ENABLED=true",
+  "WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true"
 ]) {
   assert(deploymentDocs.includes(phrase), `Deployment readiness docs missing ${phrase}`);
 }

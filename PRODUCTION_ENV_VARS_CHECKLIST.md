@@ -23,15 +23,15 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 Why it exists: Meta webhooks arrive without a logged-in boss user, so the server-only webhook needs this key to write inbound WhatsApp messages and audit logs through RLS safely.
 
-## WhatsApp Closed-Test Variables
+## WhatsApp Live Variables
 
-Default public production auto-reply remains disabled.
+Marcus-approved live mode uses public auto-reply enabled with test mode disabled.
 
 ```text
 WHATSAPP_LIVE_INBOUND_ENABLED=true
-WHATSAPP_TEST_AUTO_REPLY_ENABLED=false
-WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false
-WHATSAPP_TEST_MODE=true
+WHATSAPP_TEST_AUTO_REPLY_ENABLED=true
+WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true
+WHATSAPP_TEST_MODE=false
 WHATSAPP_VERIFY_TOKEN=
 WHATSAPP_PHONE_NUMBER_ID=
 WHATSAPP_ACCESS_TOKEN=
@@ -40,9 +40,9 @@ WHATSAPP_BUSINESS_NUMBER=
 
 Important:
 
-- Keep `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false` for first webhook verification.
-- Keep `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false`.
-- Do not enable public auto-reply in v4.9.
+- Emergency off remains `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false`.
+- Closed test remains available with `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false` and `WHATSAPP_TEST_MODE=true`.
+- Any other public/test mode pairing is blocked.
 
 ## OpenAI Dry-Run Variables
 
@@ -69,6 +69,6 @@ NEXT_PUBLIC_ENABLE_REVIEW_ROUTE=false
 - No `.env.local` is committed.
 - No service role key appears in browser code.
 - No WhatsApp token appears in browser code.
-- Public auto-reply remains disabled.
+- WhatsApp public auto-reply is Marcus-approved only for this live mode.
 - Calendar remains disabled.
 - Auto-pricing remains disabled.

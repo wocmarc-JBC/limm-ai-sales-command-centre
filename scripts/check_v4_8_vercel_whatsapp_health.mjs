@@ -29,19 +29,21 @@ const required = [
 
 const optional = ["publicAutoReplyEnabled", "testMode"];
 const failed = required.filter((key) => health[key] !== true);
+const closedTestMode = health.publicAutoReplyEnabled === false && health.testMode === true;
+const approvedLiveMode = health.publicAutoReplyEnabled === true && health.testMode === false;
 
 console.log("WhatsApp health summary");
 for (const key of [...required, ...optional]) {
   console.log(`${key}: ${health[key] === true ? "PASS" : health[key] === false ? "FAIL/false" : "UNKNOWN"}`);
 }
 
-if (health.publicAutoReplyEnabled === true) {
-  failed.push("publicAutoReplyEnabled must remain false for closed testing");
+if (!closedTestMode && !approvedLiveMode) {
+  failed.push("publicAutoReplyEnabled/testMode must be either closed test or Marcus-approved live mode");
 }
 
 if (failed.length) {
-  console.error(`FAIL: Missing or unsafe live closed-test fields: ${failed.join(", ")}`);
+  console.error(`FAIL: Missing or unsafe WhatsApp fields: ${failed.join(", ")}`);
   process.exit(1);
 }
 
-console.log("PASS: WhatsApp Vercel health is ready for closed live test.");
+console.log(`PASS: WhatsApp Vercel health is ready for ${approvedLiveMode ? "Marcus-approved live mode" : "closed test mode"}.`);

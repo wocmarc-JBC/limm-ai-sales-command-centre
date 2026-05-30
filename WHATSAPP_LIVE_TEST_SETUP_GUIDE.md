@@ -1,8 +1,8 @@
-# WhatsApp Live Closed Test Setup Guide
+# WhatsApp Live Setup Guide
 
-Status: v4.8 closed test only.
+Status: v4.8 supports closed test mode and Marcus-approved live WhatsApp auto-reply mode.
 
-This guide is for Marcus-only WhatsApp testing before the number is public. Public production auto-reply remains NO-GO.
+Marcus has approved live auto-reply for the current WhatsApp number. This remains reply-only, safety-gated, audited, and kill-switch controlled.
 
 ## 1. Required Meta Values
 
@@ -25,7 +25,9 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 This key must stay server-side only. It must never be used in frontend code.
 
-## 3. Closed Test Environment
+## 3. Supported Environment Modes
+
+### Closed Test Mode
 
 In `.env.local`, use:
 
@@ -34,6 +36,21 @@ WHATSAPP_LIVE_INBOUND_ENABLED=true
 WHATSAPP_TEST_AUTO_REPLY_ENABLED=true
 WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false
 WHATSAPP_TEST_MODE=true
+WHATSAPP_VERIFY_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_BUSINESS_NUMBER=
+```
+
+### Marcus-Approved Live Mode
+
+Use this mode only after Marcus explicitly approves live WhatsApp auto-reply:
+
+```powershell
+WHATSAPP_LIVE_INBOUND_ENABLED=true
+WHATSAPP_TEST_AUTO_REPLY_ENABLED=true
+WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true
+WHATSAPP_TEST_MODE=false
 WHATSAPP_VERIFY_TOKEN=
 WHATSAPP_PHONE_NUMBER_ID=
 WHATSAPP_ACCESS_TOKEN=
@@ -103,8 +120,8 @@ Other emergency steps:
 
 ## Safety Posture
 
-- Marcus-only closed test: GO.
-- Public auto-reply: NO-GO.
+- Closed test mode: GO.
+- Marcus-approved live auto-reply mode: GO after health endpoint confirms all required booleans.
 - WhatsApp blasting: NO-GO.
 - Calendar booking: NO-GO.
 - Auto-pricing or quote ranges: NO-GO.

@@ -53,6 +53,7 @@ async function auditWhatsApp(input: {
   metadata?: Record<string, unknown>;
   afterData?: Record<string, unknown> | null;
 }) {
+  const runtime = getWhatsAppRuntime();
   try {
     await createAuditLog({
       actorType: "system",
@@ -65,8 +66,11 @@ async function auditWhatsApp(input: {
       afterData: input.afterData ?? null,
       metadata: {
         channel: "whatsapp",
-        closedTest: true,
-        noPublicAutoReply: true,
+        closedTest: runtime.closedTestAutoReplyAllowed,
+        marcusApprovedLiveMode: runtime.liveAutoReplyApproved,
+        publicAutoReplyEnabled: runtime.publicAutoReplyEnabled,
+        testMode: runtime.testMode,
+        autoReplyModeAllowed: runtime.autoReplyModeAllowed,
         noCalendarBooking: true,
         noPricing: true,
         ...(input.metadata ?? {})
@@ -182,7 +186,7 @@ export async function handleWhatsAppInboundMessage(
   await auditWhatsApp({
     action: "whatsapp_inbound_received",
     leadId: lead.id,
-    summary: "WhatsApp inbound message received and saved for closed-test review.",
+    summary: "WhatsApp inbound message received and saved for review.",
     metadata: { providerMessageId, messageType: message.type }
   });
 
@@ -205,7 +209,7 @@ export async function handleWhatsAppInboundMessage(
   await auditWhatsApp({
     action: "whatsapp_auto_reply_requested",
     leadId: lead.id,
-    summary: "WhatsApp closed-test auto-reply requested and safety-gated.",
+    summary: "WhatsApp auto-reply requested and safety-gated.",
     metadata: { providerMessageId }
   });
 
@@ -214,7 +218,7 @@ export async function handleWhatsAppInboundMessage(
     await auditWhatsApp({
       action: "whatsapp_auto_reply_disabled",
       leadId: lead.id,
-      summary: "WhatsApp closed-test auto-reply disabled by kill switch.",
+      summary: "WhatsApp auto-reply disabled by kill switch.",
       metadata: { providerMessageId, reason: "WHATSAPP_TEST_AUTO_REPLY_ENABLED=false" }
     });
     return {
@@ -225,25 +229,25 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
-  if (runtime.publicAutoReplyEnabled || !runtime.testMode) {
+  if (!runtime.autoReplyModeAllowed) {
     logWhatsApp("whatsapp_auto_reply_disabled", {
       providerMessageId,
       leadId: lead.id,
-      reason: "closed_test_guard",
+      reason: "invalid_auto_reply_mode",
       publicAutoReplyEnabled: runtime.publicAutoReplyEnabled,
       testMode: runtime.testMode
     });
     await auditWhatsApp({
       action: "whatsapp_auto_reply_disabled",
       leadId: lead.id,
-      summary: "WhatsApp auto-reply disabled because public mode or non-test mode was detected.",
+      summary: "WhatsApp auto-reply disabled because the public/test mode pairing is invalid.",
       metadata: { providerMessageId, publicAutoReplyEnabled: runtime.publicAutoReplyEnabled, testMode: runtime.testMode }
     });
     return {
       providerMessageId,
       leadId: lead.id,
       status: "auto_reply_disabled",
-      reason: "Closed-test guard requires public auto-reply false and test mode true."
+      reason: "Auto-reply requires either closed test mode or Marcus-approved live mode."
     };
   }
 
@@ -331,14 +335,14 @@ export async function handleWhatsAppInboundMessage(
     await auditWhatsApp({
       action: "whatsapp_auto_reply_sent",
       leadId: lead.id,
-      summary: "WhatsApp closed-test auto-reply sent after safety validation.",
+      summary: "WhatsApp auto-reply sent after safety validation.",
       metadata: { providerMessageId, outboundProviderMessageId: sent.providerMessageId }
     });
     return {
       providerMessageId,
       leadId: lead.id,
       status: "auto_reply_sent",
-      reason: "Closed-test auto-reply sent after safety validation.",
+      reason: "WhatsApp auto-reply sent after safety validation.",
       reply
     };
   } catch (error) {
@@ -357,7 +361,7 @@ export async function handleWhatsAppInboundMessage(
     await auditWhatsApp({
       action: "whatsapp_auto_reply_failed",
       leadId: lead.id,
-      summary: "WhatsApp closed-test auto-reply failed. No retry loop was started.",
+      summary: "WhatsApp auto-reply failed. No retry loop was started.",
       metadata: {
         providerMessageId,
         error: error instanceof Error ? error.message : "Unknown WhatsApp send failure"

@@ -5,7 +5,7 @@ This version is approved for controlled internal use, not full public production
 ## Disabled Integrations
 
 - OpenAI live brain is disabled. OpenAI dry-run remains boss-review only when intentionally enabled.
-- WhatsApp public production auto-reply is disabled. v4.8/v4.9 allows only Marcus-only closed test auto-reply behind kill switches.
+- WhatsApp supports closed test auto-reply and Marcus-approved live auto-reply behind kill switches.
 - Calendar live booking is disabled.
 - Real file upload is disabled or placeholder-only.
 - Review route is disabled by default.
@@ -26,7 +26,8 @@ Quotation readiness is only an internal readiness tool. Marcus still needs to re
 - Use controlled internal testing first.
 - Do not treat this as a public production deployment.
 - No WhatsApp blasting exists or should be added.
-- v4.8 WhatsApp closed test requires `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false` and `WHATSAPP_TEST_MODE=true`.
+- Closed test mode requires `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false` and `WHATSAPP_TEST_MODE=true`.
+- Marcus-approved live mode requires `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true` and `WHATSAPP_TEST_MODE=false`.
 - Emergency off is `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false`.
 - v4.9 Vercel deployment is only webhook-ready until Meta verifies the callback URL and inbound logging is confirmed.
 - Expected future lead volume is around 60 leads per month.

@@ -89,6 +89,9 @@ assert(/console\.info\("whatsapp_webhook_received_start"\)/.test(webhook), "Webh
 assert(webhook.includes("await request.text()"), "Webhook must read raw body before parsing.");
 assert(webhook.includes("JSON.parse(rawBody)"), "Webhook must parse JSON inside the guarded handler.");
 assert(webhook.includes("missing") && webhook.includes("SUPABASE_SERVICE_ROLE_KEY"), "Webhook must return missing config names safely.");
+assert(webhook.includes("WHATSAPP_AUTO_REPLY_MODE_VALID"), "Webhook must validate the public/test mode pairing safely.");
+assert(!webhook.includes("WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false"), "Webhook must not force closed-test public=false after Marcus live approval.");
+assert(!webhook.includes("WHATSAPP_TEST_MODE=true"), "Webhook must not force closed-test mode after Marcus live approval.");
 assert(webhook.includes("handleWhatsAppInboundMessage"), "Webhook must still use the closed-test handler.");
 assert(!/return NextResponse\.json\(\{\s*ok:\s*true\s*\}\s*\)/.test(webhook), "Webhook must not return a fake success without processing reason.");
 
@@ -110,6 +113,13 @@ for (const marker of [
   "whatsapp_auto_reply_failed"
 ]) {
   assert(service.includes(marker), `WhatsApp service missing staged marker: ${marker}`);
+}
+assert(service.includes("autoReplyModeAllowed"), "WhatsApp service must accept closed test mode and Marcus-approved live mode.");
+assert(!service.includes("Closed-test guard requires public auto-reply false and test mode true"), "WhatsApp service must not reject Marcus-approved live mode.");
+
+const config = read("lib/whatsapp-config.ts");
+for (const phrase of ["closedTestAutoReplyAllowed", "liveAutoReplyApproved", "autoReplyModeAllowed", "publicAutoReplyEnabled && !testMode"]) {
+  assert(config.includes(phrase), `WhatsApp config missing live mode support: ${phrase}`);
 }
 
 const parser = read("lib/whatsapp-parser.ts");

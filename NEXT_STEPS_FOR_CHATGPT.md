@@ -14,7 +14,7 @@
 Run the v4.9 deployment readiness verification:
 
 - Keep all v4.0-v4.8 safety rules unchanged.
-- Do not enable public WhatsApp auto-reply.
+- Marcus has approved live WhatsApp auto-reply for the current number.
 - Do not enable Calendar.
 - Do not add pricing, quote ranges, or auto-pricing.
 - Do not hardcode Sunday blocked.
@@ -42,16 +42,20 @@ node scripts/audit_v3_package.mjs
 - Confirm `/review-chatgpt-ui` is unavailable by default.
 - Set Meta callback URL to `https://YOUR-VERCEL-URL/api/whatsapp/webhook`.
 - Verify Meta webhook with matching `WHATSAPP_VERIFY_TOKEN`.
-- Keep `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false` until inbound logging is confirmed.
+- Use Marcus-approved live mode when ready:
+  - `WHATSAPP_LIVE_INBOUND_ENABLED=true`
+  - `WHATSAPP_TEST_AUTO_REPLY_ENABLED=true`
+  - `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true`
+  - `WHATSAPP_TEST_MODE=false`
 - Add monitoring/error reporting plan before public production.
-- Prepare the next integration phase design, but keep Calendar booking, public auto-reply, and pricing disabled until Marcus approves.
+- Prepare the next integration phase design, but keep Calendar booking and pricing disabled until Marcus approves.
 
 ## Avoid
 
 - Do not copy old review/demo surfaces into production.
 - Do not expose `/review-chatgpt-ui` without the explicit review flag.
 - Do not auto-generate prices.
-- Do not enable public WhatsApp auto-reply.
+- Do not enable WhatsApp blasting or autonomous approval bypass.
 - Do not add WhatsApp broadcast or blasting.
 - Do not hardcode secrets.
 - Do not mark full production GO before backups, monitoring, and deployment hardening are complete.

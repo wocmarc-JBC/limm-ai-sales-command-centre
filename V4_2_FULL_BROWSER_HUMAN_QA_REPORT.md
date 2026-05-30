@@ -1,7 +1,7 @@
 # v4.2 Full Browser Human QA Report
 
-Run marker: v4_2_browser_human_test_2026-05-30T09-14-37-101Z
-Generated: 2026-05-30T09:21:09.723Z
+Run marker: v4_2_browser_human_test_2026-05-30T09-47-58-852Z
+Generated: 2026-05-30T09:54:03.634Z
 
 ## Status PASS/FAIL
 
@@ -76,56 +76,56 @@ MANUAL REQUIRED. SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD were not present
 
 ## Screenshots Captured
 
-Folder: screenshots/v4_2_browser_human_test_2026-05-30T09-14-37-101Z
+Folder: screenshots/v4_2_browser_human_test_2026-05-30T09-47-58-852Z
 
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-dashboard.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-login.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-leads.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-leads-lead-001.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-appointments.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-appointment-settings.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-approvals.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-followups.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-quotation-readiness.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-client-files.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-reports.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-settings.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-audit-log.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-route-review-chatgpt-ui.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-review-route-disabled.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\desktop-chromium-login.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-dashboard.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-login.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-leads.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-leads-lead-001.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-appointments.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-appointment-settings.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-approvals.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-followups.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-quotation-readiness.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-client-files.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-reports.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-settings.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-audit-log.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-route-review-chatgpt-ui.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-review-route-disabled.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\mobile-chromium-login.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-dashboard.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-login.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-leads.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-leads-lead-001.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-appointments.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-appointment-settings.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-approvals.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-followups.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-quotation-readiness.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-client-files.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-reports.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-settings.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-audit-log.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-route-review-chatgpt-ui.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-review-route-disabled.png
-- screenshots\v4_2_browser_human_test_2026-05-30T09-14-37-101Z\tablet-chromium-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-dashboard.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-leads.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-leads-lead-001.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-appointments.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-appointment-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-approvals.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-followups.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-quotation-readiness.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-client-files.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-reports.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-audit-log.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-route-review-chatgpt-ui.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-review-route-disabled.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\desktop-chromium-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-dashboard.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-leads.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-leads-lead-001.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-appointments.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-appointment-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-approvals.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-followups.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-quotation-readiness.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-client-files.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-reports.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-audit-log.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-route-review-chatgpt-ui.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-review-route-disabled.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\mobile-chromium-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-dashboard.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-login.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-leads.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-leads-lead-001.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-appointments.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-appointment-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-approvals.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-followups.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-quotation-readiness.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-client-files.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-reports.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-settings.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-audit-log.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-route-review-chatgpt-ui.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-review-route-disabled.png
+- screenshots\v4_2_browser_human_test_2026-05-30T09-47-58-852Z\tablet-chromium-login.png
 
 ## Traces Captured If Failures
 
@@ -216,10 +216,10 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - app/api/whatsapp/health/route.ts:24 contains "SUPABASE_SERVICE_ROLE_KEY"
 - app/api/whatsapp/webhook/route.ts:33 contains "service_role"
 - app/api/whatsapp/webhook/route.ts:33 contains "SUPABASE_SERVICE_ROLE_KEY"
-- CURRENT_STATUS.md:57 contains "quote range"
-- CURRENT_STATUS.md:57 contains "rough estimate"
-- CURRENT_STATUS.md:57 contains "estimated price"
-- CURRENT_STATUS.md:57 contains "package price"
+- CURRENT_STATUS.md:25 contains "quote range"
+- CURRENT_STATUS.md:58 contains "rough estimate"
+- CURRENT_STATUS.md:58 contains "estimated price"
+- CURRENT_STATUS.md:58 contains "package price"
 - DEV_BRAIN_QA_REPORT.md:223 contains "quote range"
 - INTERNAL_LAUNCH_CHECKLIST.md:63 contains "quote range"
 - INTERNAL_LAUNCH_CHECKLIST.md:28 contains "rough estimate"
@@ -241,7 +241,7 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - lib/whatsapp-safety.ts:6 contains "estimated price"
 - lib/whatsapp-safety.ts:6 contains "package price"
 - LIVE_SUPABASE_SETUP_GUIDE.md:122 contains "quote range"
-- META_WHATSAPP_WEBHOOK_LIVE_SETUP.md:93 contains "quote range"
+- META_WHATSAPP_WEBHOOK_LIVE_SETUP.md:84 contains "quote range"
 - NEXT_PHASE_OPENAI_BRAIN_PLAN.md:14 contains "quote range"
 - NEXT_PHASE_OPENAI_BRAIN_PLAN.md:15 contains "rough estimate"
 - NEXT_STEPS_FOR_CHATGPT.md:19 contains "quote range"
@@ -251,11 +251,11 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - README.md:61 contains "quote range"
 - README.md:68 contains "service_role"
 - README.md:68 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/audit_v3_package.mjs:217 contains "free consultation"
-- scripts/audit_v3_package.mjs:210 contains "quote range"
-- scripts/audit_v3_package.mjs:213 contains "package price"
-- scripts/audit_v3_package.mjs:170 contains "service_role"
-- scripts/audit_v3_package.mjs:170 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/audit_v3_package.mjs:218 contains "free consultation"
+- scripts/audit_v3_package.mjs:211 contains "quote range"
+- scripts/audit_v3_package.mjs:214 contains "package price"
+- scripts/audit_v3_package.mjs:171 contains "service_role"
+- scripts/audit_v3_package.mjs:171 contains "SUPABASE_SERVICE_ROLE_KEY"
 - scripts/dev_brain_route_probe.mjs:33 contains "free consultation"
 - scripts/dev_brain_route_probe.mjs:33 contains "quote range"
 - scripts/dev_brain_route_probe.mjs:33 contains "rough estimate"
@@ -311,10 +311,10 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - scripts/test_v4_7_openai_boss_review_ux.mjs:112 contains "package price"
 - scripts/test_v4_8_live_diagnostics_static.mjs:91 contains "service_role"
 - scripts/test_v4_8_live_diagnostics_static.mjs:91 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v4_8_whatsapp_closed_test.mjs:104 contains "free consultation"
-- scripts/test_v4_8_whatsapp_closed_test.mjs:105 contains "quote range"
-- scripts/test_v4_8_whatsapp_closed_test.mjs:106 contains "rough estimate"
-- scripts/test_v4_8_whatsapp_closed_test.mjs:107 contains "package price"
+- scripts/test_v4_8_whatsapp_closed_test.mjs:106 contains "free consultation"
+- scripts/test_v4_8_whatsapp_closed_test.mjs:107 contains "quote range"
+- scripts/test_v4_8_whatsapp_closed_test.mjs:108 contains "rough estimate"
+- scripts/test_v4_8_whatsapp_closed_test.mjs:109 contains "package price"
 - scripts/test_v4_9_deployment_readiness.mjs:177 contains "free consultation"
 - scripts/test_v4_9_deployment_readiness.mjs:181 contains "quote range"
 - scripts/test_v4_9_deployment_readiness.mjs:183 contains "rough estimate"
@@ -402,16 +402,21 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - V4_8_WHATSAPP_LIVE_CLOSED_TEST_REPORT.md:70 contains "package price"
 - V4_8_WHATSAPP_LIVE_DIAGNOSTIC_FIX_REPORT.md:7 contains "service_role"
 - V4_8_WHATSAPP_LIVE_DIAGNOSTIC_FIX_REPORT.md:7 contains "SUPABASE_SERVICE_ROLE_KEY"
+- V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md:69 contains "quote range"
+- V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md:70 contains "rough estimate"
+- V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md:71 contains "package price"
+- V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md:34 contains "service_role"
+- V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md:34 contains "SUPABASE_SERVICE_ROLE_KEY"
 - V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md:7 contains "quote range"
 - V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md:7 contains "rough estimate"
 - VERCEL_DEPLOYMENT_GUIDE.md:95 contains "quote range"
-- VERCEL_DEPLOYMENT_GUIDE.md:52 contains "service_role"
-- VERCEL_DEPLOYMENT_GUIDE.md:52 contains "SUPABASE_SERVICE_ROLE_KEY"
-- WHATSAPP_AUTO_REPLY_SAFETY_RULES.md:22 contains "quote range"
-- WHATSAPP_AUTO_REPLY_SAFETY_RULES.md:23 contains "rough estimate"
-- WHATSAPP_AUTO_REPLY_SAFETY_RULES.md:24 contains "package price"
-- WHATSAPP_EMERGENCY_OFF_GUIDE.md:43 contains "quote range"
-- WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:110 contains "quote range"
+- VERCEL_DEPLOYMENT_GUIDE.md:53 contains "service_role"
+- VERCEL_DEPLOYMENT_GUIDE.md:53 contains "SUPABASE_SERVICE_ROLE_KEY"
+- WHATSAPP_AUTO_REPLY_SAFETY_RULES.md:28 contains "quote range"
+- WHATSAPP_AUTO_REPLY_SAFETY_RULES.md:29 contains "rough estimate"
+- WHATSAPP_AUTO_REPLY_SAFETY_RULES.md:30 contains "package price"
+- WHATSAPP_EMERGENCY_OFF_GUIDE.md:42 contains "quote range"
+- WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:127 contains "quote range"
 - WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:23 contains "service_role"
 - WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:23 contains "SUPABASE_SERVICE_ROLE_KEY"
 - node_modules is present in the working folder

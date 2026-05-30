@@ -151,7 +151,7 @@ function buildReportPayload() {
       supabasePublicEnvDetected: Boolean(loadPublicEnv().NEXT_PUBLIC_SUPABASE_URL && loadPublicEnv().NEXT_PUBLIC_SUPABASE_ANON_KEY),
       authenticatedCredentialsPresent: Boolean(process.env.SUPABASE_TEST_EMAIL && process.env.SUPABASE_TEST_PASSWORD),
       openAi: process.env.OPENAI_BRAIN_DRY_RUN === "true" ? "dry-run enabled; no live actions" : "disabled",
-      whatsapp: process.env.WHATSAPP_TEST_AUTO_REPLY_ENABLED === "true" ? "closed-test requested; gated by safety flags" : "closed-test disabled by default",
+      whatsapp: process.env.WHATSAPP_TEST_AUTO_REPLY_ENABLED === "true" ? "auto-reply requested; gated by live/closed-test mode flags and safety validator" : "auto-reply disabled by default",
       calendar: "disabled"
     },
     results,
@@ -186,7 +186,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "Deploy the CRM to Vercel, verify the production WhatsApp webhook, then keep public auto-reply disabled until Marcus confirms closed-test inbound logging."
+      : "Redeploy the CRM to Vercel, confirm WhatsApp health booleans for Marcus-approved live mode, then send one live WhatsApp test message and verify lead, message, audit, and sent reply logs."
   };
 }
 

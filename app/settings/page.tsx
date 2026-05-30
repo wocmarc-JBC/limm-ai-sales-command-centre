@@ -31,14 +31,14 @@ export default async function SettingsPage() {
     ["WhatsApp", health.whatsappStatus],
     ["WhatsApp live inbound", whatsapp.liveInboundEnabled ? "Enabled" : "Disabled by default"],
     ["WhatsApp test auto-reply", whatsapp.testAutoReplyEnabled ? "Enabled" : "Disabled by default"],
-    ["WhatsApp public auto-reply", whatsapp.publicAutoReplyEnabled ? "Enabled - public mode not approved" : "Disabled"],
+    ["WhatsApp public auto-reply", whatsapp.publicAutoReplyEnabled ? "Enabled - Marcus-approved live mode" : "Disabled"],
     ["WhatsApp test mode", whatsapp.testMode ? "Enabled" : "Disabled"],
     ["WhatsApp credentials", whatsapp.credentialsReady ? "Configured" : "Missing or incomplete"],
-    ["WhatsApp closed-test posture", whatsapp.statusLabel],
-    ["WhatsApp safety", "No pricing / no Calendar booking / public auto-reply disabled"],
+    ["WhatsApp auto-reply posture", whatsapp.statusLabel],
+    ["WhatsApp safety", "No pricing / no Calendar booking / safety validator required"],
     ["Calendar", health.calendarStatus],
     ["Live auto-send", "Off"],
-    ["WhatsApp mode", "Closed-test reply-only when Marcus enables the kill switches"],
+    ["WhatsApp mode", whatsapp.liveAutoReplyApproved ? "Marcus-approved live auto-reply" : "Closed-test reply-only unless Marcus enables live mode"],
     ["Target monthly volume", "Around 60 leads"],
     ["Cost posture", "Around S$100/month target when live"]
   ];

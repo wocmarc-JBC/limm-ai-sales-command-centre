@@ -7,9 +7,9 @@ Status: v4.9 Vercel deployment and production WhatsApp webhook readiness impleme
 Current goal:
 
 - Deploy the CRM to Vercel.
-- Keep public WhatsApp auto-reply disabled.
-- Prepare the production webhook URL for Meta verification.
-- Confirm inbound WhatsApp logging before Marcus manually enables any closed-test auto-reply.
+- Run Marcus-approved live WhatsApp auto-reply mode.
+- Keep WhatsApp reply-only, audited, safety-gated, and kill-switch controlled.
+- Confirm inbound WhatsApp logging and outbound auto-reply in Vercel logs and CRM audit logs.
 
 Deployment readiness files:
 
@@ -21,7 +21,8 @@ Deployment readiness files:
 Go/No-Go:
 
 - GO for deploying the CRM to Vercel.
-- NO-GO for public WhatsApp auto-reply until the Vercel URL exists, Meta verifies the webhook, the WhatsApp number is registered, inbound logging is confirmed, and Marcus manually enables closed-test auto-reply.
+- GO for Marcus-approved live WhatsApp auto-reply mode after health endpoint confirms required booleans.
+- NO-GO for WhatsApp blasting, Calendar booking, payment collection, pricing, quote ranges, or any approval bypass.
 
 ## v4.4 Production Lockdown / Internal Launch Gate
 
@@ -51,8 +52,8 @@ New v4.4 lockdown work:
 ## Production Safety Status
 
 - OpenAI live brain remains disabled.
-- WhatsApp public auto-reply remains disabled.
-- WhatsApp closed-test code exists but stays behind kill switches.
+- WhatsApp supports closed test mode and Marcus-approved live auto-reply mode.
+- WhatsApp auto-reply stays behind kill switches.
 - Calendar remains disabled.
 - No pricing, quote ranges, estimated prices, package prices, or rough estimates were added.
 - Sunday remains configurable by appointment settings.
@@ -85,16 +86,16 @@ node scripts/audit_v3_package.mjs
 ## Must Not Be Changed Before Internal Launch
 
 - Do not enable OpenAI live actions.
-- Do not enable public WhatsApp live sending.
+- Do not enable WhatsApp blasting or any unapproved public campaign sending.
 - Do not enable Google Calendar live booking.
 - Do not generate prices or amount ranges.
 - Do not hardcode Sunday as blocked.
 - Do not weaken audit logs.
 - Do not enable `/review-chatgpt-ui` in production.
 
-## v4.8 WhatsApp Closed Test Status
+## v4.8 WhatsApp Auto-Reply Status
 
-Status: WhatsApp Marcus-only closed test auto-reply is implemented behind kill switches.
+Status: WhatsApp closed test mode and Marcus-approved live auto-reply mode are implemented behind kill switches.
 
 Default state remains safe:
 
@@ -103,7 +104,17 @@ Default state remains safe:
 - `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false`
 - `WHATSAPP_TEST_MODE=true`
 
-Closed test may be enabled only when Marcus is the expected test client and public auto-reply remains disabled. Calendar booking, public production auto-reply, blasting, and pricing remain NO-GO.
+Closed test mode:
+
+- `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false`
+- `WHATSAPP_TEST_MODE=true`
+
+Marcus-approved live mode:
+
+- `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true`
+- `WHATSAPP_TEST_MODE=false`
+
+Calendar booking, blasting, pricing, quote ranges, and approval bypass remain NO-GO.
 
 ## v4.9 Deployment Status
 

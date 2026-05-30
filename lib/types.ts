@@ -223,6 +223,6 @@ export interface SystemHealth {
   rlsExpected: boolean;
   rlsNotes: string;
   openAiStatus: "disabled" | "dry_run_key_missing" | "dry_run_ready";
-  whatsappStatus: "disabled" | "closed_test_ready" | "closed_test_credentials_missing" | "inbound_only";
+  whatsappStatus: "disabled" | "closed_test_ready" | "live_auto_reply_ready" | "closed_test_credentials_missing" | "inbound_only";
   calendarStatus: "disabled";
 }

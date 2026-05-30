@@ -16,6 +16,8 @@ export function getSystemHealth(): SystemHealth {
   const whatsapp = getWhatsAppRuntime();
   const whatsappStatus: SystemHealth["whatsappStatus"] = whatsapp.closedTestAutoReplyAllowed
     ? "closed_test_ready"
+    : whatsapp.liveAutoReplyApproved
+      ? "live_auto_reply_ready"
     : whatsapp.liveInboundEnabled || whatsapp.testAutoReplyEnabled
       ? whatsapp.credentialsReady
         ? "inbound_only"

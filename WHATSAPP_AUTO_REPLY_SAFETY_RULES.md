@@ -1,13 +1,19 @@
 # WhatsApp Auto-Reply Safety Rules
 
-v4.8 allows Marcus-only closed testing. It does not approve public production auto-reply.
+v4.8 now supports two Marcus-controlled modes:
+
+1. Closed test mode.
+2. Marcus-approved live WhatsApp auto-reply mode.
+
+Marcus has approved live auto-reply for the current WhatsApp number. This does not relax safety validation, pricing restrictions, Calendar restrictions, audit logging, or kill switches.
 
 ## Auto-Reply Allowed Only When All Are True
 
 - `WHATSAPP_LIVE_INBOUND_ENABLED=true`
 - `WHATSAPP_TEST_AUTO_REPLY_ENABLED=true`
-- `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false`
-- `WHATSAPP_TEST_MODE=true`
+- Mode is valid:
+  - Closed test: `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false` and `WHATSAPP_TEST_MODE=true`
+  - Marcus-approved live: `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true` and `WHATSAPP_TEST_MODE=false`
 - WhatsApp Cloud API credentials exist
 - Inbound message is valid text
 - Provider message id has not been processed before
@@ -40,15 +46,17 @@ The fallback reply asks for floor plan or site photos and uses initial project r
 
 The app must not send more than 3 auto-replies to the same lead within 10 minutes.
 
-## No Public Mode
+## Approved Modes
 
-If `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true`, v4.8 blocks the closed-test auto-reply path. Public production auto-reply needs a future approval phase.
+- Closed test remains supported for local/internal testing.
+- Marcus-approved live mode is supported when Marcus sets `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true` and `WHATSAPP_TEST_MODE=false`.
+- Any other pairing is blocked as invalid mode.
 
 ## Closed-Test Labels
 
 - No Calendar booking
 - No pricing
-- Marcus-only closed test
+- Marcus-approved live mode or closed test mode
 
 ---
 

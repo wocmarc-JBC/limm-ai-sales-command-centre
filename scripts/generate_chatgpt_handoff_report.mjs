@@ -8,8 +8,8 @@ const data = process.env.DEV_BRAIN_RUN_JSON ? JSON.parse(process.env.DEV_BRAIN_R
 const status = data?.status ?? "UNKNOWN";
 const authStatus = data?.authTested ? "Authenticated boss browser/write checks ran." : "Authenticated boss checks are MANUAL REQUIRED until test credentials are set.";
 const browserStatus = data?.browserCompleted ? "Playwright browser QA completed." : "Playwright browser QA did not complete.";
-const openIssues = data?.bugsRemaining?.length ? data.bugsRemaining : ["Run npm run qa:dev-brain for current open issues."];
-const nextAction = data?.nextCodexTask ?? "Deploy the CRM to Vercel, verify the production WhatsApp webhook, and keep public auto-reply disabled.";
+const openIssues = data?.bugsRemaining?.length ? data.bugsRemaining : ["None known from the latest Dev Brain run."];
+const nextAction = data?.nextCodexTask ?? "Deploy the CRM to Vercel, verify WhatsApp health booleans for Marcus-approved live mode, then send one live WhatsApp test message and confirm lead, message, audit, and sent reply logs.";
 
 const report = [
   "# ChatGPT Handoff Report",
@@ -34,8 +34,8 @@ const report = [
   "## Safety Status",
   "",
   "- Client-facing OpenAI brain remains disabled.",
-  "- WhatsApp Marcus-only closed test auto-reply is available only behind kill switches.",
-  "- Public WhatsApp auto-reply remains disabled.",
+  "- WhatsApp supports closed test mode and Marcus-approved live auto-reply mode behind kill switches.",
+  "- Public WhatsApp auto-reply is allowed only for Marcus-approved live mode and remains safety-gated.",
   "- Google Calendar live booking remains disabled.",
   "- Auto pricing and amount ranges remain blocked.",
   "- Review route is development-only and disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_ROUTE=true.",
@@ -61,8 +61,8 @@ const report = [
   `Latest Dev Brain QA status: ${status}.`,
   browserStatus,
   authStatus,
-  "OpenAI dry-run remains boss-review only. Public WhatsApp auto-reply, Calendar booking, and auto pricing are still disabled.",
-  "Please review V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md, VERCEL_DEPLOYMENT_GUIDE.md, and META_WHATSAPP_WEBHOOK_LIVE_SETUP.md, then guide Marcus through Vercel deployment and webhook verification.",
+  "OpenAI dry-run remains boss-review only. WhatsApp public auto-reply is Marcus-approved for this live number only; Calendar booking and auto pricing are still disabled.",
+  "Please review V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md, VERCEL_DEPLOYMENT_GUIDE.md, and META_WHATSAPP_WEBHOOK_LIVE_SETUP.md, then guide Marcus through Vercel redeployment, health verification, and one live WhatsApp test.",
   "```",
   ""
 ].join("\n");

@@ -174,16 +174,16 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
       <section className="mt-6 rounded border border-command-line bg-command-panel p-5 shadow-command">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">WhatsApp Closed Test</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">WhatsApp Auto-Reply</p>
             <h2 className="mt-1 text-xl font-semibold">Inbound and auto-reply audit</h2>
             <p className="mt-2 max-w-3xl text-sm text-command-muted">
-              {whatsapp.statusLabel}. This section shows WhatsApp messages saved for this lead and any closed-test auto-reply status.
+              {whatsapp.statusLabel}. This section shows WhatsApp messages saved for this lead and any auto-reply status.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             {[
-              "WhatsApp live closed test mode",
-              "Public auto-reply disabled",
+              whatsapp.liveAutoReplyApproved ? "Marcus-approved live mode" : "Closed test mode available",
+              whatsapp.publicAutoReplyEnabled ? "Public auto-reply enabled by Marcus" : "Public auto-reply disabled",
               "No pricing / no Calendar booking"
             ].map((label) => (
               <span key={label} className="rounded border border-command-line bg-command-panel2 px-3 py-1 text-command-muted">
