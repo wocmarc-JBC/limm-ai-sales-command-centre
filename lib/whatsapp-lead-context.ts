@@ -16,6 +16,8 @@ export interface WhatsAppLeadContextMemory {
   knownContextSummary: string;
 }
 
+export const OFFICIAL_LIMM_INSTAGRAM_URL = "https://www.instagram.com/limmworks/";
+
 function normalise(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -204,7 +206,7 @@ export function buildMissingInfoAsk(context: WhatsAppLeadContextMemory, focus: "
 }
 
 export function getLimmInstagramUrl() {
-  const value = process.env.LIMM_INSTAGRAM_URL || process.env.NEXT_PUBLIC_LIMM_INSTAGRAM_URL || "";
+  const value = process.env.LIMM_INSTAGRAM_URL || process.env.NEXT_PUBLIC_LIMM_INSTAGRAM_URL || OFFICIAL_LIMM_INSTAGRAM_URL;
   const trimmed = value.trim();
   if (!/^https:\/\/(?:www\.)?instagram\.com\/[A-Za-z0-9_.-]+\/?$/i.test(trimmed)) return "";
   return trimmed;

@@ -11,8 +11,8 @@ Implemented as a focused reply-quality upgrade on top of the v5.3 WhatsApp Reply
 - Lead context memory checks existing CRM messages and lead fields before asking for more information.
 - The agent avoids asking again for floor plan, site photos, scope, property type, address/area, or appointment time when those details are already detected.
 - Price questions use the approved scope-first wording and never generate prices.
-- Portfolio and past-work requests route to Instagram only if a configured company Instagram URL exists.
-- If no Instagram URL is configured, the reply asks what reference type the client wants and records trace metadata for human follow-up.
+- Portfolio and past-work requests route to the official LIMM Works Instagram URL: `https://www.instagram.com/limmworks/`.
+- The official URL is available through `NEXT_PUBLIC_LIMM_INSTAGRAM_URL`, `LIMM_INSTAGRAM_URL`, or the safe built-in official fallback.
 - Black box reply trace now includes detected intents, primary intent, lead context, missing fields asked, repeated info avoided, portfolio routing, and combined-reply status.
 
 ## Multi-Intent Example
@@ -93,10 +93,10 @@ Supported triggers:
 
 Environment variables:
 
-- `LIMM_INSTAGRAM_URL`
-- `NEXT_PUBLIC_LIMM_INSTAGRAM_URL`
+- `LIMM_INSTAGRAM_URL=https://www.instagram.com/limmworks/`
+- `NEXT_PUBLIC_LIMM_INSTAGRAM_URL=https://www.instagram.com/limmworks/`
 
-If no valid Instagram URL is configured, the reply does not invent one. It asks which reference category the client wants to see.
+The app must not invent any other Instagram handle. If Marcus changes the official account later, update the env value and safe fallback together.
 
 ## Photo Sending Policy
 

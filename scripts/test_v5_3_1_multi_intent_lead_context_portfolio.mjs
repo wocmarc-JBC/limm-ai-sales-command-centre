@@ -95,6 +95,8 @@ for (const phrase of [
 
 for (const phrase of [
   "inferWhatsAppLeadContext",
+  "OFFICIAL_LIMM_INSTAGRAM_URL",
+  "https://www.instagram.com/limmworks/",
   "hasFloorPlan",
   "hasSitePhotos",
   "hasScopeOfWork",
@@ -211,6 +213,9 @@ for (const field of [
 
 assert(envExample.includes("NEXT_PUBLIC_LIMM_INSTAGRAM_URL="), ".env.example missing NEXT_PUBLIC_LIMM_INSTAGRAM_URL.");
 assert(envExample.includes("LIMM_INSTAGRAM_URL="), ".env.example missing LIMM_INSTAGRAM_URL.");
+assert(envExample.includes("NEXT_PUBLIC_LIMM_INSTAGRAM_URL=https://www.instagram.com/limmworks/"), ".env.example must include official public LIMM Instagram URL.");
+assert(envExample.includes("LIMM_INSTAGRAM_URL=https://www.instagram.com/limmworks/"), ".env.example must include official server LIMM Instagram URL.");
+assert(health.includes("instagramUrlConfigured"), "Health endpoint must prove Instagram URL configuration.");
 
 for (const phrase of [
   "messaging_product: \"whatsapp\"",
