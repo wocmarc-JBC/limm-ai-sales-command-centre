@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
+import { questionBankStats } from "@/lib/whatsapp-question-bank";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,10 +20,18 @@ export async function GET() {
   try {
     const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
     const calendar = getCalendarRuntime();
+    const questionBank = questionBankStats();
     return NextResponse.json({
       ok: true,
-      version: "v5_0_whatsapp_sales_brain_calendar_foundation",
+      version: "v5_2_whatsapp_question_bank",
+      salesBrainVersion: "v5.2",
       runtime: "vercel",
+      questionBankAvailable: true,
+      questionBankCategories: questionBank.categories,
+      questionBankExamples: questionBank.exampleQuestions,
+      fallbackBrainAvailable: true,
+      safetyValidatorAvailable: true,
+      repetitionCheckerAvailable: true,
       hasSupabaseUrl: envPresent("NEXT_PUBLIC_SUPABASE_URL"),
       hasSupabaseAnonKey: envPresent("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
       hasServiceRoleKey: envPresent("SUPABASE_SERVICE_ROLE_KEY"),
@@ -47,8 +56,15 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v5_0_whatsapp_sales_brain_calendar_foundation",
+      version: "v5_2_whatsapp_question_bank",
+      salesBrainVersion: "v5.2",
       runtime: "vercel",
+      questionBankAvailable: false,
+      questionBankCategories: 0,
+      questionBankExamples: 0,
+      fallbackBrainAvailable: false,
+      safetyValidatorAvailable: false,
+      repetitionCheckerAvailable: false,
       hasSupabaseUrl: false,
       hasSupabaseAnonKey: false,
       hasServiceRoleKey: false,
