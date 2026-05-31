@@ -1,14 +1,18 @@
 import { PageHeader } from "@/components/PageHeader";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getSettingsSummary } from "@/lib/data/settings-repository";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
+import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 
 export default async function SettingsPage() {
   const { health } = await getSettingsSummary();
   const auth = await getCurrentProfile();
   const openAi = getOpenAiBrainRuntime();
+  const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
   const whatsapp = getWhatsAppRuntime();
+  const calendar = getCalendarRuntime();
   const settings = [
     ["Current mode", health.mode],
     ["Supabase URL detected", health.supabaseUrlDetected ? "Yes" : "No"],
@@ -27,6 +31,9 @@ export default async function SettingsPage() {
     ["Live verification", process.env.LIVE_SUPABASE_VERIFIED_AT ? `Last marked: ${process.env.LIVE_SUPABASE_VERIFIED_AT}` : "Run npm run verify:live-supabase manually"],
     ["OpenAI", openAi.label],
     ["OpenAI dry-run", openAi.dryRunEnabled ? "Enabled for draft recommendations only" : "Off by default"],
+    ["OpenAI WhatsApp reply brain", openAiWhatsApp.enabled ? `${openAiWhatsApp.status} (${openAiWhatsApp.model})` : "Off by default"],
+    ["OpenAI WhatsApp key", openAiWhatsApp.keyConfigured ? "Configured" : "Not required for fallback replies"],
+    ["WhatsApp reply brain debug", openAiWhatsApp.debug ? "Enabled" : "Disabled"],
     ["OpenAI live actions", "Disabled"],
     ["WhatsApp", health.whatsappStatus],
     ["WhatsApp live inbound", whatsapp.liveInboundEnabled ? "Enabled" : "Disabled by default"],
@@ -37,6 +44,12 @@ export default async function SettingsPage() {
     ["WhatsApp auto-reply posture", whatsapp.statusLabel],
     ["WhatsApp safety", "No pricing / no Calendar booking / safety validator required"],
     ["Calendar", health.calendarStatus],
+    ["Calendar booking enabled", calendar.bookingEnabled ? "Enabled" : "Disabled by default"],
+    ["Calendar boss approval required", calendar.bossApprovalRequired ? "Yes" : "No"],
+    ["Calendar auto booking", calendar.autoBookingEnabled ? "Enabled" : "Disabled"],
+    ["Google Calendar connected", calendar.googleCalendarConnected ? "Connected" : "Not connected"],
+    ["Google Calendar ID", calendar.calendarIdConfigured ? "Configured" : "Not configured"],
+    ["Calendar timezone", calendar.timezone],
     ["Live auto-send", "Off"],
     ["WhatsApp mode", whatsapp.liveAutoReplyApproved ? "Marcus-approved live auto-reply" : "Closed-test reply-only unless Marcus enables live mode"],
     ["Target monthly volume", "Around 60 leads"],

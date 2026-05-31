@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-v4.9 Live Deployment to Vercel + Production Webhook Readiness.
+v5.0 WhatsApp Sales Brain + boss-approved Calendar booking foundation implemented.
 
 ## Latest Report
 
-`DEV_BRAIN_QA_REPORT.md`, `V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md`, `V4_8_WHATSAPP_LIVE_CLOSED_TEST_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`.
+`DEV_BRAIN_QA_REPORT.md`, `V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`.
 
 ## Tests / Audit Status
 
@@ -19,10 +19,12 @@ Browser QA: Playwright browser QA completed.
 
 ## Safety Status
 
-- Client-facing OpenAI brain remains disabled.
-- WhatsApp supports closed test mode and Marcus-approved live auto-reply mode behind kill switches.
+- OpenAI WhatsApp reply is off by default.
+- Fallback WhatsApp replies still work without OpenAI.
+- WhatsApp live inbound and auto-reply are confirmed PASS for Marcus-approved live mode.
 - Public WhatsApp auto-reply is allowed only for Marcus-approved live mode and remains safety-gated.
 - Google Calendar live booking remains disabled.
+- Calendar booking foundation requires boss approval and cannot confirm booking before an event exists.
 - Auto pricing and amount ranges remain blocked.
 - Review route is development-only and disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_ROUTE=true.
 - Secrets and .env values are not printed.
@@ -38,15 +40,17 @@ Report: V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md
 
 ## Next Recommended Action
 
-Redeploy the CRM to Vercel, confirm WhatsApp health booleans for Marcus-approved live mode, then send one live WhatsApp test message and verify lead, message, audit, and sent reply logs.
+v5 WhatsApp Sales Brain and boss-approved Calendar booking foundation is ready for controlled live testing. Next recommended phase: Marcus live message review, then optional OpenAI WhatsApp dry-run enablement.
 
 ## Marcus Paste Block For ChatGPT
 
 ```text
-We are continuing LIMM AI Sales Command Centre v4.9 Vercel deployment and production WhatsApp webhook readiness.
+We are continuing LIMM AI Sales Command Centre after v5.0 WhatsApp Sales Brain + Calendar foundation.
 Latest Dev Brain QA status: PASS WITH MANUAL AUTH REQUIRED.
 Playwright browser QA completed.
 Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
-OpenAI dry-run remains boss-review only. WhatsApp public auto-reply is Marcus-approved for this live number only; Calendar booking and auto pricing are still disabled.
-Please review V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md, VERCEL_DEPLOYMENT_GUIDE.md, and META_WHATSAPP_WEBHOOK_LIVE_SETUP.md, then guide Marcus through Vercel redeployment, health verification, and one live WhatsApp test.
+Confirmed live result: inbound WhatsApp received, lead created, lead visible, audit logs written, and WhatsApp auto-reply sent successfully.
+v5.0 adds structured WhatsApp reply brain, friendly fallback templates, repetition guard, audit metadata, and boss-approved Calendar booking foundation.
+OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.
+Please review V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md and propose a v5.1 live observation/tuning pass.
 ```

@@ -1,5 +1,26 @@
 # WhatsApp Auto-Reply Safety Rules
 
+## v5.0 Sales Brain Layer
+
+Every WhatsApp auto-reply now passes through:
+
+1. Conversation context loading.
+2. Deterministic intent classification.
+3. Optional OpenAI WhatsApp reply generation only when explicitly enabled.
+4. Structured JSON schema validation.
+5. Safety validation.
+6. Repetition check.
+7. Friendly care tone check.
+8. Calendar confirmation check.
+9. Audit metadata recording.
+10. Existing known-good WhatsApp Cloud API send adapter.
+
+OpenAI WhatsApp reply is off by default. Fallback replies still work without OpenAI.
+
+The reply must use initial project review wording, explain why floor plan/site photos or scope are needed, and remain concise and practical.
+
+Calendar booking disabled by default. Boss approval required. Do not confirm booking until event is created.
+
 v4.8 now supports two Marcus-controlled modes:
 
 1. Closed test mode.

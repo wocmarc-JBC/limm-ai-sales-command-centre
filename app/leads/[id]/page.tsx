@@ -2,20 +2,26 @@ import { ActionButton } from "@/components/ActionButton";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
+  approveAppointmentBookingAction,
   generateAiDryRunRecommendationAction,
   markBossApprovalNeededAction,
   markLeadNotSuitableAction,
   moveLeadToQuotationReadinessAction,
+  requestAppointmentMissingInfoAction,
+  requestAppointmentReviewAction,
+  requestCalendarEventCreateAction,
   reviewAiDraftAction,
   updateLeadStatusAction
 } from "@/lib/actions";
+import { evaluateBookingReadiness } from "@/lib/calendar-booking";
+import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getLatestAiRecommendationForLead } from "@/lib/data/ai-decisions-repository";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
 import { getQuotationReadinessForLead } from "@/lib/data/quotation-repository";
-import { humanizeList } from "@/lib/labels";
+import { humanizeLabel, humanizeList } from "@/lib/labels";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
@@ -91,9 +97,27 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
     .slice(0, 8);
   const openAi = getOpenAiBrainRuntime();
   const whatsapp = getWhatsAppRuntime();
+  const calendar = getCalendarRuntime();
   const next = getNextBestAction(lead);
   const aiStatus = getAiStatus(openAi);
   const validationDisplay = aiRecommendation ? getValidationDisplay(aiRecommendation) : null;
+  const latestInbound = leadMessages.find((message) => message.direction === "inbound" && message.channel === "whatsapp");
+  const latestOutbound = leadMessages.find((message) => message.direction === "outbound" && message.channel === "whatsapp");
+  const brainMetadata = latestOutbound?.metadata ?? {};
+  const bookingReadiness = evaluateBookingReadiness({
+    lead,
+    latestText: latestInbound?.body ?? lead.lastClientMessage,
+    bossApproved: lead.status === "Ready To Book"
+  });
+  const brainStatus = latestOutbound?.whatsappStatus || "No auto-reply yet";
+  const metadataText = (key: string, fallback = "Not available") => {
+    const value = brainMetadata[key];
+    if (Array.isArray(value)) return value.length ? value.map(String).map(humanizeLabel).join(", ") : "None";
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    if (typeof value === "number") return String(value);
+    if (typeof value === "string" && value) return humanizeLabel(value);
+    return fallback;
+  };
 
   return (
     <>
@@ -227,11 +251,72 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           </aside>
         </div>
       </section>
+      <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_24rem]">
+        <div className="rounded border border-command-line bg-command-panel p-5 shadow-command">
+          <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">WhatsApp Sales Brain</p>
+          <h2 className="mt-1 text-xl font-semibold">Reply intelligence and safety metadata</h2>
+          <p className="mt-2 text-sm text-command-muted">
+            This shows the latest WhatsApp reply decision if the v5 sales brain has processed this lead. Every live reply still passes safety,
+            repetition, tone, and Calendar confirmation checks before sending.
+          </p>
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div><dt className="text-command-muted">Latest inbound WhatsApp</dt><dd>{latestInbound?.body ?? "No inbound WhatsApp message yet"}</dd></div>
+            <div><dt className="text-command-muted">Latest outbound WhatsApp</dt><dd>{latestOutbound?.body ?? "No outbound auto-reply yet"}</dd></div>
+            <div><dt className="text-command-muted">Auto-reply status</dt><dd>{humanizeLabel(brainStatus)}</dd></div>
+            <div><dt className="text-command-muted">Reply source</dt><dd>{metadataText("reply_source")}</dd></div>
+            <div><dt className="text-command-muted">Intent</dt><dd>{metadataText("intent")}</dd></div>
+            <div><dt className="text-command-muted">Confidence</dt><dd>{metadataText("confidence")}</dd></div>
+            <div><dt className="text-command-muted">Next best action</dt><dd>{metadataText("next_best_action")}</dd></div>
+            <div><dt className="text-command-muted">Safety result</dt><dd>{metadataText("safety_result")}</dd></div>
+            <div><dt className="text-command-muted">Tone result</dt><dd>{metadataText("tone_result")}</dd></div>
+            <div><dt className="text-command-muted">Repetition result</dt><dd>{metadataText("repetition_result")}</dd></div>
+            <div><dt className="text-command-muted">Appointment intent</dt><dd>{metadataText("appointment_intent")}</dd></div>
+            <div><dt className="text-command-muted">Booking readiness</dt><dd>{metadataText("booking_readiness", humanizeLabel(bookingReadiness.status))}</dd></div>
+            <div className="sm:col-span-2"><dt className="text-command-muted">Blocked reason</dt><dd>{metadataText("blocked_reason", "None")}</dd></div>
+          </dl>
+        </div>
+        <aside className="rounded border border-command-line bg-command-panel p-5 shadow-command">
+          <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">Calendar Foundation</p>
+          <h2 className="mt-1 text-xl font-semibold">Boss-approved booking only</h2>
+          <p className="mt-2 text-sm text-command-muted">
+            Do not confirm booking until event is created. Calendar is disabled by default and auto booking is disabled.
+          </p>
+          <dl className="mt-5 space-y-3 text-sm">
+            <div><dt className="text-command-muted">Calendar status</dt><dd>{humanizeLabel(calendar.status)}</dd></div>
+            <div><dt className="text-command-muted">Boss approval required</dt><dd>{calendar.bossApprovalRequired ? "Yes" : "No"}</dd></div>
+            <div><dt className="text-command-muted">Auto booking enabled</dt><dd>{calendar.autoBookingEnabled ? "Yes" : "No"}</dd></div>
+            <div><dt className="text-command-muted">Appointment type</dt><dd>{humanizeLabel(bookingReadiness.appointmentType)}</dd></div>
+            <div><dt className="text-command-muted">Booking readiness</dt><dd>{humanizeLabel(bookingReadiness.status)}</dd></div>
+            <div><dt className="text-command-muted">Missing booking info</dt><dd>{humanizeList(bookingReadiness.missingInfo)}</dd></div>
+            <div><dt className="text-command-muted">Safety note</dt><dd>{bookingReadiness.safetyNote}</dd></div>
+          </dl>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <form action={requestAppointmentReviewAction}>
+              <input type="hidden" name="lead_id" value={lead.id} />
+              <ActionButton type="submit" tone="muted">Mark Ready for Appointment Review</ActionButton>
+            </form>
+            <form action={approveAppointmentBookingAction}>
+              <input type="hidden" name="lead_id" value={lead.id} />
+              <ActionButton type="submit" tone="muted">Approve Booking</ActionButton>
+            </form>
+            <form action={requestAppointmentMissingInfoAction}>
+              <input type="hidden" name="lead_id" value={lead.id} />
+              <ActionButton type="submit" tone="muted">Reject / Need More Info</ActionButton>
+            </form>
+            <form action={requestCalendarEventCreateAction}>
+              <input type="hidden" name="lead_id" value={lead.id} />
+              <ActionButton type="submit" tone="muted" disabled={!bookingReadiness.canCreateCalendarEvent}>
+                {bookingReadiness.canCreateCalendarEvent ? "Create Calendar Event" : "Calendar Connection Not Enabled"}
+              </ActionButton>
+            </form>
+          </div>
+        </aside>
+      </section>
       <section className="mt-6 rounded border border-command-line bg-command-panel p-5 shadow-command">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">OpenAI Brain Dry-Run</p>
-            <h2 className="mt-1 text-xl font-semibold">Draft only — boss approval required</h2>
+            <h2 className="mt-1 text-xl font-semibold">Draft only - boss approval required</h2>
             <p className="mt-2 max-w-3xl text-sm text-command-muted">
               {openAi.label}. This panel can only prepare structured recommendations for Marcus review.
               It cannot send messages, book appointments, bypass approval gates, or create pricing.

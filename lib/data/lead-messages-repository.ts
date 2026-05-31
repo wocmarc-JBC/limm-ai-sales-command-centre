@@ -199,6 +199,25 @@ export async function listLeadMessages(leadId: string) {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
+export async function listRecentLeadMessagesForWebhook(leadId: string, limit = 8) {
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseWriteClient();
+    const { data, error } = await supabase
+      .from("lead_messages")
+      .select("*")
+      .eq("lead_id", leadId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(`Lead message context lookup failed: ${error.message}`);
+    return data.map(mapLeadMessageRow);
+  }
+
+  return mockClone(getMockStore().leadMessages)
+    .filter((message) => message.leadId === leadId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+}
+
 export async function countRecentWhatsAppAutoReplies(leadId: string, sinceIso: string) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();

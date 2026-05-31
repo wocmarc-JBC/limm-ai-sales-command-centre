@@ -1,5 +1,59 @@
 ﻿# LIVE INTEGRATION RULE — PRODUCTION PROOF BEFORE USER TESTING
 
+## v5.0 WhatsApp Sales Brain Rule
+
+The known-good WhatsApp payload and production diagnostics must remain intact while improving reply quality.
+
+Before Marcus tests v5.0 live replies, confirm:
+
+- `/api/whatsapp/health` returns the WhatsApp, OpenAI WhatsApp, and Calendar booleans.
+- OpenAI WhatsApp reply is off by default unless Marcus intentionally enables it.
+- Fallback replies still send without OpenAI.
+- Calendar booking disabled by default.
+- Auto booking disabled by default.
+- Boss approval required by default.
+- No WhatsApp reply can confirm booking until an event exists.
+- Audit logs record reply source, intent, safety, tone, repetition, and Calendar status.
+- The known-good WhatsApp payload remains: `messaging_product`, `recipient_type`, digits-only `to`, `type: text`, `preview_url: false`, and safe `text.body`.
+
+## v4.10 WhatsApp Live PASS Record
+
+The LIMM AI Sales Command Centre WhatsApp integration has passed live proof for the current Marcus-approved number.
+
+Confirmed:
+
+- `/api/whatsapp/health` passes.
+- Vercel live deployment works.
+- Meta webhook works.
+- Supabase write works.
+- WhatsApp Graph API send works.
+- WhatsApp inbound message was received.
+- Lead was created and appeared in CRM.
+- Audit logs showed `whatsapp_inbound_received`.
+- Audit logs showed `whatsapp_auto_reply_requested`.
+- Audit logs showed `whatsapp_auto_reply_sent`.
+- Auto-reply was sent successfully to WhatsApp.
+
+Working configuration:
+
+- `WHATSAPP_LIVE_INBOUND_ENABLED=true`
+- `WHATSAPP_TEST_AUTO_REPLY_ENABLED=true`
+- `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true`
+- `WHATSAPP_TEST_MODE=false`
+- `SUPABASE_SERVICE_ROLE_KEY` present server-side
+- `WHATSAPP_PHONE_NUMBER_ID` uses the registered phone number ID
+- `WHATSAPP_ACCESS_TOKEN` valid
+- `WHATSAPP_BUSINESS_NUMBER` present
+
+Major lessons recorded:
+
+- Health endpoint first.
+- Correct service role key required.
+- Live DB schema must match code.
+- Correct registered WhatsApp Phone Number ID required.
+- Direct Graph API send test is useful to separate Meta credential issues from CRM adapter issues.
+- Do not test live integrations before production diagnostics pass.
+
 This rule applies to any app that connects to a real external service such as WhatsApp, Meta, Calendar, payment, email, OpenAI actions, SMS, webhook, or client-facing automation.
 
 ## Core Rule

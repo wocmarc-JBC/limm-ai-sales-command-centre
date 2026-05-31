@@ -20,7 +20,20 @@ const labelMap: Record<string, string> = {
   privacy_requirements: "Privacy requirements",
   price_sensitive: "Amount sensitive",
   boss_review_required: "Boss review required",
-  quotation_readiness_score: "Quotation readiness score"
+  quotation_readiness_score: "Quotation readiness score",
+  initial_project_review: "Initial project review",
+  site_discussion: "Site discussion",
+  manager_call: "Manager call",
+  quotation_review: "Quotation review",
+  site_visit: "Site visit",
+  phone_review: "Phone review",
+  zoom_review: "Zoom review",
+  landed_aa_review: "Landed A&A review",
+  condo_renovation_review: "Condo renovation review",
+  commercial_renovation_review: "Commercial renovation review",
+  address_or_area: "Address or area",
+  preferred_date_time: "Preferred date/time",
+  floor_plan_or_site_photos: "Floor plan or site photos"
 };
 
 export function humanizeLabel(value: string) {

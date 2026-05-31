@@ -145,7 +145,7 @@ for (const guard of [
   "findLeadMessageByProviderId",
   "runtime.businessNumber && senderPhone === runtime.businessNumber",
   "validateWhatsAppAutoReply",
-  "WHATSAPP_SAFE_FALLBACK_REPLY"
+  "buildWhatsAppSalesBrainReply"
 ]) {
   assert(service.includes(guard), `WhatsApp service missing closed-test guard: ${guard}`);
 }
@@ -156,7 +156,7 @@ const leadIndex = service.indexOf("upsertWhatsAppLead", dedupeIndex);
 const inboundSaveIndex = service.indexOf("saveLeadMessage({", leadIndex);
 const inboundAuditIndex = service.indexOf("action: \"whatsapp_inbound_received\"", inboundSaveIndex);
 const replyRequestedIndex = service.indexOf("action: \"whatsapp_auto_reply_requested\"", inboundAuditIndex);
-const safetyIndex = service.indexOf("validateWhatsAppAutoReply(reply)", replyRequestedIndex);
+const safetyIndex = service.indexOf("validateWhatsAppAutoReply(reply", replyRequestedIndex);
 const sendIndex = service.indexOf("adapter.sendReply", safetyIndex);
 const outboundSaveIndex = service.indexOf("direction: \"outbound\"", sendIndex);
 const sentAuditIndex = service.indexOf("action: \"whatsapp_auto_reply_sent\"", outboundSaveIndex);

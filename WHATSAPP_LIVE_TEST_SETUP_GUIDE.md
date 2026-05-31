@@ -1,8 +1,37 @@
 # WhatsApp Live Setup Guide
 
-Status: v4.8 supports closed test mode and Marcus-approved live WhatsApp auto-reply mode.
+Status: v5.0 controlled WhatsApp Sales Brain testing.
 
-Marcus has approved live auto-reply for the current WhatsApp number. This remains reply-only, safety-gated, audited, and kill-switch controlled.
+Marcus has approved live auto-reply for the current WhatsApp number. The live path is confirmed working: inbound WhatsApp received, lead created, audit logs written, and WhatsApp auto-reply sent successfully. This remains reply-only, safety-gated, audited, and kill-switch controlled.
+
+v5.0 keeps the known-good live send adapter and adds a smarter reply brain:
+
+- OpenAI WhatsApp reply is off by default.
+- Fallback replies still work without OpenAI.
+- Replies are less repetitive by template variation and repetition checks.
+- Replies use initial project review wording.
+- Calendar booking disabled by default.
+- Boss approval required for booking workflow.
+- Do not confirm booking until event is created.
+
+## 0. Confirmed Working Live Configuration
+
+```powershell
+WHATSAPP_LIVE_INBOUND_ENABLED=true
+WHATSAPP_TEST_AUTO_REPLY_ENABLED=true
+WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true
+WHATSAPP_TEST_MODE=false
+SUPABASE_SERVICE_ROLE_KEY=<present server-side>
+WHATSAPP_PHONE_NUMBER_ID=<registered phone number ID>
+WHATSAPP_ACCESS_TOKEN=<valid token>
+WHATSAPP_BUSINESS_NUMBER=<present>
+```
+
+Health endpoint must pass:
+
+```text
+/api/whatsapp/health
+```
 
 ## 1. Required Meta Values
 
@@ -63,9 +92,11 @@ Keep OpenAI optional:
 
 ```powershell
 OPENAI_BRAIN_DRY_RUN=false
+OPENAI_WHATSAPP_REPLY_ENABLED=false
+OPENAI_WHATSAPP_MODEL=gpt-4.1-mini
 ```
 
-If OpenAI dry-run is later enabled, WhatsApp still validates the draft before sending and still uses boss-safe reply rules.
+If OpenAI WhatsApp reply is later enabled, WhatsApp still validates structured JSON before sending and still uses boss-safe reply rules.
 
 ## 4. Apply Migration
 
@@ -102,6 +133,12 @@ In Meta:
 4. Confirm inbound and outbound messages are saved.
 5. Confirm audit log includes WhatsApp inbound and auto-reply events.
 
+Confirmed PASS events:
+
+- `whatsapp_inbound_received`
+- `whatsapp_auto_reply_requested`
+- `whatsapp_auto_reply_sent`
+
 ## 7. Emergency Off
 
 Immediate kill switch:
@@ -121,7 +158,7 @@ Other emergency steps:
 ## Safety Posture
 
 - Closed test mode: GO.
-- Marcus-approved live auto-reply mode: GO after health endpoint confirms all required booleans.
+- Marcus-approved live auto-reply mode: PASS for current live number.
 - WhatsApp blasting: NO-GO.
 - Calendar booking: NO-GO.
 - Auto-pricing or quote ranges: NO-GO.

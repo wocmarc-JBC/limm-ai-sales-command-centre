@@ -1,4 +1,5 @@
 import type { SystemHealth } from "@/lib/types";
+import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 
@@ -14,6 +15,7 @@ export function getSystemHealth(): SystemHealth {
   const supabaseConfigured = hasSupabaseEnv();
   const openAi = getOpenAiBrainRuntime();
   const whatsapp = getWhatsAppRuntime();
+  const calendar = getCalendarRuntime();
   const whatsappStatus: SystemHealth["whatsappStatus"] = whatsapp.closedTestAutoReplyAllowed
     ? "closed_test_ready"
     : whatsapp.liveAutoReplyApproved
@@ -34,6 +36,6 @@ export function getSystemHealth(): SystemHealth {
       : "Mock Mode. Auth/RLS disabled until Supabase env vars are configured.",
     openAiStatus: openAi.status,
     whatsappStatus,
-    calendarStatus: "disabled"
+    calendarStatus: calendar.status
   };
 }

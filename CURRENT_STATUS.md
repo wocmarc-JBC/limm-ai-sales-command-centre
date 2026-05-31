@@ -1,5 +1,67 @@
 # Current Status
 
+## v5.0 WhatsApp Sales Brain + Calendar Foundation
+
+Status: implemented for controlled live testing.
+
+What changed:
+
+- WhatsApp replies now use a structured sales brain before sending.
+- OpenAI WhatsApp reply is off by default.
+- Fallback replies still work without OpenAI.
+- Replies are selected from a warmer, more context-aware template bank.
+- Repetition guard checks the last outbound WhatsApp replies.
+- Friendly care tone check prevents cold command-style replies.
+- Safety validator still blocks pricing, quote ranges, rough estimates, package prices, forbidden consultation wording, approval promises, permit certainty, completion guarantee, structural certainty, and booking confirmation before an event exists.
+- Audit metadata records intent, reply source, safety, tone, repetition, appointment intent, booking readiness, and Calendar status.
+- Calendar booking foundation exists, but Calendar booking disabled by default.
+- Boss approval required by default.
+- Auto booking disabled by default.
+- WhatsApp cannot confirm booking until a Calendar event exists.
+
+Current Go/No-Go:
+
+- GO for controlled live WhatsApp reply brain testing.
+- GO for boss-approved Calendar booking foundation review.
+- NO-GO for autonomous Calendar booking, pricing, WhatsApp blasting, payment collection, or public marketing automation.
+
+## v4.10 WhatsApp Live PASS
+
+Status: PASS.
+
+Confirmed live production result:
+
+- Vercel live deployment works.
+- Meta WhatsApp webhook works.
+- `/api/whatsapp/health` passes.
+- WhatsApp inbound message was received.
+- Supabase writes work.
+- Lead was created in CRM.
+- Lead appears in the Leads page.
+- Audit logs show `whatsapp_inbound_received`.
+- Audit logs show `whatsapp_auto_reply_requested`.
+- Audit logs show `whatsapp_auto_reply_sent`.
+- WhatsApp Graph API send works.
+- Auto-reply was sent successfully to WhatsApp.
+
+Working live configuration:
+
+- `WHATSAPP_LIVE_INBOUND_ENABLED=true`
+- `WHATSAPP_TEST_AUTO_REPLY_ENABLED=true`
+- `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true`
+- `WHATSAPP_TEST_MODE=false`
+- `SUPABASE_SERVICE_ROLE_KEY` present server-side
+- `WHATSAPP_PHONE_NUMBER_ID` uses the registered phone number ID
+- `WHATSAPP_ACCESS_TOKEN` valid
+- `WHATSAPP_BUSINESS_NUMBER` present
+
+Current Go/No-Go:
+
+- GO for Marcus-approved WhatsApp live reply-only auto-reply.
+- NO-GO for WhatsApp blasting, Calendar booking, payment collection, pricing, quote ranges, rough estimates, or approval bypass.
+- OpenAI live brain remains disabled.
+- Calendar remains disabled.
+
 ## v4.9 Live Deployment Readiness
 
 Status: v4.9 Vercel deployment and production WhatsApp webhook readiness implemented.

@@ -14,7 +14,17 @@ export type LeadStatus =
 
 export type AppointmentRule = "allowed" | "approval_required" | "blocked";
 
-export type AppointmentType = "initial_project_review" | "site_discussion" | "manager_call" | "quotation_review";
+export type AppointmentType =
+  | "initial_project_review"
+  | "site_discussion"
+  | "manager_call"
+  | "quotation_review"
+  | "site_visit"
+  | "phone_review"
+  | "zoom_review"
+  | "landed_aa_review"
+  | "condo_renovation_review"
+  | "commercial_renovation_review";
 
 export interface AppointmentDaySetting {
   enabled: boolean;
@@ -224,5 +234,5 @@ export interface SystemHealth {
   rlsNotes: string;
   openAiStatus: "disabled" | "dry_run_key_missing" | "dry_run_ready";
   whatsappStatus: "disabled" | "closed_test_ready" | "live_auto_reply_ready" | "closed_test_credentials_missing" | "inbound_only";
-  calendarStatus: "disabled";
+  calendarStatus: "disabled" | "connection_missing" | "boss_approval_required" | "auto_booking_requested";
 }

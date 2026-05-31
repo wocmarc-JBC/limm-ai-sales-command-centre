@@ -2,6 +2,8 @@
 
 Use this if WhatsApp auto-reply must stop immediately.
 
+Current status: v4.10 WhatsApp live reply-only auto-reply is confirmed PASS. This guide remains the emergency stop procedure.
+
 ## Fastest Kill Switch
 
 Set this in `.env.local`:
@@ -33,6 +35,8 @@ Settings/System Health should show:
 - WhatsApp test auto-reply: Disabled by default
 - WhatsApp auto-reply posture: gated or disabled
 - WhatsApp public auto-reply: either disabled for closed test, or enabled only when Marcus-approved live mode is intended
+
+Production health should show `testAutoReplyEnabled: false` after the kill switch and redeploy.
 
 ## What Remains Disabled
 

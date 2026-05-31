@@ -53,6 +53,10 @@ for (const required of [
   "V4_8_WHATSAPP_LIVE_DIAGNOSTIC_FIX_REPORT.md",
   "V4_8_WHATSAPP_LIVE_MODE_ENABLE_REPORT.md",
   "V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md",
+  "V4_10_WHATSAPP_LIVE_PASS_REPORT.md",
+  "V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md",
+  "CALENDAR_BOOKING_SETUP_GUIDE.md",
+  "CALENDAR_BOOKING_SAFETY_RULES.md",
   "WHATSAPP_LIVE_TEST_SETUP_GUIDE.md",
   "WHATSAPP_EMERGENCY_OFF_GUIDE.md",
   "WHATSAPP_AUTO_REPLY_SAFETY_RULES.md",
@@ -88,6 +92,10 @@ for (const required of [
   "lib/whatsapp-parser.ts",
   "lib/whatsapp-safety.ts",
   "lib/whatsapp-auto-reply.ts",
+  "lib/whatsapp-sales-brain.ts",
+  "lib/openai-whatsapp-config.ts",
+  "lib/calendar-config.ts",
+  "lib/calendar-booking.ts",
   "lib/review-route.ts",
   "lib/data/supabase-client.ts",
   "lib/data/supabase-admin.ts",
@@ -149,6 +157,7 @@ for (const required of [
   "scripts/test_v4_8_whatsapp_live_payload.mjs",
   "scripts/check_v4_8_vercel_whatsapp_health.mjs",
   "scripts/test_v4_9_deployment_readiness.mjs",
+  "scripts/test_v5_whatsapp_sales_brain_calendar.mjs",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql"
 ]) {
   assert(exists(required), `Missing required file: ${required}`);
@@ -373,6 +382,21 @@ assert(!/console\.(log|error|warn)/.test(whatsappAdapter), "WhatsApp adapter mus
 const whatsappService = read("lib/whatsapp-auto-reply.ts");
 for (const phrase of ["whatsapp_inbound_received", "whatsapp_auto_reply_sent", "whatsapp_auto_reply_blocked_unsafe", "recentReplyCount >= 3", "validateWhatsAppAutoReply"]) {
   assert(whatsappService.includes(phrase), `WhatsApp closed-test service missing ${phrase}`);
+}
+for (const phrase of ["buildWhatsAppSalesBrainReply", "listRecentLeadMessagesForWebhook", "whatsapp_boss_review_required", "brain.auditMetadata"]) {
+  assert(whatsappService.includes(phrase), `WhatsApp v5 sales brain integration missing ${phrase}`);
+}
+const whatsappBrain = read("lib/whatsapp-sales-brain.ts");
+for (const phrase of ["landed_renovation", "aa_works", "price_question", "site_visit_request", "repeated_enquiry", "toneCheck", "repetition_checked", "initial project review"]) {
+  assert(whatsappBrain.includes(phrase), `WhatsApp v5 sales brain missing ${phrase}`);
+}
+const calendarConfig = read("lib/calendar-config.ts");
+for (const phrase of ["CALENDAR_BOOKING_ENABLED", "CALENDAR_BOSS_APPROVAL_REQUIRED", "CALENDAR_AUTO_BOOKING_ENABLED", "GOOGLE_CALENDAR_CONNECTED"]) {
+  assert(calendarConfig.includes(phrase), `Calendar config missing ${phrase}`);
+}
+const calendarBooking = read("lib/calendar-booking.ts");
+for (const phrase of ["evaluateBookingReadiness", "ready_for_boss_review", "approved_for_booking", "Do not confirm booking until event is created."]) {
+  assert(calendarBooking.includes(phrase), `Calendar booking foundation missing ${phrase}`);
 }
 const whatsappDocs = read("WHATSAPP_LIVE_TEST_SETUP_GUIDE.md") + read("WHATSAPP_EMERGENCY_OFF_GUIDE.md");
 assert(whatsappDocs.includes("WHATSAPP_TEST_AUTO_REPLY_ENABLED=false"), "WhatsApp emergency kill switch doc missing.");

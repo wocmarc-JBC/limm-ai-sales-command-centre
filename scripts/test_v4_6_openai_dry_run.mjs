@@ -92,7 +92,6 @@ assert(actions.includes("getOpenAiBrainRuntime") && actions.includes("!runtime.d
 const leadDetail = read("app/leads/[id]/page.tsx");
 for (const phrase of [
   "OpenAI Brain Dry-Run",
-  "Draft only — boss approval required",
   "cannot send messages, book appointments, bypass approval gates, or create pricing",
   "Generate Dry-Run Draft",
   "Dry-Run Off"

@@ -21,7 +21,13 @@ export const defaultAppointmentSettings: AppointmentSettings = {
     initial_project_review: { enabled: true, durationMinutes: 60, approvalRequired: false },
     site_discussion: { enabled: true, durationMinutes: 60, approvalRequired: false },
     manager_call: { enabled: true, durationMinutes: 30, approvalRequired: false },
-    quotation_review: { enabled: true, durationMinutes: 45, approvalRequired: true }
+    quotation_review: { enabled: true, durationMinutes: 45, approvalRequired: true },
+    site_visit: { enabled: true, durationMinutes: 60, approvalRequired: true },
+    phone_review: { enabled: true, durationMinutes: 30, approvalRequired: false },
+    zoom_review: { enabled: true, durationMinutes: 45, approvalRequired: false },
+    landed_aa_review: { enabled: true, durationMinutes: 75, approvalRequired: true },
+    condo_renovation_review: { enabled: true, durationMinutes: 60, approvalRequired: false },
+    commercial_renovation_review: { enabled: true, durationMinutes: 60, approvalRequired: true }
   },
   publicHolidays: []
 };

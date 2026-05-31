@@ -107,3 +107,71 @@ export async function moveLeadToQuotationReadiness(id: string) {
     "Lead moved to quotation readiness without generating prices."
   );
 }
+
+export async function requestAppointmentReview(id: string) {
+  return updateLead(
+    id,
+    {
+      status: "Appointment Pending",
+      bossApprovalNeeded: true,
+      aiRecommendedNextAction: "Review appointment readiness before offering or confirming any slot."
+    },
+    "appointment_review_requested",
+    "Lead marked ready for appointment review. Booking confirmation still requires Marcus approval and an actual event."
+  );
+}
+
+export async function approveAppointmentBooking(id: string) {
+  return updateLead(
+    id,
+    {
+      status: "Ready To Book",
+      bossApprovalNeeded: false,
+      aiRecommendedNextAction: "Create a Calendar event only after availability and required details are confirmed."
+    },
+    "appointment_booking_approved",
+    "Marcus approved this lead for booking workflow. No Calendar event was created by this action."
+  );
+}
+
+export async function requestAppointmentMissingInfo(id: string) {
+  return updateLead(
+    id,
+    {
+      status: "Awaiting Client",
+      bossApprovalNeeded: false,
+      aiRecommendedNextAction: "Ask the client for missing appointment details before booking review."
+    },
+    "appointment_missing_info_requested",
+    "Appointment workflow needs more information before booking can proceed."
+  );
+}
+
+export async function recordCalendarEventCreateRequested(id: string) {
+  const lead = await updateLead(
+    id,
+    {
+      status: "Ready To Book",
+      aiRecommendedNextAction: "Calendar event creation requested, but live Calendar booking is disabled."
+    },
+    "calendar_event_create_requested",
+    "Calendar event creation was requested from the CRM."
+  );
+  await createAuditLog({
+    actorType: "system",
+    actorName: "Calendar Adapter",
+    action: "calendar_event_create_failed",
+    entityType: "lead",
+    entityId: id,
+    summary: "Calendar event was not created because the live Calendar adapter is disabled.",
+    beforeData: null,
+    afterData: { calendarEventId: "", status: "disabled" },
+    metadata: {
+      calendarBookingEnabled: false,
+      autoBookingEnabled: false,
+      bossApprovalRequired: true,
+      noFakeBooking: true
+    }
+  });
+  return lead;
+}

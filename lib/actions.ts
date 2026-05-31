@@ -8,9 +8,13 @@ import { saveAppointmentSettings } from "@/lib/data/appointment-settings-reposit
 import { generateAndSaveAiDryRunRecommendation, recordAiDraftReviewAction } from "@/lib/data/ai-decisions-repository";
 import { updateFollowUpStatus } from "@/lib/data/followups-repository";
 import {
+  approveAppointmentBooking,
   markBossApprovalNeeded,
   markLeadNotSuitable,
   moveLeadToQuotationReadiness,
+  recordCalendarEventCreateRequested,
+  requestAppointmentMissingInfo,
+  requestAppointmentReview,
   updateLeadStatus
 } from "@/lib/data/leads-repository";
 import { updateQuotationReadinessStatus } from "@/lib/data/quotation-repository";
@@ -107,6 +111,54 @@ export async function moveLeadToQuotationReadinessAction(formData: FormData) {
   revalidatePath("/leads");
   revalidatePath(`/leads/${text(formData, "lead_id")}`);
   revalidatePath("/quotation-readiness");
+  revalidatePath("/audit-log");
+}
+
+export async function requestAppointmentReviewAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  await requestAppointmentReview(leadId);
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/appointments");
+  revalidatePath("/audit-log");
+}
+
+export async function approveAppointmentBookingAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  await approveAppointmentBooking(leadId);
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/appointments");
+  revalidatePath("/audit-log");
+}
+
+export async function requestAppointmentMissingInfoAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  await requestAppointmentMissingInfo(leadId);
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/appointments");
+  revalidatePath("/audit-log");
+}
+
+export async function requestCalendarEventCreateAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  await recordCalendarEventCreateRequested(leadId);
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/appointments");
   revalidatePath("/audit-log");
 }
 
