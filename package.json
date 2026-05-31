@@ -19,6 +19,7 @@
     "test:whatsapp-payload": "node scripts/test_whatsapp_adapter_payload_shape.mjs",
     "test:v4.9": "node scripts/test_v4_9_deployment_readiness.mjs",
     "test:v5": "node scripts/test_v5_whatsapp_sales_brain_calendar.mjs",
+    "test:v5.2": "node scripts/test_v5_2_whatsapp_question_bank.mjs",
     "test:review-route": "node scripts/test_v3_review_route_static.mjs",
     "test:supabase": "node scripts/test_v3_supabase_layer.mjs",
     "test:auth": "node scripts/test_v3_auth_rls_static.mjs",
@@ -35,7 +36,7 @@
     "verify:live-actions": "node scripts/verify_live_authenticated_actions.mjs",
     "test:live-setup": "node scripts/test_v3_live_setup_static.mjs",
     "verify": "npm run test && npm run test:supabase && npm run test:auth && npm run test:live-setup && npm run test:review-route && npm run test:v4 && npm run audit",
-    "verify:all": "npm run verify && npm run test:v4.6 && npm run test:v4.7 && npm run test:v4.8 && npm run test:v4.8-live && npm run test:whatsapp-payload && npm run test:v4.9 && npm run test:v5 && npm run qa:dev-brain"
+    "verify:all": "npm run verify && npm run test:v4.6 && npm run test:v4.7 && npm run test:v4.8 && npm run test:v4.8-live && npm run test:whatsapp-payload && npm run test:v4.9 && npm run test:v5 && npm run test:v5.2 && npm run qa:dev-brain"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.0",

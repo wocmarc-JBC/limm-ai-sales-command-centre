@@ -209,3 +209,32 @@ Before Marcus tests any live action, the deployed production app must have:
 
 Full rule: see `LIVE_INTEGRATION_PRODUCTION_PROOF_PLAYBOOK.md`.
 
+## v5.2 WhatsApp Question Bank Status
+
+Status: WhatsApp Question Bank + Reply Playbook is implemented and verified PASS.
+
+The v5.2 layer adds a scalable question bank instead of hardcoding thousands of exact replies. It covers structured question bank intent handling for common LIMM Works homeowner conversations:
+
+- general enquiry
+- landed enquiry
+- A&A enquiry
+- design theme
+- price question
+- appointment request
+- follow-up ping
+- floor plan/photos received
+- condo enquiry
+- commercial enquiry
+- hacking / demolition
+- carpentry
+- timeline
+- submission / authority
+- structural / wall
+- waterproofing / drainage / roof
+- bathroom / kitchen
+- small handyman / fit review
+- complaint / risk
+- spam / unrelated
+
+The live WhatsApp pipe remains preserved. The question bank adds better reply selection, safe answer strategy, missing information, risk flags, escalation rules, non-repetition handling, and audit metadata. OpenAI WhatsApp reply remains off by default, Calendar booking remains boss-approved foundation only, and no pricing or booking confirmation is added.
+

@@ -55,8 +55,10 @@ for (const required of [
   "V4_9_LIVE_DEPLOYMENT_READINESS_REPORT.md",
   "V4_10_WHATSAPP_LIVE_PASS_REPORT.md",
   "V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md",
+  "V5_2_WHATSAPP_QUESTION_BANK_REPORT.md",
   "CALENDAR_BOOKING_SETUP_GUIDE.md",
   "CALENDAR_BOOKING_SAFETY_RULES.md",
+  "WHATSAPP_QUESTION_BANK_PLAYBOOK.md",
   "WHATSAPP_LIVE_TEST_SETUP_GUIDE.md",
   "WHATSAPP_EMERGENCY_OFF_GUIDE.md",
   "WHATSAPP_AUTO_REPLY_SAFETY_RULES.md",
@@ -93,6 +95,7 @@ for (const required of [
   "lib/whatsapp-safety.ts",
   "lib/whatsapp-auto-reply.ts",
   "lib/whatsapp-sales-brain.ts",
+  "lib/whatsapp-question-bank.ts",
   "lib/openai-whatsapp-config.ts",
   "lib/calendar-config.ts",
   "lib/calendar-booking.ts",
@@ -158,6 +161,7 @@ for (const required of [
   "scripts/check_v4_8_vercel_whatsapp_health.mjs",
   "scripts/test_v4_9_deployment_readiness.mjs",
   "scripts/test_v5_whatsapp_sales_brain_calendar.mjs",
+  "scripts/test_v5_2_whatsapp_question_bank.mjs",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql"
 ]) {
   assert(exists(required), `Missing required file: ${required}`);
@@ -389,6 +393,28 @@ for (const phrase of ["buildWhatsAppSalesBrainReply", "listRecentLeadMessagesFor
 const whatsappBrain = read("lib/whatsapp-sales-brain.ts");
 for (const phrase of ["landed_renovation", "aa_works", "price_question", "site_visit_request", "repeated_enquiry", "toneCheck", "repetition_checked", "initial project review"]) {
   assert(whatsappBrain.includes(phrase), `WhatsApp v5 sales brain missing ${phrase}`);
+}
+const questionBank = read("lib/whatsapp-question-bank.ts");
+for (const phrase of [
+  "whatsappQuestionBank",
+  "questionBankStats",
+  "matchQuestionBankIntent",
+  "safe_answer_strategy",
+  "reply_variations",
+  "design_theme",
+  "submission_approval",
+  "waterproofing_drainage_roof"
+]) {
+  assert(questionBank.includes(phrase), `WhatsApp v5.2 question bank missing ${phrase}`);
+}
+for (const phrase of [
+  "matchQuestionBankIntent(context.latestInboundMessage)",
+  "question_bank_intent",
+  "matched_keywords",
+  "reply_strategy",
+  "escalation_required"
+]) {
+  assert(whatsappBrain.includes(phrase), `WhatsApp v5.2 sales brain metadata missing ${phrase}`);
 }
 const calendarConfig = read("lib/calendar-config.ts");
 for (const phrase of ["CALENDAR_BOOKING_ENABLED", "CALENDAR_BOSS_APPROVAL_REQUIRED", "CALENDAR_AUTO_BOOKING_ENABLED", "GOOGLE_CALENDAR_CONNECTED"]) {

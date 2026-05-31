@@ -3,6 +3,7 @@ import { evaluateBookingReadiness } from "@/lib/calendar-booking";
 import type { Lead } from "@/lib/types";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
 import { getNextBestAction } from "@/lib/next-best-action";
+import { matchQuestionBankIntent } from "@/lib/whatsapp-question-bank";
 import { StatusBadge } from "./StatusBadge";
 
 export function LeadCard({ lead }: { lead: Lead }) {
@@ -10,6 +11,8 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const booking = evaluateBookingReadiness({ lead, latestText: lead.lastClientMessage });
   const isWhatsapp = /whatsapp/i.test(lead.source);
   const needsFiles = lead.missingInfo.includes("floor_plan") || lead.missingInfo.includes("site_photos");
+  const questionMatch = isWhatsapp ? matchQuestionBankIntent(lead.lastClientMessage) : null;
+  const showQuestionBadge = Boolean(questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported");
   return (
     <article className="rounded border border-command-line bg-command-panel p-4 shadow-command">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -21,7 +24,9 @@ export function LeadCard({ lead }: { lead: Lead }) {
             <StatusBadge label={lead.leadCategory} />
             <StatusBadge label={lead.status} />
             {isWhatsapp ? <StatusBadge label="WhatsApp" /> : null}
+            {showQuestionBadge ? <StatusBadge label={questionMatch!.entry.category} /> : null}
             {booking.appointmentIntent ? <StatusBadge label="Appointment Requested" /> : null}
+            {questionMatch?.entry.escalation_rule !== "auto_safe" && showQuestionBadge ? <StatusBadge label="Boss Review Required" /> : null}
             {needsFiles ? <StatusBadge label="Needs Floor Plan / Photos" /> : null}
           </div>
           <p className="mt-1 text-sm text-command-muted">
@@ -66,6 +71,11 @@ export function LeadCard({ lead }: { lead: Lead }) {
           <p className="mt-2 text-xs text-command-muted">
             Booking readiness: {humanizeLabel(booking.status)} | Missing booking info: {humanizeList(booking.missingInfo)}
           </p>
+          {showQuestionBadge ? (
+            <p className="mt-2 text-xs text-command-muted">
+              Question category: {questionMatch!.entry.category} | Reply strategy: {questionMatch!.entry.safe_answer_strategy}
+            </p>
+          ) : null}
         </div>
       ) : null}
       <div className="mt-4 rounded border border-command-line bg-command-panel2 p-3 text-sm">

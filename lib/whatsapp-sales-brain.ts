@@ -3,11 +3,20 @@
 import { evaluateBookingReadiness, type BookingReadiness } from "@/lib/calendar-booking";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
 import type { Lead, LeadMessage } from "@/lib/types";
+import {
+  findQuestionBankEntry,
+  matchQuestionBankIntent,
+  selectQuestionBankReply,
+  type QuestionBankIntentKey,
+  type QuestionBankMatch
+} from "@/lib/whatsapp-question-bank";
 import { validateWhatsAppAutoReply, WHATSAPP_SAFE_FALLBACK_REPLY } from "@/lib/whatsapp-safety";
 
 export type WhatsAppBrainIntent =
   | "landed_renovation"
   | "aa_works"
+  | "general_enquiry"
+  | "design_theme"
   | "condo_renovation"
   | "commercial_renovation"
   | "hacking_demo"
@@ -16,6 +25,14 @@ export type WhatsAppBrainIntent =
   | "site_visit_request"
   | "appointment_request"
   | "floorplan_or_photos_sent"
+  | "follow_up_ping"
+  | "timeline_question"
+  | "submission_approval"
+  | "structural_wall"
+  | "waterproofing_drainage_roof"
+  | "bathroom_kitchen"
+  | "small_handyman"
+  | "spam_unrelated"
   | "vague_enquiry"
   | "unsupported_media"
   | "repeated_enquiry"
@@ -33,7 +50,10 @@ export type WhatsAppBrainNextAction =
   | "acknowledge_received_info"
   | "suggest_initial_project_review"
   | "boss_review_required"
-  | "safe_decline";
+  | "safe_decline"
+  | "ask_for_design_references"
+  | "ask_for_issue_photos"
+  | "request_manager_review";
 
 export interface WhatsAppBrainSchema {
   intent: WhatsAppBrainIntent;
@@ -82,6 +102,8 @@ export interface WhatsAppBrainContext {
 const intents: WhatsAppBrainIntent[] = [
   "landed_renovation",
   "aa_works",
+  "general_enquiry",
+  "design_theme",
   "condo_renovation",
   "commercial_renovation",
   "hacking_demo",
@@ -90,6 +112,14 @@ const intents: WhatsAppBrainIntent[] = [
   "site_visit_request",
   "appointment_request",
   "floorplan_or_photos_sent",
+  "follow_up_ping",
+  "timeline_question",
+  "submission_approval",
+  "structural_wall",
+  "waterproofing_drainage_roof",
+  "bathroom_kitchen",
+  "small_handyman",
+  "spam_unrelated",
   "vague_enquiry",
   "unsupported_media",
   "repeated_enquiry",
@@ -101,7 +131,89 @@ function has(text: string, pattern: RegExp) {
   return pattern.test(text);
 }
 
+function nextActionForQuestionBank(match: QuestionBankMatch): WhatsAppBrainNextAction {
+  switch (match.entry.intent_key) {
+    case "design_theme":
+      return "ask_for_design_references";
+    case "price_question":
+      return "ask_for_scope";
+    case "site_visit_request":
+    case "appointment_request":
+      return "ask_for_address_or_area";
+    case "floorplan_or_photos_sent":
+      return "acknowledge_received_info";
+    case "follow_up_ping":
+      return "ask_for_scope";
+    case "submission_approval":
+    case "structural_wall":
+    case "complaint_or_risk":
+      return "request_manager_review";
+    case "waterproofing_drainage_roof":
+      return "ask_for_issue_photos";
+    case "hacking_demo":
+    case "carpentry":
+      return "ask_for_site_photos";
+    case "spam_unrelated":
+      return "safe_decline";
+    default:
+      return match.entry.required_missing_info.includes("floor_plan") ? "ask_for_floor_plan" : "ask_for_scope";
+  }
+}
+
+function propertyTypeForQuestionBank(match: QuestionBankMatch, lead?: Lead): WhatsAppBrainPropertyType {
+  if (match.entry.intent_key === "landed_renovation" || match.entry.intent_key === "aa_works") return "landed";
+  if (match.entry.intent_key === "condo_renovation") return "condo";
+  if (match.entry.intent_key === "commercial_renovation") return "commercial";
+  if (lead?.propertyType) {
+    if (/landed/i.test(lead.propertyType)) return "landed";
+    if (/condo|apartment/i.test(lead.propertyType)) return "condo";
+    if (/commercial|clinic|office|shop/i.test(lead.propertyType)) return "commercial";
+  }
+  return "unknown";
+}
+
+function appointmentTypeForQuestionBank(match: QuestionBankMatch) {
+  if (match.entry.intent_key === "aa_works") return "landed_aa_review" as const;
+  if (match.entry.intent_key === "site_visit_request") return "site_visit" as const;
+  if (match.entry.intent_key === "appointment_request") return "initial_project_review" as const;
+  return "initial_project_review" as const;
+}
+
+function questionBankIntentForBrainIntent(intent: WhatsAppBrainIntent): QuestionBankIntentKey {
+  if (intent === "vague_enquiry") return "general_enquiry";
+  return findQuestionBankEntry(intent as QuestionBankIntentKey).intent_key;
+}
+
 export function classifyWhatsAppIntent(text = "", lead?: Lead): WhatsAppBrainSchema {
+  const questionBank = matchQuestionBankIntent(text);
+  if (questionBank.score > 0 && questionBank.entry.intent_key !== "unsupported") {
+    const missing = new Set(questionBank.entry.required_missing_info);
+    if (lead?.propertyType) missing.delete("property_type");
+    if (lead?.scopeSummary && !/pending review|not provided/i.test(lead.scopeSummary)) missing.delete("scope");
+    const appointmentIntent = ["site_visit_request", "appointment_request"].includes(questionBank.entry.intent_key);
+    const shouldRequestBoss = questionBank.entry.escalation_rule !== "auto_safe";
+    const bossOnly = ["boss_only", "no_auto_reply"].includes(questionBank.entry.escalation_rule);
+    return {
+      intent: questionBank.entry.intent_key as WhatsAppBrainIntent,
+      property_type: propertyTypeForQuestionBank(questionBank, lead),
+      scope_summary: text.slice(0, 180) || lead?.scopeSummary || "",
+      missing_info: [...missing],
+      risk_flags: questionBank.entry.risk_flags,
+      appointment_intent: appointmentIntent,
+      appointment_type: appointmentTypeForQuestionBank(questionBank),
+      next_best_action: nextActionForQuestionBank(questionBank),
+      reply: "",
+      internal_note: `Question bank matched ${questionBank.entry.category}: ${questionBank.entry.safe_answer_strategy}`,
+      confidence: Math.min(95, 70 + questionBank.score * 5),
+      should_auto_send: !bossOnly,
+      should_request_boss_review: shouldRequestBoss,
+      safety_notes: [
+        "Question bank safety rules applied.",
+        `Forbidden claims: ${questionBank.entry.forbidden_claims.join(", ") || "none"}`
+      ]
+    };
+  }
+
   const combined = `${text} ${lead?.propertyType ?? ""} ${lead?.scopeSummary ?? ""}`.toLowerCase();
   const missing = new Set(["property_type", "scope", "floor_plan", "site_photos"]);
   const risk = new Set<string>();
@@ -187,7 +299,7 @@ export function classifyWhatsAppIntent(text = "", lead?: Lead): WhatsAppBrainSch
   };
 }
 
-const templates: Record<WhatsAppBrainIntent, string[]> = {
+const templates: Partial<Record<WhatsAppBrainIntent, string[]>> = {
   landed_renovation: [
     "Thanks for reaching out. For landed renovation, it's best not to advise blindly because layout, access and site conditions can affect the scope. Could you send the floor plan or site photos if available? We can take a look properly before advising the next step for an initial project review.",
     "No worries, we can help you review it properly. For landed work, the layout, access and existing condition matter quite a bit, so floor plans or site photos would be useful before we advise on the next step for an initial project review.",
@@ -278,7 +390,7 @@ function similarity(a: string, b: string) {
 }
 
 function pickTemplate(intent: WhatsAppBrainIntent, previousReplies: string[], seed: string) {
-  const candidates = templates[intent] ?? templates.vague_enquiry;
+  const candidates = templates[intent] ?? templates.vague_enquiry ?? [WHATSAPP_SAFE_FALLBACK_REPLY];
   const start = Math.abs([...seed].reduce((sum, char) => sum + char.charCodeAt(0), 0)) % candidates.length;
   for (let index = 0; index < candidates.length; index += 1) {
     const candidate = candidates[(start + index) % candidates.length];
@@ -315,7 +427,12 @@ function normalizeSchema(value: Partial<WhatsAppBrainSchema>, fallback: WhatsApp
   };
 }
 
-async function callOpenAiWhatsAppSchema(context: WhatsAppBrainContext, fallback: WhatsAppBrainSchema, previousReplies: string[]) {
+async function callOpenAiWhatsAppSchema(
+  context: WhatsAppBrainContext,
+  fallback: WhatsAppBrainSchema,
+  previousReplies: string[],
+  questionBankMatch: QuestionBankMatch
+) {
   const runtime = getOpenAiWhatsAppReplyRuntime();
   if (!runtime.canCallOpenAi) return null;
 
@@ -332,6 +449,9 @@ async function callOpenAiWhatsAppSchema(context: WhatsAppBrainContext, fallback:
             "You are LIMM Works WhatsApp reply brain for Singapore renovation enquiries.",
             "Return strict JSON only. No markdown.",
             "Never give prices, quote ranges, rough estimates, packages, approval promises, permit certainty, structural certainty, hacking certainty, or appointment confirmation before event exists.",
+            `Matched playbook intent: ${questionBankMatch.entry.intent_key}. Category: ${questionBankMatch.entry.category}.`,
+            `Safe answer strategy: ${questionBankMatch.entry.safe_answer_strategy}.`,
+            `Forbidden claims: ${questionBankMatch.entry.forbidden_claims.join(", ")}.`,
             "Use initial project review wording.",
             "Sound friendly, warm, calm, practical, and human. Avoid repetition. Ask only the next useful detail."
           ].join(" ")
@@ -348,6 +468,16 @@ async function callOpenAiWhatsAppSchema(context: WhatsAppBrainContext, fallback:
               scopeSummary: context.lead.scopeSummary,
               missingInfo: context.lead.missingInfo,
               riskFlags: context.lead.riskFlags
+            },
+            questionBank: {
+              intentKey: questionBankMatch.entry.intent_key,
+              category: questionBankMatch.entry.category,
+              safeAnswerStrategy: questionBankMatch.entry.safe_answer_strategy,
+              requiredMissingInfo: questionBankMatch.entry.required_missing_info,
+              riskFlags: questionBankMatch.entry.risk_flags,
+              escalationRule: questionBankMatch.entry.escalation_rule,
+              forbiddenClaims: questionBankMatch.entry.forbidden_claims,
+              followUpQuestion: questionBankMatch.entry.follow_up_question
             },
             previousOutboundReplies: previousReplies
           })
@@ -367,12 +497,25 @@ export async function buildWhatsAppSalesBrainReply(context: WhatsAppBrainContext
     .filter((message) => message.direction === "outbound" && message.channel === "whatsapp")
     .slice(0, 3)
     .map((message) => message.body);
+  const questionBankMatch = matchQuestionBankIntent(context.latestInboundMessage);
   const baseSchema = classifyWhatsAppIntent(context.latestInboundMessage, context.lead);
   const openAi = getOpenAiWhatsAppReplyRuntime();
-  const openAiSchema = await callOpenAiWhatsAppSchema(context, baseSchema, previousOutbound);
+  const openAiSchema = await callOpenAiWhatsAppSchema(context, baseSchema, previousOutbound, questionBankMatch);
   let schema = openAiSchema ?? baseSchema;
   let replySource: WhatsAppBrainResult["replySource"] = openAiSchema ? "openai" : "fallback_template";
-  const template = pickTemplate(schema.intent, previousOutbound, `${context.lead.id}-${context.latestInboundMessage}`);
+  const questionBankTemplate = selectQuestionBankReply({
+    entry: questionBankMatch.score > 0 ? questionBankMatch.entry : findQuestionBankEntry(questionBankIntentForBrainIntent(schema.intent)),
+    previousReplies: previousOutbound,
+    seed: `${context.lead.id}-${context.latestInboundMessage}`
+  });
+  const template = questionBankMatch.score > 0
+    ? {
+        reply: questionBankTemplate.reply,
+        variationUsed: questionBankTemplate.variationUsed,
+        repeated: questionBankTemplate.repeated,
+        reason: questionBankTemplate.similarityReason
+      }
+    : pickTemplate(schema.intent, previousOutbound, `${context.lead.id}-${context.latestInboundMessage}`);
   if (!schema.reply || !openAiSchema) schema = { ...schema, reply: template.reply };
   let repetitionResult: WhatsAppBrainResult["repetitionResult"] = template.variationUsed ? "fallback_variation" : "passed";
   let reply = schema.reply.trim();
@@ -380,7 +523,13 @@ export async function buildWhatsAppSalesBrainReply(context: WhatsAppBrainContext
   const exactRepeat = previousOutbound.some((previous) => normalize(previous) === normalize(reply));
   const highRepeat = previousOutbound.some((previous) => similarity(previous, reply) > 0.82);
   if (exactRepeat || highRepeat) {
-    const alternate = pickTemplate(schema.intent, previousOutbound, `${context.latestInboundMessage}-alternate`);
+    const alternate = questionBankMatch.score > 0
+      ? selectQuestionBankReply({
+          entry: questionBankMatch.entry,
+          previousReplies: previousOutbound,
+          seed: `${context.latestInboundMessage}-alternate`
+        })
+      : pickTemplate(schema.intent, previousOutbound, `${context.latestInboundMessage}-alternate`);
     reply = alternate.reply;
     repetitionResult = alternate.repeated ? "boss_review_required" : openAiSchema ? "rewritten" : "fallback_variation";
     replySource = openAiSchema ? "rewritten_openai" : "fallback_template";
@@ -388,7 +537,13 @@ export async function buildWhatsAppSalesBrainReply(context: WhatsAppBrainContext
 
   const toneResult = toneCheck(reply);
   if (toneResult === "cold_rewritten") {
-    const alternate = pickTemplate(schema.intent, previousOutbound, `${context.latestInboundMessage}-tone`);
+    const alternate = questionBankMatch.score > 0
+      ? selectQuestionBankReply({
+          entry: questionBankMatch.entry,
+          previousReplies: previousOutbound,
+          seed: `${context.latestInboundMessage}-tone`
+        })
+      : pickTemplate(schema.intent, previousOutbound, `${context.latestInboundMessage}-tone`);
     reply = alternate.reply;
   }
 
@@ -400,9 +555,21 @@ export async function buildWhatsAppSalesBrainReply(context: WhatsAppBrainContext
     toneResult === "too_salesy_blocked" ||
     !safety.ok;
 
-  const shouldAutoSend = schema.should_auto_send && !shouldRequestBoss && schema.confidence >= 65;
+  const repeatedPricePressure =
+    schema.intent === "price_question" &&
+    previousOutbound.filter((previous) => /cost|quotation direction|scope first|wrong idea/i.test(previous)).length >= 2;
+  const shouldAutoSend =
+    schema.should_auto_send &&
+    !["boss_only", "no_auto_reply"].includes(questionBankMatch.entry.escalation_rule) &&
+    !repeatedPricePressure &&
+    !(!safety.ok) &&
+    repetitionResult !== "boss_review_required" &&
+    toneResult !== "too_salesy_blocked" &&
+    schema.confidence >= 65;
   const blockedReason = !safety.ok
     ? safety.errors.join("; ")
+    : repeatedPricePressure
+      ? "repeated price question requires boss review"
     : repetitionResult === "boss_review_required"
       ? "reply too similar to previous outbound replies"
       : toneResult === "too_salesy_blocked"
@@ -432,6 +599,16 @@ export async function buildWhatsAppSalesBrainReply(context: WhatsAppBrainContext
     blockedReason: finalSafety.ok ? (shouldAutoSend ? "" : blockedReason) : finalSafety.errors.join("; "),
     auditMetadata: {
       reply_source: finalSafety.ok && shouldAutoSend ? replySource : "boss_review_required",
+      question_bank_intent: questionBankMatch.entry.intent_key,
+      latest_question_bank_category: questionBankMatch.entry.category,
+      matched_examples: questionBankMatch.matchedExamples,
+      matched_keywords: questionBankMatch.matchedKeywords,
+      reply_strategy: questionBankMatch.entry.safe_answer_strategy,
+      safety_category: questionBankMatch.entry.category,
+      escalation_required: questionBankMatch.entry.escalation_rule !== "auto_safe" || repeatedPricePressure,
+      escalation_rule: questionBankMatch.entry.escalation_rule,
+      escalation_reason: repeatedPricePressure ? "repeated price question" : questionBankMatch.entry.escalation_rule,
+      follow_up_question: questionBankMatch.entry.follow_up_question,
       intent: schema.intent,
       property_type: schema.property_type,
       next_best_action: schema.next_best_action,

@@ -229,6 +229,17 @@ Before sending real WhatsApp tests:
 5. If webhook returns `500`, it must return safe JSON error with code.
 6. No fake `200` if lead/message/audit processing failed.
 
+## WHATSAPP QUESTION BANK LIVE RULE
+
+For v5.2 and later, live WhatsApp replies should also prove the reply-quality layer is working:
+
+1. The audit metadata should show question bank intent when a message matches the playbook.
+2. Price question messages must not produce an amount, amount range, package amount, or rough number.
+3. Appointment request messages must not confirm a booking before a calendar event exists.
+4. Approval, submission, structural, hacking, complaint, and refund-pressure messages must mark boss review or manager review metadata.
+5. Repeated messages should not receive the exact same auto-reply again.
+6. If OpenAI WhatsApp reply is enabled later, it must stay inside the matched question bank safe answer strategy and still pass all validators.
+
 ## FUTURE CODEX RULE
 
 For any live integration phase, Codex must build diagnostics before live testing:

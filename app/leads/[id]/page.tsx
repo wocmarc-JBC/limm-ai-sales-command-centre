@@ -264,6 +264,11 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <div><dt className="text-command-muted">Latest outbound WhatsApp</dt><dd>{latestOutbound?.body ?? "No outbound auto-reply yet"}</dd></div>
             <div><dt className="text-command-muted">Auto-reply status</dt><dd>{humanizeLabel(brainStatus)}</dd></div>
             <div><dt className="text-command-muted">Reply source</dt><dd>{metadataText("reply_source")}</dd></div>
+            <div><dt className="text-command-muted">Matched question intent</dt><dd>{metadataText("question_bank_intent")}</dd></div>
+            <div><dt className="text-command-muted">Latest question bank category</dt><dd>{metadataText("latest_question_bank_category")}</dd></div>
+            <div><dt className="text-command-muted">Reply strategy</dt><dd>{metadataText("reply_strategy")}</dd></div>
+            <div><dt className="text-command-muted">Escalation required</dt><dd>{metadataText("escalation_required")}</dd></div>
+            <div><dt className="text-command-muted">Escalation reason</dt><dd>{metadataText("escalation_reason", "None")}</dd></div>
             <div><dt className="text-command-muted">Intent</dt><dd>{metadataText("intent")}</dd></div>
             <div><dt className="text-command-muted">Confidence</dt><dd>{metadataText("confidence")}</dd></div>
             <div><dt className="text-command-muted">Next best action</dt><dd>{metadataText("next_best_action")}</dd></div>

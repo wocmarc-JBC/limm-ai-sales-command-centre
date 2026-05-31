@@ -21,6 +21,42 @@ The reply must use initial project review wording, explain why floor plan/site p
 
 Calendar booking disabled by default. Boss approval required. Do not confirm booking until event is created.
 
+## v5.2 Question Bank Layer
+
+The WhatsApp question bank now sits before fallback selection and optional OpenAI generation. It classifies common homeowner questions into question bank intent categories such as:
+
+- General enquiry
+- Landed enquiry
+- A&A enquiry
+- Design theme
+- Price question
+- Appointment request
+- Follow-up ping
+- Floor plan/photos received
+- Condo enquiry
+- Commercial enquiry
+- Hacking / demolition
+- Carpentry
+- Timeline
+- Submission / authority
+- Structural / wall
+- Waterproofing / drainage / roof
+- Bathroom / kitchen
+- Complaint / risk
+
+Each category has a safe answer strategy, missing information requirements, risk flags, escalation rule, forbidden claims, reply variations, follow-up question, and audit tag.
+
+Every WhatsApp decision should record question bank intent metadata where available:
+
+- question bank intent
+- matched keywords/examples
+- reply strategy
+- safety category
+- escalation required
+- repetition checked
+
+The question bank also helps avoid repetitive replies by selecting alternate variations and escalating repeated pressure, especially repeated price questions.
+
 v4.8 now supports two Marcus-controlled modes:
 
 1. Closed test mode.

@@ -96,7 +96,8 @@ const requiredScripts = [
   "scripts/test_v4_8_live_diagnostics_static.mjs",
   "scripts/test_whatsapp_adapter_payload_shape.mjs",
   "scripts/test_v4_9_deployment_readiness.mjs",
-  "scripts/test_v5_whatsapp_sales_brain_calendar.mjs"
+  "scripts/test_v5_whatsapp_sales_brain_calendar.mjs",
+  "scripts/test_v5_2_whatsapp_question_bank.mjs"
 ];
 
 let hardFail = false;
@@ -188,7 +189,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v5 WhatsApp Sales Brain and boss-approved Calendar booking foundation is ready for controlled live testing. Next recommended phase: Marcus live message review, then optional OpenAI WhatsApp dry-run enablement."
+      : "v5.2 WhatsApp Question Bank + Reply Playbook is ready for controlled live WhatsApp observation. Next recommended phase: Marcus reviews real conversations and tunes the highest-volume intents before enabling any optional OpenAI WhatsApp reply testing."
   };
 }
 

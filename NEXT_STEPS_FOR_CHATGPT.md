@@ -2,21 +2,24 @@
 
 ## Review First
 
-1. Review `V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md`.
-2. Review `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
-3. Review `WHATSAPP_LIVE_TEST_SETUP_GUIDE.md`.
-4. Review `WHATSAPP_EMERGENCY_OFF_GUIDE.md`.
-5. Review `CALENDAR_BOOKING_SETUP_GUIDE.md`.
-6. Review `DEV_BRAIN_QA_REPORT.md`.
-7. Confirm the review route remains disabled by default.
+1. Review `V5_2_WHATSAPP_QUESTION_BANK_REPORT.md`.
+2. Review `WHATSAPP_QUESTION_BANK_PLAYBOOK.md`.
+3. Review `V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md`.
+4. Review `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
+5. Review `WHATSAPP_LIVE_TEST_SETUP_GUIDE.md`.
+6. Review `WHATSAPP_EMERGENCY_OFF_GUIDE.md`.
+7. Review `CALENDAR_BOOKING_SETUP_GUIDE.md`.
+8. Review `DEV_BRAIN_QA_REPORT.md`.
+9. Confirm the review route remains disabled by default.
 
 ## Recommended Next Prompt For Marcus PowerShell
 
-Prepare the next controlled verification phase after v5.0:
+Prepare the next controlled verification phase after v5.2:
 
 - Keep all v4.0-v4.8 safety rules unchanged.
 - WhatsApp live reply-only auto-reply is confirmed PASS.
-- v5.0 adds the WhatsApp Sales Brain and Calendar foundation.
+- v5.2 adds the WhatsApp Question Bank + Reply Playbook.
+- Question bank intent, reply strategy, escalation reason, and non-repetition metadata should appear in audit data where available.
 - OpenAI WhatsApp reply is off by default.
 - Calendar booking is disabled by default.
 - Auto booking is disabled by default.
@@ -25,7 +28,7 @@ Prepare the next controlled verification phase after v5.0:
 - Do not hardcode Sunday blocked.
 - Do not weaken audit logs.
 - Confirm `/review-chatgpt-ui` is unavailable by default.
-- Run controlled WhatsApp message tests and review reply quality/audit metadata.
+- Run controlled WhatsApp message tests and review reply quality, category matching, non-repetition, and audit metadata.
 - Do not add autonomous booking or send bypass.
 
 ## Marcus PowerShell Commands
@@ -41,8 +44,8 @@ node scripts/audit_v3_package.mjs
 
 ## What Codex Should Build Next
 
-- v5.1 live observation and tuning pass after Marcus tests the five WhatsApp messages.
-- Improve template wording only if Marcus finds tone issues.
+- v5.3 live observation and question-bank tuning pass after Marcus tests real WhatsApp conversations.
+- Tune category keywords, reply variations, and escalation rules based on actual homeowner questions.
 - Add richer boss review/reporting for WhatsApp brain metadata.
 - Prepare Google Calendar live setup only after Marcus approves Calendar credentials and workflow.
 
