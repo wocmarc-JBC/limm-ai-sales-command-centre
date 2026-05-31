@@ -1,6 +1,11 @@
 import "server-only";
 
-import { WhatsAppCloudApiAdapter, type WhatsAppAdapter } from "@/lib/adapters/whatsapp-adapter";
+import {
+  getWhatsAppSendPayloadSummary,
+  WhatsAppCloudApiAdapter,
+  WhatsAppCloudApiSendError,
+  type WhatsAppAdapter
+} from "@/lib/adapters/whatsapp-adapter";
 import { openAiBrainDryRunAdapter } from "@/lib/adapters/openai-adapter";
 import { createAuditLog } from "@/lib/data/audit-repository";
 import {
@@ -36,6 +41,24 @@ function tenMinutesAgoIso() {
 
 function safeError(error: unknown) {
   return error instanceof Error ? error.message : "Unknown WhatsApp webhook failure";
+}
+
+function safeSendErrorMetadata(error: unknown) {
+  if (error instanceof WhatsAppCloudApiSendError) {
+    return {
+      status: error.status,
+      metaCode: error.metaCode ?? "",
+      metaMessage: error.metaMessage ?? "",
+      metaType: error.metaType ?? ""
+    };
+  }
+
+  return {
+    status: "",
+    metaCode: "",
+    metaMessage: safeError(error),
+    metaType: ""
+  };
 }
 
 function logWhatsApp(stage: string, metadata: Record<string, unknown> = {}) {
@@ -316,6 +339,7 @@ export async function handleWhatsAppInboundMessage(
   logWhatsApp("whatsapp_auto_reply_validation_passed", { providerMessageId, leadId: lead.id });
 
   try {
+    logWhatsApp("whatsapp_auto_reply_send_payload_summary", getWhatsAppSendPayloadSummary(senderPhone, reply));
     logWhatsApp("whatsapp_auto_reply_send_started", { providerMessageId, leadId: lead.id });
     const sent = await adapter.sendReply(senderPhone, reply);
     logWhatsApp("whatsapp_auto_reply_sent", { providerMessageId, leadId: lead.id, outboundProviderMessageId: sent.providerMessageId || "" });
@@ -346,7 +370,24 @@ export async function handleWhatsAppInboundMessage(
       reply
     };
   } catch (error) {
-    logWhatsAppError("auto_reply_send", { providerMessageId, leadId: lead.id, reason: safeError(error) });
+    const sendError = safeSendErrorMetadata(error);
+    logWhatsApp("whatsapp_auto_reply_failed", {
+      providerMessageId,
+      leadId: lead.id,
+      status: sendError.status,
+      metaCode: sendError.metaCode,
+      metaMessage: sendError.metaMessage,
+      metaType: sendError.metaType
+    });
+    logWhatsAppError("auto_reply_send", {
+      providerMessageId,
+      leadId: lead.id,
+      reason: safeError(error),
+      status: sendError.status,
+      metaCode: sendError.metaCode,
+      metaMessage: sendError.metaMessage,
+      metaType: sendError.metaType
+    });
     await saveLeadMessage({
       leadId: lead.id,
       direction: "outbound",
@@ -355,7 +396,11 @@ export async function handleWhatsAppInboundMessage(
       whatsappStatus: "failed",
       metadata: {
         inboundProviderMessageId: providerMessageId,
-        error: error instanceof Error ? error.message : "Unknown WhatsApp send failure"
+        error: error instanceof Error ? error.message : "Unknown WhatsApp send failure",
+        status: sendError.status,
+        metaCode: sendError.metaCode,
+        metaMessage: sendError.metaMessage,
+        metaType: sendError.metaType
       }
     });
     await auditWhatsApp({
@@ -364,7 +409,11 @@ export async function handleWhatsAppInboundMessage(
       summary: "WhatsApp auto-reply failed. No retry loop was started.",
       metadata: {
         providerMessageId,
-        error: error instanceof Error ? error.message : "Unknown WhatsApp send failure"
+        error: error instanceof Error ? error.message : "Unknown WhatsApp send failure",
+        status: sendError.status,
+        metaCode: sendError.metaCode,
+        metaMessage: sendError.metaMessage,
+        metaType: sendError.metaType
       }
     });
     return {

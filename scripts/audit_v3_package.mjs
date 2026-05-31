@@ -145,6 +145,7 @@ for (const required of [
   "scripts/test_v4_7_openai_boss_review_ux.mjs",
   "scripts/test_v4_8_whatsapp_closed_test.mjs",
   "scripts/test_v4_8_live_diagnostics_static.mjs",
+  "scripts/test_whatsapp_adapter_payload_shape.mjs",
   "scripts/test_v4_8_whatsapp_live_payload.mjs",
   "scripts/check_v4_8_vercel_whatsapp_health.mjs",
   "scripts/test_v4_9_deployment_readiness.mjs",

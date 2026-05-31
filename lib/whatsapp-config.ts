@@ -61,7 +61,7 @@ export function getWhatsAppRuntime(): WhatsAppRuntime {
     accessTokenConfigured,
     phoneNumberIdConfigured,
     businessNumber: normalizeWhatsAppPhone(process.env.WHATSAPP_BUSINESS_NUMBER ?? ""),
-    graphVersion: process.env.WHATSAPP_GRAPH_VERSION || "v20.0",
+    graphVersion: process.env.WHATSAPP_GRAPH_VERSION || "v21.0",
     closedTestAutoReplyAllowed,
     liveAutoReplyApproved,
     autoReplyModeAllowed,
