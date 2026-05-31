@@ -73,8 +73,35 @@ function similarity(a: string, b: string) {
 }
 
 function isValidClientText(input: WhatsAppReplyDecisionInput) {
-  if (input.inboundMessageType !== "text") return false;
+  const type = input.inboundMessageType.toLowerCase();
+  if (!["text", "image", "document", "video"].includes(type)) return false;
   return normalise(input.inboundMessageText).length > 0;
+}
+
+function isVoiceOrAudio(input: WhatsAppReplyDecisionInput) {
+  const type = input.inboundMessageType.toLowerCase();
+  return type === "audio" || type === "voice";
+}
+
+function isSinglish(text: string) {
+  return /\b(how much ah|price ah|budget how|can make appt anot|can meet anot|got landed photo|got project photo|can hack wall or not|need approval meh|reno landed can|can do anot)\b/i.test(text);
+}
+
+function voiceFallbackReply() {
+  return "Sorry, we're not able to listen to voice messages here. Could you type the key details instead, such as your property type, renovation scope, and preferred appointment timing for an initial project review?";
+}
+
+function mediaTrace(type: string) {
+  const normalizedType = type.toLowerCase();
+  return {
+    inboundMessageType: normalizedType,
+    mediaDetected: ["image", "document", "video", "audio", "voice"].includes(normalizedType),
+    imageDetected: normalizedType === "image",
+    documentDetected: normalizedType === "document",
+    audioDetected: normalizedType === "audio",
+    voiceMessageDetected: normalizedType === "voice" || normalizedType === "audio",
+    voiceTranscriptionAttempted: false
+  };
 }
 
 function isSpamIntent(intent: string) {
@@ -109,15 +136,84 @@ function safeRewriteFor(intent: string) {
 
 export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): WhatsAppReplyDecision {
   const validText = isValidClientText(input);
+  const voiceMessage = isVoiceOrAudio(input);
   const baseTrace: Record<string, unknown> = {
     providerMessageId: input.providerMessageId ?? "",
     inbound_text: input.inboundMessageText,
     normalized_text: normalise(input.inboundMessageText),
+    ...mediaTrace(input.inboundMessageType),
     valid_client_text: validText,
     auto_reply_enabled: input.autoReplyEnabled,
     openai_enabled: input.openAiEnabled,
-    rate_limit_exceeded: Boolean(input.rateLimitExceeded)
+    rate_limit_exceeded: Boolean(input.rateLimitExceeded),
+    singlishDetected: isSinglish(input.inboundMessageText),
+    replyLanguage: "professional_english",
+    handoffEmailTriggered: false,
+    handoffEmailSent: false,
+    handoffEmailSkippedReason: "",
+    handoffEmailCooldownApplied: false,
+    handoffEmailToMasked: "",
+    duplicateSuppressionReason: ""
   };
+
+  if (voiceMessage) {
+    const replyText = voiceFallbackReply();
+    return {
+      shouldReply: input.autoReplyEnabled,
+      replyText,
+      intentionalNoReplyReason: input.autoReplyEnabled ? null : "auto_reply_disabled",
+      intent: "unsupported_media",
+      stage: "unsupported_or_spam",
+      confidence: 100,
+      replySource: "safe_fallback",
+      salesMove: "safe_fallback",
+      answeredClientQuestion: true,
+      askedNextBestQuestion: true,
+      handoffRequired: true,
+      riskFlags: ["voice_message_needs_typed_details"],
+      missingInfo: ["property_type", "scope", "preferred_date_time"],
+      nextAction: "Ask client to type key project and appointment details.",
+      safetyResult: "pass",
+      repetitionResult: "pass",
+      qualityResult: "pass",
+      noSilenceGuardResult: "not_needed",
+      appointmentStatus: "none",
+      calendarEventId: input.calendarEventId ?? null,
+      blackBoxTrace: {
+        ...baseTrace,
+        valid_client_text: false,
+        voiceMessageDetected: true,
+        voiceTranscriptionAttempted: false,
+        detected_intent: "voice_message",
+        detectedIntents: ["unsupported_media"],
+        primaryIntent: "unsupported_media",
+        multiIntentDetected: false,
+        leadContextChecked: true,
+        knownContextSummary: "Voice/audio message received; content not transcribed.",
+        missingFieldsAsked: ["property_type", "scope", "preferred_date_time"],
+        repeatedInfoAvoided: [],
+        contextUsedInReply: true,
+        contextFromCurrentMessage: false,
+        contextFromPreviousMessages: false,
+        likelyFloorPlanDetected: false,
+        likelySitePhotoDetected: false,
+        likelyDesignReferenceDetected: false,
+        repeatedInfoRequestPrevented: false,
+        needsHuman: true,
+        escalationReason: "voice_message_received",
+        final_reply_text: replyText,
+        reply_source: "safe_fallback",
+        safety_result: "pass",
+        repetition_result: "pass",
+        quality_result: "pass",
+        no_silence_guard_result: "not_needed",
+        appointment_status: "none",
+        handoff_required: true,
+        final_send_result: "pending_send",
+        error: ""
+      }
+    };
+  }
 
   if (!validText) {
     return {
@@ -144,7 +240,8 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       blackBoxTrace: {
         ...baseTrace,
         final_send_result: "intentional_no_reply",
-        intentional_no_reply_reason: input.inboundMessageType === "text" ? "system_event" : "unsupported_media"
+        intentional_no_reply_reason: input.inboundMessageType === "text" ? "system_event" : "unsupported_media",
+        duplicateSuppressionReason: input.inboundMessageType === "text" ? "" : "unsupported_media_without_caption"
       }
     };
   }
@@ -256,6 +353,35 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     previousReplies: priorOutbound,
     calendarEventId: input.calendarEventId
   });
+  const detectedIntents = coach.detectedIntents;
+  const needsHuman =
+    coach.handoffRequired ||
+    coach.multiIntentDetected ||
+    detectedIntents.some((intent) =>
+      [
+        "appointment_request",
+        "meeting_availability",
+        "price_question",
+        "portfolio_request",
+        "hacking_wall",
+        "approval_submission",
+        "landed_renovation",
+        "landed_aa",
+        "complaint_or_risk"
+      ].includes(intent)
+    ) ||
+    coach.leadContext.hasImageOrDocument ||
+    coach.confidence < 75;
+  const escalationReason = [
+    coach.handoffRequired ? "risk_or_complaint" : "",
+    coach.multiIntentDetected ? "multi_intent_high_value_lead" : "",
+    detectedIntents.includes("appointment_request") || detectedIntents.includes("meeting_availability") ? "appointment_request" : "",
+    detectedIntents.includes("price_question") ? "price_budget_question" : "",
+    detectedIntents.includes("portfolio_request") ? "portfolio_request" : "",
+    detectedIntents.includes("hacking_wall") || detectedIntents.includes("approval_submission") ? "hacking_or_approval_question" : "",
+    coach.leadContext.hasImageOrDocument ? "floor_plan_photo_or_document_received" : "",
+    coach.confidence < 75 ? "bot_confidence_low" : ""
+  ].filter(Boolean).join(" + ");
 
   return {
     shouldReply: input.autoReplyEnabled && validText && Boolean(replyText.trim()),
@@ -268,7 +394,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     salesMove: coach.salesMove,
     answeredClientQuestion: finalQuality.answeredActualQuestion,
     askedNextBestQuestion: /\?/.test(replyText),
-    handoffRequired: coach.handoffRequired,
+    handoffRequired: needsHuman,
     riskFlags: [...new Set([...coach.riskFlags, ...riskFlagsFromIntents(coach.detectedIntents)])],
     missingInfo: coach.missingInfo,
     nextAction: coach.nextAction,
@@ -287,13 +413,31 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       multiIntentDetected: coach.multiIntentDetected,
       leadContextChecked: true,
       knownContextSummary: coach.leadContext.knownContextSummary,
+      knownPropertyType: coach.leadContext.knownPropertyType,
+      inboundMessageType: input.inboundMessageType,
+      mediaDetected: coach.leadContext.hasMedia || mediaTrace(input.inboundMessageType).mediaDetected,
+      imageDetected: coach.leadContext.hasImageOrDocument || mediaTrace(input.inboundMessageType).imageDetected,
+      documentDetected: mediaTrace(input.inboundMessageType).documentDetected,
+      audioDetected: false,
+      voiceMessageDetected: false,
+      likelyFloorPlanDetected: coach.leadContext.likelyFloorPlan || coach.leadContext.hasFloorPlan,
+      likelySitePhotoDetected: coach.leadContext.likelySitePhoto || coach.leadContext.hasSitePhotos,
+      likelyDesignReferenceDetected: coach.leadContext.likelyDesignReference || coach.leadContext.hasDesignReferences,
+      contextFromCurrentMessage: coach.leadContext.contextFromCurrentMessage,
+      contextFromPreviousMessages: coach.leadContext.contextFromPreviousMessages,
+      contextUsedInReply: true,
       missingFieldsAsked: coach.missingFieldsAsked,
       repeatedInfoAvoided: coach.repeatedInfoAvoided,
+      repeatedInfoRequestPrevented: coach.repeatedInfoAvoided.length > 0,
       portfolioRequestDetected: coach.portfolioRequestDetected,
       instagramUrlAvailable: coach.instagramUrlAvailable,
       humanFollowUpTaskCreated: coach.humanFollowUpTaskCreated,
       humanFollowUpTaskSkippedReason: coach.humanFollowUpTaskSkippedReason,
       combinedReplyUsed: coach.combinedReplyUsed,
+      singlishDetected: isSinglish(input.inboundMessageText),
+      replyLanguage: "professional_english",
+      needsHuman,
+      escalationReason,
       conversation_stage: coach.stage,
       confidence: coach.confidence,
       selected_sales_move: coach.salesMove,
@@ -306,7 +450,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       quality_score: finalQuality.qualityScore,
       no_silence_guard_result: noSilenceGuardResult,
       appointment_status: coach.appointmentStatus,
-      handoff_required: coach.handoffRequired,
+      handoff_required: needsHuman,
       intentional_no_reply_reason: null,
       final_send_result: "pending_send",
       error: ""

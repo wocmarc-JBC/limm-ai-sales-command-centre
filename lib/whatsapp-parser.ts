@@ -4,6 +4,11 @@ export type ParsedWhatsAppMessage = {
   timestamp: string | null;
   text: string;
   type: string;
+  caption: string;
+  filename: string;
+  mimeType: string;
+  mediaId: string;
+  isVoiceMessage: boolean;
   contactName: string;
   businessPhoneNumberId: string;
 };
@@ -32,7 +37,12 @@ export function parseWhatsAppInbound(payload: any): ParsedWhatsAppMessage[] {
         const senderPhone = String(message?.from ?? "");
         const providerMessageId = String(message?.id ?? "");
         const type = String(message?.type ?? "");
-        const text = type === "text" ? String(message?.text?.body ?? "").trim() : "";
+        const media = message?.[type] && typeof message?.[type] === "object" ? message[type] : {};
+        const caption = String(media?.caption ?? "").trim();
+        const filename = String(media?.filename ?? "").trim();
+        const mimeType = String(media?.mime_type ?? "").trim();
+        const mediaId = String(media?.id ?? "").trim();
+        const text = type === "text" ? String(message?.text?.body ?? "").trim() : caption;
         const contact = contacts.find((item: any) => String(item?.wa_id ?? "") === senderPhone) ?? contacts[0] ?? {};
         parsed.push({
           senderPhone,
@@ -40,6 +50,11 @@ export function parseWhatsAppInbound(payload: any): ParsedWhatsAppMessage[] {
           timestamp: parseProviderTimestamp(message?.timestamp),
           text,
           type,
+          caption,
+          filename,
+          mimeType,
+          mediaId,
+          isVoiceMessage: type === "voice" || (type === "audio" && Boolean(message?.audio?.voice)),
           contactName: String(contact?.profile?.name ?? ""),
           businessPhoneNumberId: String(value?.metadata?.phone_number_id ?? "")
         });

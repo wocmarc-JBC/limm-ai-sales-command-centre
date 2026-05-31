@@ -143,8 +143,8 @@ const replay = [
   {
     message: "I want refund / lawyer",
     intent: "complaint_or_risk",
-    sourcePhrases: ["get the manager to review", "before advising the next step"],
-    expectedReply: "Thanks for raising this. I'll get the manager to review the matter properly before advising the next step. Could you share the details, photos or messages related to the issue so it can be checked carefully for an initial project review?"
+    sourcePhrases: ["get the team to follow up", "checked properly"],
+    expectedReply: "Thanks, I'll get the team to follow up with you directly on this. Could you share the key details or photos/messages related to the issue so it can be checked properly for an initial project review?"
   }
 ];
 
@@ -222,8 +222,8 @@ for (const phrase of [
 }
 
 for (const field of [
-  "version: \"v5_3_1_multi_intent_lead_context_portfolio\"",
-  "salesBrainVersion: \"v5.3.1\"",
+  "version: \"v5_3_2_deep_qa_media_singlish_voice_email_handoff\"",
+  "salesBrainVersion: \"v5.3.2\"",
   "replyCoachAvailable",
   "replyDecisionEngineAvailable",
   "replyQualityGateAvailable",

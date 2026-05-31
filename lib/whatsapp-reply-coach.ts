@@ -126,10 +126,17 @@ function similarity(leftText: string, rightText: string) {
 
 export function detectReplyCoachIntent(text: string): QuestionBankIntentKey {
   const normalized = normalise(text);
+  const raw = text.toLowerCase();
+  if (/你好|在吗|hello|hi/.test(raw) && normalized.length <= 32) return "follow_up_ping";
+  if (/多少钱|报价|价格/.test(raw)) return "price_question";
+  if (/预约|见面|会议|可以约/.test(raw)) return "appointment_request";
+  if (/作品|案例|照片/.test(raw)) return "design_theme";
+  if (/敲墙|拆墙/.test(raw)) return "structural_wall";
+  if (/申请|批准|审批|报批/.test(raw)) return "submission_approval";
   if (!normalized) return "unsupported";
-  if (has(normalized, /\b(past works?|past projects?|project photos?|portfolio|before[-\s]?after|before and after|show me your work|photos of your works?|renovation photos?|completed project|design photos?)\b/i)) return "design_theme";
-  if (has(normalized, /\b(refund|lawyer|complaint|unhappy|angry|defect|your work.*problem)\b/i)) return "complaint_or_risk";
-  if (has(normalized, /\b(how much|roughly|price|cost|estimate|quotation|quote|package|budget)\b/i)) return "price_question";
+  if (has(normalized, /\b(past works?|past projects?|project photos?|portfolio|before[-\s]?after|before and after|show me your work|photos of your works?|renovation photos?|completed project|design photos?|got landed photo|got project photo)\b/i)) return "design_theme";
+  if (has(normalized, /\b(refund|lawyer|complaint|unhappy|angry|defect|your work.*problem|call me|urgent|paid deposit|cancel project|cancel)\b/i)) return "complaint_or_risk";
+  if (has(normalized, /\b(how much|roughly|price|cost|estimate|quotation|quote|package|budget|budget how|price ah)\b/i)) return "price_question";
   if (has(normalized, /\b(need approval|can approve|ura|bca|submission|permit|will this pass|will pass)\b/i)) return "submission_approval";
   if (has(normalized, /\b(hack wall|remove wall|structural wall|load bearing|need pe|pe endorsement|beam|column)\b/i)) return "structural_wall";
   if (has(normalized, /\b(can hack|hacking|demolish|demolition|debris|disposal)\b/i)) return "hacking_demo";
@@ -191,7 +198,7 @@ function appointmentTimeText(text: string) {
 }
 
 function repeatedInfoAvoided(context: WhatsAppLeadContextMemory) {
-  return context.receivedFields.filter((field) => ["floor plan", "scope", "site photos", "property type", "address/area"].includes(field));
+  return context.receivedFields.filter((field) => ["floor plan", "floor plan/image", "scope", "site photos", "property type", "address/area"].includes(field));
 }
 
 function missingAsked(context: WhatsAppLeadContextMemory, reply: string) {
@@ -233,12 +240,13 @@ function composeAppointmentReply(input: WhatsAppReplyCoachInput, context: WhatsA
     const received = describeReceivedInfo(context);
     return `${requestedTime} noted. We can help check availability, but the appointment is not confirmed yet. ${received || "Since we've received the main details,"} the team will review and confirm whether that slot works for an initial project review.`;
   }
+  const received = describeReceivedInfo(context);
   if (followUp) {
     const ask = buildMissingInfoAsk(context, "appointment");
-    return `We can help check the next available meeting slot, but it is not confirmed yet. ${ask || "The team will review the current details and confirm availability for an initial project review."}`;
+    return `We can help check the next available meeting slot, but it is not confirmed yet. ${received ? `${received} ` : ""}${ask || "The team will review the current details and confirm availability for an initial project review."}`;
   }
   const ask = buildMissingInfoAsk(context, "appointment");
-  return `${requestedTime} noted. We can help check availability, but the appointment is not confirmed yet. ${ask || "The team will review the current details and confirm availability for an initial project review."}`;
+  return `${requestedTime} noted. We can help check availability, but the appointment is not confirmed yet. ${received ? `${received} ` : ""}${ask || "The team will review the current details and confirm availability for an initial project review."}`;
 }
 
 function composePortfolioReply(context: WhatsAppLeadContextMemory) {
@@ -265,6 +273,10 @@ function composePingReply(input: WhatsAppReplyCoachInput, context: WhatsAppLeadC
     return `Yes, we're here. Sorry if you were waiting. ${describeReceivedInfo(context)} The team can review the next step properly for an initial project review.`;
   }
   return "Yes, we're here. Sorry if you were waiting. Could you share what type of renovation you're planning, or send the floor plan/scope if you already have it for an initial project review?";
+}
+
+function composeVoiceMessageReply() {
+  return "Sorry, we're not able to listen to voice messages here. Could you type the key details instead, such as your property type, renovation scope, and preferred appointment timing for an initial project review?";
 }
 
 function composeWhatNextReply(context: WhatsAppLeadContextMemory) {
@@ -315,7 +327,7 @@ function composeMultiIntentReply(input: WhatsAppReplyCoachInput, intents: WhatsA
   }
 
   const info = contextAwareInfoAsk(context, hasAppointment ? "appointment" : "general");
-  if (!hasPrice && !parts.join(" ").includes(info) && info) {
+  if (!hasPrice && !hasAppointment && !parts.join(" ").includes(info) && info) {
     parts.push(info);
   }
 
@@ -327,6 +339,7 @@ function replyFor(input: WhatsAppReplyCoachInput, intent: QuestionBankIntentKey,
   const hasPriorContext = input.previousMessages.length > 1;
   const context = inferWhatsAppLeadContext({ lead: input.lead, previousMessages: input.previousMessages, inboundText: input.inboundText });
   const scan = detectWhatsAppMessageIntents(input.inboundText);
+  if (intent === "unsupported_media" && /audio|voice/i.test(input.inboundText)) return composeVoiceMessageReply();
   if (scan.multiIntentDetected) return composeMultiIntentReply(input, scan.detectedIntents, context);
   if (scan.portfolioRequestDetected) return composePortfolioReply(context);
   if (normalise(input.inboundText).includes("what next")) return composeWhatNextReply(context);
@@ -352,7 +365,7 @@ function replyFor(input: WhatsAppReplyCoachInput, intent: QuestionBankIntentKey,
     case "timeline_question":
       return "We should avoid promising a timeline before reviewing the full scope and site condition. Duration can depend on material lead time, trade sequencing and site readiness. Could you share the areas involved and your target date so the team can review it properly for an initial project review?";
     case "complaint_or_risk":
-      return "Thanks for raising this. I'll get the manager to review the matter properly before advising the next step. Could you share the details, photos or messages related to the issue so it can be checked carefully for an initial project review?";
+      return "Thanks, I'll get the team to follow up with you directly on this. Could you share the key details or photos/messages related to the issue so it can be checked properly for an initial project review?";
     case "aa_works":
       return "Thanks for sharing. For landed A&A works, items like roofline, drainage, waterproofing, access and submission requirements can affect the scope. If you have the floor plan or site photos, send them over and we will review it more properly for an initial project review.";
     case "landed_renovation":

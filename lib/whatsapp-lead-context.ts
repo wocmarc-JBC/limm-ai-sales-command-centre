@@ -1,14 +1,22 @@
 import type { Lead, LeadMessage } from "@/lib/types";
 
 export interface WhatsAppLeadContextMemory {
+  hasMedia: boolean;
+  hasImageOrDocument: boolean;
+  hasAudio: boolean;
   hasFloorPlan: boolean;
+  likelyFloorPlan: boolean;
   hasSitePhotos: boolean;
+  likelySitePhoto: boolean;
   hasScopeOfWork: boolean;
   hasPropertyType: boolean;
   hasAddressOrArea: boolean;
   hasPreferredAppointmentTime: boolean;
   hasDesignReferences: boolean;
+  likelyDesignReference: boolean;
   hasPortfolioRequest: boolean;
+  contextFromCurrentMessage: boolean;
+  contextFromPreviousMessages: boolean;
   knownScopeSummary: string;
   knownPropertyType: string;
   missingFields: string[];
@@ -25,7 +33,17 @@ function normalise(text: string) {
 function inboundTexts(messages: LeadMessage[]) {
   return messages
     .filter((message) => message.direction === "inbound")
-    .map((message) => `${message.body} ${Object.values(message.metadata ?? {}).join(" ")}`);
+    .map((message) => `${message.body} ${metadataText(message.metadata ?? {})}`);
+}
+
+function metadataText(metadata: Record<string, unknown>) {
+  return Object.entries(metadata)
+    .map(([key, value]) => {
+      if (value === null || value === undefined) return key;
+      if (typeof value === "object") return `${key} ${JSON.stringify(value)}`;
+      return `${key} ${String(value)}`;
+    })
+    .join(" ");
 }
 
 function hasAny(text: string, patterns: RegExp[]) {
@@ -57,16 +75,35 @@ export function inferWhatsAppLeadContext(input: {
   previousMessages: LeadMessage[];
   inboundText: string;
 }): WhatsAppLeadContextMemory {
-  const relevantText = [
+  const currentText = [
     input.lead.propertyType,
     input.lead.scopeSummary,
     input.lead.lastClientMessage,
-    input.inboundText,
-    ...inboundTexts(input.previousMessages)
+    input.inboundText
+  ].join(" ");
+  const previousText = inboundTexts(input.previousMessages).join(" ");
+  const relevantText = [
+    currentText,
+    previousText
   ].join(" ");
   const normalized = normalise(relevantText);
+  const normalizedCurrent = normalise(currentText);
+  const normalizedPrevious = normalise(previousText);
 
-  const hasFloorPlan = hasAny(normalized, [
+  const hasImageOrDocument = hasAny(normalized, [
+    /\bmessagetype\s+(?:image|document)\b/i,
+    /\bmimetype\s+(?:image|application pdf|application\/pdf)\b/i,
+    /\bfilename\s+[\w\s-]*(?:floorplan|floor plan|plan|drawing|layout)[\w\s-]*(?:pdf|jpg|jpeg|png|webp)\b/i,
+    /\bfloorplan\s+(?:pdf|jpg|jpeg|png|webp)\b/i
+  ]);
+  const hasAudio = hasAny(normalized, [
+    /\bmessagetype\s+(?:audio|voice)\b/i,
+    /\bmimetype\s+audio\b/i,
+    /\bisvoicemessage\s+true\b/i
+  ]);
+  const hasMedia = hasImageOrDocument || hasAudio || hasAny(normalized, [/\bmediaid\b/i, /\bcaption\b/i]);
+
+  const explicitFloorPlan = hasAny(normalized, [
     /\bfloor plan\b/i,
     /\bfloorplan\b/i,
     /\blayout\b/i,
@@ -74,16 +111,36 @@ export function inferWhatsAppLeadContext(input: {
     /\bi (?:sent|have|attached).*plan\b/i,
     /\battached.*(?:plan|layout|drawing)\b/i
   ]);
-  const hasSitePhotos = hasAny(normalized, [
+  const likelyFloorPlan = explicitFloorPlan || (hasImageOrDocument && hasAny(normalized, [
+    /\bplan\b/i,
+    /\bdrawing\b/i,
+    /\blayout\b/i,
+    /\bdesign ideas?\b/i,
+    /\bdesign theme\b/i,
+    /\ba&a\b/i,
+    /\baa works\b/i,
+    /\blanded\b/i
+  ]));
+  const hasFloorPlan = explicitFloorPlan || likelyFloorPlan;
+  const explicitSitePhotos = hasAny(normalized, [
     /\bsite photos?\b/i,
     /\bphotos?\b/i,
     /\bpictures?\b/i,
     /\bimages?\b/i,
     /\bvideo\b/i,
     /\battached.*(?:photo|image|picture|video)\b/i,
-    /\bmessageType image\b/i,
-    /\bmessageType video\b/i
+    /\bmessagetype\s+video\b/i
   ]);
+  const likelySitePhoto = explicitSitePhotos || (hasImageOrDocument && !likelyFloorPlan && hasAny(normalized, [
+    /\bphoto\b/i,
+    /\bpicture\b/i,
+    /\bsite\b/i,
+    /\bcondition\b/i,
+    /\bleak\b/i,
+    /\broof\b/i,
+    /\bwall\b/i
+  ]));
+  const hasSitePhotos = explicitSitePhotos || likelySitePhoto;
   const knownScopeSummary = scopeFromText(normalized, input.lead);
   const hasScopeOfWork = Boolean(knownScopeSummary) || hasAny(normalized, [
     /\bscope\b/i,
@@ -122,7 +179,7 @@ export function inferWhatsAppLeadContext(input: {
     /\bmeeting\b/i,
     /\bslot\b/i
   ]);
-  const hasDesignReferences = hasAny(normalized, [
+  const explicitDesignReferences = hasAny(normalized, [
     /\breference images?\b/i,
     /\bdesign refs?\b/i,
     /\bstyle reference\b/i,
@@ -132,6 +189,14 @@ export function inferWhatsAppLeadContext(input: {
     /\bmodern luxury\b/i,
     /\bminimalist\b/i
   ]);
+  const likelyDesignReference = explicitDesignReferences || (hasImageOrDocument && hasAny(normalized, [
+    /\bdesign ideas?\b/i,
+    /\bdesign theme\b/i,
+    /\bdesign concept\b/i,
+    /\breference\b/i,
+    /\bstyle\b/i
+  ]));
+  const hasDesignReferences = explicitDesignReferences || likelyDesignReference;
   const hasPortfolioRequest = hasAny(normalized, [
     /\bpast works?\b/i,
     /\bpast projects?\b/i,
@@ -153,7 +218,7 @@ export function inferWhatsAppLeadContext(input: {
   const receivedFields = [
     hasPropertyType ? "property type" : "",
     hasScopeOfWork ? "scope" : "",
-    hasFloorPlan ? "floor plan" : "",
+    hasFloorPlan ? (hasImageOrDocument && likelyFloorPlan ? "floor plan/image" : "floor plan") : "",
     hasSitePhotos ? "site photos" : "",
     hasAddressOrArea ? "address/area" : "",
     hasPreferredAppointmentTime ? "preferred appointment time" : "",
@@ -165,14 +230,45 @@ export function inferWhatsAppLeadContext(input: {
     : "No key project details received yet.";
 
   return {
+    hasMedia,
+    hasImageOrDocument,
+    hasAudio,
     hasFloorPlan,
+    likelyFloorPlan,
     hasSitePhotos,
+    likelySitePhoto,
     hasScopeOfWork,
     hasPropertyType,
     hasAddressOrArea,
     hasPreferredAppointmentTime,
     hasDesignReferences,
+    likelyDesignReference,
     hasPortfolioRequest,
+    contextFromCurrentMessage: hasAny(normalizedCurrent, [
+      /\bfloor plan\b/i,
+      /\bfloorplan\b/i,
+      /\blayout\b/i,
+      /\bdrawing\b/i,
+      /\bscope\b/i,
+      /\blanded\b/i,
+      /\bsite photos?\b/i,
+      /\baddress\b/i,
+      /\barea\b/i
+    ]),
+    contextFromPreviousMessages: hasAny(normalizedPrevious, [
+      /\bfloor plan\b/i,
+      /\bfloorplan\b/i,
+      /\blayout\b/i,
+      /\bdrawing\b/i,
+      /\bcaption\b/i,
+      /\bfilename\b/i,
+      /\bmessagetype\s+(?:image|document)\b/i,
+      /\bscope\b/i,
+      /\blanded\b/i,
+      /\bsite photos?\b/i,
+      /\baddress\b/i,
+      /\barea\b/i
+    ]),
     knownScopeSummary,
     knownPropertyType,
     missingFields,
@@ -183,6 +279,11 @@ export function inferWhatsAppLeadContext(input: {
 
 export function describeReceivedInfo(context: WhatsAppLeadContextMemory) {
   if (!context.receivedFields.length) return "";
+  if (context.receivedFields.includes("floor plan/image")) {
+    const remaining = context.receivedFields.filter((field) => field !== "floor plan/image");
+    if (!remaining.length) return "Thanks, we've received the floor plan/image.";
+    return `Thanks, we've received the floor plan/image and ${readableList(remaining)}.`;
+  }
   return `Thanks, we've received the ${readableList(context.receivedFields)}.`;
 }
 

@@ -15,6 +15,7 @@ import {
   upsertWhatsAppLead
 } from "@/lib/data/lead-messages-repository";
 import { getWhatsAppRuntime, normalizeWhatsAppPhone } from "@/lib/whatsapp-config";
+import { processWhatsAppHandoffEmail } from "@/lib/handoff-email";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
 import { buildWhatsAppReplyDecision, type WhatsAppReplyDecision } from "@/lib/whatsapp-reply-decision";
 import { validateWhatsAppAutoReply } from "@/lib/whatsapp-safety";
@@ -67,6 +68,14 @@ function logWhatsApp(stage: string, metadata: Record<string, unknown> = {}) {
 
 function logWhatsAppError(stage: string, metadata: Record<string, unknown> = {}) {
   console.error("whatsapp_webhook_error", { stage, ...metadata });
+}
+
+function canBuildReplyDecision(message: ParsedWhatsAppMessage) {
+  const type = message.type.toLowerCase();
+  if (type === "text") return Boolean(message.text.trim());
+  if (type === "audio" || type === "voice") return true;
+  if (["image", "document", "video"].includes(type)) return Boolean(message.text.trim());
+  return false;
 }
 
 async function auditWhatsApp(input: {
@@ -217,7 +226,7 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
-  const inboundBody = message.text || `[Unsupported WhatsApp ${message.type || "message"} received]`;
+  const inboundBody = message.text || message.caption || `[Unsupported WhatsApp ${message.type || "message"} received]`;
   let lead: Awaited<ReturnType<typeof upsertWhatsAppLead>>;
   try {
     logWhatsApp("whatsapp_lead_upsert_started", { providerMessageId });
@@ -244,6 +253,11 @@ export async function handleWhatsAppInboundMessage(
       whatsappStatus: "received",
       metadata: {
         messageType: message.type,
+        caption: message.caption,
+        filename: message.filename,
+        mimeType: message.mimeType,
+        mediaId: message.mediaId,
+        isVoiceMessage: message.isVoiceMessage,
         businessPhoneNumberId: message.businessPhoneNumberId,
         providerMessageId
       }
@@ -262,7 +276,8 @@ export async function handleWhatsAppInboundMessage(
     metadata: { providerMessageId, messageType: message.type }
   });
 
-  if (!message.text || message.type !== "text") {
+  const typeForDecision = message.type.toLowerCase();
+  if (!canBuildReplyDecision(message) && !["image", "document"].includes(typeForDecision)) {
     logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "unsupported_or_empty_message" });
     await auditWhatsApp({
       action: "whatsapp_auto_reply_disabled",
@@ -371,10 +386,36 @@ export async function handleWhatsAppInboundMessage(
   });
   await auditReplyDecisionTrace({ leadId: lead.id, providerMessageId, decision });
   const reply = decision.replyText;
+  const traceId = `${providerMessageId}:${lead.id}`;
+  const handoffEmail = await processWhatsAppHandoffEmail({
+    lead,
+    phone: senderPhone,
+    latestMessage: inboundBody,
+    recentMessages,
+    decision,
+    botReply: reply,
+    traceId
+  });
+  Object.assign(decision.blackBoxTrace, handoffEmail.trace);
   const brainMetadata = {
     providerMessageId,
     ...decision.blackBoxTrace
   };
+  if (handoffEmail.triggered) {
+    await auditWhatsApp({
+      action: handoffEmail.sent ? "whatsapp_handoff_email_sent" : "whatsapp_handoff_email_skipped",
+      leadId: lead.id,
+      summary: handoffEmail.sent
+        ? "WhatsApp lead handoff email sent to Marcus."
+        : "WhatsApp lead handoff email was triggered but not sent.",
+      metadata: {
+        ...brainMetadata,
+        handoffReasons: handoffEmail.reasons,
+        handoffEmailSkippedReason: handoffEmail.skippedReason,
+        handoffEmailCooldownApplied: handoffEmail.cooldownApplied
+      }
+    });
+  }
   logWhatsApp("whatsapp_auto_reply_generated", {
     providerMessageId,
     leadId: lead.id,

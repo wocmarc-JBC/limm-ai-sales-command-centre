@@ -58,6 +58,8 @@ for (const required of [
   "V5_2_WHATSAPP_QUESTION_BANK_REPORT.md",
   "V5_3_WHATSAPP_REPLY_COACH_REPORT.md",
   "docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md",
+  "docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md",
+  "reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md",
   "CALENDAR_BOOKING_SETUP_GUIDE.md",
   "CALENDAR_BOOKING_SAFETY_RULES.md",
   "WHATSAPP_QUESTION_BANK_PLAYBOOK.md",
@@ -105,6 +107,7 @@ for (const required of [
   "lib/whatsapp-reply-decision.ts",
   "lib/whatsapp-multi-intent.ts",
   "lib/whatsapp-lead-context.ts",
+  "lib/handoff-email.ts",
   "lib/openai-whatsapp-config.ts",
   "lib/calendar-config.ts",
   "lib/calendar-booking.ts",
@@ -173,6 +176,7 @@ for (const required of [
   "scripts/test_v5_2_whatsapp_question_bank.mjs",
   "scripts/test_v5_3_whatsapp_reply_coach_replay.mjs",
   "scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs",
+  "scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql"
 ]) {
   assert(exists(required), `Missing required file: ${required}`);
@@ -381,8 +385,18 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
-  "version: \"v5_3_1_multi_intent_lead_context_portfolio\"",
-  "salesBrainVersion: \"v5.3.1\"",
+  "version: \"v5_3_2_deep_qa_media_singlish_voice_email_handoff\"",
+  "salesBrainVersion: \"v5.3.2\"",
+  "deepWhatsappAgentQaAvailable",
+  "mediaContextDetectionAvailable",
+  "floorPlanImageContextAvailable",
+  "avoidAskingForReceivedMediaAvailable",
+  "voiceMessageFallbackAvailable",
+  "voiceTranscriptionEnabled",
+  "singlishIntentSupportAvailable",
+  "singlishRepliesInEnglish",
+  "emailHandoffAvailable",
+  "handoffEmailAntiSpamAvailable",
   "multiIntentDetectorAvailable",
   "combinedReplyComposerAvailable",
   "leadContextMemoryCheckerAvailable",

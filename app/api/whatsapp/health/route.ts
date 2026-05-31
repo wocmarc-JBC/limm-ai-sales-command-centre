@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCalendarRuntime } from "@/lib/calendar-config";
+import { getHandoffEmailRuntime } from "@/lib/handoff-email";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
 import { getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
 import { questionBankStats } from "@/lib/whatsapp-question-bank";
@@ -21,13 +22,30 @@ export async function GET() {
   try {
     const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
     const calendar = getCalendarRuntime();
+    const handoffEmail = getHandoffEmailRuntime();
     const questionBank = questionBankStats();
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v5_3_1_multi_intent_lead_context_portfolio",
-      salesBrainVersion: "v5.3.1",
+      version: "v5_3_2_deep_qa_media_singlish_voice_email_handoff",
+      salesBrainVersion: "v5.3.2",
       runtime: "vercel",
+      deepWhatsappAgentQaAvailable: true,
+      webhookPayloadSimulatorAvailable: true,
+      mediaContextDetectionAvailable: true,
+      floorPlanImageContextAvailable: true,
+      avoidAskingForReceivedMediaAvailable: true,
+      voiceMessageFallbackAvailable: true,
+      voiceTranscriptionEnabled: false,
+      singlishIntentSupportAvailable: true,
+      singlishRepliesInEnglish: true,
+      humanEscalationIntentAvailable: true,
+      emailHandoffAvailable: handoffEmail.available,
+      handoffEmailConfigured: handoffEmail.configured,
+      handoffEmailToConfigured: handoffEmail.toConfigured,
+      handoffEmailToDomain: handoffEmail.toDomain,
+      handoffEmailProviderConfigured: handoffEmail.providerConfigured,
+      handoffEmailAntiSpamAvailable: true,
       multiIntentDetectorAvailable: true,
       combinedReplyComposerAvailable: true,
       leadContextMemoryCheckerAvailable: true,
@@ -76,9 +94,25 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v5_3_1_multi_intent_lead_context_portfolio",
-      salesBrainVersion: "v5.3.1",
+      version: "v5_3_2_deep_qa_media_singlish_voice_email_handoff",
+      salesBrainVersion: "v5.3.2",
       runtime: "vercel",
+      deepWhatsappAgentQaAvailable: false,
+      webhookPayloadSimulatorAvailable: false,
+      mediaContextDetectionAvailable: false,
+      floorPlanImageContextAvailable: false,
+      avoidAskingForReceivedMediaAvailable: false,
+      voiceMessageFallbackAvailable: false,
+      voiceTranscriptionEnabled: false,
+      singlishIntentSupportAvailable: false,
+      singlishRepliesInEnglish: false,
+      humanEscalationIntentAvailable: false,
+      emailHandoffAvailable: true,
+      handoffEmailConfigured: false,
+      handoffEmailToConfigured: true,
+      handoffEmailToDomain: "gmail.com",
+      handoffEmailProviderConfigured: false,
+      handoffEmailAntiSpamAvailable: false,
       multiIntentDetectorAvailable: false,
       combinedReplyComposerAvailable: false,
       leadContextMemoryCheckerAvailable: false,

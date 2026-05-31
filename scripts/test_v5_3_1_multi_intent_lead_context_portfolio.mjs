@@ -191,8 +191,8 @@ for (const phrase of [
 }
 
 for (const field of [
-  "version: \"v5_3_1_multi_intent_lead_context_portfolio\"",
-  "salesBrainVersion: \"v5.3.1\"",
+  "version: \"v5_3_2_deep_qa_media_singlish_voice_email_handoff\"",
+  "salesBrainVersion: \"v5.3.2\"",
   "multiIntentDetectorAvailable",
   "combinedReplyComposerAvailable",
   "leadContextMemoryCheckerAvailable",

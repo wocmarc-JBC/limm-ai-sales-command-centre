@@ -1,5 +1,30 @@
 # Current Status
 
+## v5.3.2 Deep QA + Media Context + Singlish + Voice + Email Handoff
+
+Status: implemented locally and ready for Vercel deployment proof.
+
+Root cause fixed:
+
+- WhatsApp image/document captions and filenames were not preserved as useful reply context.
+- A floor plan image with caption could be saved as a generic unsupported image, so the next multi-question reply could ask for the floor plan again.
+
+What changed:
+
+- Added strict deep WhatsApp Agent QA and report output.
+- Media parser now preserves caption, filename, MIME type, media id, and voice/audio marker.
+- Lead context memory now detects likely floor plan/image, document, site photo, design reference, and same-conversation media context.
+- Reply Coach now avoids asking again for floor plan/image when received.
+- Voice/audio messages get a typed-details fallback; no transcription is attempted.
+- Common Singlish-style intents are understood, but replies stay in professional English.
+- Important WhatsApp events can trigger server-only email handoff to `limmwork@gmail.com`; if no provider is configured, the app records a safe skipped-handoff trace.
+- Health endpoint target is now `v5_3_2_deep_qa_media_singlish_voice_email_handoff`.
+
+Current Go/No-Go:
+
+- GO for controlled v5.3.2 live retest only after Vercel health proves the new version.
+- NO-GO for OpenAI WhatsApp reply, autonomous Calendar booking, pricing, automatic project-photo sending, broadcast, or approval bypass.
+
 ## v5.3.1 Multi-Intent + Lead Context Memory + Portfolio Routing
 
 Status: implemented locally and ready for Vercel deployment proof.
