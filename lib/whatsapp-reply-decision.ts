@@ -81,6 +81,16 @@ function isSpamIntent(intent: string) {
   return intent === "spam_unrelated";
 }
 
+function riskFlagsFromIntents(intents: string[]) {
+  return [
+    intents.includes("price_question") ? "pricing_request" : "",
+    intents.includes("appointment_request") || intents.includes("meeting_availability") ? "appointment_request" : "",
+    intents.includes("hacking_wall") ? "structural_or_hacking_review" : "",
+    intents.includes("approval_submission") ? "approval_or_submission_review" : "",
+    intents.includes("portfolio_request") ? "portfolio_reference_request" : ""
+  ].filter(Boolean);
+}
+
 function safeRewriteFor(intent: string) {
   if (intent === "price_question") {
     return "I understand you'd like a rough idea. To avoid giving you the wrong figure, we need to understand the scope, layout, site condition and material direction first. Could you send the floor plan, photos and the main areas you're planning to renovate for an initial project review?";
@@ -259,7 +269,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     answeredClientQuestion: finalQuality.answeredActualQuestion,
     askedNextBestQuestion: /\?/.test(replyText),
     handoffRequired: coach.handoffRequired,
-    riskFlags: coach.riskFlags,
+    riskFlags: [...new Set([...coach.riskFlags, ...riskFlagsFromIntents(coach.detectedIntents)])],
     missingInfo: coach.missingInfo,
     nextAction: coach.nextAction,
     safetyResult,
@@ -272,6 +282,18 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       ...baseTrace,
       inbound_text: input.inboundMessageText,
       detected_intent: coach.intent,
+      detectedIntents: coach.detectedIntents,
+      primaryIntent: coach.primaryIntent,
+      multiIntentDetected: coach.multiIntentDetected,
+      leadContextChecked: true,
+      knownContextSummary: coach.leadContext.knownContextSummary,
+      missingFieldsAsked: coach.missingFieldsAsked,
+      repeatedInfoAvoided: coach.repeatedInfoAvoided,
+      portfolioRequestDetected: coach.portfolioRequestDetected,
+      instagramUrlAvailable: coach.instagramUrlAvailable,
+      humanFollowUpTaskCreated: coach.humanFollowUpTaskCreated,
+      humanFollowUpTaskSkippedReason: coach.humanFollowUpTaskSkippedReason,
+      combinedReplyUsed: coach.combinedReplyUsed,
       conversation_stage: coach.stage,
       confidence: coach.confidence,
       selected_sales_move: coach.salesMove,

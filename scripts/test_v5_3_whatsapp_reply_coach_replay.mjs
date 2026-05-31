@@ -93,31 +93,32 @@ const replay = [
   {
     message: "how much roughly?",
     intent: "price_question",
-    sourcePhrases: ["I understand you'd like a rough idea", "To avoid giving you the wrong figure"],
-    expectedReply: "I understand you'd like a rough idea. To avoid giving you the wrong figure, we need to understand the scope, layout, site condition and material direction first. Could you send the floor plan, photos and the main areas you're planning to renovate for an initial project review?"
+    sourcePhrases: ["I understand you'd like a rough idea", "To advise properly"],
+    expectedReply: "I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed. Once we understand the scope, we can review the next step more accurately for an initial project review."
   },
   {
     message: "are you there?",
     intent: "follow_up_ping",
-    sourcePhrases: ["Yes, I'm here", "Sorry if the reply was slow"],
-    expectedReply: "Yes, I'm here. Sorry if the reply was slow. You can send over your floor plan, site photos or renovation scope, and we'll help review the next step properly for an initial project review."
+    sourcePhrases: ["Yes, we're here", "Sorry if you were waiting"],
+    expectedReply: "Yes, we're here. Sorry if you were waiting. Could you share what type of renovation you're planning, or send the floor plan/scope if you already have it for an initial project review?"
   },
   {
     message: "hello",
     intent: "follow_up_ping",
-    sourcePhrases: ["Hi, I'm here", "How can we help with your renovation"],
-    expectedReply: "Hi, I'm here. How can we help with your renovation? You can share your property type, basic scope, and any floor plan or site photos if available for an initial project review."
+    sourcePhrases: ["Hi, yes we're here", "send your floor plan"],
+    expectedReply: "Hi, yes we're here. You can send your floor plan, site photos or renovation scope, and we'll help review the next step for an initial project review."
   },
   {
     message: "when is next available slot for meeting?",
     intent: "appointment_request",
-    sourcePhrases: ["next available meeting slot", "The team will review availability before confirming"],
-    expectedReply: "We can help check the next available meeting slot. Before confirming, could you share your property type, property area/address and basic renovation scope? The team will review availability before confirming for an initial project review."
+    sourcePhrases: ["next available meeting slot", "not confirmed yet"],
+    expectedReply: "We can help check the next available meeting slot, but it is not confirmed yet. Could you share your property type, property area/address and basic renovation scope first so the team can review before confirming for an initial project review?",
+    exactSourceRequired: false
   },
   {
     message: "can you confirm wed 2pm?",
     intent: "appointment_request",
-    sourcePhrases: ["Before confirming a slot", "review availability before confirming"],
+    sourcePhrases: ["not confirmed yet", "review before confirming"],
     expectedReply: "We can help check Wednesday 2pm. Before confirming a slot, could you share your property type, property area/address and basic renovation scope? The team will review availability before confirming for an initial project review.",
     exactSourceRequired: false
   },
@@ -221,8 +222,8 @@ for (const phrase of [
 }
 
 for (const field of [
-  "version: \"v5_3_whatsapp_reply_coach\"",
-  "salesBrainVersion: \"v5.3\"",
+  "version: \"v5_3_1_multi_intent_lead_context_portfolio\"",
+  "salesBrainVersion: \"v5.3.1\"",
   "replyCoachAvailable",
   "replyDecisionEngineAvailable",
   "replyQualityGateAvailable",

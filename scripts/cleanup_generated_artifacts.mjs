@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = fs.realpathSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."));
 const removable = ["node_modules", ".next", "test-results", "playwright-report", ".codex-tools"];
+const removableFiles = ["tsconfig.tsbuildinfo"];
 
 function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -75,4 +76,15 @@ for (const name of removable) {
   }
   removeWithRetries(real);
   console.log(`Removed generated folder: ${real}`);
+}
+
+for (const name of removableFiles) {
+  const target = path.join(root, name);
+  if (!fs.existsSync(target)) continue;
+  const real = fs.realpathSync(target);
+  if (!real.startsWith(root + path.sep) || path.basename(real).toLowerCase() !== name.toLowerCase()) {
+    throw new Error(`Refusing to remove unexpected file: ${real}`);
+  }
+  fs.rmSync(real, { force: true });
+  console.log(`Removed generated file: ${real}`);
 }

@@ -154,6 +154,15 @@ async function auditReplyDecisionTrace(input: {
       metadata
     });
   }
+
+  if (input.decision.blackBoxTrace.portfolioRequestDetected) {
+    await auditWhatsApp({
+      action: "whatsapp_portfolio_follow_up_trace",
+      leadId: input.leadId,
+      summary: "Client requested past works or portfolio references; trace recorded for human follow-up if relevant.",
+      metadata
+    });
+  }
 }
 
 export async function handleWhatsAppInboundMessage(

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
+import { getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
 import { questionBankStats } from "@/lib/whatsapp-question-bank";
 
 export const runtime = "nodejs";
@@ -21,11 +22,20 @@ export async function GET() {
     const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
     const calendar = getCalendarRuntime();
     const questionBank = questionBankStats();
+    const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v5_3_whatsapp_reply_coach",
-      salesBrainVersion: "v5.3",
+      version: "v5_3_1_multi_intent_lead_context_portfolio",
+      salesBrainVersion: "v5.3.1",
       runtime: "vercel",
+      multiIntentDetectorAvailable: true,
+      combinedReplyComposerAvailable: true,
+      leadContextMemoryCheckerAvailable: true,
+      avoidRepeatedInfoRequestAvailable: true,
+      priceScopeFirstRuleAvailable: true,
+      portfolioInstagramRoutingAvailable: true,
+      instagramUrlConfigured,
+      portfolioHumanFollowUpTaskAvailable: false,
       replyCoachAvailable: true,
       replyDecisionEngineAvailable: true,
       replyQualityGateAvailable: true,
@@ -66,9 +76,17 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v5_3_whatsapp_reply_coach",
-      salesBrainVersion: "v5.3",
+      version: "v5_3_1_multi_intent_lead_context_portfolio",
+      salesBrainVersion: "v5.3.1",
       runtime: "vercel",
+      multiIntentDetectorAvailable: false,
+      combinedReplyComposerAvailable: false,
+      leadContextMemoryCheckerAvailable: false,
+      avoidRepeatedInfoRequestAvailable: false,
+      priceScopeFirstRuleAvailable: false,
+      portfolioInstagramRoutingAvailable: false,
+      instagramUrlConfigured: false,
+      portfolioHumanFollowUpTaskAvailable: false,
       replyCoachAvailable: false,
       replyDecisionEngineAvailable: false,
       replyQualityGateAvailable: false,

@@ -57,6 +57,7 @@ for (const required of [
   "V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md",
   "V5_2_WHATSAPP_QUESTION_BANK_REPORT.md",
   "V5_3_WHATSAPP_REPLY_COACH_REPORT.md",
+  "docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md",
   "CALENDAR_BOOKING_SETUP_GUIDE.md",
   "CALENDAR_BOOKING_SAFETY_RULES.md",
   "WHATSAPP_QUESTION_BANK_PLAYBOOK.md",
@@ -102,6 +103,8 @@ for (const required of [
   "lib/whatsapp-question-bank.ts",
   "lib/whatsapp-reply-coach.ts",
   "lib/whatsapp-reply-decision.ts",
+  "lib/whatsapp-multi-intent.ts",
+  "lib/whatsapp-lead-context.ts",
   "lib/openai-whatsapp-config.ts",
   "lib/calendar-config.ts",
   "lib/calendar-booking.ts",
@@ -169,6 +172,7 @@ for (const required of [
   "scripts/test_v5_whatsapp_sales_brain_calendar.mjs",
   "scripts/test_v5_2_whatsapp_question_bank.mjs",
   "scripts/test_v5_3_whatsapp_reply_coach_replay.mjs",
+  "scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql"
 ]) {
   assert(exists(required), `Missing required file: ${required}`);
@@ -180,6 +184,7 @@ assert(!relativePaths.some((file) => /^\.next[\\/]/i.test(file)), ".next must no
 assert(!relativePaths.some((file) => /(^|[\\/])__pycache__($|[\\/])/i.test(file)), "__pycache__ must not be present.");
 assert(!relativePaths.some((file) => /(^|[\\/])(dist|build|coverage)($|[\\/])/i.test(file)), "build artifacts must not be present.");
 assert(!relativePaths.some((file) => /\.py[co]$/i.test(file)), "Python cache files must not be present.");
+assert(!relativePaths.some((file) => /tsconfig\.tsbuildinfo$/i.test(file)), "TypeScript build info cache must not be present.");
 assert(!relativePaths.some((file) => /LIMM_AI_Sales_Agent_v2/i.test(file)), "v2 folder must not be copied into v3.");
 
 const textFiles = relativePaths.filter((file) =>
@@ -376,8 +381,16 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
-  "version: \"v5_3_whatsapp_reply_coach\"",
-  "salesBrainVersion: \"v5.3\"",
+  "version: \"v5_3_1_multi_intent_lead_context_portfolio\"",
+  "salesBrainVersion: \"v5.3.1\"",
+  "multiIntentDetectorAvailable",
+  "combinedReplyComposerAvailable",
+  "leadContextMemoryCheckerAvailable",
+  "avoidRepeatedInfoRequestAvailable",
+  "priceScopeFirstRuleAvailable",
+  "portfolioInstagramRoutingAvailable",
+  "instagramUrlConfigured",
+  "portfolioHumanFollowUpTaskAvailable",
   "replyCoachAvailable",
   "replyDecisionEngineAvailable",
   "replyQualityGateAvailable",
@@ -440,11 +453,19 @@ assert(!/recentReplyCount\s*>=\s*3[\s\S]{0,900}return\s+\{[\s\S]{0,300}auto_repl
 const replyCoach = read("lib/whatsapp-reply-coach.ts");
 for (const phrase of [
   "NO_SILENCE_FALLBACK_REPLY",
+  "composeMultiIntentReply",
+  "composePortfolioReply",
+  "composeAppointmentReply",
+  "composePriceReply",
+  "composePingReply",
+  "composeWhatNextReply",
   "answer_design_direction_and_request_refs",
   "safe_price_deflection_and_collect_info",
   "appointment_followup_pending_review",
   "warm_ping_reassurance",
-  "evaluateReplyQuality"
+  "evaluateReplyQuality",
+  "missingFieldsAsked",
+  "repeatedInfoAvoided"
 ]) {
   assert(replyCoach.includes(phrase), `WhatsApp Reply Coach missing ${phrase}`);
 }
@@ -454,6 +475,17 @@ for (const phrase of [
   "valid_client_text",
   "final_reply_text",
   "blackBoxTrace",
+  "detectedIntents",
+  "primaryIntent",
+  "multiIntentDetected",
+  "leadContextChecked",
+  "knownContextSummary",
+  "missingFieldsAsked",
+  "repeatedInfoAvoided",
+  "portfolioRequestDetected",
+  "instagramUrlAvailable",
+  "humanFollowUpTaskCreated",
+  "combinedReplyUsed",
   "NO_SILENCE_FALLBACK_REPLY",
   "safety_result",
   "repetition_result",
@@ -461,6 +493,14 @@ for (const phrase of [
   "no_silence_guard_result"
 ]) {
   assert(replyDecision.includes(phrase), `WhatsApp reply decision engine missing ${phrase}`);
+}
+const multiIntent = read("lib/whatsapp-multi-intent.ts");
+for (const phrase of ["detectWhatsAppMessageIntents", "appointment_request", "design_theme", "landed_renovation", "hacking_wall", "approval_submission", "portfolio_request"]) {
+  assert(multiIntent.includes(phrase), `WhatsApp multi-intent detector missing ${phrase}`);
+}
+const leadContext = read("lib/whatsapp-lead-context.ts");
+for (const phrase of ["inferWhatsAppLeadContext", "hasFloorPlan", "hasSitePhotos", "hasScopeOfWork", "hasPropertyType", "getLimmInstagramUrl"]) {
+  assert(leadContext.includes(phrase), `WhatsApp lead context memory missing ${phrase}`);
 }
 const whatsappBrain = read("lib/whatsapp-sales-brain.ts");
 for (const phrase of ["landed_renovation", "aa_works", "price_question", "site_visit_request", "repeated_enquiry", "toneCheck", "repetition_checked", "initial project review"]) {

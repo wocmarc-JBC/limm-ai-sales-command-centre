@@ -1,5 +1,25 @@
 # Current Status
 
+## v5.3.1 Multi-Intent + Lead Context Memory + Portfolio Routing
+
+Status: implemented locally and ready for Vercel deployment proof.
+
+What changed:
+
+- Multi-intent detector can catch appointment, design, landed, hacking/wall, approval/submission, price, portfolio, and greeting intents in one client message.
+- Reply Coach now composes one human-style combined reply for multi-question WhatsApp messages.
+- Lead context memory checks prior CRM messages and lead fields before asking for information again.
+- Price questions now use a scope-first pattern and acknowledge floor plan/scope when already received.
+- Appointment replies acknowledge requested timing without confirming a booking.
+- Portfolio and past-work requests route to Instagram only if a configured Instagram URL exists.
+- If Instagram URL is missing, the agent asks what reference type the client wants and records trace metadata for human follow-up.
+- Health endpoint target is now `v5_3_1_multi_intent_lead_context_portfolio`.
+
+Current Go/No-Go:
+
+- GO for controlled v5.3.1 live retest only after Vercel health proves the new version.
+- NO-GO for OpenAI, autonomous Calendar booking, pricing, project-photo auto-send, broadcast, or approval bypass.
+
 ## v5.3 WhatsApp Reply Coach + No-Silence Guard
 
 Status: implemented locally and ready for Vercel deployment proof.
