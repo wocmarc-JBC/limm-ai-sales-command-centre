@@ -56,9 +56,13 @@ for (const required of [
   "V4_10_WHATSAPP_LIVE_PASS_REPORT.md",
   "V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md",
   "V5_2_WHATSAPP_QUESTION_BANK_REPORT.md",
+  "V5_3_WHATSAPP_REPLY_COACH_REPORT.md",
   "CALENDAR_BOOKING_SETUP_GUIDE.md",
   "CALENDAR_BOOKING_SAFETY_RULES.md",
   "WHATSAPP_QUESTION_BANK_PLAYBOOK.md",
+  "WHATSAPP_REPLY_COACH_PLAYBOOK.md",
+  "WHATSAPP_NO_SILENCE_REPLY_RELIABILITY_RULES.md",
+  "WHATSAPP_LIVE_INCIDENT_PLAYBOOK.md",
   "WHATSAPP_LIVE_TEST_SETUP_GUIDE.md",
   "WHATSAPP_EMERGENCY_OFF_GUIDE.md",
   "WHATSAPP_AUTO_REPLY_SAFETY_RULES.md",
@@ -96,6 +100,8 @@ for (const required of [
   "lib/whatsapp-auto-reply.ts",
   "lib/whatsapp-sales-brain.ts",
   "lib/whatsapp-question-bank.ts",
+  "lib/whatsapp-reply-coach.ts",
+  "lib/whatsapp-reply-decision.ts",
   "lib/openai-whatsapp-config.ts",
   "lib/calendar-config.ts",
   "lib/calendar-booking.ts",
@@ -162,6 +168,7 @@ for (const required of [
   "scripts/test_v4_9_deployment_readiness.mjs",
   "scripts/test_v5_whatsapp_sales_brain_calendar.mjs",
   "scripts/test_v5_2_whatsapp_question_bank.mjs",
+  "scripts/test_v5_3_whatsapp_reply_coach_replay.mjs",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql"
 ]) {
   assert(exists(required), `Missing required file: ${required}`);
@@ -193,6 +200,12 @@ for (const file of textFiles) {
   for (const pattern of secretPatterns) {
     assert(!pattern.test(content), `Possible hardcoded secret in ${file}`);
   }
+}
+
+const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
+for (const file of textFiles) {
+  const content = fs.readFileSync(path.join(root, file), "utf8");
+  assert(!content.includes(wrongWhatsAppPhoneNumberId), `Wrong WhatsApp Phone Number ID reintroduced in ${file}`);
 }
 
 for (const file of relativePaths.filter((item) => /\.(ts|tsx)$/i.test(item))) {
@@ -362,6 +375,25 @@ const whatsappHealthRoute = read("app/api/whatsapp/health/route.ts");
 for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessToken", "testAutoReplyEnabled"]) {
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
+for (const field of [
+  "version: \"v5_3_whatsapp_reply_coach\"",
+  "salesBrainVersion: \"v5.3\"",
+  "replyCoachAvailable",
+  "replyDecisionEngineAvailable",
+  "replyQualityGateAvailable",
+  "validTextNeverEmptyReplyGuard",
+  "noSilenceFallbackAvailable",
+  "safetyRewriteInsteadOfSilence",
+  "repetitionRewriteInsteadOfSilence",
+  "answerActualQuestionFirstRule",
+  "blackBoxReplyRecorderAvailable",
+  "humanTakeoverLockPlanned",
+  "questionBankAvailable",
+  "openaiWhatsappReplyEnabled",
+  "calendarAutoBookingEnabled"
+]) {
+  assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing v5.3 proof field: ${field}`);
+}
 assert(!/return\s+process\.env/.test(whatsappHealthRoute), "WhatsApp health route must not return raw env values.");
 const whatsappDebugRoute = read("app/api/whatsapp/debug-parse/route.ts");
 assert(whatsappDebugRoute.includes("debug_endpoint_disabled"), "WhatsApp debug parse route must be disabled behind a safe flag.");
@@ -387,8 +419,48 @@ const whatsappService = read("lib/whatsapp-auto-reply.ts");
 for (const phrase of ["whatsapp_inbound_received", "whatsapp_auto_reply_sent", "whatsapp_auto_reply_blocked_unsafe", "recentReplyCount >= 3", "validateWhatsAppAutoReply"]) {
   assert(whatsappService.includes(phrase), `WhatsApp closed-test service missing ${phrase}`);
 }
-for (const phrase of ["buildWhatsAppSalesBrainReply", "listRecentLeadMessagesForWebhook", "whatsapp_boss_review_required", "brain.auditMetadata"]) {
-  assert(whatsappService.includes(phrase), `WhatsApp v5 sales brain integration missing ${phrase}`);
+for (const phrase of [
+  "buildWhatsAppReplyDecision",
+  "listRecentLeadMessagesForWebhook",
+  "auditReplyDecisionTrace",
+  "whatsapp_reply_decision_started",
+  "whatsapp_sales_brain_classified",
+  "whatsapp_reply_quality_checked",
+  "whatsapp_no_silence_fallback_used",
+  "whatsapp_auto_reply_intentional_no_reply",
+  "whatsapp_auto_reply_send_failed",
+  "whatsapp_rate_limit_warning",
+  "distinctTextWillStillReply",
+  "decision.blackBoxTrace"
+]) {
+  assert(whatsappService.includes(phrase), `WhatsApp v5.3 reply decision integration missing ${phrase}`);
+}
+assert(!whatsappService.includes("Too many auto-replies sent to this WhatsApp phone."), "Old hard rate-limit silence reason must be removed.");
+assert(!/recentReplyCount\s*>=\s*3[\s\S]{0,900}return\s+\{[\s\S]{0,300}auto_reply_disabled/.test(whatsappService), "Rate-limit threshold must not return before reply decision.");
+const replyCoach = read("lib/whatsapp-reply-coach.ts");
+for (const phrase of [
+  "NO_SILENCE_FALLBACK_REPLY",
+  "answer_design_direction_and_request_refs",
+  "safe_price_deflection_and_collect_info",
+  "appointment_followup_pending_review",
+  "warm_ping_reassurance",
+  "evaluateReplyQuality"
+]) {
+  assert(replyCoach.includes(phrase), `WhatsApp Reply Coach missing ${phrase}`);
+}
+const replyDecision = read("lib/whatsapp-reply-decision.ts");
+for (const phrase of [
+  "buildWhatsAppReplyDecision",
+  "valid_client_text",
+  "final_reply_text",
+  "blackBoxTrace",
+  "NO_SILENCE_FALLBACK_REPLY",
+  "safety_result",
+  "repetition_result",
+  "quality_result",
+  "no_silence_guard_result"
+]) {
+  assert(replyDecision.includes(phrase), `WhatsApp reply decision engine missing ${phrase}`);
 }
 const whatsappBrain = read("lib/whatsapp-sales-brain.ts");
 for (const phrase of ["landed_renovation", "aa_works", "price_question", "site_visit_request", "repeated_enquiry", "toneCheck", "repetition_checked", "initial project review"]) {

@@ -2,62 +2,53 @@
 
 ## Review First
 
-1. Review `V5_2_WHATSAPP_QUESTION_BANK_REPORT.md`.
-2. Review `WHATSAPP_QUESTION_BANK_PLAYBOOK.md`.
-3. Review `V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md`.
-4. Review `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
-5. Review `WHATSAPP_LIVE_TEST_SETUP_GUIDE.md`.
-6. Review `WHATSAPP_EMERGENCY_OFF_GUIDE.md`.
-7. Review `CALENDAR_BOOKING_SETUP_GUIDE.md`.
-8. Review `DEV_BRAIN_QA_REPORT.md`.
-9. Confirm the review route remains disabled by default.
+1. Review `V5_3_WHATSAPP_REPLY_COACH_REPORT.md`.
+2. Review `WHATSAPP_REPLY_COACH_PLAYBOOK.md`.
+3. Review `WHATSAPP_NO_SILENCE_REPLY_RELIABILITY_RULES.md`.
+4. Review `WHATSAPP_LIVE_INCIDENT_PLAYBOOK.md`.
+5. Review `V5_2_WHATSAPP_QUESTION_BANK_REPORT.md`.
+6. Review `WHATSAPP_QUESTION_BANK_PLAYBOOK.md`.
+7. Review `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
+8. Confirm `/api/whatsapp/health` shows `version: v5_3_whatsapp_reply_coach` before any live WhatsApp retest.
 
 ## Recommended Next Prompt For Marcus PowerShell
 
-Prepare the next controlled verification phase after v5.2:
+Prepare the controlled live v5.3 WhatsApp retest:
 
-- Keep all v4.0-v4.8 safety rules unchanged.
-- WhatsApp live reply-only auto-reply is confirmed PASS.
-- v5.2 adds the WhatsApp Question Bank + Reply Playbook.
-- Question bank intent, reply strategy, escalation reason, and non-repetition metadata should appear in audit data where available.
-- OpenAI WhatsApp reply is off by default.
-- Calendar booking is disabled by default.
-- Auto booking is disabled by default.
-- Boss approval is required by default.
-- Do not add pricing, quote ranges, or auto-pricing.
-- Do not hardcode Sunday blocked.
-- Do not weaken audit logs.
-- Confirm `/review-chatgpt-ui` is unavailable by default.
-- Run controlled WhatsApp message tests and review reply quality, category matching, non-repetition, and audit metadata.
-- Do not add autonomous booking or send bypass.
+- Keep all v4/v5 safety rules unchanged.
+- Confirm health endpoint first; local PASS is not production PASS.
+- v5.3 fixes the silence issue by changing the old 3-in-10-min reply threshold into a warning.
+- Valid client text must go through Reply Coach, safety, repetition, quality, no-silence guard, audit trace, and send.
+- OpenAI WhatsApp reply remains off.
+- Calendar auto-booking remains off.
+- No pricing, amount ranges, package prices, or booking confirmation before a real event exists.
+- Test the exact v5.3 conversation sequence and inspect CRM audit logs for the black box reply trace.
 
 ## Marcus PowerShell Commands
 
 ```powershell
 cd "C:\Users\Lenovo\Documents\Sales CRM Agent\LIMM_AI_Sales_Command_Centre_v3"
 npm.cmd run build
-npm.cmd run qa:browser
-npm.cmd run qa:v4-3
-npm.cmd run qa:dev-brain
+node scripts/test_v5_2_whatsapp_question_bank.mjs
+node scripts/test_v5_3_whatsapp_reply_coach_replay.mjs
 node scripts/audit_v3_package.mjs
 ```
 
 ## What Codex Should Build Next
 
-- v5.3 live observation and question-bank tuning pass after Marcus tests real WhatsApp conversations.
-- Tune category keywords, reply variations, and escalation rules based on actual homeowner questions.
-- Add richer boss review/reporting for WhatsApp brain metadata.
-- Prepare Google Calendar live setup only after Marcus approves Calendar credentials and workflow.
+- v5.4 should only happen after Marcus confirms v5.3 deployed health and live retest results.
+- Recommended v5.4 scope: human takeover lock if a reliable manual-reply signal exists, plus trace viewer improvements for WhatsApp audit metadata.
+- Optional OpenAI WhatsApp reply testing should remain disabled until v5.3 no-silence behavior is proven live.
 
 ## Avoid
 
-- Do not copy old review/demo surfaces into production.
+- Do not enable OpenAI WhatsApp reply by default.
+- Do not enable autonomous Calendar booking.
 - Do not expose `/review-chatgpt-ui` without the explicit review flag.
-- Do not auto-generate prices.
-- Do not enable WhatsApp blasting or autonomous approval bypass.
-- Do not add WhatsApp broadcast or blasting.
+- Do not auto-generate pricing or amount ranges.
+- Do not add WhatsApp blasting or broadcast.
 - Do not hardcode secrets.
-- Do not mark full production GO before backups, monitoring, and deployment hardening are complete.
+- Do not live test before the deployed health endpoint proves the expected v5.3 fields.
 
 ---
 
@@ -66,6 +57,7 @@ node scripts/audit_v3_package.mjs
 For any real external integration such as WhatsApp, Meta, Calendar, payment, email, OpenAI actions, SMS, webhook, or client-facing automation, do not treat Codex PASS, local QA, browser QA, build PASS, package audit, or webhook GET verification as production proof.
 
 Before Marcus tests any live action, the deployed production app must have:
+
 - production health endpoint
 - deployed version marker
 - safe env booleans
@@ -78,4 +70,3 @@ Before Marcus tests any live action, the deployed production app must have:
 - kill switch and rollback guide
 
 Full rule: see `LIVE_INTEGRATION_PRODUCTION_PROOF_PLAYBOOK.md`.
-

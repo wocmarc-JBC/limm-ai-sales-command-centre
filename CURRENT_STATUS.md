@@ -1,5 +1,30 @@
 # Current Status
 
+## v5.3 WhatsApp Reply Coach + No-Silence Guard
+
+Status: implemented locally and ready for Vercel deployment proof.
+
+Root cause fixed:
+
+- v5.2 had a hard auto-reply threshold after 3 recent outbound WhatsApp replies in 10 minutes.
+- That guard returned before the sales brain, safety checks, no-silence fallback, and send step.
+- This explains the live result where the first 3 messages got replies, then valid texts such as "how much roughly?", "are you there?", "hello", and "when is next available slot for meeting?" went silent.
+
+What changed:
+
+- Added a central WhatsApp reply decision engine.
+- Added a Reply Coach that answers the actual client question first, then asks the next useful question.
+- Changed the old 3-in-10-min auto-reply threshold into a warning only; distinct valid client text still proceeds.
+- Added a no-silence guard for valid client text.
+- Added quality, safety, and repetition rewrite/fallback behavior instead of silence.
+- Added black box reply trace metadata to audit the intent, stage, sales move, final reply, safety result, repetition result, quality result, appointment status, and final send result.
+- Health endpoint version now reports `v5_3_whatsapp_reply_coach`.
+
+Current Go/No-Go:
+
+- GO for controlled live WhatsApp retest only after Vercel health proves v5.3 is deployed.
+- NO-GO for OpenAI WhatsApp reply, autonomous Calendar booking, pricing, amount ranges, payment, broadcast, or approval bypass.
+
 ## v5.0 WhatsApp Sales Brain + Calendar Foundation
 
 Status: implemented for controlled live testing.
