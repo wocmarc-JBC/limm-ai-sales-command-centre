@@ -5,8 +5,12 @@ import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseServerClient } from "./supabase-server";
 import type { Lead, LeadStatus } from "@/lib/types";
 
-function isActiveLead(lead: Lead) {
-  return !lead.deletedAt && !lead.archivedAt && !lead.isSpam;
+type ListLeadsOptions = { includeInactive?: boolean; includeTest?: boolean };
+
+function shouldShowLead(lead: Lead, options?: ListLeadsOptions) {
+  if (!options?.includeInactive && (lead.deletedAt || lead.archivedAt || lead.isSpam)) return false;
+  if (!options?.includeTest && lead.isTest) return false;
+  return true;
 }
 
 function leadPatchToRow(patch: Partial<Lead>, now: string) {
@@ -47,7 +51,7 @@ function leadPatchToRow(patch: Partial<Lead>, now: string) {
   return Object.fromEntries(Object.entries(row).filter(([, value]) => value !== undefined));
 }
 
-export async function listLeads(options?: { includeInactive?: boolean }) {
+export async function listLeads(options?: ListLeadsOptions) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase!
@@ -56,12 +60,12 @@ export async function listLeads(options?: { includeInactive?: boolean }) {
       .order("updated_at", { ascending: false });
     if (!error && data) {
       const leads = data.map(mapLeadRow);
-      return options?.includeInactive ? leads : leads.filter(isActiveLead);
+      return leads.filter((lead) => shouldShowLead(lead, options));
     }
   }
 
   return mockClone(getMockStore().leads)
-    .filter((lead) => options?.includeInactive || isActiveLead(lead))
+    .filter((lead) => shouldShowLead(lead, options))
     .sort((a, b) => (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt));
 }
 

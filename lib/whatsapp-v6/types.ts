@@ -1,6 +1,6 @@
 import type { Lead, LeadMessage } from "@/lib/types";
 
-export const V6_SALES_BRAIN_VERSION = "v6_1_ui_polish_test_cleanup";
+export const V6_SALES_BRAIN_VERSION = "v6_1_1_dashboard_declutter_live_cleanup";
 export const V6_SALES_BRAIN_LABEL = "v6.ultimate";
 
 export type V6ClientMessageType = "text" | "image" | "document" | "audio" | "voice" | "unsupported";

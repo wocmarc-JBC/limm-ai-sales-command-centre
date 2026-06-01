@@ -191,7 +191,7 @@ for (const phrase of [
 }
 
 for (const field of [
-  "version: \"v6_1_ui_polish_test_cleanup\"",
+  "version: \"v6_1_1_dashboard_declutter_live_cleanup\"",
   "salesBrainVersion: \"v6.ultimate\"",
   "multiIntentDetectorAvailable",
   "combinedReplyComposerAvailable",

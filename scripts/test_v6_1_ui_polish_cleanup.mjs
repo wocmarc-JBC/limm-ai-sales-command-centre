@@ -181,15 +181,25 @@ assert(cleanupScript.includes("laminated wall cladding test"), "cleanup script m
 const globals = read("app/globals.css");
 const tailwind = read("tailwind.config.ts");
 const dashboard = read("app/page.tsx");
+const leadInbox = read("app/leads/page.tsx");
 const leadCard = read("components/LeadCard.tsx");
 const leadDetail = read("app/leads/[id]/page.tsx");
 const settings = read("app/settings/page.tsx");
 const reports = read("app/reports/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
+const leadDisplay = read("lib/lead-display.ts");
+const sharedCleanup = read("lib/test-lead-cleanup.ts");
+const actions = read("lib/actions.ts");
 
 for (const field of [
-  'version: "v6_1_ui_polish_test_cleanup"',
+  'version: "v6_1_1_dashboard_declutter_live_cleanup"',
   "uiPolishAvailable",
+  "dashboardDeclutterAvailable",
+  "mainDashboardSystemClutterHidden",
+  "inAppLiveCleanupAvailable",
+  "showHideTestLeadsFilterAvailable",
+  "generatedLeadDisplayCleanupAvailable",
+  "marcusFioCleanupProtectionAvailable",
   "premiumGoldCommandCentreThemeAvailable",
   "largerReadableFontsAvailable",
   "testLeadCleanupAvailable",
@@ -213,15 +223,24 @@ assert(globals.includes("font-size: 15.5px"), "base font size must be increased 
 assert(globals.includes(".premium-card"), "premium card style must exist");
 assert(dashboard.includes("Today's Missions"), "dashboard must put Today's Missions first");
 assert(dashboard.includes("What Marcus should clear first"), "dashboard must answer boss-first action question");
+assert(dashboard.includes("System health and QA details live in Settings and Reports"), "main dashboard must hide system/debug clutter");
+assert(!dashboard.includes("System Health"), "main dashboard must not show system health metric");
+assert(!dashboard.includes("Mission Queue"), "main dashboard must not show dense mission queue grid");
+assert(leadInbox.includes("show_test") && leadInbox.includes("Show Test Leads") && leadInbox.includes("Hide Test Leads"), "lead inbox must include show/hide test leads filter");
 assert(leadCard.includes("Open Lead") && leadCard.includes("Pause Bot") && leadCard.includes("Take Over"), "lead cards must include clearer quick actions");
 assert(leadCard.includes("text-xl") && leadCard.includes("text-base"), "lead cards should use larger readable text");
+assert(leadCard.includes("cleanLeadDisplayName"), "lead cards must clean generated/test display names");
+assert(leadDisplay.includes("WhatsApp Enquiry") && leadDisplay.includes("Internal Test Lead") && leadDisplay.includes("containsProtectedName"), "lead display cleanup helper missing expected generated-name handling");
 assert(leadDetail.includes('id="bot-controls"'), "lead detail must anchor bot controls from cards");
 assert(leadDetail.includes("Next best action"), "lead detail must surface next best action near top");
 assert(settings.includes("Bot / WhatsApp") && settings.includes("Handoff Email / Portfolio") && settings.includes("Safety Rules") && settings.includes("Dry Run Test Lead Cleanup"), "settings page must group key control cards and expose cleanup commands");
+assert(settings.includes("Live Test Lead Cleanup") && settings.includes("Soft Delete Test Leads") && settings.includes("Marcus/Fio protected"), "settings page must expose live in-app cleanup action and protection proof");
+assert(actions.includes("cleanupOldTestLeadsAction") && actions.includes("CLEAN TEST LEADS") && actions.includes("buildTestLeadCleanupPlan"), "server actions must expose guarded in-app cleanup action");
+assert(sharedCleanup.includes("protectedPersonEvidence") && sharedCleanup.includes("laminated wall cladding test"), "shared cleanup rules must include Marcus/Fio protection and latest test phrase");
 assert(reports.includes("Latest QA") && reports.includes("Deep QA Cases"), "reports page must include boss-friendly QA cards");
 
 const leadsRepo = read("lib/data/leads-repository.ts");
-const actions = read("lib/actions.ts");
+assert(leadsRepo.includes("includeTest") && leadsRepo.includes("!options?.includeTest && lead.isTest"), "lead repository must hide test leads by default with explicit includeTest override");
 assert(leadsRepo.includes("lead_hard_delete_pre_audit"), "hard delete pre-audit must remain");
 assert(leadsRepo.includes("if (!before?.deletedAt)"), "hard delete must require prior soft delete");
 assert(actions.includes('confirmation !== "PERMANENT DELETE"'), "hard delete action must require typed confirmation");

@@ -1,5 +1,26 @@
 # Current Status
 
+## v6.1.1 Dashboard Declutter + Live Test Lead Cleanup
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_1_1_dashboard_declutter_live_cleanup`.
+- Dashboard was simplified to a boss-first live sales view.
+- System health and QA/debug clutter were moved away from the main dashboard and remain in Settings/Reports.
+- Lead inbox hides test leads by default and includes a show/hide test leads filter.
+- Settings now includes an in-app live cleanup action guarded by confirmation text.
+- Cleanup remains soft-delete by default.
+- Marcus and Fio are hard-protected from cleanup.
+- Generated/test-looking lead titles are cleaned for display.
+
+Current Go/No-Go:
+
+- GO for controlled v6.1.1 deploy proof after push and Vercel health check.
+- GO for in-app cleanup only after reviewing the displayed cleanup counts.
+- NO-GO for hard-deleting real leads, deleting audit logs, WhatsApp pipeline changes, autonomous Calendar booking, or pricing.
+
 ## v6.1 UI Polish + Test Lead Cleanup
 
 Status: implemented locally as a controlled polish and cleanup pass; pending deploy health proof.

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { evaluateBookingReadiness } from "@/lib/calendar-booking";
 import type { Lead } from "@/lib/types";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
+import { cleanLeadDisplayName } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
 import { matchQuestionBankIntent } from "@/lib/whatsapp-question-bank";
@@ -17,13 +18,14 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const leadLevel = lead.leadLevel ?? calculateLeadLevel(lead);
   const mission = lead.missionCategory || missionForLead(lead);
   const infoCollected = Math.max(0, Math.min(100, 100 - lead.missingInfo.length * 18));
+  const displayName = cleanLeadDisplayName(lead);
   return (
     <article className="rounded-lg border border-command-line bg-command-card p-5 shadow-premium">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/leads/${lead.id}`} className="text-xl font-semibold leading-7 text-command-text hover:text-command-gold">
-              {lead.clientName}
+              {displayName}
             </Link>
             <StatusBadge label={lead.leadCategory} />
             <StatusBadge label={leadLevel} />
@@ -44,6 +46,9 @@ export function LeadCard({ lead }: { lead: Lead }) {
           <p className="mt-2 text-base text-command-muted">
             {lead.phone} | {lead.source} | {lead.division}
           </p>
+          {displayName !== lead.clientName ? (
+            <p className="mt-1 text-sm text-command-subtle">Generated CRM title cleaned for display.</p>
+          ) : null}
         </div>
         <div className="rounded-lg border border-command-line bg-command-elevated px-4 py-3 text-right">
           <p className="text-[13px] text-command-muted">Lead Heat Score</p>

@@ -93,8 +93,8 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
   const isTemporaryReviewRoute = isReviewRouteEnabled() && pathname === "/review-chatgpt-ui";
   const isLoginRoute = pathname === "/login";
   const mainClassName = isTemporaryReviewRoute
-    ? "px-4 pb-10 pt-48 md:ml-64 md:px-8 md:pt-8"
-    : "px-4 pb-10 pt-36 md:ml-64 md:px-8 md:pt-8";
+    ? "mx-auto max-w-[1480px] px-4 pb-10 pt-48 md:ml-64 md:px-8 md:pt-8"
+    : "mx-auto max-w-[1480px] px-4 pb-10 pt-36 md:ml-64 md:px-8 md:pt-8";
 
   useEffect(() => {
     if (auth.mode === "Mock Mode") {

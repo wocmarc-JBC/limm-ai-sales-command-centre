@@ -195,7 +195,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v6.1 UI polish and test-lead cleanup is ready for controlled deploy proof after the health endpoint shows v6_1_ui_polish_test_cleanup. Next recommended phase: apply migration 019 if needed, run cleanup dry-run, review the report, then apply soft-delete cleanup only if safe."
+      : "v6.1 UI polish and test-lead cleanup is ready for controlled deploy proof after the health endpoint shows v6_1_1_dashboard_declutter_live_cleanup. Next recommended phase: apply migration 019 if needed, run cleanup dry-run, review the report, then apply soft-delete cleanup only if safe."
   };
 }
 

@@ -1,9 +1,14 @@
 import { PageHeader } from "@/components/PageHeader";
+import { ActionButton } from "@/components/ActionButton";
+import { cleanupOldTestLeadsAction } from "@/lib/actions";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getCalendarRuntime } from "@/lib/calendar-config";
+import { listLeadMessages } from "@/lib/data/lead-messages-repository";
+import { listLeads } from "@/lib/data/leads-repository";
 import { getSettingsSummary } from "@/lib/data/settings-repository";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
+import { buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 
 export default async function SettingsPage() {
@@ -13,6 +18,12 @@ export default async function SettingsPage() {
   const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
   const whatsapp = getWhatsAppRuntime();
   const calendar = getCalendarRuntime();
+  const cleanupLeads = await listLeads({ includeInactive: true, includeTest: true });
+  const cleanupMessages = await Promise.all(cleanupLeads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const));
+  const cleanupPlan = buildTestLeadCleanupPlan(cleanupLeads, new Map(cleanupMessages));
+  const cleanupTargets = cleanupPlan.filter((item) => item.action === "mark_test_and_soft_delete");
+  const cleanupProtected = cleanupPlan.filter((item) => item.action === "protected_marcus_fio");
+  const cleanupUncertain = cleanupPlan.filter((item) => item.action === "not_touched");
   const settingGroups = [
     {
       title: "System / Supabase",
@@ -134,6 +145,40 @@ export default async function SettingsPage() {
             </div>
           ))}
         </div>
+      </section>
+      <section className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
+        <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Live Test Lead Cleanup</p>
+        <h2 className="mt-1 text-2xl font-semibold">Soft-delete old QA/test leads</h2>
+        <p className="mt-2 text-base text-command-muted">
+          This in-app action only soft-deletes clearly identified test leads. Marcus and Fio are hard-protected and excluded completely.
+          Hard delete is not available from this bulk cleanup.
+        </p>
+        <div className="mt-5 grid gap-4 md:grid-cols-4">
+          {[
+            ["Leads scanned", cleanupPlan.length],
+            ["Cleanup targets", cleanupTargets.length],
+            ["Marcus/Fio protected", cleanupProtected.length],
+            ["Skipped uncertain", cleanupUncertain.length]
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-command-line bg-command-elevated p-4">
+              <p className="text-sm text-command-muted">{label}</p>
+              <p className="mt-1 text-3xl font-semibold text-command-text">{value}</p>
+            </div>
+          ))}
+        </div>
+        <form action={cleanupOldTestLeadsAction} className="mt-5 grid gap-3 rounded-lg border border-command-line bg-command-elevated p-4 md:grid-cols-[1fr_auto]">
+          <input
+            name="confirmation"
+            placeholder="Type CLEAN TEST LEADS"
+            className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text"
+          />
+          <ActionButton type="submit" tone="danger" disabled={cleanupTargets.length === 0}>
+            Soft Delete Test Leads
+          </ActionButton>
+        </form>
+        <p className="mt-3 text-sm text-command-muted">
+          CLI dry-run report remains available at `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`.
+        </p>
       </section>
     </>
   );

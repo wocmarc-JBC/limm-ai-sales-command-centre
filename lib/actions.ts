@@ -11,6 +11,7 @@ import {
   archiveLead,
   approveAppointmentBooking,
   hardDeleteLead,
+  listLeads,
   markBossApprovalNeeded,
   markLeadAsDuplicate,
   markLeadAsSpam,
@@ -30,7 +31,9 @@ import {
   updateLeadStatus
 } from "@/lib/data/leads-repository";
 import { updateQuotationReadinessStatus } from "@/lib/data/quotation-repository";
+import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
+import { buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import type { AiDraftReviewStatus, ApprovalStatus, FollowUpStatus, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
 
 const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
@@ -344,4 +347,30 @@ export async function markFollowedUpAction(formData: FormData) {
   const leadId = text(formData, "lead_id");
   await markLeadFollowedUp(leadId, permission.auth.profile?.fullName ?? "Marcus");
   revalidateLeadPaths(leadId);
+}
+
+export async function cleanupOldTestLeadsAction(formData: FormData) {
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) return;
+  if (text(formData, "confirmation") !== "CLEAN TEST LEADS") return;
+
+  const leads = await listLeads({ includeInactive: true, includeTest: true });
+  const messages = await Promise.all(leads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const));
+  const plan = buildTestLeadCleanupPlan(leads, new Map(messages));
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+
+  for (const item of plan) {
+    if (item.action !== "mark_test_and_soft_delete") continue;
+    await markLeadAsTest(item.lead.id);
+    await softDeleteLead(
+      item.lead.id,
+      `v6.1.1 in-app cleanup: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`,
+      actor
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath("/leads");
+  revalidatePath("/settings");
+  revalidatePath("/audit-log");
 }

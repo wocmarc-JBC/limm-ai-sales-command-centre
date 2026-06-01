@@ -1,6 +1,17 @@
 # v6.1 UI Polish + Test Lead Cleanup
 
-Version: `v6_1_ui_polish_test_cleanup`
+Version: `v6_1_1_dashboard_declutter_live_cleanup`
+
+## v6.1.1 Add-On
+
+v6.1.1 keeps the v6.1 premium theme and tightens the live operating view:
+
+- Main dashboard is decluttered into a boss-first sales view.
+- System health, QA and diagnostic clutter are kept in Settings/Reports instead of the main dashboard.
+- Lead inbox hides test leads by default and includes a `Show Test Leads` / `Hide Test Leads` filter.
+- Settings page has a live in-app cleanup action guarded by confirmation text.
+- Generated/test-looking lead titles are cleaned for display so the live UI does not show raw QA titles.
+- Marcus/Fio protection remains absolute for CLI and in-app cleanup.
 
 ## What Changed Visually
 
@@ -12,6 +23,7 @@ v6.1 keeps the v6 Ultimate command centre structure, but improves the visual lay
 - Softer card shadows and clearer panel hierarchy.
 - Bigger body text, bigger metric numbers, and more comfortable button tap targets.
 - Dashboard now leads with `Today's Missions`, so Marcus sees the most important actions first.
+- v6.1.1 removes the dense mission/debug sections from the dashboard and keeps it focused on immediate boss actions.
 - Lead cards show clearer title, heat score, mission brief, readiness, WhatsApp preview, and quick navigation to open/pause/take over a lead.
 - Lead detail surfaces next best action and conversation summary near the top.
 - Settings are grouped into boss-friendly control cards.
@@ -59,6 +71,18 @@ The script identifies a lead as test data only when it has strong evidence, such
 - Known QA phrases include `laminated wall cladding test`.
 
 Weak phrases such as `how much ah` alone are not enough to clean a lead because they can be real customer messages.
+
+## In-App Cleanup
+
+Settings includes a live cleanup action for Marcus/admin:
+
+- Shows scanned lead count.
+- Shows cleanup target count.
+- Shows Marcus/Fio protected count.
+- Shows skipped uncertain count.
+- Requires typing `CLEAN TEST LEADS`.
+- Soft-deletes test leads by default.
+- Does not expose hard-delete bulk cleanup in the browser.
 
 ## Dry Run Usage
 
@@ -116,7 +140,7 @@ Do not use this for real leads.
 
 1. Apply Supabase migration 019 if it is not already live.
 2. Open `/api/whatsapp/health`.
-3. Confirm `version: v6_1_ui_polish_test_cleanup`.
+3. Confirm `version: v6_1_1_dashboard_declutter_live_cleanup`.
 4. Open dashboard and confirm the premium theme/readability.
 5. Open leads and confirm old inactive/test leads are hidden by default.
 6. Run cleanup dry run.

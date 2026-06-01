@@ -33,7 +33,7 @@ for (const file of [
 
 const health = read("app/api/whatsapp/health/route.ts");
 for (const key of [
-  "v6_1_ui_polish_test_cleanup",
+  "v6_1_1_dashboard_declutter_live_cleanup",
   "hasSupabaseUrl",
   "hasSupabaseAnonKey",
   "hasServiceRoleKey",
