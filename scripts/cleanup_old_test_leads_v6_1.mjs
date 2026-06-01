@@ -47,6 +47,10 @@ function normalizeLead(row) {
   return {
     id: row.id,
     clientName: row.client_name ?? row.clientName ?? "",
+    contactName: row.contact_name ?? row.contactName ?? "",
+    displayName: row.display_name ?? row.displayName ?? "",
+    phoneLabel: row.phone_label ?? row.phoneLabel ?? "",
+    title: row.title ?? row.crm_title ?? row.crmTitle ?? "",
     phone: row.phone ?? "",
     source: row.source ?? "",
     status: row.status ?? "",
@@ -63,10 +67,27 @@ function normalizeMessage(row) {
   return {
     leadId: row.lead_id ?? row.leadId ?? "",
     body: row.body ?? row.text ?? row.caption ?? "",
+    title: row.title ?? row.message_title ?? row.messageTitle ?? "",
     metadata: row.metadata ?? {},
     providerMessageId: row.provider_message_id ?? row.providerMessageId ?? "",
     createdAt: row.created_at ?? row.createdAt ?? ""
   };
+}
+
+function protectedPersonEvidence(lead, messages) {
+  const protectedText = [
+    lead.clientName,
+    lead.contactName,
+    lead.displayName,
+    lead.phoneLabel,
+    lead.title,
+    lead.lastClientMessage,
+    ...messages.map((message) => `${message.body} ${message.title}`)
+  ].join("\n");
+  const matches = [];
+  if (/marcus/i.test(protectedText)) matches.push("Marcus");
+  if (/fio/i.test(protectedText)) matches.push("Fio");
+  return [...new Set(matches)];
 }
 
 function isFakePhone(phone) {
@@ -79,9 +100,14 @@ function isFakePhone(phone) {
 function scoreLead(lead, messages) {
   const reasons = [];
   const weakReasons = [];
+  const protectedPeople = protectedPersonEvidence(lead, messages);
   const haystack = [
     lead.id,
     lead.clientName,
+    lead.contactName,
+    lead.displayName,
+    lead.phoneLabel,
+    lead.title,
     lead.source,
     lead.lastClientMessage,
     textOf(lead.metadata),
@@ -104,22 +130,29 @@ function scoreLead(lead, messages) {
     "can see your past works?",
     "got landed project photo?",
     "voice test",
-    "floor plan test"
+    "floor plan test",
+    "laminated wall cladding test"
   ];
   for (const phrase of knownTestPhrases) {
     if (haystack.includes(phrase)) weakReasons.push(`known QA phrase: ${phrase}`);
   }
 
-  const clearlyTest = reasons.length > 0 || weakReasons.length >= 2;
+  const clearlyTest = protectedPeople.length ? false : reasons.length > 0 || weakReasons.length >= 2;
   return {
     clearlyTest,
+    protectedPeople,
     reasons,
     weakReasons,
-    riskWarning: clearlyTest ? "" : "Not clearly test data; no cleanup action planned."
+    riskWarning: protectedPeople.length
+      ? `Protected lead contains ${protectedPeople.join(" and ")}; excluded from cleanup completely.`
+      : clearlyTest
+        ? ""
+        : "Not clearly test data; no cleanup action planned."
   };
 }
 
 function plannedActionFor(lead, score) {
+  if (score.protectedPeople.length) return "protected_marcus_fio";
   if (!score.clearlyTest) return "not_touched";
   if (hardDeleteTestData && lead.deletedAt) return "hard_delete_test_data";
   if (lead.deletedAt) return "already_soft_deleted_keep";
@@ -259,6 +292,14 @@ async function applyCleanup(plan) {
   return results;
 }
 
+function simulateFixtureApply(plan) {
+  return plan.map((item) => {
+    if (item.action === "mark_test_and_soft_delete") return { ...item, result: "soft_deleted" };
+    if (item.action === "hard_delete_test_data") return { ...item, result: "hard_deleted" };
+    return { ...item, result: "skipped" };
+  });
+}
+
 function buildPlan(leads, messages) {
   return leads.map((lead) => {
     const leadMessages = messages.filter((message) => message.leadId === lead.id);
@@ -268,6 +309,7 @@ function buildPlan(leads, messages) {
       action: plannedActionFor(lead, score),
       reasons: score.reasons,
       weakReasons: score.weakReasons,
+      protectedPeople: score.protectedPeople,
       riskWarning: score.riskWarning,
       messageCount: leadMessages.length
     };
@@ -275,9 +317,12 @@ function buildPlan(leads, messages) {
 }
 
 function renderReport({ source, warnings, plan, results = [] }) {
-  const identified = plan.filter((item) => item.action !== "not_touched");
+  const cleanable = plan.filter((item) => ["mark_test_and_soft_delete", "hard_delete_test_data", "already_soft_deleted_keep"].includes(item.action));
+  const protectedCount = plan.filter((item) => item.action === "protected_marcus_fio").length;
+  const skippedUncertain = plan.filter((item) => item.action === "not_touched").length;
   const softDeleted = results.filter((item) => item.result === "soft_deleted").length;
   const hardDeleted = results.filter((item) => item.result === "hard_deleted").length;
+  const cleaned = softDeleted + hardDeleted;
   const lines = [
     "# V6.1 Test Lead Cleanup Report",
     "",
@@ -288,10 +333,13 @@ function renderReport({ source, warnings, plan, results = [] }) {
     "## Summary",
     "",
     `- Total leads scanned: ${plan.length}`,
-    `- Test leads identified: ${identified.length}`,
+    `- Test leads identified: ${cleanable.length}`,
+    `- Test leads cleaned: ${cleaned}`,
+    `- Marcus/Fio leads protected: ${protectedCount}`,
+    `- Skipped uncertain leads: ${skippedUncertain}`,
     `- Soft-deleted: ${softDeleted}`,
     `- Hard-deleted: ${hardDeleted}`,
-    `- Leads not touched: ${plan.filter((item) => item.action === "not_touched").length}`,
+    `- Leads not touched: ${skippedUncertain + protectedCount}`,
     `- Hard delete flag enabled: ${hardDeleteTestData ? "yes" : "no"}`,
     "",
     "## Safety Rules",
@@ -300,6 +348,7 @@ function renderReport({ source, warnings, plan, results = [] }) {
     "- Apply requires `--apply`.",
     "- Cleanup defaults to mark test + soft delete.",
     "- Hard delete requires `--hard-delete-test-data` and the lead must already be soft-deleted.",
+    "- Any lead mentioning Marcus or Fio in name, contact/display name, phone label, title, or message content is excluded completely.",
     "- Audit logs are not deleted.",
     "- Real-looking leads are not touched.",
     ""
@@ -308,6 +357,28 @@ function renderReport({ source, warnings, plan, results = [] }) {
   if (warnings.length) {
     lines.push("## Warnings", "");
     for (const warning of warnings) lines.push(`- ${warning}`);
+    lines.push("");
+  }
+
+  lines.push("## Leads Selected For Cleanup", "");
+  const selected = plan.filter((item) => ["mark_test_and_soft_delete", "hard_delete_test_data"].includes(item.action));
+  if (!selected.length) {
+    lines.push("None.", "");
+  } else {
+    for (const item of selected) {
+      lines.push(`- ${item.lead.clientName || item.lead.id} (${item.action})`);
+    }
+    lines.push("");
+  }
+
+  lines.push("## Marcus / Fio Protected Leads", "");
+  const protectedItems = plan.filter((item) => item.action === "protected_marcus_fio");
+  if (!protectedItems.length) {
+    lines.push("None found.", "");
+  } else {
+    for (const item of protectedItems) {
+      lines.push(`- ${item.lead.clientName || item.lead.id}: ${item.protectedPeople.join(", ")}`);
+    }
     lines.push("");
   }
 
@@ -320,6 +391,7 @@ function renderReport({ source, warnings, plan, results = [] }) {
     lines.push(`- Action: ${item.action}`);
     lines.push(`- Result: ${result}`);
     lines.push(`- Messages checked: ${item.messageCount}`);
+    lines.push(`- Protected names found: ${item.protectedPeople.join(", ") || "None"}`);
     lines.push(`- Strong reasons: ${item.reasons.join("; ") || "None"}`);
     lines.push(`- Weak reasons: ${item.weakReasons.join("; ") || "None"}`);
     lines.push(`- Risk warning: ${item.riskWarning || "None"}`);
@@ -332,7 +404,10 @@ const data = await loadData();
 const plan = buildPlan(data.leads, data.messages);
 let results = [];
 if (applyMode) {
-  if (data.source !== "supabase") {
+  if (data.source === "fixture") {
+    data.warnings.push("Fixture apply simulation only. No live writes or audit inserts were performed.");
+    results = simulateFixtureApply(plan);
+  } else if (data.source !== "supabase") {
     data.warnings.push("Apply mode requires live Supabase admin env. No writes were performed.");
   } else {
     results = await applyCleanup(plan);

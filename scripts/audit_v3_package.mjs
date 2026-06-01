@@ -657,9 +657,11 @@ const v61Test = read("scripts/test_v6_1_ui_polish_cleanup.mjs");
 for (const phrase of ["Dry run is the default", "--apply", "--hard-delete-test-data", "reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md"]) {
   assert(v61Docs.includes(phrase), `v6.1 cleanup docs missing ${phrase}`);
 }
-for (const phrase of ["lead_test_cleanup_soft_delete_planned", "lead_test_cleanup_hard_delete_pre_audit", "Not clearly test data", "--apply"]) {
+for (const phrase of ["lead_test_cleanup_soft_delete_planned", "lead_test_cleanup_hard_delete_pre_audit", "Not clearly test data", "protectedPersonEvidence", "protected_marcus_fio", "laminated wall cladding test", "--apply"]) {
   assert(v61Cleanup.includes(phrase), `v6.1 cleanup script missing ${phrase}`);
 }
+assert(v61Docs.includes("Marcus") && v61Docs.includes("Fio"), "v6.1 cleanup docs must document Marcus/Fio protection.");
 assert(v61Test.includes("Real Homeowner") && v61Test.includes("Action: not_touched"), "v6.1 cleanup test must protect real-looking leads.");
+assert(v61Test.includes("Marcus QA Test Lead") && v61Test.includes("Old QA Lead") && v61Test.includes("protected_marcus_fio"), "v6.1 cleanup test must prove Marcus/Fio leads are protected.");
 
 console.log("PASS: v3 package audit passed.");
