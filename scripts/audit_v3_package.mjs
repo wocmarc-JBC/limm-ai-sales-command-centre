@@ -57,11 +57,15 @@ for (const required of [
   "V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md",
   "V5_2_WHATSAPP_QUESTION_BANK_REPORT.md",
   "V5_3_WHATSAPP_REPLY_COACH_REPORT.md",
+  "V6_ULTIMATE_SALES_COMMAND_CENTRE_REPORT.md",
   "docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md",
   "docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md",
   "docs/V6_HUMAN_LIKE_SALES_BRAIN.md",
+  "docs/V6_ULTIMATE_BLUEPRINT.md",
+  "docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md",
   "reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md",
   "reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md",
+  "reports/V6_ULTIMATE_DEEP_QA_REPORT.md",
   "CALENDAR_BOOKING_SETUP_GUIDE.md",
   "CALENDAR_BOOKING_SAFETY_RULES.md",
   "WHATSAPP_QUESTION_BANK_PLAYBOOK.md",
@@ -119,6 +123,8 @@ for (const required of [
   "lib/whatsapp-v6/safety-governor.ts",
   "lib/whatsapp-v6/reply-quality-judge.ts",
   "lib/whatsapp-v6/sales-brain.ts",
+  "lib/sales-control.ts",
+  "lib/sales-learning.ts",
   "lib/openai-whatsapp-config.ts",
   "lib/calendar-config.ts",
   "lib/calendar-booking.ts",
@@ -189,7 +195,9 @@ for (const required of [
   "scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs",
   "scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs",
   "scripts/test_v6_human_like_sales_brain_deep_qa.mjs",
-  "supabase/migrations/018_v4_8_whatsapp_closed_test.sql"
+  "scripts/test_v6_ultimate_deep_qa.mjs",
+  "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
+  "supabase/migrations/019_v6_ultimate_command_centre.sql"
 ]) {
   assert(exists(required), `Missing required file: ${required}`);
 }
@@ -397,8 +405,8 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
-  "version: \"v6_0_human_like_sales_brain\"",
-  "salesBrainVersion: \"v6.0\"",
+  "version: \"v6_ultimate_sales_command_centre\"",
+  "salesBrainVersion: \"v6.ultimate\"",
   "humanLikeSalesBrainAvailable",
   "contextTruthGateAvailable",
   "singaporeRenovationMeaningBrainAvailable",
@@ -408,6 +416,7 @@ for (const field of [
   "overClaimPreventionAvailable",
   "localRenovationShortformSupportAvailable",
   "v6DeepQaAvailable",
+  "v6UltimateDeepQaAvailable",
   "optionalAiSalesBrainEnabled",
   "aiDraftReplyEnabled",
   "aiJsonSchemaValidationAvailable",
@@ -439,6 +448,23 @@ for (const field of [
   "answerActualQuestionFirstRule",
   "blackBoxReplyRecorderAvailable",
   "humanTakeoverLockPlanned",
+  "softDeleteAvailable",
+  "restoreAvailable",
+  "bossOnlyHardDeleteAvailable",
+  "deleteAuditAvailable",
+  "humanTakeoverAvailable",
+  "botPauseResumeAvailable",
+  "leadScoringAvailable",
+  "conversationSummaryAvailable",
+  "missionQueueAvailable",
+  "followUpReminderAvailable",
+  "staffRolesAvailable",
+  "settingsPageAvailable",
+  "goldCommandCentreUiAvailable",
+  "inAppQaCentreAvailable",
+  "salesLearningFoundationAvailable",
+  "weeklyBossReportDraftAvailable",
+  "quotationReadinessAvailable",
   "questionBankAvailable",
   "openaiWhatsappReplyEnabled",
   "calendarAutoBookingEnabled"

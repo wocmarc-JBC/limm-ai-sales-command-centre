@@ -1,5 +1,29 @@
 # Current Status
 
+## v6 Ultimate Sales Command Centre
+
+Status: implemented locally as launch-candidate foundation; pending push/deploy and live health proof.
+
+Reason for upgrade:
+
+- v6.0 improved WhatsApp reply quality, but Marcus requested one consolidated launch-candidate build covering sales brain, cleanup, takeover, mission queue, settings, gold UI, QA, learning, and readiness foundations.
+- The live WhatsApp pipeline remains the core system and must not be broken.
+
+What changed:
+
+- Health endpoint target is now `v6_ultimate_sales_command_centre`.
+- Added v6 Ultimate blueprint and operating docs.
+- Kept v6 Human-Like Sales Brain, Context Truth Gate, Singapore Renovation Meaning Brain, Safety Governor, and Reply Quality Judge.
+- Added soft delete, restore, boss/admin hard-delete gating, delete audit, human takeover, and bot pause/resume foundations.
+- Added lead scoring, conversation summaries, mission queue, follow-up reminders, staff-role permissions, settings proof, gold command centre UI, in-app QA centre, sales learning foundation, weekly boss report draft foundation, and quotation/site visit readiness foundation.
+- Added migration `019_v6_ultimate_command_centre.sql`.
+- Added `scripts/test_v6_ultimate_deep_qa.mjs` and `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`.
+
+Current Go/No-Go:
+
+- GO for controlled v6 Ultimate deployment proof after push and Vercel health check.
+- NO-GO for OpenAI by default, autonomous Calendar booking, pricing, automatic project-photo sending, broadcast, approval bypass, or hard delete without prior soft delete and reason.
+
 ## v6.0 Human-Like WhatsApp Sales Brain
 
 Status: implemented locally and ready for Vercel deployment proof.

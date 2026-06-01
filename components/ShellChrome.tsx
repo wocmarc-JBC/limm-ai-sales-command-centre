@@ -123,7 +123,7 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
         <div className="flex items-center justify-between gap-3 md:block">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">LIMM Works</p>
-            <h1 className="mt-1 text-lg font-semibold text-command-text">AI Sales Command Centre v3</h1>
+            <h1 className="mt-1 text-lg font-semibold text-command-text">Gold Sales Command Centre</h1>
           </div>
           <ShellStatus auth={auth} clientAuthenticated={clientAuthenticated} isTemporaryReviewRoute={isTemporaryReviewRoute} isLoginRoute={isLoginRoute} />
         </div>

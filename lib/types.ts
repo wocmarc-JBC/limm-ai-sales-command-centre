@@ -138,6 +138,28 @@ export interface Lead {
   updatedAt?: string;
   preferredContactTime: string;
   riskFlags: string[];
+  deletedAt?: string | null;
+  deletedBy?: string;
+  deleteReason?: string;
+  archivedAt?: string | null;
+  archivedBy?: string;
+  archivedReason?: string;
+  isTest?: boolean;
+  isSpam?: boolean;
+  duplicateOf?: string;
+  restoredAt?: string | null;
+  restoredBy?: string;
+  botPaused?: boolean;
+  botPausedAt?: string | null;
+  botPausedBy?: string;
+  botPauseReason?: string;
+  assignedTo?: string;
+  needsMarcus?: boolean;
+  followedUpAt?: string | null;
+  followedUpBy?: string;
+  leadLevel?: "Gold Lead" | "Warm Lead" | "Cold Lead" | "Risk Lead" | "Spam/Test" | "Needs Marcus";
+  conversationSummary?: string;
+  missionCategory?: string;
 }
 
 export type LeadMessageDirection = "inbound" | "outbound" | "internal";
@@ -236,3 +258,17 @@ export interface SystemHealth {
   whatsappStatus: "disabled" | "closed_test_ready" | "live_auto_reply_ready" | "closed_test_credentials_missing" | "inbound_only";
   calendarStatus: "disabled" | "connection_missing" | "boss_approval_required" | "auto_booking_requested";
 }
+
+export type LeadLifecycleAction =
+  | "archive"
+  | "soft_delete"
+  | "restore"
+  | "mark_test"
+  | "mark_spam"
+  | "mark_duplicate"
+  | "hard_delete"
+  | "take_over"
+  | "pause_bot"
+  | "resume_bot"
+  | "mark_needs_marcus"
+  | "mark_followed_up";

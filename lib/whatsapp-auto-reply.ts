@@ -276,6 +276,27 @@ export async function handleWhatsAppInboundMessage(
     metadata: { providerMessageId, messageType: message.type }
   });
 
+  if (lead.botPaused) {
+    logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "bot_paused_for_lead" });
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_disabled",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply skipped because human takeover or bot pause is active for this lead.",
+      metadata: {
+        providerMessageId,
+        reason: "bot_paused_for_lead",
+        botPausedAt: lead.botPausedAt ?? "",
+        botPauseReason: lead.botPauseReason ?? ""
+      }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Bot paused for this lead."
+    };
+  }
+
   const typeForDecision = message.type.toLowerCase();
   if (!canBuildReplyDecision(message) && !["image", "document"].includes(typeForDecision)) {
     logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "unsupported_or_empty_message" });

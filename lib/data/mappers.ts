@@ -34,7 +34,29 @@ export function mapLeadRow(row: any): Lead {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     preferredContactTime: row.preferred_contact_time ?? "",
-    riskFlags: row.risk_flags ?? []
+    riskFlags: row.risk_flags ?? [],
+    deletedAt: row.deleted_at ?? null,
+    deletedBy: row.deleted_by ?? "",
+    deleteReason: row.delete_reason ?? "",
+    archivedAt: row.archived_at ?? null,
+    archivedBy: row.archived_by ?? "",
+    archivedReason: row.archived_reason ?? "",
+    isTest: row.is_test ?? false,
+    isSpam: row.is_spam ?? false,
+    duplicateOf: row.duplicate_of ?? "",
+    restoredAt: row.restored_at ?? null,
+    restoredBy: row.restored_by ?? "",
+    botPaused: row.bot_paused ?? false,
+    botPausedAt: row.bot_paused_at ?? null,
+    botPausedBy: row.bot_paused_by ?? "",
+    botPauseReason: row.bot_pause_reason ?? "",
+    assignedTo: row.assigned_to ?? "",
+    needsMarcus: row.needs_marcus ?? false,
+    followedUpAt: row.followed_up_at ?? null,
+    followedUpBy: row.followed_up_by ?? "",
+    leadLevel: row.lead_level ?? undefined,
+    conversationSummary: row.conversation_summary ?? "",
+    missionCategory: row.mission_category ?? ""
   };
 }
 

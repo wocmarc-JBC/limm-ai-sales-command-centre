@@ -222,8 +222,8 @@ for (const phrase of [
 }
 
 for (const field of [
-  "version: \"v6_0_human_like_sales_brain\"",
-  "salesBrainVersion: \"v6.0\"",
+  "version: \"v6_ultimate_sales_command_centre\"",
+  "salesBrainVersion: \"v6.ultimate\"",
   "replyCoachAvailable",
   "replyDecisionEngineAvailable",
   "replyQualityGateAvailable",

@@ -3,14 +3,26 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   approveAppointmentBookingAction,
+  archiveLeadAction,
   generateAiDryRunRecommendationAction,
+  hardDeleteLeadAction,
+  markFollowedUpAction,
   markBossApprovalNeededAction,
+  markLeadDuplicateAction,
+  markLeadSpamAction,
+  markLeadTestAction,
   markLeadNotSuitableAction,
+  markNeedsMarcusAction,
   moveLeadToQuotationReadinessAction,
+  pauseBotForLeadAction,
   requestAppointmentMissingInfoAction,
   requestAppointmentReviewAction,
   requestCalendarEventCreateAction,
+  restoreLeadAction,
+  resumeBotForLeadAction,
   reviewAiDraftAction,
+  softDeleteLeadAction,
+  takeOverLeadAction,
   updateLeadStatusAction
 } from "@/lib/actions";
 import { evaluateBookingReadiness } from "@/lib/calendar-booking";
@@ -24,6 +36,7 @@ import { getQuotationReadinessForLead } from "@/lib/data/quotation-repository";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
+import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 import type { AiDraftReviewStatus, AiDryRunRecommendation, LeadStatus } from "@/lib/types";
 
@@ -99,6 +112,8 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
   const whatsapp = getWhatsAppRuntime();
   const calendar = getCalendarRuntime();
   const next = getNextBestAction(lead);
+  const leadLevel = lead.leadLevel ?? calculateLeadLevel(lead);
+  const leadMission = lead.missionCategory || missionForLead(lead);
   const aiStatus = getAiStatus(openAi);
   const validationDisplay = aiRecommendation ? getValidationDisplay(aiRecommendation) : null;
   const latestInbound = leadMessages.find((message) => message.direction === "inbound" && message.channel === "whatsapp");
@@ -140,8 +155,14 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
         <div className="rounded border border-command-line bg-command-panel p-5 shadow-command">
           <div className="flex flex-wrap gap-2">
             <StatusBadge label={lead.leadCategory} />
+            <StatusBadge label={leadLevel} />
+            <StatusBadge label={leadMission} />
             <StatusBadge label={lead.status} />
             {lead.bossApprovalNeeded ? <StatusBadge label="Boss Approval Needed" /> : null}
+            {lead.needsMarcus ? <StatusBadge label="Needs Marcus" /> : null}
+            {lead.botPaused ? <StatusBadge label="Bot Paused" /> : null}
+            {lead.deletedAt ? <StatusBadge label="Soft Deleted" /> : null}
+            {lead.archivedAt ? <StatusBadge label="Archived" /> : null}
           </div>
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
             <div><dt className="text-command-muted">Phone / Source</dt><dd>{lead.phone} | {lead.source}</dd></div>
@@ -155,6 +176,11 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <div className="sm:col-span-2"><dt className="text-command-muted">Next Best Action</dt><dd>{next.action}</dd></div>
             <div className="sm:col-span-2"><dt className="text-command-muted">Reason</dt><dd>{next.reason}</dd></div>
             <div className="sm:col-span-2"><dt className="text-command-muted">Blockers</dt><dd>{humanizeList(next.blockers)}</dd></div>
+            <div className="sm:col-span-2"><dt className="text-command-muted">Conversation Summary</dt><dd>{lead.conversationSummary || buildConversationSummary(lead)}</dd></div>
+            <div><dt className="text-command-muted">Readiness Status</dt><dd>{readinessStatus(lead)}</dd></div>
+            <div><dt className="text-command-muted">Follow-Up Reminder</dt><dd>{buildFollowUpReminder(lead)}</dd></div>
+            <div><dt className="text-command-muted">Assigned To</dt><dd>{lead.assignedTo || "Unassigned"}</dd></div>
+            <div><dt className="text-command-muted">Bot Control</dt><dd>{lead.botPaused ? `Paused - ${lead.botPauseReason || "Manual"}` : "Active"}</dd></div>
           </dl>
           <form action={updateLeadStatusAction} className="mt-5 flex flex-wrap items-end gap-3 rounded border border-command-line bg-command-panel2 p-4">
             <input type="hidden" name="lead_id" value={lead.id} />
@@ -176,6 +202,69 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <form action={markLeadNotSuitableAction}>
               <input type="hidden" name="lead_id" value={lead.id} />
               <ActionButton type="submit" tone="danger">Mark Not Suitable</ActionButton>
+            </form>
+          </div>
+          <div className="mt-5 rounded border border-command-line bg-command-panel2 p-4">
+            <p className="text-sm font-semibold text-command-text">Human takeover and cleanup controls</p>
+            <p className="mt-1 text-sm text-command-muted">
+              Normal delete is soft delete. Permanent delete is boss/admin only, requires prior soft delete, typed confirmation, reason, and an audit before deletion.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <form action={takeOverLeadAction}>
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <ActionButton type="submit" tone="muted">Take Over Lead</ActionButton>
+              </form>
+              <form action={pauseBotForLeadAction} className="flex flex-wrap gap-2">
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <input name="reason" placeholder="Pause reason" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+                <ActionButton type="submit" tone="muted">Pause Bot</ActionButton>
+              </form>
+              <form action={resumeBotForLeadAction}>
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <ActionButton type="submit" tone="muted">Resume Bot</ActionButton>
+              </form>
+              <form action={markNeedsMarcusAction}>
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <input type="hidden" name="reason" value="Marked from lead detail." />
+                <ActionButton type="submit" tone="muted">Mark Needs Marcus</ActionButton>
+              </form>
+              <form action={markFollowedUpAction}>
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <ActionButton type="submit" tone="muted">Mark Followed Up</ActionButton>
+              </form>
+              <form action={markLeadTestAction}>
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <ActionButton type="submit" tone="muted">Mark Test Lead</ActionButton>
+              </form>
+              <form action={markLeadSpamAction}>
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <ActionButton type="submit" tone="danger">Mark Spam</ActionButton>
+              </form>
+              <form action={markLeadDuplicateAction} className="flex flex-wrap gap-2">
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <input name="duplicate_of" placeholder="Duplicate of lead id" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+                <ActionButton type="submit" tone="muted">Mark Duplicate</ActionButton>
+              </form>
+              <form action={archiveLeadAction} className="flex flex-wrap gap-2">
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <input name="reason" placeholder="Archive reason" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+                <ActionButton type="submit" tone="muted">Archive Lead</ActionButton>
+              </form>
+              <form action={softDeleteLeadAction} className="flex flex-wrap gap-2">
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <input name="reason" placeholder="Soft delete reason" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+                <ActionButton type="submit" tone="danger">Soft Delete Lead</ActionButton>
+              </form>
+              <form action={restoreLeadAction}>
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <ActionButton type="submit" tone="muted">Restore Lead</ActionButton>
+              </form>
+            </div>
+            <form action={hardDeleteLeadAction} className="mt-4 grid gap-2 rounded border border-command-red/60 bg-command-bg p-3 md:grid-cols-[1fr_1fr_auto]">
+              <input type="hidden" name="lead_id" value={lead.id} />
+              <input name="reason" placeholder="Permanent delete reason" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+              <input name="confirmation" placeholder="Type PERMANENT DELETE" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+              <ActionButton type="submit" tone="danger" disabled={!lead.deletedAt}>Permanent Delete</ActionButton>
             </form>
           </div>
         </div>

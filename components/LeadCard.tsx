@@ -3,6 +3,7 @@ import { evaluateBookingReadiness } from "@/lib/calendar-booking";
 import type { Lead } from "@/lib/types";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
 import { getNextBestAction } from "@/lib/next-best-action";
+import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
 import { matchQuestionBankIntent } from "@/lib/whatsapp-question-bank";
 import { StatusBadge } from "./StatusBadge";
 
@@ -13,6 +14,9 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const needsFiles = lead.missingInfo.includes("floor_plan") || lead.missingInfo.includes("site_photos");
   const questionMatch = isWhatsapp ? matchQuestionBankIntent(lead.lastClientMessage) : null;
   const showQuestionBadge = Boolean(questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported");
+  const leadLevel = lead.leadLevel ?? calculateLeadLevel(lead);
+  const mission = lead.missionCategory || missionForLead(lead);
+  const infoCollected = Math.max(0, Math.min(100, 100 - lead.missingInfo.length * 18));
   return (
     <article className="rounded border border-command-line bg-command-panel p-4 shadow-command">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -22,8 +26,16 @@ export function LeadCard({ lead }: { lead: Lead }) {
               {lead.clientName}
             </Link>
             <StatusBadge label={lead.leadCategory} />
+            <StatusBadge label={leadLevel} />
+            <StatusBadge label={mission} />
             <StatusBadge label={lead.status} />
             {isWhatsapp ? <StatusBadge label="WhatsApp" /> : null}
+            {lead.botPaused ? <StatusBadge label="Bot Paused" /> : null}
+            {lead.needsMarcus ? <StatusBadge label="Needs Marcus" /> : null}
+            {lead.deletedAt ? <StatusBadge label="Soft Deleted" /> : null}
+            {lead.archivedAt ? <StatusBadge label="Archived" /> : null}
+            {lead.isTest ? <StatusBadge label="Test Lead" /> : null}
+            {lead.isSpam ? <StatusBadge label="Spam" /> : null}
             {showQuestionBadge ? <StatusBadge label={questionMatch!.entry.category} /> : null}
             {booking.appointmentIntent ? <StatusBadge label="Appointment Requested" /> : null}
             {questionMatch?.entry.escalation_rule !== "auto_safe" && showQuestionBadge ? <StatusBadge label="Boss Review Required" /> : null}
@@ -34,8 +46,22 @@ export function LeadCard({ lead }: { lead: Lead }) {
           </p>
         </div>
         <div className="rounded border border-command-line bg-command-panel2 px-3 py-2 text-right">
-          <p className="text-xs text-command-muted">Lead score</p>
+          <p className="text-xs text-command-muted">Lead Heat Score</p>
           <p className="text-xl font-semibold text-command-text">{lead.leadScore}</p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_14rem]">
+        <div className="rounded border border-command-line bg-command-panel2 p-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-command-cyan">Mission Brief</p>
+          <p className="mt-2 text-sm text-command-text">{buildConversationSummary(lead)}</p>
+          <p className="mt-2 text-xs text-command-muted">{buildFollowUpReminder(lead)}</p>
+        </div>
+        <div className="rounded border border-command-line bg-command-panel2 p-3">
+          <p className="text-xs text-command-muted">Info Collected</p>
+          <div className="mt-2 h-2 rounded-full bg-command-bg">
+            <div className="h-2 rounded-full bg-command-cyan" style={{ width: `${infoCollected}%` }} />
+          </div>
+          <p className="mt-2 text-sm font-semibold text-command-text">{infoCollected}% | {readinessStatus(lead)}</p>
         </div>
       </div>
       <dl className="mt-4 grid gap-3 text-sm lg:grid-cols-3">

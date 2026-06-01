@@ -6,20 +6,22 @@ const config: Config = {
     extend: {
       colors: {
         command: {
-          bg: "#0b0d10",
-          panel: "#12161d",
-          panel2: "#171c24",
-          line: "#29313c",
-          text: "#f2f5f8",
-          muted: "#9aa6b2",
-          cyan: "#39c5d8",
-          green: "#56d364",
+          bg: "#120c07",
+          panel: "#1d140d",
+          panel2: "#271b11",
+          line: "#5a4227",
+          text: "#fff8e7",
+          muted: "#c8b58e",
+          cyan: "#f4c95d",
+          green: "#7bd88f",
           amber: "#f2c94c",
-          red: "#ff6b6b"
+          red: "#ff7b6f",
+          bronze: "#8a612f",
+          gold: "#f6d36b"
         }
       },
       boxShadow: {
-        command: "0 18px 55px rgba(0,0,0,0.28)"
+        command: "0 18px 55px rgba(34,18,4,0.45)"
       }
     }
   },

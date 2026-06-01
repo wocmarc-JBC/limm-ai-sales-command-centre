@@ -220,6 +220,20 @@ where table_name = 'lead_messages'
 and column_name in ('provider_message_id','provider_timestamp','whatsapp_status','metadata');
 ```
 
+## 019_v6_ultimate_command_centre.sql
+
+Purpose: Add v6 Ultimate command-centre fields for safe soft delete/restore, boss/admin hard-delete gating, bot pause/resume, human takeover, lead scoring, mission queue, and summaries.
+Dependencies: migrations 002, 013, 016, and 018.
+Safe to re-run: Yes. Uses `add column if not exists` and `create index if not exists`.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_name = 'leads'
+and column_name in ('deleted_at','is_test','is_spam','bot_paused','needs_marcus','lead_level','conversation_summary','mission_category');
+```
+
 ## After All Migrations
 
 Run:

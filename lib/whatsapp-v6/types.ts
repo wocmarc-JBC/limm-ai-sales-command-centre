@@ -1,7 +1,7 @@
 import type { Lead, LeadMessage } from "@/lib/types";
 
-export const V6_SALES_BRAIN_VERSION = "v6_0_human_like_sales_brain";
-export const V6_SALES_BRAIN_LABEL = "v6.0";
+export const V6_SALES_BRAIN_VERSION = "v6_ultimate_sales_command_centre";
+export const V6_SALES_BRAIN_LABEL = "v6.ultimate";
 
 export type V6ClientMessageType = "text" | "image" | "document" | "audio" | "voice" | "unsupported";
 

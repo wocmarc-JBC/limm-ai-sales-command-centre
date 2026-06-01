@@ -8,13 +8,25 @@ import { saveAppointmentSettings } from "@/lib/data/appointment-settings-reposit
 import { generateAndSaveAiDryRunRecommendation, recordAiDraftReviewAction } from "@/lib/data/ai-decisions-repository";
 import { updateFollowUpStatus } from "@/lib/data/followups-repository";
 import {
+  archiveLead,
   approveAppointmentBooking,
+  hardDeleteLead,
   markBossApprovalNeeded,
+  markLeadAsDuplicate,
+  markLeadAsSpam,
+  markLeadAsTest,
+  markLeadFollowedUp,
   markLeadNotSuitable,
+  markLeadNeedsMarcus,
   moveLeadToQuotationReadiness,
+  pauseBotForLead,
   recordCalendarEventCreateRequested,
   requestAppointmentMissingInfo,
   requestAppointmentReview,
+  restoreLead,
+  resumeBotForLead,
+  softDeleteLead,
+  takeOverLead,
   updateLeadStatus
 } from "@/lib/data/leads-repository";
 import { updateQuotationReadinessStatus } from "@/lib/data/quotation-repository";
@@ -223,4 +235,113 @@ export async function reviewAiDraftAction(formData: FormData) {
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/audit-log");
+}
+
+function revalidateLeadPaths(leadId: string) {
+  revalidatePath("/");
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/settings");
+  revalidatePath("/audit-log");
+}
+
+export async function archiveLeadAction(formData: FormData) {
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await archiveLead(leadId, text(formData, "reason", "Archived by Marcus/admin."), permission.auth.profile?.fullName ?? "Marcus");
+  revalidateLeadPaths(leadId);
+}
+
+export async function softDeleteLeadAction(formData: FormData) {
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await softDeleteLead(leadId, text(formData, "reason", "Soft deleted by Marcus/admin."), permission.auth.profile?.fullName ?? "Marcus");
+  revalidateLeadPaths(leadId);
+}
+
+export async function restoreLeadAction(formData: FormData) {
+  const permission = await requirePermission("restore_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await restoreLead(leadId, permission.auth.profile?.fullName ?? "Marcus");
+  revalidateLeadPaths(leadId);
+}
+
+export async function hardDeleteLeadAction(formData: FormData) {
+  const permission = await requirePermission("hard_delete_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  const reason = text(formData, "reason");
+  const confirmation = text(formData, "confirmation");
+  if (!reason || confirmation !== "PERMANENT DELETE") return;
+  await hardDeleteLead(leadId, reason);
+  revalidatePath("/");
+  revalidatePath("/leads");
+  revalidatePath("/audit-log");
+}
+
+export async function markLeadTestAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await markLeadAsTest(leadId);
+  revalidateLeadPaths(leadId);
+}
+
+export async function markLeadSpamAction(formData: FormData) {
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await markLeadAsSpam(leadId);
+  revalidateLeadPaths(leadId);
+}
+
+export async function markLeadDuplicateAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await markLeadAsDuplicate(leadId, text(formData, "duplicate_of"));
+  revalidateLeadPaths(leadId);
+}
+
+export async function takeOverLeadAction(formData: FormData) {
+  const permission = await requirePermission("control_bot");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await takeOverLead(leadId, permission.auth.profile?.fullName ?? "Marcus");
+  revalidateLeadPaths(leadId);
+}
+
+export async function pauseBotForLeadAction(formData: FormData) {
+  const permission = await requirePermission("control_bot");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await pauseBotForLead(leadId, text(formData, "reason", "Manual pause"), permission.auth.profile?.fullName ?? "Marcus");
+  revalidateLeadPaths(leadId);
+}
+
+export async function resumeBotForLeadAction(formData: FormData) {
+  const permission = await requirePermission("control_bot");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await resumeBotForLead(leadId, permission.auth.profile?.fullName ?? "Marcus");
+  revalidateLeadPaths(leadId);
+}
+
+export async function markNeedsMarcusAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await markLeadNeedsMarcus(leadId, text(formData, "reason", "Marked from command centre."));
+  revalidateLeadPaths(leadId);
+}
+
+export async function markFollowedUpAction(formData: FormData) {
+  const permission = await requirePermission("manage_followups");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  await markLeadFollowedUp(leadId, permission.auth.profile?.fullName ?? "Marcus");
+  revalidateLeadPaths(leadId);
 }
