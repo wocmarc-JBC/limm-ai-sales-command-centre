@@ -84,6 +84,34 @@ function composePrice(input: { text: string; understanding: V6Understanding; con
   return "I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed. Once we understand the scope, we can review the next step more accurately for an initial project review.";
 }
 
+function specificWorkLabel(text: string) {
+  const normalized = normaliseV6Text(text);
+  const match = normalized.match(/\b(laminated wall cladding|wall cladding|fluted panel|feature wall|toilet overlay|false ceiling|vinyl|spc flooring|wardrobe|kitchen cabinet|backsplash|commercial office renovation|waterproofing|hacking 2 walls?)\b/i);
+  return match?.[0] ?? "";
+}
+
+function composeSpecificWork(text: string, context: V6VerifiedContext) {
+  const label = specificWorkLabel(text);
+  if (!label) return "";
+  const mediaAsk = askForMissing(context, ["site_photos"], "general") || "The team can review the current details and advise the next step for an initial project review.";
+  if (/laminated wall cladding|wall cladding|fluted panel|feature wall/i.test(label)) {
+    return `Yes, we can help review ${label} works. Suitability depends on the wall condition, moisture exposure, backing/substrate, area size and finishing details. ${mediaAsk}`;
+  }
+  if (/toilet overlay|waterproofing/i.test(label)) {
+    return `Yes, we can help review ${label} works. Wet areas need careful checking because waterproofing, drainage, substrate condition and existing defects can affect the right method. ${mediaAsk}`;
+  }
+  if (/false ceiling/i.test(label)) {
+    return `Yes, we can help review false ceiling works. The team will need to check ceiling height, lighting points, access panels and site condition before advising the next step. ${mediaAsk}`;
+  }
+  if (/vinyl|spc flooring/i.test(label)) {
+    return `Yes, we can help review ${label} works. Floor condition, levelness, moisture and transition details should be checked before advising the right finish. ${mediaAsk}`;
+  }
+  if (/wardrobe|kitchen cabinet|backsplash/i.test(label)) {
+    return `Yes, we can help review ${label} works. It helps to check the area size, measurements, wall condition and finishing direction before advising the next step. ${mediaAsk}`;
+  }
+  return `Yes, we can help review ${label} works. The team should check the site condition, scope and finishing details before advising the next step for an initial project review. ${mediaAsk}`;
+}
+
 function composeAppointment(text: string, context: V6VerifiedContext) {
   const requested = appointmentTimeText(text);
   const ack = receivedAcknowledgement(context);
@@ -112,6 +140,10 @@ export function composeNaturalV6Reply(input: {
 
   if (hasIntent(understanding, "portfolio_request")) return composePortfolio(context);
   if (hasIntent(understanding, "price_question")) return composePrice({ text: input.inboundText, understanding, context });
+  if (hasIntent(understanding, "specific_works") && !hasIntent(understanding, "demolition_hacking") && !hasIntent(understanding, "structural_wall")) {
+    const specificReply = composeSpecificWork(input.inboundText, context);
+    if (specificReply) return specificReply;
+  }
 
   const hasKitchen = hasIntent(understanding, "kitchen_renovation");
   const hasWallRisk = hasIntent(understanding, "demolition_hacking") || hasIntent(understanding, "structural_wall");

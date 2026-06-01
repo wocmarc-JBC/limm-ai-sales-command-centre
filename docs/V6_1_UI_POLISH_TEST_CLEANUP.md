@@ -1,6 +1,18 @@
 # v6.1 UI Polish + Test Lead Cleanup
 
-Version: `v6_1_1_dashboard_declutter_live_cleanup`
+Version: `v6_1_2_mission_control_ui_live_cleanup`
+
+## v6.1.2 Add-On
+
+v6.1.2 replaces the remaining brown/debug-style dashboard with a futuristic Mission Control cockpit. The main page now focuses on mission cards, the main action queue, recent WhatsApp leads, quick actions, and a compact system core.
+
+- Main dashboard title is `LIMM Mission Control`.
+- Main dashboard answers `What must Marcus do now?`.
+- QA/system details remain in Settings and Reports.
+- Leads page supports Active, Test, Archived/Deleted, Spam, and All filters.
+- Active view hides test/generated leads by default.
+- Settings cleanup has live dry-run counts, sample candidates, soft-delete default cleanup, Marcus/Fio protection proof, and a danger-zone action for already-soft-deleted test leads.
+- Bulk in-app cleanup uses a normal confirmation modal instead of typed phrase entry.
 
 ## v6.1.1 Add-On
 
@@ -140,7 +152,7 @@ Do not use this for real leads.
 
 1. Apply Supabase migration 019 if it is not already live.
 2. Open `/api/whatsapp/health`.
-3. Confirm `version: v6_1_1_dashboard_declutter_live_cleanup`.
+3. Confirm `version: v6_1_2_mission_control_ui_live_cleanup`.
 4. Open dashboard and confirm the premium theme/readability.
 5. Open leads and confirm old inactive/test leads are hidden by default.
 6. Run cleanup dry run.

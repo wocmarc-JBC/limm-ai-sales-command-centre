@@ -350,23 +350,31 @@ export async function markFollowedUpAction(formData: FormData) {
 }
 
 export async function cleanupOldTestLeadsAction(formData: FormData) {
-  const permission = await requirePermission("soft_delete_leads");
+  const mode = text(formData, "cleanup_mode", "soft_delete");
+  const permission = await requirePermission(mode === "hard_delete_soft_deleted" ? "hard_delete_leads" : "soft_delete_leads");
   if (!permission.ok) return;
-  if (text(formData, "confirmation") !== "CLEAN TEST LEADS") return;
 
   const leads = await listLeads({ includeInactive: true, includeTest: true });
   const messages = await Promise.all(leads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const));
-  const plan = buildTestLeadCleanupPlan(leads, new Map(messages));
+  const plan = buildTestLeadCleanupPlan(leads, new Map(messages), { hardDeleteTestData: mode === "hard_delete_soft_deleted" });
   const actor = permission.auth.profile?.fullName ?? "Marcus";
 
   for (const item of plan) {
-    if (item.action !== "mark_test_and_soft_delete") continue;
-    await markLeadAsTest(item.lead.id);
-    await softDeleteLead(
-      item.lead.id,
-      `v6.1.1 in-app cleanup: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`,
-      actor
-    );
+    if (mode === "hard_delete_soft_deleted") {
+      if (item.action !== "hard_delete_test_data") continue;
+      await hardDeleteLead(
+        item.lead.id,
+        `v6.1.2 in-app hard cleanup for already-soft-deleted test lead: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`
+      );
+    } else {
+      if (item.action !== "mark_test_and_soft_delete") continue;
+      await markLeadAsTest(item.lead.id);
+      await softDeleteLead(
+        item.lead.id,
+        `v6.1.2 in-app cleanup: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`,
+        actor
+      );
+    }
   }
 
   revalidatePath("/");

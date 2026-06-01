@@ -4,8 +4,8 @@
 
 :root {
   color-scheme: dark;
-  background: #120d08;
-  color: #fff7e6;
+  background: #05070a;
+  color: #f8f3e7;
 }
 
 * {
@@ -16,12 +16,14 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(214, 168, 79, 0.13) 0, rgba(27, 18, 11, 0.42) 18rem, rgba(18, 13, 8, 0) 36rem),
-    linear-gradient(135deg, rgba(36, 23, 13, 0.82), rgba(18, 13, 8, 0.96) 46rem),
-    #120d08;
-  color: #fff7e6;
-  font-size: 15.5px;
-  line-height: 1.55;
+    radial-gradient(circle at 18% 8%, rgba(34, 211, 238, 0.16), transparent 26rem),
+    radial-gradient(circle at 78% 4%, rgba(245, 197, 66, 0.16), transparent 24rem),
+    linear-gradient(180deg, rgba(16, 24, 32, 0.82), rgba(5, 7, 10, 0.98) 34rem),
+    linear-gradient(135deg, rgba(18, 13, 8, 0.62), rgba(5, 7, 10, 0.98)),
+    #05070a;
+  color: #f8f3e7;
+  font-size: 16px;
+  line-height: 1.62;
   font-family:
     Inter,
     ui-sans-serif,
@@ -30,6 +32,19 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+}
+
+body::before {
+  pointer-events: none;
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), transparent 78%);
 }
 
 a {
@@ -62,7 +77,24 @@ textarea {
 }
 
 .premium-card {
-  border: 1px solid rgba(212, 164, 74, 0.22);
-  background: linear-gradient(180deg, rgba(42, 27, 16, 0.96), rgba(32, 21, 14, 0.96));
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 247, 230, 0.04);
+  border: 1px solid rgba(214, 168, 79, 0.24);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(214, 168, 79, 0.07));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(18px);
+}
+
+.mission-panel {
+  border: 1px solid rgba(214, 168, 79, 0.22);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+    linear-gradient(180deg, rgba(16, 24, 32, 0.86), rgba(9, 13, 18, 0.92));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.radar-ring {
+  background:
+    radial-gradient(circle, rgba(34, 211, 238, 0.24) 0 2px, transparent 3px),
+    repeating-radial-gradient(circle, rgba(34, 211, 238, 0.22) 0 1px, transparent 1px 28px),
+    conic-gradient(from 145deg, rgba(34, 211, 238, 0.35), transparent 35%, rgba(245, 197, 66, 0.22), transparent 72%);
 }

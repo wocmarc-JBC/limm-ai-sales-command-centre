@@ -3,6 +3,7 @@ import { getDataMode } from "./data-source";
 import { mapLeadRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseServerClient } from "./supabase-server";
+import { scoreTestLead } from "@/lib/test-lead-cleanup";
 import type { Lead, LeadStatus } from "@/lib/types";
 
 type ListLeadsOptions = { includeInactive?: boolean; includeTest?: boolean };
@@ -10,6 +11,7 @@ type ListLeadsOptions = { includeInactive?: boolean; includeTest?: boolean };
 function shouldShowLead(lead: Lead, options?: ListLeadsOptions) {
   if (!options?.includeInactive && (lead.deletedAt || lead.archivedAt || lead.isSpam)) return false;
   if (!options?.includeTest && lead.isTest) return false;
+  if (!options?.includeTest && scoreTestLead(lead).clearlyTest) return false;
   return true;
 }
 

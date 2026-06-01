@@ -20,7 +20,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const infoCollected = Math.max(0, Math.min(100, 100 - lead.missingInfo.length * 18));
   const displayName = cleanLeadDisplayName(lead);
   return (
-    <article className="rounded-lg border border-command-line bg-command-card p-5 shadow-premium">
+    <article className="mission-panel rounded-2xl p-6 transition hover:border-command-cyan/70 hover:shadow-glow">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -50,18 +50,18 @@ export function LeadCard({ lead }: { lead: Lead }) {
             <p className="mt-1 text-sm text-command-subtle">Generated CRM title cleaned for display.</p>
           ) : null}
         </div>
-        <div className="rounded-lg border border-command-line bg-command-elevated px-4 py-3 text-right">
+        <div className="rounded-xl border border-command-line bg-command-bg/55 px-4 py-3 text-right">
           <p className="text-[13px] text-command-muted">Lead Heat Score</p>
           <p className="text-2xl font-semibold text-command-text">{lead.leadScore}</p>
         </div>
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-[1fr_15rem]">
-        <div className="rounded-lg border border-command-line bg-command-elevated p-4">
+        <div className="rounded-xl border border-command-line bg-command-bg/55 p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-command-gold">Mission Brief</p>
           <p className="mt-2 text-base leading-7 text-command-text">{buildConversationSummary(lead)}</p>
           <p className="mt-2 text-sm text-command-muted">{buildFollowUpReminder(lead)}</p>
         </div>
-        <div className="rounded-lg border border-command-line bg-command-elevated p-4">
+        <div className="rounded-xl border border-command-line bg-command-bg/55 p-4">
           <p className="text-sm text-command-muted">Info Collected</p>
           <div className="mt-2 h-2 rounded-full bg-command-bg">
             <div className="h-2 rounded-full bg-command-gold" style={{ width: `${infoCollected}%` }} />
@@ -96,7 +96,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
         </div>
       </dl>
       {isWhatsapp ? (
-        <div className="mt-5 rounded-lg border border-command-line bg-command-elevated p-4 text-base">
+        <div className="mt-5 rounded-xl border border-command-line bg-command-bg/55 p-4 text-base">
           <p className="text-command-muted">Last WhatsApp message</p>
           <p className="mt-2 text-command-text">{lead.lastClientMessage || "No WhatsApp message preview yet."}</p>
           <p className="mt-3 text-sm text-command-muted">
@@ -109,7 +109,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
           ) : null}
         </div>
       ) : null}
-      <div className="mt-5 rounded-lg border border-command-line bg-command-elevated p-4 text-base">
+      <div className="mt-5 rounded-xl border border-command-line bg-command-bg/55 p-4 text-base">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold text-command-text">{next.action}</p>
@@ -119,13 +119,13 @@ export function LeadCard({ lead }: { lead: Lead }) {
         </div>
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link href={`/leads/${lead.id}`} className="inline-flex min-h-11 items-center rounded-md border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
+        <Link href={`/leads/${lead.id}`} className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
           Open Lead
         </Link>
-        <Link href={`/leads/${lead.id}#bot-controls`} className="inline-flex min-h-11 items-center rounded-md border border-command-line bg-command-elevated px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+        <Link href={`/leads/${lead.id}#bot-controls`} className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
           Pause Bot
         </Link>
-        <Link href={`/leads/${lead.id}#bot-controls`} className="inline-flex min-h-11 items-center rounded-md border border-command-line bg-command-elevated px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+        <Link href={`/leads/${lead.id}#bot-controls`} className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
           Take Over
         </Link>
       </div>

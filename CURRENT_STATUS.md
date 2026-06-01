@@ -1,12 +1,35 @@
 # Current Status
 
+## v6.1.2 Mission Control UI + Live Test Lead Cleanup
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_1_2_mission_control_ui_live_cleanup`.
+- Dashboard is redesigned as `LIMM Mission Control`, a compact cockpit view focused on what Marcus must do now.
+- Debug/system clutter stays off the main dashboard and lives in Settings/Reports.
+- Lead names are cleaned with `formatLeadDisplayName()` so raw QA/generated titles do not appear as client names.
+- Active dashboard/inbox hide soft-deleted, archived, spam, marked test, and obvious generated QA/test leads by default.
+- Leads page now has Active, Test, Archived/Deleted, Spam, and All filters.
+- Settings has live cleanup dry-run counts, soft-delete default cleanup, and a danger-zone hard delete for already-soft-deleted test leads.
+- Hard delete from the cleanup panel uses a normal confirmation modal, not typed phrase entry.
+- Marcus and Fio remain fully protected from cleanup.
+- Specific works quick fix added for items such as laminated wall cladding, feature wall, toilet overlay, false ceiling, vinyl/SPC flooring, cabinetry, waterproofing, and hacking 2 walls.
+
+Current Go/No-Go:
+
+- GO for controlled v6.1.2 deploy proof after push and Vercel health check.
+- GO for live cleanup only after Marcus reviews the dry-run counts in Settings.
+- NO-GO for auto-pricing, Calendar auto-booking, voice transcription, deleting audit logs, or changing the working WhatsApp pipeline.
+
 ## v6.1.1 Dashboard Declutter + Live Test Lead Cleanup
 
 Status: implemented locally; pending push/deploy health proof.
 
 What changed:
 
-- Health endpoint target is now `v6_1_1_dashboard_declutter_live_cleanup`.
+- Health endpoint target is now `v6_1_2_mission_control_ui_live_cleanup`.
 - Dashboard was simplified to a boss-first live sales view.
 - System health and QA/debug clutter were moved away from the main dashboard and remain in Settings/Reports.
 - Lead inbox hides test leads by default and includes a show/hide test leads filter.
@@ -411,4 +434,3 @@ The v5.2 layer adds a scalable question bank instead of hardcoding thousands of 
 - spam / unrelated
 
 The live WhatsApp pipe remains preserved. The question bank adds better reply selection, safe answer strategy, missing information, risk flags, escalation rules, non-repetition handling, and audit metadata. OpenAI WhatsApp reply remains off by default, Calendar booking remains boss-approved foundation only, and no pricing or booking confirmation is added.
-

@@ -24,12 +24,23 @@ function stringify(value: unknown) {
 }
 
 export function protectedPersonEvidence(lead: Lead, messages: LeadMessage[] = []) {
+  const extendedLead = lead as Lead & Record<string, unknown>;
   const protectedText = [
     lead.clientName,
+    extendedLead.displayName,
+    extendedLead.display_name,
+    extendedLead.contactName,
+    extendedLead.contact_name,
+    extendedLead.phoneLabel,
+    extendedLead.phone_label,
+    extendedLead.title,
+    extendedLead.crmTitle,
+    extendedLead.crm_title,
     lead.phone,
     lead.email,
     lead.lastClientMessage,
     lead.scopeSummary,
+    stringify(extendedLead.metadata),
     ...messages.map((message) => `${message.body} ${stringify(message.metadata)}`)
   ].join("\n");
   const matches: string[] = [];

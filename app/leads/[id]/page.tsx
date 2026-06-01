@@ -34,6 +34,7 @@ import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
 import { getQuotationReadinessForLead } from "@/lib/data/quotation-repository";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
+import { formatLeadDisplayName } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
@@ -125,6 +126,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
     bossApproved: lead.status === "Ready To Book"
   });
   const brainStatus = latestOutbound?.whatsappStatus || "No auto-reply yet";
+  const displayName = formatLeadDisplayName(lead);
   const metadataText = (key: string, fallback = "Not available") => {
     const value = brainMetadata[key];
     if (Array.isArray(value)) return value.length ? value.map(String).map(humanizeLabel).join(", ") : "None";
@@ -136,7 +138,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
 
   return (
     <>
-      <PageHeader title="Lead Detail" eyebrow={lead.clientName}>
+      <PageHeader title={displayName} eyebrow="Lead Detail">
         <form action={markBossApprovalNeededAction}>
           <input type="hidden" name="lead_id" value={lead.id} />
           <ActionButton type="submit">Approve Reply</ActionButton>
@@ -164,6 +166,11 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             {lead.deletedAt ? <StatusBadge label="Soft Deleted" /> : null}
             {lead.archivedAt ? <StatusBadge label="Archived" /> : null}
           </div>
+          {displayName !== lead.clientName ? (
+            <p className="mt-4 rounded-xl border border-command-line bg-command-bg/55 px-4 py-3 text-sm text-command-muted">
+              Generated CRM title cleaned for display. Original title is still preserved internally for audit/history.
+            </p>
+          ) : null}
           <div className="mt-5 rounded-lg border border-command-gold/35 bg-command-gold/10 p-4">
             <p className="text-sm uppercase tracking-[0.18em] text-command-gold">Next best action</p>
             <p className="mt-2 text-xl font-semibold text-command-text">{next.action}</p>

@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { updateQuotationReadinessAction } from "@/lib/actions";
 import { listQuotationReadinessRows } from "@/lib/data/quotation-repository";
 import { humanizeLabel } from "@/lib/labels";
+import { formatLeadDisplayName } from "@/lib/lead-display";
 
 export default async function QuotationReadinessPage() {
   const quotationRows = await listQuotationReadinessRows();
@@ -14,7 +15,7 @@ export default async function QuotationReadinessPage() {
           <article key={lead.id} data-testid={`quotation-readiness-${readiness.id}`} className="rounded border border-command-line bg-command-panel p-5 shadow-command">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h3 className="text-lg font-semibold">{lead.clientName}</h3>
+                <h3 className="text-lg font-semibold">{formatLeadDisplayName(lead)}</h3>
                 <p className="text-sm text-command-muted">{lead.scopeSummary}</p>
                 <p className="mt-2 text-sm text-command-muted">Status: {humanizeLabel(readiness.status)}</p>
               </div>

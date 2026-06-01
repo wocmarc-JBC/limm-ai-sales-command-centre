@@ -93,8 +93,8 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
   const isTemporaryReviewRoute = isReviewRouteEnabled() && pathname === "/review-chatgpt-ui";
   const isLoginRoute = pathname === "/login";
   const mainClassName = isTemporaryReviewRoute
-    ? "mx-auto max-w-[1480px] px-4 pb-10 pt-48 md:ml-64 md:px-8 md:pt-8"
-    : "mx-auto max-w-[1480px] px-4 pb-10 pt-36 md:ml-64 md:px-8 md:pt-8";
+    ? "mx-auto max-w-[1440px] px-4 pb-10 pt-48 md:ml-64 md:px-8 md:pt-8 xl:px-10"
+    : "mx-auto max-w-[1440px] px-4 pb-10 pt-36 md:ml-64 md:px-8 md:pt-8 xl:px-10";
 
   useEffect(() => {
     if (auth.mode === "Mock Mode") {
@@ -119,11 +119,11 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-x-0 top-0 z-20 border-b border-command-line bg-command-bg/95 px-4 py-3 shadow-command backdrop-blur md:bottom-0 md:left-0 md:right-auto md:w-64 md:border-b-0 md:border-r md:px-5 md:py-6">
+      <aside className="fixed inset-x-0 top-0 z-20 border-b border-command-line bg-command-bg/90 px-4 py-3 shadow-command backdrop-blur-xl md:bottom-0 md:left-0 md:right-auto md:w-64 md:border-b-0 md:border-r md:px-5 md:py-6">
         <div className="flex items-center justify-between gap-3 md:block">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">LIMM Works</p>
-            <h1 className="mt-1 text-xl font-semibold leading-6 text-command-text">Premium Sales Command Centre</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">LIMM Works</p>
+            <h1 className="mt-1 text-xl font-semibold leading-6 text-command-text">Mission Control</h1>
           </div>
           <ShellStatus auth={auth} clientAuthenticated={clientAuthenticated} isTemporaryReviewRoute={isTemporaryReviewRoute} isLoginRoute={isLoginRoute} />
         </div>
@@ -133,7 +133,7 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
                 <a
                   key={item.href}
                   href={item.href}
-                  className="block whitespace-nowrap rounded-md border border-transparent px-3 py-2.5 text-[15px] text-command-muted transition hover:border-command-line hover:bg-command-card hover:text-command-text"
+                  className="block whitespace-nowrap rounded-xl border border-transparent px-3 py-2.5 text-[15px] text-command-muted transition hover:border-command-line hover:bg-command-card hover:text-command-text"
                 >
                   {item.label}
                 </a>
@@ -142,7 +142,7 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="block whitespace-nowrap rounded-md border border-transparent px-3 py-2.5 text-[15px] text-command-muted transition hover:border-command-line hover:bg-command-card hover:text-command-text"
+                  className="block whitespace-nowrap rounded-xl border border-transparent px-3 py-2.5 text-[15px] text-command-muted transition hover:border-command-line hover:bg-command-card hover:text-command-text"
                 >
                   {item.label}
                 </Link>

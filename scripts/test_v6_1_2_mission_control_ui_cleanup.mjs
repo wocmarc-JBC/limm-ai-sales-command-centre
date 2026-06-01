@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const tempDir = path.join(root, "reports", "tmp_v6_1_cleanup_test");
+const tempDir = path.join(root, "reports", "tmp_v6_1_2_cleanup_test");
 const fixturePath = path.join(tempDir, "fixture.json");
 const reportPath = path.join(tempDir, "dry_run_report.md");
 const applyReportPath = path.join(tempDir, "apply_report.md");
@@ -266,4 +266,5 @@ assert(read("package.json").includes("test:v6.1"), "package.json must expose v6.
 
 fs.rmSync(tempDir, { recursive: true, force: true });
 
-console.log("PASS: v6.1 UI polish and cleanup tests passed.");
+console.log("PASS: v6.1.2 mission control UI and cleanup tests passed.");
+

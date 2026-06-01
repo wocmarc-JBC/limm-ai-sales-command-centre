@@ -6,29 +6,30 @@ const config: Config = {
     extend: {
       colors: {
         command: {
-          bg: "#120D08",
-          panel: "#1B120B",
-          panel2: "#24170D",
-          card: "#20150E",
-          elevated: "#2A1B10",
-          line: "rgba(212, 164, 74, 0.22)",
-          text: "#FFF7E6",
-          muted: "#D8C4A5",
-          subtle: "#A88F6A",
-          cyan: "#D6A84F",
-          green: "#72C38C",
-          amber: "#D6A84F",
-          red: "#D9786D",
-          blue: "#6FA8A6",
+          bg: "#05070A",
+          panel: "#090D12",
+          panel2: "#101820",
+          card: "rgba(255,255,255,0.04)",
+          elevated: "rgba(214,168,79,0.08)",
+          line: "rgba(214,168,79,0.24)",
+          text: "#F8F3E7",
+          muted: "#C9B99A",
+          subtle: "#7D8CA3",
+          cyan: "#22D3EE",
+          green: "#22C55E",
+          amber: "#F59E0B",
+          red: "#EF4444",
+          blue: "#38BDF8",
           bronze: "#B88935",
           gold: "#D6A84F",
-          goldHover: "#E8C76A",
-          yellow: "#F1D27A"
+          goldHover: "#F5C542",
+          yellow: "#F5C542"
         }
       },
       boxShadow: {
-        command: "0 18px 55px rgba(5, 3, 2, 0.42)",
-        premium: "0 22px 70px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 247, 230, 0.04)"
+        command: "0 18px 55px rgba(0, 0, 0, 0.48)",
+        premium: "0 24px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.07)",
+        glow: "0 0 32px rgba(34, 211, 238, 0.14), 0 0 42px rgba(214, 168, 79, 0.08)"
       }
     }
   },

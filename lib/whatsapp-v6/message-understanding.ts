@@ -44,6 +44,11 @@ export function understandWhatsAppMessage(text: string, type = "text"): V6Unders
     addUnique(detectedIntents, "design_theme");
     addUnique(detectedScopes, "design direction");
   }
+  if (has(normalized, /\b(laminated wall cladding|wall cladding|fluted panel|feature wall|toilet overlay|false ceiling|vinyl|spc flooring|wardrobe|kitchen cabinet|backsplash|commercial office renovation|waterproofing|hacking 2 walls?)\b/i)) {
+    addUnique(detectedIntents, "specific_works");
+    const match = normalized.match(/\b(laminated wall cladding|wall cladding|fluted panel|feature wall|toilet overlay|false ceiling|vinyl|spc flooring|wardrobe|kitchen cabinet|backsplash|commercial office renovation|waterproofing|hacking 2 walls?)\b/i);
+    addUnique(detectedScopes, match?.[0] ?? "specific renovation works");
+  }
   if (has(normalized, /\b(kitchen|wet kitchen|dry kitchen)\b/i)) {
     addUnique(detectedIntents, "kitchen_renovation");
     addUnique(detectedScopes, "kitchen works");
@@ -80,7 +85,7 @@ export function understandWhatsAppMessage(text: string, type = "text"): V6Unders
     addUnique(detectedScopes, detectWallCount(text) > 0 ? `${detectWallCount(text)} wall demolition` : "demolition or hacking works");
     addUnique(detectedRisks, "wall_or_hacking_review");
   }
-  if (has(normalized, /\b(wall|beam|column|structural|load bearing|pe)\b/i)) {
+  if (has(normalized, /\b(beam|column|structural|load bearing|need pe|pe endorsement|hack wall|remove wall|can hack wall)\b/i)) {
     addUnique(detectedIntents, "structural_wall");
     addUnique(detectedRisks, "structural_or_pe_review");
   }

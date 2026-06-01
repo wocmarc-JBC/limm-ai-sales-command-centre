@@ -199,7 +199,9 @@ for (const required of [
   "scripts/test_v6_human_like_sales_brain_deep_qa.mjs",
   "scripts/test_v6_ultimate_deep_qa.mjs",
   "scripts/test_v6_1_ui_polish_cleanup.mjs",
+  "scripts/test_v6_1_2_mission_control_ui_cleanup.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
+  "docs/V6_1_2_MISSION_CONTROL_UI_LIVE_CLEANUP.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
   "supabase/migrations/019_v6_ultimate_command_centre.sql"
 ]) {
@@ -409,8 +411,18 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
-  "version: \"v6_1_1_dashboard_declutter_live_cleanup\"",
+  "version: \"v6_1_2_mission_control_ui_live_cleanup\"",
   "salesBrainVersion: \"v6.ultimate\"",
+  "missionControlUiAvailable",
+  "futuristicCockpitThemeAvailable",
+  "leadDisplayNameCleanerAvailable",
+  "liveTestLeadCleanupAvailable",
+  "inAppCleanupDryRunAvailable",
+  "hardDeleteNoTypingRequired",
+  "hideTestLeadsFromDashboardAvailable",
+  "priceGuideOnHold",
+  "specificWorksBrainAvailable",
+  "antiGenericReplyGateAvailable",
   "uiPolishAvailable",
   "premiumGoldCommandCentreThemeAvailable",
   "largerReadableFontsAvailable",
