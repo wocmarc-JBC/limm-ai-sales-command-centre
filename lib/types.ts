@@ -210,6 +210,7 @@ export interface FollowUp {
   suggestedMessage: string;
   completedAt: string | null;
   notes: string;
+  lead?: Lead | null;
 }
 
 export interface AuditLog {

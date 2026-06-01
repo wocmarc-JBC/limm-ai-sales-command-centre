@@ -90,7 +90,8 @@ export function mapFollowUpRow(row: any): FollowUp {
     status: row.status ?? "Scheduled",
     suggestedMessage: row.suggested_message ?? "",
     completedAt: row.completed_at ?? null,
-    notes: row.notes ?? ""
+    notes: row.notes ?? "",
+    lead: row.leads ? mapLeadRow(row.leads) : null
   };
 }
 

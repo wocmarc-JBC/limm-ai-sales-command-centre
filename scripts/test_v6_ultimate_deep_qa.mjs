@@ -184,7 +184,7 @@ const source = sourceFiles.filter(exists).map(read).join("\n") + read("lib/adapt
 const forbiddenWrongPhoneNumberId = "115395" + "2887800145";
 const staticChecks = [
   ["minimum_case_count", () => caseIndex >= 200],
-  ["version_health", () => /version:\s*"v6_1_4_mission_control_ux_final_polish"/.test(source)],
+  ["version_health", () => /version:\s*"v6_1_5_performance_followup_test_cleanup"/.test(source)],
   ["sales_brain_label", () => /salesBrainVersion:\s*"v6\.ultimate"/.test(source)],
   ["soft_delete", () => /softDeleteAvailable|lead_soft_deleted|deleted_at/.test(source)],
   ["restore", () => /restoreAvailable|lead_restored|restored_at/.test(source)],

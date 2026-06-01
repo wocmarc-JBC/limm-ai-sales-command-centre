@@ -1,5 +1,28 @@
 # Current Status
 
+## v6.1.5 Performance + Follow-Up Button Fix + Live Test Cleanup
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_1_5_performance_followup_test_cleanup`.
+- Follow-Up Queue now defaults to active real follow-ups only, max 20 per page.
+- Follow-Up Queue has Active, Due Today, Overdue, Snoozed, Completed, Show All, and Show Test Follow-Ups filters.
+- Complete / Snooze / No Reply buttons use server-action forms with visible loading states and audit-backed repository updates.
+- Test/generated follow-ups are hidden by default, even before cleanup is applied.
+- Settings cleanup now scans only after Marcus clicks `Scan Test Data`; normal dashboard/settings page load does not scan all cleanup data.
+- In-app cleanup now covers both test leads and test follow-ups.
+- Cleanup remains soft-delete/hide by default; hard delete remains danger-zone only for already-soft-deleted test leads.
+- Marcus/Fio/Fion protection applies to lead fields, messages, follow-up notes, attached lead evidence, and metadata.
+- Dashboard fetches a bounded active follow-up set and sends cleanup work to Settings.
+
+Current Go/No-Go:
+
+- GO for controlled v6.1.5 deploy proof after push and Vercel health check.
+- GO for cleanup only after Marcus reviews the Settings dry-run sample list.
+- NO-GO for hard-deleting real leads, deleting audit logs, price guide automation, Calendar auto-booking, voice transcription, or WhatsApp pipeline changes.
+
 ## v6.1.4 Mission Control UX Final Polish
 
 Status: implemented locally; pending push/deploy health proof.

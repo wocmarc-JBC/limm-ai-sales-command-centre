@@ -49,7 +49,7 @@ for (const phrase of [
 
 assert(dashboard.includes("priorityCount") && dashboard.includes("Today's command priority"), "dashboard must show concise command priority");
 assert(dashboard.includes("Collections Due") && dashboard.includes("Accounts module on hold"), "dashboard must keep accounts compact and on hold");
-assert(dashboard.includes("cleanupTargets.length"), "dashboard must include cleanup action signal without dumping raw test data");
+assert(dashboard.includes("/settings?cleanup=scan#test-lead-cleanup"), "dashboard must include explicit cleanup scan action without dumping raw test data");
 assert(!dashboard.includes("raw command") && !dashboard.includes("health JSON") && !dashboard.includes("Daniel Tan") && !dashboard.includes("Apex Clinic"), "dashboard must not show debug or mock client-file clutter");
 assert(!dashboard.includes("Client Files"), "dashboard must not promote fake client files");
 
@@ -81,7 +81,7 @@ assert(cleanupPanel.includes("Marcus/Fio/Fion"), "cleanup UI must mention Marcus
 assert(sharedCleanup.includes("/fion/i") && cleanupScript.includes("/fion/i"), "cleanup rules must protect Fion as well as Marcus/Fio");
 
 for (const field of [
-  'version: "v6_1_4_mission_control_ux_final_polish"',
+  'version: "v6_1_5_performance_followup_test_cleanup"',
   "missionControlUxFinalPolishAvailable",
   "marcusTodayPanelAvailable",
   "sidebarNavigationGrouped",

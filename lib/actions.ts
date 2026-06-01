@@ -6,7 +6,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { decideApprovalRequest } from "@/lib/data/approvals-repository";
 import { saveAppointmentSettings } from "@/lib/data/appointment-settings-repository";
 import { generateAndSaveAiDryRunRecommendation, recordAiDraftReviewAction } from "@/lib/data/ai-decisions-repository";
-import { updateFollowUpStatus } from "@/lib/data/followups-repository";
+import { hideTestFollowUp, listFollowUps, updateFollowUpStatus } from "@/lib/data/followups-repository";
 import {
   archiveLead,
   approveAppointmentBooking,
@@ -33,7 +33,8 @@ import {
 import { updateQuotationReadinessStatus } from "@/lib/data/quotation-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
-import { buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
+import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
+import type { Permission } from "@/lib/auth/roles";
 import type { AiDraftReviewStatus, ApprovalStatus, FollowUpStatus, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
 
 const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
@@ -188,11 +189,15 @@ export async function decideApprovalAction(formData: FormData) {
 
 export async function updateFollowUpStatusAction(formData: FormData) {
   const permission = await requirePermission("manage_followups");
-  if (!permission.ok) return;
+  if (!permission.ok) {
+    return { ok: false, error: permission.error || "Permission denied." };
+  }
 
-  await updateFollowUpStatus(text(formData, "followup_id"), text(formData, "status") as FollowUpStatus, text(formData, "notes"));
+  const result = await updateFollowUpStatus(text(formData, "followup_id"), text(formData, "status") as FollowUpStatus, text(formData, "notes"));
   revalidatePath("/followups");
   revalidatePath("/audit-log");
+  if (!result) return { ok: false, error: "Follow-up update failed. Please refresh and try again." };
+  return { ok: true, error: "" };
 }
 
 export async function updateQuotationReadinessAction(formData: FormData) {
@@ -351,34 +356,54 @@ export async function markFollowedUpAction(formData: FormData) {
 
 export async function cleanupOldTestLeadsAction(formData: FormData) {
   const mode = text(formData, "cleanup_mode", "soft_delete");
-  const permission = await requirePermission(mode === "hard_delete_soft_deleted" ? "hard_delete_leads" : "soft_delete_leads");
+  const permissionName: Permission = mode === "hard_delete_soft_deleted"
+    ? "hard_delete_leads"
+    : mode === "followups_only"
+      ? "manage_followups"
+      : "soft_delete_leads";
+  const permission = await requirePermission(permissionName);
   if (!permission.ok) return;
 
   const leads = await listLeads({ includeInactive: true, includeTest: true });
   const messages = await Promise.all(leads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const));
   const plan = buildTestLeadCleanupPlan(leads, new Map(messages), { hardDeleteTestData: mode === "hard_delete_soft_deleted" });
+  const followUps = await listFollowUps({ includeTest: true, includeCompleted: true, status: "all", pageSize: 500, scanAll: true });
+  const followUpPlan = buildTestFollowUpCleanupPlan(followUps);
   const actor = permission.auth.profile?.fullName ?? "Marcus";
 
-  for (const item of plan) {
-    if (mode === "hard_delete_soft_deleted") {
-      if (item.action !== "hard_delete_test_data") continue;
-      await hardDeleteLead(
-        item.lead.id,
-        `v6.1.4 in-app hard cleanup for already-soft-deleted test lead: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`
-      );
-    } else {
-      if (item.action !== "mark_test_and_soft_delete") continue;
-      await markLeadAsTest(item.lead.id);
-      await softDeleteLead(
-        item.lead.id,
-        `v6.1.4 in-app cleanup: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`,
-        actor
+  if (mode !== "followups_only") {
+    for (const item of plan) {
+      if (mode === "hard_delete_soft_deleted") {
+        if (item.action !== "hard_delete_test_data") continue;
+        await hardDeleteLead(
+          item.lead.id,
+          `v6.1.5 in-app hard cleanup for already-soft-deleted test lead: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`
+        );
+      } else {
+        if (item.action !== "mark_test_and_soft_delete") continue;
+        await markLeadAsTest(item.lead.id);
+        await softDeleteLead(
+          item.lead.id,
+          `v6.1.5 in-app cleanup: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`,
+          actor
+        );
+      }
+    }
+  }
+
+  if (mode !== "hard_delete_soft_deleted") {
+    for (const item of followUpPlan) {
+      if (item.action !== "hide_or_complete_test_followup") continue;
+      await hideTestFollowUp(
+        item.followUp.id,
+        [...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test follow-up"
       );
     }
   }
 
   revalidatePath("/");
   revalidatePath("/leads");
+  revalidatePath("/followups");
   revalidatePath("/settings");
   revalidatePath("/audit-log");
 }

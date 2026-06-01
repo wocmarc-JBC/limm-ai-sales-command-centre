@@ -2,14 +2,12 @@ import Link from "next/link";
 import { LeadCard } from "@/components/LeadCard";
 import { PageHeader } from "@/components/PageHeader";
 import { listFollowUps } from "@/lib/data/followups-repository";
-import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { getSettingsSummary } from "@/lib/data/settings-repository";
 import { getHandoffEmailRuntime } from "@/lib/handoff-email";
 import { formatLeadDisplayName, leadSubtitle } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { calculateLeadLevel } from "@/lib/sales-control";
-import { buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import type { Lead } from "@/lib/types";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 
@@ -115,15 +113,11 @@ function makeLeadItem(label: string, priority: Priority, lead: Lead, actionLabel
 
 export default async function DashboardPage({ searchParams }: { searchParams?: { focus?: string } }) {
   const focusMode = searchParams?.focus === "true";
-  const [leads, allLeads, followUps, settings] = await Promise.all([
+  const [leads, followUps, settings] = await Promise.all([
     listLeads(),
-    listLeads({ includeInactive: true, includeTest: true }),
-    listFollowUps(),
+    listFollowUps({ status: "active", pageSize: 20 }),
     getSettingsSummary()
   ]);
-  const cleanupMessages = await Promise.all(allLeads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const));
-  const cleanupPlan = buildTestLeadCleanupPlan(allLeads, new Map(cleanupMessages));
-  const cleanupTargets = cleanupPlan.filter((item) => item.action === "mark_test_and_soft_delete");
   const whatsapp = getWhatsAppRuntime();
   const handoff = getHandoffEmailRuntime();
 
@@ -150,13 +144,13 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     ...priceQuestions.slice(0, 1).map((lead) => makeLeadItem("Price question needs safe review", "high", lead)),
     ...riskQuestions.slice(0, 1).map((lead) => makeLeadItem("Hacking / approval risk", "critical", lead)),
     ...botPaused.slice(0, 1).map((lead) => makeLeadItem("Bot paused", "medium", lead, "Review bot")),
-    cleanupTargets.length ? {
-      label: "Clean test leads",
+    {
+      label: "Cleanup test data",
       priority: "low" as const,
-      reason: `${cleanupTargets.length} clear test lead${cleanupTargets.length === 1 ? "" : "s"} found in dry run.`,
-      actionLabel: "Open cleanup",
-      href: "/settings#test-lead-cleanup"
-    } : null
+      reason: "Run cleanup scan only from Settings when Marcus is ready.",
+      actionLabel: "Scan cleanup",
+      href: "/settings?cleanup=scan#test-lead-cleanup"
+    }
   ].filter((item): item is TodayItem => Boolean(item)).slice(0, 7);
 
   const actionQueue = leads
@@ -210,7 +204,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
             </a>
           </div>
           <div className="flex flex-wrap gap-2">
-            <CompactLink href="/settings#test-lead-cleanup">Clean Test Leads</CompactLink>
+            <CompactLink href="/settings?cleanup=scan#test-lead-cleanup">Clean Test Data</CompactLink>
             <CompactLink href="/reports">QA Centre</CompactLink>
             <CompactLink href="/settings">Settings</CompactLink>
           </div>
@@ -311,7 +305,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
             <section className="mission-panel rounded-2xl p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Quick Actions</p>
               <div className="mt-4 grid gap-3">
-                <CompactLink href="/settings#test-lead-cleanup">Clean Test Leads</CompactLink>
+                <CompactLink href="/settings?cleanup=scan#test-lead-cleanup">Clean Test Data</CompactLink>
                 <CompactLink href="/reports">Reports</CompactLink>
                 <CompactLink href="/settings">Settings</CompactLink>
                 <CompactLink href="/audit-log">Audit Log</CompactLink>

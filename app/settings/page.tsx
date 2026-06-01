@@ -3,16 +3,17 @@ import { CleanupPanel } from "@/components/CleanupPanel";
 import { cleanupOldTestLeadsAction } from "@/lib/actions";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getCalendarRuntime } from "@/lib/calendar-config";
+import { listFollowUps } from "@/lib/data/followups-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { getSettingsSummary } from "@/lib/data/settings-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
-import { buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
+import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams?: { cleanup?: string } }) {
   const auth = await getCurrentProfile();
   if (!auth.authenticated || !auth.profile) {
     return (
@@ -34,19 +35,35 @@ export default async function SettingsPage() {
   const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
   const whatsapp = getWhatsAppRuntime();
   const calendar = getCalendarRuntime();
-  const cleanupLeads = await listLeads({ includeInactive: true, includeTest: true });
-  const cleanupMessages = await Promise.all(cleanupLeads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const));
-  const cleanupPlan = buildTestLeadCleanupPlan(cleanupLeads, new Map(cleanupMessages));
+  const cleanupScanRequested = searchParams?.cleanup === "scan";
+  const cleanupLeads = cleanupScanRequested ? await listLeads({ includeInactive: true, includeTest: true }) : [];
+  const cleanupMessages = cleanupScanRequested ? await Promise.all(cleanupLeads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const)) : [];
+  const cleanupPlan = cleanupScanRequested ? buildTestLeadCleanupPlan(cleanupLeads, new Map(cleanupMessages)) : [];
+  const cleanupFollowUps = cleanupScanRequested ? await listFollowUps({ includeTest: true, includeCompleted: true, status: "all", pageSize: 500, scanAll: true }) : [];
+  const followUpCleanupPlan = cleanupScanRequested ? buildTestFollowUpCleanupPlan(cleanupFollowUps) : [];
   const cleanupTargets = cleanupPlan.filter((item) => item.action === "mark_test_and_soft_delete");
+  const followUpTargets = followUpCleanupPlan.filter((item) => item.action === "hide_or_complete_test_followup");
   const cleanupProtected = cleanupPlan.filter((item) => item.action === "protected_marcus_fio");
+  const followUpProtected = followUpCleanupPlan.filter((item) => item.action === "protected_marcus_fio");
   const cleanupUncertain = cleanupPlan.filter((item) => item.action === "not_touched");
+  const followUpUncertain = followUpCleanupPlan.filter((item) => item.action === "not_touched");
   const cleanupAlreadySoftDeleted = cleanupPlan.filter((item) => item.action === "already_soft_deleted_keep");
+  const followUpAlreadyHidden = followUpCleanupPlan.filter((item) => item.action === "already_hidden_keep");
   const cleanupSamples = cleanupPlan
     .filter((item) => item.action !== "not_touched")
     .slice(0, 8)
     .map((item) => ({
       id: item.lead.id,
       name: formatLeadDisplayName(item.lead),
+      status: item.action.replace(/_/g, " "),
+      reason: [...item.reasons, ...item.weakReasons, item.riskWarning].filter(Boolean).join("; ") || "No action"
+    }));
+  const followUpSamples = followUpCleanupPlan
+    .filter((item) => item.action !== "not_touched")
+    .slice(0, 8)
+    .map((item) => ({
+      id: item.followUp.id,
+      name: item.followUp.clientName,
       status: item.action.replace(/_/g, " "),
       reason: [...item.reasons, ...item.weakReasons, item.riskWarning].filter(Boolean).join("; ") || "No action"
     }));
@@ -177,12 +194,19 @@ export default async function SettingsPage() {
       </section>
       <CleanupPanel
         action={cleanupOldTestLeadsAction}
+        scanRequested={cleanupScanRequested}
         scanned={cleanupPlan.length}
+        followUpsScanned={followUpCleanupPlan.length}
         targets={cleanupTargets.length}
+        followUpTargets={followUpTargets.length}
         protectedCount={cleanupProtected.length}
+        followUpProtectedCount={followUpProtected.length}
         uncertain={cleanupUncertain.length}
+        followUpUncertain={followUpUncertain.length}
         alreadySoftDeleted={cleanupAlreadySoftDeleted.length}
+        alreadyHiddenFollowUps={followUpAlreadyHidden.length}
         samples={cleanupSamples}
+        followUpSamples={followUpSamples}
       />
     </>
   );

@@ -9,7 +9,7 @@ const status = data?.status ?? "UNKNOWN";
 const authStatus = data?.authTested ? "Authenticated boss browser/write checks ran." : "Authenticated boss checks are MANUAL REQUIRED until test credentials are set.";
 const browserStatus = data?.browserCompleted ? "Playwright browser QA completed." : "Playwright browser QA did not complete.";
 const openIssues = data?.bugsRemaining?.length ? data.bugsRemaining : ["None known from the latest Dev Brain run."];
-const nextAction = data?.nextCodexTask ?? "v6.1.4 Mission Control UX final polish is ready for controlled deploy proof after the health endpoint shows v6_1_4_mission_control_ux_final_polish. Next recommended phase: apply migration 019 if needed, review Settings cleanup counts, then apply soft-delete cleanup only if safe.";
+const nextAction = data?.nextCodexTask ?? "v6.1.5 Follow-Up performance and live test cleanup is ready for controlled deploy proof after the health endpoint shows v6_1_5_performance_followup_test_cleanup. Next recommended phase: run Settings cleanup scan in production, review Marcus/Fio/Fion protection, then apply soft-delete cleanup only if safe.";
 
 const report = [
   "# ChatGPT Handoff Report",
