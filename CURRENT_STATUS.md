@@ -1,5 +1,48 @@
 # Current Status
 
+## v6.4 Singapore Mission Map
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_4_singapore_mission_map`.
+- Dashboard now includes a Singapore Mission Map beneath the Mission Radar.
+- The map uses a hybrid area heatmap plus clickable pins for leads, hot leads, appointment requests, follow-ups, won projects, collection items, overdue items, and risk items.
+- A local Singapore area/postal parser was added with no external geocoding and no map API key.
+- Unknown locations are counted as `Unknown area` instead of being placed on fake pins.
+- Main dashboard map remains privacy-safe and does not show full exact addresses.
+- Protected lead detail can show stored location intelligence when already present.
+- Additive Supabase migration `021_v6_4_singapore_mission_map.sql` adds optional location metadata to leads and project accounts.
+- v6.3 Sales + Collection map layers are preserved when project/payment data exists.
+
+Current Go/No-Go:
+
+- GO for controlled v6.4 deploy proof after push, Vercel deployment, and health check.
+- GO for visual dashboard retest after health shows `v6_4_singapore_mission_map`.
+- NO-GO for external geocoding, map API keys, exact address exposure on dashboard, price guide automation, Calendar auto-booking, voice transcription, GST calculations, or WhatsApp pipeline changes.
+
+## v6.3 Sales + Collection Command Centre
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_3_sales_collection_command_centre`.
+- Added Sales Pipeline route for manual sales stages, owners, next actions, probabilities, potential values, and expected close dates.
+- Added Sales & Collection route for won projects, manual payment records, collections received, outstanding receivables, overdue payments, and follow-up reminders.
+- Added Targets route for monthly sales, collection, site visit, quotation, landed lead, commercial lead, and confirmed job targets.
+- Added Boss Monthly Report metrics inside Reports.
+- Added manual quotation status/amount visibility to Quotation Readiness without any generated pricing.
+- Added additive Supabase migration `020_v6_3_sales_collection_command_centre.sql`.
+- LIMM Works Pte Ltd is not GST-registered. No GST charged.
+
+Current Go/No-Go:
+
+- GO for controlled v6.3 deploy proof after push, Vercel deployment, and health check.
+- GO for internal manual sales/collection tracking.
+- NO-GO for price guide automation, autonomous calendar booking, voice transcription, GST calculations, payment collection automation, or accounting document generation.
+
 ## v6.1.8 Dashboard Compression + Zero-State Polish
 
 Status: implemented locally; pending push/deploy health proof.

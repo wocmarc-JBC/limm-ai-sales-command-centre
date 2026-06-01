@@ -4,12 +4,26 @@ import { updateQuotationReadinessAction } from "@/lib/actions";
 import { listQuotationReadinessRows } from "@/lib/data/quotation-repository";
 import { humanizeLabel } from "@/lib/labels";
 import { formatLeadDisplayName } from "@/lib/lead-display";
+import { manualQuotationStatuses, money, quotationStatusForLead } from "@/lib/sales-collection";
 
 export default async function QuotationReadinessPage() {
   const quotationRows = await listQuotationReadinessRows();
   return (
     <>
       <PageHeader title="Quotation Readiness" eyebrow="No price generation" />
+      <section className="mb-5 rounded-lg border border-command-line bg-command-card p-5 shadow-premium">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Manual Quotation Tracking</p>
+        <p className="mt-2 text-sm text-command-muted">
+          Quotation status and amounts are entered manually by Marcus. This page never generates prices, ranges, or automatic quotation amounts.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {manualQuotationStatuses.map((status) => (
+            <span key={status} className="rounded-full border border-command-line bg-command-elevated px-3 py-1 text-xs text-command-muted">
+              {status}
+            </span>
+          ))}
+        </div>
+      </section>
       <div className="space-y-4">
         {quotationRows.map(({ lead, readiness }) => (
           <article key={lead.id} data-testid={`quotation-readiness-${readiness.id}`} className="rounded border border-command-line bg-command-panel p-5 shadow-command">
@@ -18,6 +32,10 @@ export default async function QuotationReadinessPage() {
                 <h3 className="text-lg font-semibold">{formatLeadDisplayName(lead)}</h3>
                 <p className="text-sm text-command-muted">{lead.scopeSummary}</p>
                 <p className="mt-2 text-sm text-command-muted">Status: {humanizeLabel(readiness.status)}</p>
+                <p className="mt-1 text-sm text-command-muted">Manual quotation status: {quotationStatusForLead(lead)}</p>
+                <p className="mt-1 text-sm text-command-muted">
+                  Quoted amount: {lead.quotedAmount ? money(lead.quotedAmount) : "manual only / no amount entered"}
+                </p>
               </div>
               <div className="rounded border border-command-line bg-command-panel2 px-4 py-2 text-right">
                 <p className="text-xs text-command-muted">Readiness</p>

@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { LeadCard } from "@/components/LeadCard";
 import { PageHeader } from "@/components/PageHeader";
+import { SingaporeMissionMap } from "@/components/SingaporeMissionMap";
 import { listFollowUps } from "@/lib/data/followups-repository";
 import { listLeads } from "@/lib/data/leads-repository";
+import { listPaymentRecords, listProjectAccounts } from "@/lib/data/sales-collection-repository";
 import { getSettingsSummary } from "@/lib/data/settings-repository";
 import { getHandoffEmailRuntime } from "@/lib/handoff-email";
 import { formatLeadDisplayName, leadSubtitle } from "@/lib/lead-display";
+import { buildSingaporeMissionMapData, type MissionMapFilter } from "@/lib/mission-map";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { calculateLeadLevel } from "@/lib/sales-control";
 import type { Lead } from "@/lib/types";
@@ -254,12 +257,17 @@ function makeLeadItem(label: string, priority: Priority, lead: Lead, actionLabel
   };
 }
 
-export default async function DashboardPage({ searchParams }: { searchParams?: { focus?: string } }) {
+const mapFilters: MissionMapFilter[] = ["all", "leads", "hot", "won", "site_visits", "followups", "collections", "overdue"];
+
+export default async function DashboardPage({ searchParams }: { searchParams?: { focus?: string; map?: string } }) {
   const focusMode = searchParams?.focus === "true";
-  const [leads, followUps, settings] = await Promise.all([
+  const activeMapFilter = mapFilters.includes(searchParams?.map as MissionMapFilter) ? searchParams?.map as MissionMapFilter : "all";
+  const [leads, followUps, settings, projects, payments] = await Promise.all([
     listLeads(),
     listFollowUps({ status: "active", pageSize: 20 }),
-    getSettingsSummary()
+    getSettingsSummary(),
+    listProjectAccounts(),
+    listPaymentRecords()
   ]);
   const whatsapp = getWhatsAppRuntime();
   const handoff = getHandoffEmailRuntime();
@@ -328,6 +336,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     { label: "Email Handoff Pending", count: emailHandoffPending, tone: handoff.configured ? "green" : "amber" }
   ];
   const radarPrimary = todayItems[0] ?? null;
+  const missionMap = buildSingaporeMissionMapData({ leads, followUps, projects, payments, activeFilter: activeMapFilter });
 
   return (
     <>
@@ -367,6 +376,10 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
       <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,30rem)]">
         <MarcusTodayPanel items={todayItems} />
         <MissionRadarPanel items={radarItems} primary={radarPrimary} />
+      </section>
+
+      <section className="mt-6">
+        <SingaporeMissionMap data={missionMap} activeFilter={activeMapFilter} />
       </section>
 
       <section className="mt-6">
@@ -424,6 +437,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
           <aside className="space-y-5">
             <section className="mission-panel rounded-2xl p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">System Core</p>
+              <p className="sr-only">Deep QA and diagnostics stay in Settings and Reports</p>
               <div className="mt-4 space-y-3 text-base">
                 {[
                   ["WhatsApp", statusText(whatsapp.liveInboundEnabled && whatsapp.credentialsReady, "Online", "Check env")],

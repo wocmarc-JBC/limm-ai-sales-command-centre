@@ -38,6 +38,7 @@ import { formatLeadDisplayName } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
+import { inferLeadLocation } from "@/lib/singapore-location";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 import type { AiDraftReviewStatus, AiDryRunRecommendation, LeadStatus } from "@/lib/types";
 
@@ -127,6 +128,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
   });
   const brainStatus = latestOutbound?.whatsappStatus || "No auto-reply yet";
   const displayName = formatLeadDisplayName(lead);
+  const leadLocation = inferLeadLocation(lead);
   const metadataText = (key: string, fallback = "Not available") => {
     const value = brainMetadata[key];
     if (Array.isArray(value)) return value.length ? value.map(String).map(humanizeLabel).join(", ") : "None";
@@ -208,6 +210,19 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <div><dt className="text-command-muted">Assigned To</dt><dd>{lead.assignedTo || "Unassigned"}</dd></div>
             <div><dt className="text-command-muted">Bot Control</dt><dd>{lead.botPaused ? `Paused - ${lead.botPauseReason || "Manual"}` : "Active"}</dd></div>
           </dl>
+          <div className="mt-5 rounded-lg border border-command-line bg-command-elevated p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Location Intelligence</p>
+            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+              <div><dt className="text-command-muted">Property area</dt><dd>{lead.propertyArea || leadLocation.area}</dd></div>
+              <div><dt className="text-command-muted">Planning region</dt><dd>{lead.planningRegion || leadLocation.region}</dd></div>
+              <div><dt className="text-command-muted">Postal code</dt><dd>{lead.postalCode || leadLocation.postalCode || "Not provided"}</dd></div>
+              <div><dt className="text-command-muted">Location confidence</dt><dd>{leadLocation.confidence}</dd></div>
+              <div className="sm:col-span-2"><dt className="text-command-muted">Location notes</dt><dd>{lead.locationNotes || leadLocation.notes}</dd></div>
+              {lead.projectAddress ? (
+                <div className="sm:col-span-2"><dt className="text-command-muted">Stored address / area note</dt><dd>{lead.projectAddress}</dd></div>
+              ) : null}
+            </dl>
+          </div>
           <form action={updateLeadStatusAction} className="mt-5 flex flex-wrap items-end gap-3 rounded-lg border border-command-line bg-command-elevated p-4">
             <input type="hidden" name="lead_id" value={lead.id} />
             <label className="grid gap-1 text-sm">

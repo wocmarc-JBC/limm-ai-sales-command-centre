@@ -9,6 +9,9 @@ import type {
   AiDryRunRecommendation,
   LeadMessage,
   Lead,
+  MonthlySalesTarget,
+  PaymentRecord,
+  ProjectAccount,
   QuotationReadinessRecord
 } from "@/lib/types";
 
@@ -19,6 +22,9 @@ type MockStore = {
   auditLogs: AuditLog[];
   aiRecommendations: AiDryRunRecommendation[];
   leadMessages: LeadMessage[];
+  projectAccounts: ProjectAccount[];
+  paymentRecords: PaymentRecord[];
+  monthlyTargets: MonthlySalesTarget[];
   quotationReadiness: QuotationReadinessRecord[];
   appointmentSettings: AppointmentSettings;
   settings: Record<string, unknown>;
@@ -40,6 +46,9 @@ function createStore(): MockStore {
     auditLogs: clone(auditLogs),
     aiRecommendations: [],
     leadMessages: [],
+    projectAccounts: [],
+    paymentRecords: [],
+    monthlyTargets: [],
     quotationReadiness: mockLeads.map((lead) => {
       const readiness = buildQuotationReadiness(lead);
       return {

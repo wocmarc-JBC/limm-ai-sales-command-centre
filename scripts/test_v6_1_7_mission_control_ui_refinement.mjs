@@ -100,8 +100,8 @@ for (const forbidden of ["Daniel Tan", "Apex Clinic", "Mock folder", "Placeholde
 }
 
 for (const field of [
-  'version: "v6_1_8_dashboard_compression_zero_state_polish"',
-  'salesBrainVersion: "v6.ultimate"',
+  'version: "v6_3_sales_collection_command_centre"',
+  'salesBrainVersion: "v6.3"',
   "missionControlUiRefinementAvailable",
   "marcusTodayHeroPanelAvailable",
   "focusModeAvailable",

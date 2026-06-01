@@ -234,6 +234,44 @@ where table_name = 'leads'
 and column_name in ('deleted_at','is_test','is_spam','bot_paused','needs_marcus','lead_level','conversation_summary','mission_category');
 ```
 
+## 020_v6_3_sales_collection_command_centre.sql
+
+Purpose: Add v6.3 manual sales pipeline, quotation tracking, monthly boss targets, project/account records, and collection/payment tracking for the non-GST internal command centre.
+Dependencies: migrations 002, 013, 016, 018, and 019.
+Safe to re-run: Yes. Uses `add column if not exists`, `create table if not exists`, guarded constraints, `create index if not exists`, and policy recreation.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_name = 'leads'
+and column_name in ('sales_stage','quotation_status','quoted_amount','confirmed_value','project_id');
+
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+and table_name in ('project_accounts','payment_records','monthly_targets');
+```
+
+## 021_v6_4_singapore_mission_map.sql
+
+Purpose: Add optional privacy-safe Singapore location metadata for dashboard area heatmap and clickable pins.
+Dependencies: migrations 002, 016, 019, and 020 if project/account map layers are used.
+Safe to re-run: Yes. Uses `add column if not exists` and `create index if not exists`.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_name = 'leads'
+and column_name in ('property_area','postal_code','project_address','planning_region','planning_area','map_lat','map_lng','location_confidence','location_source');
+
+select column_name
+from information_schema.columns
+where table_name = 'project_accounts'
+and column_name in ('property_area','postal_code','project_address','planning_region','planning_area','map_lat','map_lng','location_confidence','location_source');
+```
+
 ## After All Migrations
 
 Run:

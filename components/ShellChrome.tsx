@@ -21,7 +21,7 @@ const appNavGroups = [
   {
     title: "Sales",
     items: [
-      { label: "Sales Pipeline", disabled: true },
+      { href: "/sales-pipeline", label: "Sales Pipeline" },
       { href: "/quotation-readiness", label: "Quotation Readiness" },
       { href: "/followups", label: "Follow-Ups" },
       { href: "/appointments", label: "Appointments" },
@@ -32,8 +32,8 @@ const appNavGroups = [
   {
     title: "Accounts",
     items: [
-      { label: "Sales & Collection", disabled: true },
-      { label: "Targets", disabled: true },
+      { href: "/sales-collection", label: "Sales & Collection" },
+      { href: "/targets", label: "Targets" },
       { href: "/reports", label: "Boss Report" }
     ]
   },

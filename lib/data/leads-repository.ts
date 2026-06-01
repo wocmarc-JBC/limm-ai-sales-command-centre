@@ -45,7 +45,38 @@ function leadPatchToRow(patch: Partial<Lead>, now: string) {
     ["followedUpBy", "followed_up_by"],
     ["leadLevel", "lead_level"],
     ["conversationSummary", "conversation_summary"],
-    ["missionCategory", "mission_category"]
+    ["missionCategory", "mission_category"],
+    ["salesStage", "sales_stage"],
+    ["leadOwner", "lead_owner"],
+    ["salesNextAction", "sales_next_action"],
+    ["followUpDate", "follow_up_date"],
+    ["probabilityPercent", "probability_percent"],
+    ["potentialValue", "potential_value"],
+    ["expectedCloseDate", "expected_close_date"],
+    ["leadSource", "lead_source"],
+    ["wonLostReason", "won_lost_reason"],
+    ["stageNotes", "stage_notes"],
+    ["quotationStatus", "quotation_status"],
+    ["quotedAmount", "quoted_amount"],
+    ["quoteSentDate", "quote_sent_date"],
+    ["quoteExpiryDate", "quote_expiry_date"],
+    ["quoteRevisionCount", "quote_revision_count"],
+    ["quoteFollowUpDate", "quote_follow_up_date"],
+    ["quoteNotes", "quote_notes"],
+    ["confirmedValue", "confirmed_value"],
+    ["wonDate", "won_date"],
+    ["lostDate", "lost_date"],
+    ["projectId", "project_id"],
+    ["propertyArea", "property_area"],
+    ["postalCode", "postal_code"],
+    ["projectAddress", "project_address"],
+    ["planningRegion", "planning_region"],
+    ["planningArea", "planning_area"],
+    ["mapLat", "map_lat"],
+    ["mapLng", "map_lng"],
+    ["locationConfidence", "location_confidence"],
+    ["locationSource", "location_source"],
+    ["locationNotes", "location_notes"]
   ];
   for (const [key, column] of optional) {
     if (key in patch) row[column] = patch[key];
@@ -133,6 +164,51 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
 
 export async function updateLeadStatus(id: string, status: LeadStatus) {
   return updateLead(id, { status }, "lead_status_updated", `Lead status updated to ${status}.`);
+}
+
+export async function updateLeadSalesTracking(id: string, patch: Partial<Lead>, reason = "Sales tracking updated.") {
+  return updateLead(
+    id,
+    patch,
+    "lead_sales_tracking_updated",
+    reason,
+    {
+      moneyChangeAudit: true,
+      manualOnly: true,
+      noPriceGuideAutomation: true,
+      changedFields: Object.keys(patch)
+    }
+  );
+}
+
+export async function markLeadWon(id: string, confirmedValue: number, wonReason: string) {
+  const now = new Date().toISOString();
+  return updateLeadSalesTracking(
+    id,
+    {
+      salesStage: "Won",
+      status: "Quotation Readiness",
+      quotationStatus: "Accepted",
+      confirmedValue,
+      wonDate: now,
+      wonLostReason: wonReason || "Other"
+    },
+    "Lead marked Won with manually entered confirmed value."
+  );
+}
+
+export async function markLeadLost(id: string, lostReason: string) {
+  const now = new Date().toISOString();
+  return updateLeadSalesTracking(
+    id,
+    {
+      salesStage: "Lost",
+      status: "Not Suitable",
+      lostDate: now,
+      wonLostReason: lostReason || "Other"
+    },
+    "Lead marked Lost with reason retained for reporting."
+  );
 }
 
 export async function markBossApprovalNeeded(id: string) {

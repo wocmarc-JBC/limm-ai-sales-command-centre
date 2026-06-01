@@ -12,6 +12,60 @@ export type LeadStatus =
   | "Follow Up Due"
   | "Not Suitable";
 
+export type SalesStage =
+  | "New Lead"
+  | "Qualified"
+  | "Info Requested"
+  | "Floor Plan / Scope Received"
+  | "Initial Project Review"
+  | "Site Visit Needed"
+  | "Site Visit Booked"
+  | "Quotation Needed"
+  | "Quotation Sent"
+  | "Follow-Up Due"
+  | "Negotiation"
+  | "Won"
+  | "Lost"
+  | "Archived";
+
+export type ManualQuotationStatus =
+  | "Not Ready"
+  | "Ready to Quote"
+  | "Preparing"
+  | "Sent"
+  | "Client Reviewing"
+  | "Revision Requested"
+  | "Accepted"
+  | "Rejected"
+  | "Expired";
+
+export type ProjectAccountStatus =
+  | "Active"
+  | "Deposit Pending"
+  | "In Progress"
+  | "Payment Due"
+  | "Fully Paid"
+  | "Completed"
+  | "Disputed"
+  | "Cancelled";
+
+export type PaymentType = "deposit" | "progress" | "final" | "other";
+
+export type PaymentStatus =
+  | "No Payment Yet"
+  | "Deposit Requested"
+  | "Deposit Received"
+  | "Progress Payment Due"
+  | "Progress Payment Received"
+  | "Final Payment Due"
+  | "Fully Paid"
+  | "Overdue"
+  | "Disputed";
+
+export type LocationConfidence = "exact" | "postal" | "area" | "unknown";
+
+export type LocationSource = "address" | "postal_code" | "message_text" | "manual" | "unknown";
+
 export type AppointmentRule = "allowed" | "approval_required" | "blocked";
 
 export type AppointmentType =
@@ -160,6 +214,94 @@ export interface Lead {
   leadLevel?: "Gold Lead" | "Warm Lead" | "Cold Lead" | "Risk Lead" | "Spam/Test" | "Needs Marcus";
   conversationSummary?: string;
   missionCategory?: string;
+  salesStage?: SalesStage;
+  leadOwner?: string;
+  salesNextAction?: string;
+  followUpDate?: string | null;
+  probabilityPercent?: number;
+  potentialValue?: number;
+  expectedCloseDate?: string | null;
+  leadSource?: string;
+  wonLostReason?: string;
+  stageNotes?: string;
+  quotationStatus?: ManualQuotationStatus;
+  quotedAmount?: number;
+  quoteSentDate?: string | null;
+  quoteExpiryDate?: string | null;
+  quoteRevisionCount?: number;
+  quoteFollowUpDate?: string | null;
+  quoteNotes?: string;
+  confirmedValue?: number;
+  wonDate?: string | null;
+  lostDate?: string | null;
+  projectId?: string;
+  propertyArea?: string;
+  postalCode?: string;
+  projectAddress?: string;
+  planningRegion?: string;
+  planningArea?: string;
+  mapLat?: number | null;
+  mapLng?: number | null;
+  locationConfidence?: LocationConfidence;
+  locationSource?: LocationSource;
+  locationNotes?: string;
+}
+
+export interface ProjectAccount {
+  id: string;
+  leadId: string;
+  clientName: string;
+  phone: string;
+  propertyType: string;
+  scopeSummary: string;
+  quotedAmount: number;
+  confirmedValue: number;
+  notes: string;
+  status: ProjectAccountStatus;
+  sourceLeadId: string;
+  propertyArea?: string;
+  postalCode?: string;
+  projectAddress?: string;
+  planningRegion?: string;
+  planningArea?: string;
+  mapLat?: number | null;
+  mapLng?: number | null;
+  locationConfidence?: LocationConfidence;
+  locationSource?: LocationSource;
+  locationNotes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  projectId: string;
+  leadId: string;
+  paymentType: PaymentType;
+  amount: number;
+  dueDate: string | null;
+  receivedDate: string | null;
+  status: PaymentStatus;
+  notes: string;
+  voidedAt?: string | null;
+  voidedBy?: string;
+  voidReason?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface MonthlySalesTarget {
+  id: string;
+  targetMonth: string;
+  monthlySalesTarget: number;
+  monthlyConfirmedJobsTarget: number;
+  monthlySiteVisitTarget: number;
+  monthlyQuotationTarget: number;
+  monthlyLandedLeadTarget: number;
+  monthlyCommercialLeadTarget: number;
+  monthlyCollectionTarget: number;
+  notes: string;
+  updatedAt: string;
 }
 
 export type LeadMessageDirection = "inbound" | "outbound" | "internal";

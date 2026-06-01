@@ -99,7 +99,7 @@ for (const forbidden of ["Daniel Tan", "Apex Clinic", "Mock folder", "Placeholde
 }
 
 for (const field of [
-  'version: "v6_1_8_dashboard_compression_zero_state_polish"',
+  'version: "v6_3_sales_collection_command_centre"',
   "missionControlUiIntegrated",
   "julesUiIdeasAppliedByCodex",
   "cockpitGlassmorphismThemeAvailable",

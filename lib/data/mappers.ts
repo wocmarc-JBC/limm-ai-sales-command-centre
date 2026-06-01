@@ -5,6 +5,9 @@ import type {
   FollowUp,
   Lead,
   LeadMessage,
+  MonthlySalesTarget,
+  PaymentRecord,
+  ProjectAccount,
   QuotationReadinessRecord
 } from "@/lib/types";
 
@@ -56,7 +59,101 @@ export function mapLeadRow(row: any): Lead {
     followedUpBy: row.followed_up_by ?? "",
     leadLevel: row.lead_level ?? undefined,
     conversationSummary: row.conversation_summary ?? "",
-    missionCategory: row.mission_category ?? ""
+    missionCategory: row.mission_category ?? "",
+    salesStage: row.sales_stage ?? undefined,
+    leadOwner: row.lead_owner ?? "",
+    salesNextAction: row.sales_next_action ?? row.next_action ?? "",
+    followUpDate: row.follow_up_date ?? null,
+    probabilityPercent: row.probability_percent ?? 0,
+    potentialValue: row.potential_value ?? 0,
+    expectedCloseDate: row.expected_close_date ?? null,
+    leadSource: row.lead_source ?? row.source ?? "",
+    wonLostReason: row.won_lost_reason ?? "",
+    stageNotes: row.stage_notes ?? "",
+    quotationStatus: row.quotation_status ?? undefined,
+    quotedAmount: row.quoted_amount ?? 0,
+    quoteSentDate: row.quote_sent_date ?? null,
+    quoteExpiryDate: row.quote_expiry_date ?? null,
+    quoteRevisionCount: row.quote_revision_count ?? 0,
+    quoteFollowUpDate: row.quote_follow_up_date ?? null,
+    quoteNotes: row.quote_notes ?? "",
+    confirmedValue: row.confirmed_value ?? 0,
+    wonDate: row.won_date ?? null,
+    lostDate: row.lost_date ?? null,
+    projectId: row.project_id ?? "",
+    propertyArea: row.property_area ?? "",
+    postalCode: row.postal_code ?? "",
+    projectAddress: row.project_address ?? "",
+    planningRegion: row.planning_region ?? "",
+    planningArea: row.planning_area ?? "",
+    mapLat: row.map_lat ?? null,
+    mapLng: row.map_lng ?? null,
+    locationConfidence: row.location_confidence ?? "unknown",
+    locationSource: row.location_source ?? "unknown",
+    locationNotes: row.location_notes ?? ""
+  };
+}
+
+export function mapProjectRow(row: any): ProjectAccount {
+  return {
+    id: row.id,
+    leadId: row.lead_id ?? row.source_lead_id ?? "",
+    clientName: row.client_name ?? "",
+    phone: row.phone ?? "",
+    propertyType: row.property_type ?? "",
+    scopeSummary: row.scope_summary ?? "",
+    quotedAmount: row.quoted_amount ?? 0,
+    confirmedValue: row.confirmed_value ?? 0,
+    notes: row.notes ?? "",
+    status: row.status ?? "Active",
+    sourceLeadId: row.source_lead_id ?? row.lead_id ?? "",
+    propertyArea: row.property_area ?? "",
+    postalCode: row.postal_code ?? "",
+    projectAddress: row.project_address ?? "",
+    planningRegion: row.planning_region ?? "",
+    planningArea: row.planning_area ?? "",
+    mapLat: row.map_lat ?? null,
+    mapLng: row.map_lng ?? null,
+    locationConfidence: row.location_confidence ?? "unknown",
+    locationSource: row.location_source ?? "unknown",
+    locationNotes: row.location_notes ?? "",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export function mapPaymentRow(row: any): PaymentRecord {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    leadId: row.lead_id ?? "",
+    paymentType: row.payment_type ?? "other",
+    amount: row.amount ?? 0,
+    dueDate: row.due_date ?? null,
+    receivedDate: row.received_date ?? null,
+    status: row.status ?? "No Payment Yet",
+    notes: row.notes ?? "",
+    voidedAt: row.voided_at ?? null,
+    voidedBy: row.voided_by ?? "",
+    voidReason: row.void_reason ?? "",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export function mapMonthlyTargetRow(row: any): MonthlySalesTarget {
+  return {
+    id: row.id,
+    targetMonth: row.target_month,
+    monthlySalesTarget: row.monthly_sales_target ?? 0,
+    monthlyConfirmedJobsTarget: row.monthly_confirmed_jobs_target ?? 0,
+    monthlySiteVisitTarget: row.monthly_site_visit_target ?? 0,
+    monthlyQuotationTarget: row.monthly_quotation_target ?? 0,
+    monthlyLandedLeadTarget: row.monthly_landed_lead_target ?? 0,
+    monthlyCommercialLeadTarget: row.monthly_commercial_lead_target ?? 0,
+    monthlyCollectionTarget: row.monthly_collection_target ?? 0,
+    notes: row.notes ?? "",
+    updatedAt: row.updated_at ?? row.created_at
   };
 }
 

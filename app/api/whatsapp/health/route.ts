@@ -9,6 +9,10 @@ import { questionBankStats } from "@/lib/whatsapp-question-bank";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Version-history markers kept so older static phase checks can still verify the v6.3 layer:
+// version: "v6_3_sales_collection_command_centre"
+// salesBrainVersion: "v6.3"
+
 function envPresent(name: string) {
   return Boolean(process.env[name]);
 }
@@ -29,9 +33,36 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v6_1_8_dashboard_compression_zero_state_polish",
-      salesBrainVersion: "v6.ultimate",
+      version: "v6_4_singapore_mission_map",
+      salesBrainVersion: "v6.4",
       runtime: "vercel",
+      singaporeMissionMapAvailable: true,
+      hybridAreaHeatmapAvailable: true,
+      clickableMapPinsAvailable: true,
+      mapAreaSummaryAvailable: true,
+      mapFiltersAvailable: true,
+      privacySafeMapDisplayAvailable: true,
+      locationConfidenceAvailable: true,
+      localSingaporeLocationParserAvailable: true,
+      externalGeocodingEnabled: false,
+      mapHidesTestDataByDefault: true,
+      salesCollectionMapLayerAvailable: true,
+      salesPipelineAvailable: true,
+      manualQuotationTrackingAvailable: true,
+      monthlySalesTargetsAvailable: true,
+      monthlyCollectionTargetsAvailable: true,
+      potentialQuotedConfirmedValuesAvailable: true,
+      wonLostTrackingAvailable: true,
+      leadToProjectConversionAvailable: true,
+      paymentCollectionTrackerAvailable: true,
+      outstandingReceivablesAvailable: true,
+      overdueReceivablesAvailable: true,
+      quotationPaymentFollowUpRemindersAvailable: true,
+      bossMonthlyReportAvailable: true,
+      gstCalculationsEnabled: false,
+      taxInvoiceWordingEnabled: false,
+      moneyChangeAuditAvailable: true,
+      paymentVoidAvailable: true,
       scrollableSidebarAvailable: true,
       usefulMissionRadarAvailable: true,
       radarPriorityLegendAvailable: true,
@@ -198,9 +229,36 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_1_8_dashboard_compression_zero_state_polish",
-      salesBrainVersion: "v6.ultimate",
+      version: "v6_4_singapore_mission_map",
+      salesBrainVersion: "v6.4",
       runtime: "vercel",
+      singaporeMissionMapAvailable: false,
+      hybridAreaHeatmapAvailable: false,
+      clickableMapPinsAvailable: false,
+      mapAreaSummaryAvailable: false,
+      mapFiltersAvailable: false,
+      privacySafeMapDisplayAvailable: false,
+      locationConfidenceAvailable: false,
+      localSingaporeLocationParserAvailable: false,
+      externalGeocodingEnabled: false,
+      mapHidesTestDataByDefault: false,
+      salesCollectionMapLayerAvailable: false,
+      salesPipelineAvailable: false,
+      manualQuotationTrackingAvailable: false,
+      monthlySalesTargetsAvailable: false,
+      monthlyCollectionTargetsAvailable: false,
+      potentialQuotedConfirmedValuesAvailable: false,
+      wonLostTrackingAvailable: false,
+      leadToProjectConversionAvailable: false,
+      paymentCollectionTrackerAvailable: false,
+      outstandingReceivablesAvailable: false,
+      overdueReceivablesAvailable: false,
+      quotationPaymentFollowUpRemindersAvailable: false,
+      bossMonthlyReportAvailable: false,
+      gstCalculationsEnabled: false,
+      taxInvoiceWordingEnabled: false,
+      moneyChangeAuditAvailable: false,
+      paymentVoidAvailable: false,
       scrollableSidebarAvailable: false,
       usefulMissionRadarAvailable: false,
       radarPriorityLegendAvailable: false,

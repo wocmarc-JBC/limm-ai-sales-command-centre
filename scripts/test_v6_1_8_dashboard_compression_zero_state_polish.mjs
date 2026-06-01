@@ -71,7 +71,7 @@ assert(dashboard.includes("Action queue clear."), "empty action queue must be co
 assert(!dashboard.includes("Collections Due\", value: 0"), "zero-count collection card must not be forced into the dashboard.");
 
 for (const field of [
-  'version: "v6_1_8_dashboard_compression_zero_state_polish"',
+  'version: "v6_3_sales_collection_command_centre"',
   "scrollableSidebarAvailable",
   "usefulMissionRadarAvailable",
   "radarPriorityLegendAvailable",

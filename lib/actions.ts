@@ -31,8 +31,10 @@ import {
   updateLeadStatus
 } from "@/lib/data/leads-repository";
 import { updateQuotationReadinessStatus } from "@/lib/data/quotation-repository";
+import { saveMonthlySalesTarget } from "@/lib/data/sales-collection-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
+import { currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
 import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import type { Permission } from "@/lib/auth/roles";
 import type { AiDraftReviewStatus, ApprovalStatus, FollowUpStatus, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
@@ -209,6 +211,32 @@ export async function updateQuotationReadinessAction(formData: FormData) {
     text(formData, "status") as QuotationReadinessRecord["status"]
   );
   revalidatePath("/quotation-readiness");
+  revalidatePath("/audit-log");
+}
+
+export async function saveMonthlySalesTargetAction(formData: FormData) {
+  const permission = await requirePermission("edit_settings");
+  if (!permission.ok) return;
+
+  const month = text(formData, "target_month", currentMonthKey());
+  const base = defaultMonthlyTarget(month);
+  await saveMonthlySalesTarget(
+    {
+      ...base,
+      monthlySalesTarget: Number(text(formData, "monthly_sales_target", "0")),
+      monthlyConfirmedJobsTarget: Number(text(formData, "monthly_confirmed_jobs_target", "0")),
+      monthlySiteVisitTarget: Number(text(formData, "monthly_site_visit_target", "0")),
+      monthlyQuotationTarget: Number(text(formData, "monthly_quotation_target", "0")),
+      monthlyLandedLeadTarget: Number(text(formData, "monthly_landed_lead_target", "0")),
+      monthlyCommercialLeadTarget: Number(text(formData, "monthly_commercial_lead_target", "0")),
+      monthlyCollectionTarget: Number(text(formData, "monthly_collection_target", "0")),
+      notes: text(formData, "notes")
+    },
+    permission.auth.profile?.fullName ?? "Marcus"
+  );
+  revalidatePath("/targets");
+  revalidatePath("/sales-collection");
+  revalidatePath("/reports");
   revalidatePath("/audit-log");
 }
 
