@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getHandoffEmailRuntime } from "@/lib/handoff-email";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
+import { getOptionalAiSalesBrainRuntime } from "@/lib/whatsapp-v6/sales-brain";
 import { getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
 import { questionBankStats } from "@/lib/whatsapp-question-bank";
 
@@ -21,15 +22,30 @@ function envFlag(name: string, fallback = false) {
 export async function GET() {
   try {
     const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
+    const optionalAiSalesBrain = getOptionalAiSalesBrainRuntime();
     const calendar = getCalendarRuntime();
     const handoffEmail = getHandoffEmailRuntime();
     const questionBank = questionBankStats();
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v5_3_2_deep_qa_media_singlish_voice_email_handoff",
-      salesBrainVersion: "v5.3.2",
+      version: "v6_0_human_like_sales_brain",
+      salesBrainVersion: "v6.0",
       runtime: "vercel",
+      humanLikeSalesBrainAvailable: true,
+      contextTruthGateAvailable: true,
+      singaporeRenovationMeaningBrainAvailable: true,
+      naturalReplyComposerAvailable: true,
+      safetyGovernorAvailable: true,
+      replyQualityJudgeAvailable: true,
+      overClaimPreventionAvailable: true,
+      localRenovationShortformSupportAvailable: true,
+      v6DeepQaAvailable: true,
+      v6DeepQaCaseCount: 156,
+      optionalAiSalesBrainAvailable: optionalAiSalesBrain.available,
+      optionalAiSalesBrainEnabled: optionalAiSalesBrain.enabled,
+      aiDraftReplyEnabled: optionalAiSalesBrain.draftReplyEnabled,
+      aiJsonSchemaValidationAvailable: optionalAiSalesBrain.jsonSchemaValidationAvailable,
       deepWhatsappAgentQaAvailable: true,
       webhookPayloadSimulatorAvailable: true,
       mediaContextDetectionAvailable: true,
@@ -94,9 +110,23 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v5_3_2_deep_qa_media_singlish_voice_email_handoff",
-      salesBrainVersion: "v5.3.2",
+      version: "v6_0_human_like_sales_brain",
+      salesBrainVersion: "v6.0",
       runtime: "vercel",
+      humanLikeSalesBrainAvailable: false,
+      contextTruthGateAvailable: false,
+      singaporeRenovationMeaningBrainAvailable: false,
+      naturalReplyComposerAvailable: false,
+      safetyGovernorAvailable: false,
+      replyQualityJudgeAvailable: false,
+      overClaimPreventionAvailable: false,
+      localRenovationShortformSupportAvailable: false,
+      v6DeepQaAvailable: false,
+      v6DeepQaCaseCount: 0,
+      optionalAiSalesBrainAvailable: true,
+      optionalAiSalesBrainEnabled: false,
+      aiDraftReplyEnabled: false,
+      aiJsonSchemaValidationAvailable: false,
       deepWhatsappAgentQaAvailable: false,
       webhookPayloadSimulatorAvailable: false,
       mediaContextDetectionAvailable: false,

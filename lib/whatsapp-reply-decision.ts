@@ -7,6 +7,7 @@ import {
   type WhatsAppSalesMove
 } from "@/lib/whatsapp-reply-coach";
 import { validateWhatsAppAutoReply } from "@/lib/whatsapp-safety";
+import { buildV6WhatsAppSalesBrainDecision } from "@/lib/whatsapp-v6/sales-brain";
 
 export type WhatsAppReplySource =
   | "reply_coach"
@@ -252,6 +253,15 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     previousMessages: input.previousMessages,
     calendarEventId: input.calendarEventId
   });
+  const v6Decision = buildV6WhatsAppSalesBrainDecision({
+    inboundMessageText: input.inboundMessageText,
+    inboundMessageType: input.inboundMessageType,
+    lead: input.lead,
+    previousMessages: input.previousMessages,
+    autoReplyEnabled: input.autoReplyEnabled,
+    calendarEventId: input.calendarEventId,
+    providerMessageId: input.providerMessageId
+  });
 
   if (isSpamIntent(coach.intent)) {
     return {
@@ -285,8 +295,8 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     };
   }
 
-  let replyText = coach.replyText;
-  let replySource: WhatsAppReplySource = coach.handoffRequired && coach.intent === "complaint_or_risk" ? "handoff_holding" : "reply_coach";
+  let replyText = v6Decision.replyText || coach.replyText;
+  let replySource: WhatsAppReplySource = v6Decision.replyText ? "reply_coach" : coach.handoffRequired && coach.intent === "complaint_or_risk" ? "handoff_holding" : "reply_coach";
   let safetyResult: WhatsAppReplyDecision["safetyResult"] = "pass";
   let repetitionResult: WhatsAppReplyDecision["repetitionResult"] = "pass";
   let qualityResult: WhatsAppReplyDecision["qualityResult"] = "pass";
@@ -356,6 +366,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
   const detectedIntents = coach.detectedIntents;
   const needsHuman =
     coach.handoffRequired ||
+    v6Decision.replyPlan.handoffNeeded ||
     coach.multiIntentDetected ||
     detectedIntents.some((intent) =>
       [
@@ -395,9 +406,11 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     answeredClientQuestion: finalQuality.answeredActualQuestion,
     askedNextBestQuestion: /\?/.test(replyText),
     handoffRequired: needsHuman,
-    riskFlags: [...new Set([...coach.riskFlags, ...riskFlagsFromIntents(coach.detectedIntents)])],
-    missingInfo: coach.missingInfo,
-    nextAction: coach.nextAction,
+    riskFlags: [...new Set([...coach.riskFlags, ...riskFlagsFromIntents(coach.detectedIntents), ...v6Decision.understanding.detectedRisks])],
+    missingInfo: v6Decision.verifiedContext.missingFields.length ? v6Decision.verifiedContext.missingFields : coach.missingInfo,
+    nextAction: v6Decision.replyPlan.askOnlyMissingInfo.length
+      ? `Ask only for missing info: ${v6Decision.replyPlan.askOnlyMissingInfo.join(", ")}.`
+      : coach.nextAction,
     safetyResult,
     repetitionResult,
     qualityResult,
@@ -409,6 +422,26 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       inbound_text: input.inboundMessageText,
       detected_intent: coach.intent,
       detectedIntents: coach.detectedIntents,
+      v6_version: v6Decision.version,
+      v6_detectedIntents: v6Decision.understanding.detectedIntents,
+      v6_detectedScopes: v6Decision.understanding.detectedScopes,
+      v6_detectedRisks: v6Decision.understanding.detectedRisks,
+      v6_clientQuestion: v6Decision.understanding.clientQuestion,
+      v6_singlishDetected: v6Decision.understanding.singlishDetected,
+      v6_chineseDetected: v6Decision.understanding.chineseDetected,
+      v6_renovationShortformDetected: v6Decision.understanding.renovationShortformDetected,
+      v6_verifiedContext: v6Decision.verifiedContext,
+      v6_contextTruthGate: v6Decision.contextTruthGate,
+      v6_replyPlan: v6Decision.replyPlan,
+      v6_safetyGovernor: v6Decision.safety,
+      v6_qualityJudge: v6Decision.quality,
+      humanLikeSalesBrainAvailable: true,
+      contextTruthGateAvailable: true,
+      singaporeRenovationMeaningBrainAvailable: true,
+      naturalReplyComposerAvailable: true,
+      safetyGovernorAvailable: true,
+      replyQualityJudgeAvailable: true,
+      overClaimPreventionAvailable: true,
       primaryIntent: coach.primaryIntent,
       multiIntentDetected: coach.multiIntentDetected,
       leadContextChecked: true,
@@ -437,7 +470,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       singlishDetected: isSinglish(input.inboundMessageText),
       replyLanguage: "professional_english",
       needsHuman,
-      escalationReason,
+      escalationReason: escalationReason || v6Decision.replyPlan.handoffReason.join(" + "),
       conversation_stage: coach.stage,
       confidence: coach.confidence,
       selected_sales_move: coach.salesMove,

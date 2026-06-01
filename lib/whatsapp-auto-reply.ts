@@ -373,6 +373,7 @@ export async function handleWhatsAppInboundMessage(
   }
 
   logWhatsApp("whatsapp_reply_decision_started", { providerMessageId, leadId: lead.id });
+  logWhatsApp("whatsapp_auto_reply_generate_started", { providerMessageId, leadId: lead.id });
   const decision = buildWhatsAppReplyDecision({
     inboundMessageText: message.text,
     inboundMessageType: message.type,

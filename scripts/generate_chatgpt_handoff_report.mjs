@@ -9,18 +9,18 @@ const status = data?.status ?? "UNKNOWN";
 const authStatus = data?.authTested ? "Authenticated boss browser/write checks ran." : "Authenticated boss checks are MANUAL REQUIRED until test credentials are set.";
 const browserStatus = data?.browserCompleted ? "Playwright browser QA completed." : "Playwright browser QA did not complete.";
 const openIssues = data?.bugsRemaining?.length ? data.bugsRemaining : ["None known from the latest Dev Brain run."];
-const nextAction = data?.nextCodexTask ?? "v5.3.2 Deep QA + Media Context + Singlish + Voice Fallback + Email Handoff is ready for controlled live retest after the health endpoint proves the Vercel deployment. Next recommended phase: observe real WhatsApp traces and configure handoff email provider if Marcus wants live email delivery.";
+const nextAction = data?.nextCodexTask ?? "v6.0 Human-Like WhatsApp Sales Brain is ready for controlled live retest after the health endpoint proves the Vercel deployment. Next recommended phase: observe real WhatsApp traces, then consider a CRM trace viewer or optional AI interpreter behind explicit env flags.";
 
 const report = [
   "# ChatGPT Handoff Report",
   "",
   "## Current Phase",
   "",
-  "v5.3.2 Deep QA + Media Context + Singlish + Voice Fallback + Email Handoff implemented on top of the live WhatsApp Sales Brain.",
+  "v6.0 Human-Like WhatsApp Sales Brain implemented on top of the live WhatsApp CRM pipeline.",
   "",
   "## Latest Report",
   "",
-  data?.browserReport ? "`DEV_BRAIN_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md`, `docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md`, `V5_3_WHATSAPP_REPLY_COACH_REPORT.md`, `V5_2_WHATSAPP_QUESTION_BANK_REPORT.md`, `V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`." : "`DEV_BRAIN_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md`, `docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md`, `V5_3_WHATSAPP_REPLY_COACH_REPORT.md`, `V5_2_WHATSAPP_QUESTION_BANK_REPORT.md`, and `V5_0_WHATSAPP_SALES_BRAIN_AND_CALENDAR_FOUNDATION_REPORT.md`.",
+  data?.browserReport ? "`DEV_BRAIN_QA_REPORT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `docs/V6_HUMAN_LIKE_SALES_BRAIN.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`." : "`DEV_BRAIN_QA_REPORT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `docs/V6_HUMAN_LIKE_SALES_BRAIN.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.",
   "",
   "## Tests / Audit Status",
   "",
@@ -39,6 +39,7 @@ const report = [
   "- v5.3 adds a central reply decision engine, reply coach, quality gate, no-silence guard, and black box reply trace.",
   "- v5.3.1 adds multi-intent detection, lead context memory, repeated-info avoidance, and portfolio/Instagram routing.",
   "- v5.3.2 adds deep WhatsApp QA, media/floor-plan context repair, voice fallback without transcription, Singlish intent support with English replies, and server-only handoff email tracing.",
+  "- v6.0 adds a Context Truth Gate, Singapore renovation meaning parser, natural reply composer, Safety Governor, Reply Quality Judge, and 150+ case deep QA.",
   "- Question bank replies include non-repetition handling, escalation rules, and audit metadata.",
   "- WhatsApp live inbound and auto-reply are confirmed PASS for Marcus-approved live mode.",
   "- Public WhatsApp auto-reply is allowed only for Marcus-approved live mode and remains safety-gated.",
@@ -64,7 +65,7 @@ const report = [
   "## Marcus Paste Block For ChatGPT",
   "",
   "```text",
-  "We are continuing LIMM AI Sales Command Centre after v5.3.2 Deep QA + Media Context + Singlish + Voice Fallback + Email Handoff.",
+  "We are continuing LIMM AI Sales Command Centre after v6.0 Human-Like WhatsApp Sales Brain.",
   `Latest Dev Brain QA status: ${status}.`,
   browserStatus,
   authStatus,
@@ -72,8 +73,9 @@ const report = [
   "v5.3 fixes the live silence issue by changing the old 3-in-10-min auto-reply gate into a warning, then forcing valid client text through the reply coach, safety/quality/repetition gates, and a no-silence fallback.",
   "v5.3.1 improves reply intelligence for multi-question messages, avoids asking again for details already received, and routes portfolio/past-work requests to configured Instagram only.",
   "v5.3.2 fixes media context so floor plan images/documents can prevent repeated floor-plan requests, adds voice fallback without transcription, understands common Singlish-style intent while replying in professional English, and records/sends handoff email alerts to limmwork@gmail.com when configured.",
+  "v6.0 improves reply quality with a Context Truth Gate, Singapore renovation shorthand understanding, natural replies, a strict Safety Governor, and a Reply Quality Judge. It specifically blocks over-claimed context and generic route-style replies for normal renovation questions.",
   "OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.",
-  "Please review docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md and use the health endpoint first before Marcus performs the controlled WhatsApp live retest.",
+  "Please review docs/V6_HUMAN_LIKE_SALES_BRAIN.md and use the health endpoint first before Marcus performs the controlled WhatsApp live retest.",
   "```",
   ""
 ].join("\n");

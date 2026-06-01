@@ -1,5 +1,32 @@
 # Current Status
 
+## v6.0 Human-Like WhatsApp Sales Brain
+
+Status: implemented locally and ready for Vercel deployment proof.
+
+Reason for upgrade:
+
+- v5.3.2 fixed silence and media context, but live replies could still over-claim context or sound like a generic form.
+- The message `hello...can help me do my kitchen?` should answer kitchen renovation directly.
+- The message `do kitchen and demo 2 wall can?` should understand that `demo 2 wall` means wall demolition/hacking review.
+
+What changed:
+
+- Added v6 reply intelligence modules under `lib/whatsapp-v6`.
+- Added Context Truth Gate to stop unverified `we've received...` claims.
+- Added Singapore renovation shorthand parser.
+- Added natural reply composer and reply planner.
+- Added strict rule-based Safety Governor.
+- Added Reply Quality Judge to block generic route-style replies.
+- Added optional AI interpreter/drafter env flags, default OFF.
+- Added 150+ case v6 deep QA and report.
+- Health endpoint target is now `v6_0_human_like_sales_brain`.
+
+Current Go/No-Go:
+
+- GO for controlled v6 live retest only after Vercel health proves `v6_0_human_like_sales_brain`.
+- NO-GO for OpenAI by default, autonomous Calendar booking, pricing, automatic project-photo sending, broadcast, or approval bypass.
+
 ## v5.3.2 Deep QA + Media Context + Singlish + Voice + Email Handoff
 
 Status: implemented locally and ready for Vercel deployment proof.

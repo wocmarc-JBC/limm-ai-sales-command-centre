@@ -145,7 +145,7 @@ for (const guard of [
   "findLeadMessageByProviderId",
   "runtime.businessNumber && senderPhone === runtime.businessNumber",
   "validateWhatsAppAutoReply",
-  "buildWhatsAppSalesBrainReply"
+  "buildWhatsAppReplyDecision"
 ]) {
   assert(service.includes(guard), `WhatsApp service missing closed-test guard: ${guard}`);
 }

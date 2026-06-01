@@ -110,12 +110,12 @@ assert(!/should_auto_send:\s*true[\s\S]{0,80}appointment confirmed/i.test(brain)
 
 const whatsappService = read("lib/whatsapp-auto-reply.ts");
 for (const phrase of [
-  "buildWhatsAppSalesBrainReply",
+  "buildWhatsAppReplyDecision",
   "listRecentLeadMessagesForWebhook",
   "whatsapp_context_load_failed",
   "whatsapp_auto_reply_requested",
-  "whatsapp_boss_review_required",
-  "brain.auditMetadata",
+  "whatsapp_handoff_required",
+  "brainMetadata",
   "validateWhatsAppAutoReply(reply, { calendarEventId })",
   "adapter.sendReply(senderPhone, reply)"
 ]) {

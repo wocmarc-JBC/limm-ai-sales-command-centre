@@ -2,51 +2,64 @@
 
 ## Current Phase
 
-v5.3.2 Deep QA + Media Context + Singlish + Voice Fallback + Email Handoff implemented on top of the live WhatsApp Sales Brain.
+v6.0 Human-Like WhatsApp Sales Brain implemented on top of the live WhatsApp CRM pipeline.
 
 ## Latest Report
 
-`docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md`, `V5_3_WHATSAPP_REPLY_COACH_REPORT.md`, `WHATSAPP_REPLY_COACH_PLAYBOOK.md`, `WHATSAPP_NO_SILENCE_REPLY_RELIABILITY_RULES.md`, `WHATSAPP_LIVE_INCIDENT_PLAYBOOK.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
+`DEV_BRAIN_QA_REPORT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `docs/V6_HUMAN_LIKE_SALES_BRAIN.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`.
 
 ## Tests / Audit Status
 
-Status: local PASS. Production PASS still requires Vercel deployment health proof.
+Status: PASS WITH MANUAL AUTH REQUIRED
+Browser QA: Playwright browser QA completed.
 
 ## Open Issues
 
-- Human takeover lock is planned for a later phase and not implemented yet.
-- Actual handoff email delivery requires `HANDOFF_EMAIL_ENABLED=true` plus a configured provider such as Resend.
-- OpenAI WhatsApp reply remains off.
-- Calendar auto-booking remains off.
+- None known from the latest Dev Brain run.
 
 ## Safety Status
 
 - OpenAI WhatsApp reply is off by default.
-- Calendar auto-booking is off by default.
-- WhatsApp adapter payload shape is preserved.
-- Valid client text now passes through Reply Coach, safety, repetition, quality, no-silence guard, audit trace, and send.
-- Multi-question WhatsApp messages now get a combined answer instead of a single generic intent reply.
-- Lead context memory avoids asking again for floor plan, scope, photos, property type, or address/area when already detected.
-- Media captions and filenames now feed context memory, so floor plan images/documents can prevent repeated floor-plan requests.
-- Voice/audio messages get a typed-details fallback; no transcription is attempted.
-- Singlish-style client intent is understood while replies remain professional English.
-- Important lead moments can trigger a server-only email handoff trace to `limmwork@gmail.com`.
-- Portfolio/past-work requests route to configured Instagram only; no fake project photos or random image sending.
-- The old 3-in-10-min auto-reply threshold is now a warning only.
-- Pricing, amount ranges, package prices, booking confirmation before a real event, approval promises, structural certainty, and completion guarantees remain blocked.
-- Review route is development-only and disabled by default unless `NEXT_PUBLIC_ENABLE_REVIEW_ROUTE=true`.
-- Secrets and `.env` values are not printed.
+- Fallback WhatsApp replies still work without OpenAI.
+- v5.2 question bank covers common homeowner questions through structured intents, examples, strategies, safety rules, and reply variations.
+- v5.3 adds a central reply decision engine, reply coach, quality gate, no-silence guard, and black box reply trace.
+- v5.3.1 adds multi-intent detection, lead context memory, repeated-info avoidance, and portfolio/Instagram routing.
+- v5.3.2 adds deep WhatsApp QA, media/floor-plan context repair, voice fallback without transcription, Singlish intent support with English replies, and server-only handoff email tracing.
+- v6.0 adds a Context Truth Gate, Singapore renovation meaning parser, natural reply composer, Safety Governor, Reply Quality Judge, and 150+ case deep QA.
+- Question bank replies include non-repetition handling, escalation rules, and audit metadata.
+- WhatsApp live inbound and auto-reply are confirmed PASS for Marcus-approved live mode.
+- Public WhatsApp auto-reply is allowed only for Marcus-approved live mode and remains safety-gated.
+- Google Calendar live booking remains disabled.
+- Calendar booking foundation requires boss approval and cannot confirm booking before an event exists.
+- Auto pricing and amount ranges remain blocked.
+- Review route is development-only and disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_ROUTE=true.
+- Secrets and .env values are not printed.
+
+## Auth Status
+
+Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
+
+## Browser QA Status
+
+Playwright browser QA completed.
+Report: V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md
 
 ## Next Recommended Action
 
-Deploy v5.3.2 to Vercel, open `/api/whatsapp/health`, confirm `version: v5_3_2_deep_qa_media_singlish_voice_email_handoff`, then run the controlled WhatsApp live retest.
+v6.0 Human-Like WhatsApp Sales Brain is ready for controlled live retest after the health endpoint proves the Vercel deployment. Next recommended phase: observe real WhatsApp traces, then consider a CRM trace viewer or optional AI interpreter behind explicit env flags.
 
 ## Marcus Paste Block For ChatGPT
 
 ```text
-We are continuing LIMM AI Sales Command Centre after v5.3.2 Deep QA + Media Context + Singlish + Voice Fallback + Email Handoff.
-v5.3.1 live health proved multi-intent, lead context, Instagram routing, and no-silence behaviour.
-v5.3.2 fixes the media/floor-plan repeated ask bug by preserving WhatsApp media captions/filenames in context, adds strict deep QA, adds voice fallback without transcription, understands common Singlish-style intent while replying in professional English, and records/sends important email handoff traces to limmwork@gmail.com when configured.
-OpenAI WhatsApp reply remains off by default. Calendar auto-booking remains off by default. No pricing, amount ranges, blasting, or booking confirmation before event exists.
-Do not live test until Vercel health shows version v5_3_2_deep_qa_media_singlish_voice_email_handoff.
+We are continuing LIMM AI Sales Command Centre after v6.0 Human-Like WhatsApp Sales Brain.
+Latest Dev Brain QA status: PASS WITH MANUAL AUTH REQUIRED.
+Playwright browser QA completed.
+Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
+Confirmed live result: inbound WhatsApp received, lead created, lead visible, audit logs written, and WhatsApp auto-reply sent successfully.
+v5.3 fixes the live silence issue by changing the old 3-in-10-min auto-reply gate into a warning, then forcing valid client text through the reply coach, safety/quality/repetition gates, and a no-silence fallback.
+v5.3.1 improves reply intelligence for multi-question messages, avoids asking again for details already received, and routes portfolio/past-work requests to configured Instagram only.
+v5.3.2 fixes media context so floor plan images/documents can prevent repeated floor-plan requests, adds voice fallback without transcription, understands common Singlish-style intent while replying in professional English, and records/sends handoff email alerts to limmwork@gmail.com when configured.
+v6.0 improves reply quality with a Context Truth Gate, Singapore renovation shorthand understanding, natural replies, a strict Safety Governor, and a Reply Quality Judge. It specifically blocks over-claimed context and generic route-style replies for normal renovation questions.
+OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.
+Please review docs/V6_HUMAN_LIKE_SALES_BRAIN.md and use the health endpoint first before Marcus performs the controlled WhatsApp live retest.
 ```

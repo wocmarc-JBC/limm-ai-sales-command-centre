@@ -100,7 +100,8 @@ const requiredScripts = [
   "scripts/test_v5_2_whatsapp_question_bank.mjs",
   "scripts/test_v5_3_whatsapp_reply_coach_replay.mjs",
   "scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs",
-  "scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs"
+  "scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs",
+  "scripts/test_v6_human_like_sales_brain_deep_qa.mjs"
 ];
 
 let hardFail = false;
@@ -192,7 +193,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v5.3.2 Deep QA + Media Context + Singlish + Voice Fallback + Email Handoff is ready for controlled live retest after the health endpoint proves the Vercel deployment. Next recommended phase: observe real WhatsApp traces and configure handoff email provider if Marcus wants live email delivery."
+      : "v6.0 Human-Like WhatsApp Sales Brain is ready for controlled live retest after the health endpoint proves the Vercel deployment. Next recommended phase: observe real WhatsApp traces, then consider a CRM trace viewer or optional AI interpreter behind explicit env flags."
   };
 }
 
