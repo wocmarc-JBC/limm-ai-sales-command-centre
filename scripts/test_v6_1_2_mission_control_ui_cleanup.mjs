@@ -195,7 +195,7 @@ const v6Understanding = read("lib/whatsapp-v6/message-understanding.ts");
 const v6Composer = read("lib/whatsapp-v6/natural-reply-composer.ts");
 
 for (const field of [
-  'version: "v6_1_5_performance_followup_test_cleanup"',
+  'version: "v6_1_6_mission_control_ui_integrated"',
   "uiPolishAvailable",
   "missionControlUiAvailable",
   "futuristicCockpitThemeAvailable",

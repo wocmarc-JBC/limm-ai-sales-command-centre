@@ -2,7 +2,7 @@ import Link from "next/link";
 import { evaluateBookingReadiness } from "@/lib/calendar-booking";
 import type { Lead } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
-import { formatLeadDisplayName } from "@/lib/lead-display";
+import { formatFullPhoneForProtectedApp, formatLeadDisplayName } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { calculateLeadLevel } from "@/lib/sales-control";
 import { matchQuestionBankIntent } from "@/lib/whatsapp-question-bank";
@@ -31,6 +31,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const questionMatch = isWhatsapp ? matchQuestionBankIntent(lead.lastClientMessage) : null;
   const leadLevel = lead.leadLevel ?? calculateLeadLevel(lead);
   const displayName = formatLeadDisplayName(lead);
+  const fullPhone = formatFullPhoneForProtectedApp(lead.phone) || "Phone pending";
   const scope = lead.scopeSummary || lead.serviceType || "Renovation scope pending";
   const stage = booking.appointmentIntent ? "Appointment requested" : lead.status;
 
@@ -53,6 +54,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
           <Link href={`/leads/${lead.id}`} className="mt-3 block text-2xl font-semibold leading-8 text-command-text hover:text-command-gold">
             {displayName}
           </Link>
+          <p className="mt-1 text-base font-semibold text-command-cyan">{fullPhone}</p>
           <p className="mt-2 text-xl font-semibold text-command-text">{scope}</p>
           <p className="mt-1 text-base text-command-muted">
             Stage: {humanizeLabel(stage)} | {lead.propertyType || "Property type pending"}

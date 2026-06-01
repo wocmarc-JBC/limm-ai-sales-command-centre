@@ -212,6 +212,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
       </section>
 
       <section className="mission-panel relative overflow-hidden rounded-3xl p-6 md:p-8">
+        <div className="cockpit-grid absolute inset-0 opacity-60" />
         <div className="absolute right-8 top-8 hidden h-36 w-36 rounded-full border border-command-cyan/30 radar-ring opacity-75 lg:block" />
         <div className="relative max-w-4xl">
           <p className="text-sm font-semibold uppercase tracking-[0.28em] text-command-cyan">Command status</p>

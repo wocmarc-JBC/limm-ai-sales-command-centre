@@ -11,6 +11,15 @@ export function maskPhone(phone: string) {
   return digits.startsWith("65") ? `+65 **** ${suffix}` : `**** ${suffix}`;
 }
 
+export function formatFullPhoneForProtectedApp(phone: string) {
+  const trimmed = String(phone ?? "").trim();
+  if (!trimmed) return "";
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 8) return `+65 ${digits.slice(0, 4)} ${digits.slice(4)}`;
+  if (digits.length === 10 && digits.startsWith("65")) return `+65 ${digits.slice(2, 6)} ${digits.slice(6)}`;
+  return trimmed;
+}
+
 export function looksGeneratedLeadName(name: string) {
   const trimmed = name.trim();
   return !trimmed
@@ -31,7 +40,7 @@ export function formatLeadDisplayName(lead: Lead) {
   const generatedName = looksGeneratedLeadName(name);
   if (lead.isTest) return "Test Lead";
   if (generatedName) {
-    const phone = maskPhone(lead.phone);
+    const phone = formatFullPhoneForProtectedApp(lead.phone);
     if (phone) return /whats\s*app/i.test(lead.source) ? `WhatsApp Lead ${phone}` : `Lead ${phone}`;
     return /whats\s*app/i.test(lead.source) ? "Unknown WhatsApp Lead" : "Unknown Lead";
   }

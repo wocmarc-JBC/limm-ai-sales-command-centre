@@ -81,7 +81,7 @@ assert(cleanupPanel.includes("Marcus/Fio/Fion"), "cleanup UI must mention Marcus
 assert(sharedCleanup.includes("/fion/i") && cleanupScript.includes("/fion/i"), "cleanup rules must protect Fion as well as Marcus/Fio");
 
 for (const field of [
-  'version: "v6_1_5_performance_followup_test_cleanup"',
+  'version: "v6_1_6_mission_control_ui_integrated"',
   "missionControlUxFinalPolishAvailable",
   "marcusTodayPanelAvailable",
   "sidebarNavigationGrouped",

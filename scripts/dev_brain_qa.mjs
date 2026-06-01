@@ -106,7 +106,8 @@ const requiredScripts = [
   "scripts/test_v6_1_ui_polish_cleanup.mjs",
   "scripts/test_v6_1_2_mission_control_ui_cleanup.mjs",
   "scripts/test_v6_1_4_mission_control_ux_final_polish.mjs",
-  "scripts/test_v6_1_5_performance_followup_test_cleanup.mjs"
+  "scripts/test_v6_1_5_performance_followup_test_cleanup.mjs",
+  "scripts/test_v6_1_6_mission_control_ui_integrated.mjs"
 ];
 
 let hardFail = false;
@@ -198,7 +199,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v6.1.5 Follow-Up performance and live test cleanup is ready for controlled deploy proof after the health endpoint shows v6_1_5_performance_followup_test_cleanup. Next recommended phase: run Settings cleanup scan in production, review Marcus/Fio/Fion protection, then apply soft-delete cleanup only if safe."
+      : "v6.1.6 Mission Control UI integration is ready for controlled deploy proof after the health endpoint shows v6_1_6_mission_control_ui_integrated. Next recommended phase: visually verify dashboard/sidebar/lead cards, then run Settings cleanup scan only if Marcus is ready."
   };
 }
 
