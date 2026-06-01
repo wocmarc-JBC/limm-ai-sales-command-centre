@@ -33,12 +33,42 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader title="Marcus Gold Command Centre" eyebrow="Today's Missions">
-        <div className="rounded border border-command-line bg-command-panel px-4 py-2 text-sm text-command-muted">
+        <div className="rounded-lg border border-command-line bg-command-card px-4 py-2 text-sm text-command-muted">
           {health.mode} | Reply-only WhatsApp posture
         </div>
       </PageHeader>
 
-      <section className="command-grid">
+      <section className="rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Today&apos;s Missions</p>
+            <h2 className="mt-2 text-3xl font-semibold leading-tight text-command-text">What Marcus should clear first</h2>
+            <p className="mt-2 max-w-3xl text-base text-command-muted">
+              Hot leads, appointment requests, floor-plan follow-ups, paused bots, and Marcus-review items are lifted to the top.
+            </p>
+          </div>
+          <div className="rounded-lg border border-command-gold/50 bg-command-gold/10 px-4 py-3 text-command-yellow">
+            {approvalNeeded.length + followUps.filter((item) => item.status !== "Scheduled").length} urgent checks
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          {todayActions.map(({ lead, next }) => (
+            <div key={lead.id} className="rounded-lg border border-command-line bg-command-elevated p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-lg font-semibold text-command-text">{lead.clientName}</p>
+                  <p className="mt-1 text-base text-command-muted">{lead.propertyType} | {lead.scopeSummary}</p>
+                </div>
+                <span className="rounded-md border border-command-line px-3 py-1 text-sm text-command-muted">{next.urgency}</span>
+              </div>
+              <p className="mt-4 text-base font-semibold text-command-text">{next.action}</p>
+              <p className="mt-1 text-sm text-command-muted">{next.reason}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="command-grid mt-6">
         <MetricCard label="Today's Actions" value={todayActions.length} detail="What Marcus should clear first" />
         <MetricCard label="Gold Leads" value={goldLeads.length} tone="danger" detail="Highest-value opportunities" />
         <MetricCard label="Hot Leads" value={hotLeads.length} tone="danger" detail="Needs fast boss attention" />
@@ -49,41 +79,22 @@ export default async function DashboardPage() {
         <MetricCard label="System Health" value={health.mode === "Supabase Mode" ? "Live DB" : "Mock"} detail="OpenAI/WhatsApp/Calendar disabled" />
       </section>
 
-      <section className="mt-8 rounded border border-command-line bg-command-panel p-5 shadow-command">
-        <h3 className="text-lg font-semibold text-command-text">What must Marcus do today?</h3>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {todayActions.map(({ lead, next }) => (
-            <div key={lead.id} className="rounded border border-command-line bg-command-panel2 p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="font-semibold">{lead.clientName}</p>
-                  <p className="text-sm text-command-muted">{lead.propertyType} | {lead.scopeSummary}</p>
-                </div>
-                <span className="rounded border border-command-line px-2 py-1 text-xs text-command-muted">{next.urgency}</span>
-              </div>
-              <p className="mt-3 text-sm text-command-text">{next.action}</p>
-              <p className="mt-1 text-sm text-command-muted">{next.reason}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-8 rounded border border-command-line bg-command-panel p-5 shadow-command">
+      <section className="mt-8 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">Mission Queue</p>
-            <h3 className="mt-1 text-lg font-semibold text-command-text">Boss action radar</h3>
+            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Mission Queue</p>
+            <h3 className="mt-1 text-2xl font-semibold text-command-text">Boss action radar</h3>
           </div>
-          <p className="text-sm text-command-muted">Lead scoring and reminders are internal only. No auto-pricing or auto-booking.</p>
+          <p className="text-base text-command-muted">Lead scoring and reminders are internal only. No auto-pricing or auto-booking.</p>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Object.entries(missionQueue).map(([mission, missionLeads]) => (
-            <div key={mission} className="rounded border border-command-line bg-command-panel2 p-4">
+            <div key={mission} className="rounded-lg border border-command-line bg-command-elevated p-5">
               <div className="flex items-center justify-between gap-3">
                 <p className="font-semibold text-command-text">{mission}</p>
-                <span className="rounded border border-command-line px-2 py-1 text-xs text-command-muted">{missionLeads.length}</span>
+                <span className="rounded-md border border-command-line px-3 py-1 text-sm text-command-muted">{missionLeads.length}</span>
               </div>
-              <p className="mt-2 text-sm text-command-muted">
+              <p className="mt-3 text-base text-command-muted">
                 {missionLeads.slice(0, 3).map((lead) => lead.clientName).join(", ") || "No leads in this mission."}
               </p>
             </div>
@@ -93,14 +104,14 @@ export default async function DashboardPage() {
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-command-text">Lead Priority</h3>
+          <h3 className="text-2xl font-semibold text-command-text">Lead Priority</h3>
           {leads.slice(0, 3).map((lead) => (
             <LeadCard key={lead.id} lead={lead} />
           ))}
         </div>
-        <aside className="rounded border border-command-line bg-command-panel p-4 shadow-command">
-          <h3 className="text-lg font-semibold text-command-text">Command Answers</h3>
-          <div className="mt-4 space-y-4 text-sm">
+        <aside className="rounded-lg border border-command-line bg-command-card p-5 shadow-premium">
+          <h3 className="text-2xl font-semibold text-command-text">Command Answers</h3>
+          <div className="mt-5 space-y-4 text-base">
             <p><span className="text-command-muted">Hot leads today:</span> {hotLeads.length ? hotLeads.map((lead) => lead.clientName).join(", ") : "None"}</p>
             <p><span className="text-command-muted">Waiting for reply:</span> {waitingReply.length}</p>
             <p><span className="text-command-muted">Appointment to confirm:</span> {readyToBook.length}</p>

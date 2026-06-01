@@ -152,7 +152,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
         </form>
       </PageHeader>
       <section className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-        <div className="rounded border border-command-line bg-command-panel p-5 shadow-command">
+        <div className="rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
           <div className="flex flex-wrap gap-2">
             <StatusBadge label={lead.leadCategory} />
             <StatusBadge label={leadLevel} />
@@ -164,7 +164,12 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             {lead.deletedAt ? <StatusBadge label="Soft Deleted" /> : null}
             {lead.archivedAt ? <StatusBadge label="Archived" /> : null}
           </div>
-          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="mt-5 rounded-lg border border-command-gold/35 bg-command-gold/10 p-4">
+            <p className="text-sm uppercase tracking-[0.18em] text-command-gold">Next best action</p>
+            <p className="mt-2 text-xl font-semibold text-command-text">{next.action}</p>
+            <p className="mt-2 text-base text-command-muted">{next.reason}</p>
+          </div>
+          <dl className="mt-5 grid gap-4 text-base sm:grid-cols-2">
             <div><dt className="text-command-muted">Phone / Source</dt><dd>{lead.phone} | {lead.source}</dd></div>
             <div><dt className="text-command-muted">Division</dt><dd>{lead.division}</dd></div>
             <div><dt className="text-command-muted">Property Type</dt><dd>{lead.propertyType}</dd></div>
@@ -173,8 +178,6 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <div><dt className="text-command-muted">Missing Info</dt><dd>{humanizeList(lead.missingInfo)}</dd></div>
             <div><dt className="text-command-muted">Risk Flags</dt><dd>{humanizeList(lead.riskFlags)}</dd></div>
             <div><dt className="text-command-muted">Preferred Contact</dt><dd>{lead.preferredContactTime || "Not provided"}</dd></div>
-            <div className="sm:col-span-2"><dt className="text-command-muted">Next Best Action</dt><dd>{next.action}</dd></div>
-            <div className="sm:col-span-2"><dt className="text-command-muted">Reason</dt><dd>{next.reason}</dd></div>
             <div className="sm:col-span-2"><dt className="text-command-muted">Blockers</dt><dd>{humanizeList(next.blockers)}</dd></div>
             <div className="sm:col-span-2"><dt className="text-command-muted">Conversation Summary</dt><dd>{lead.conversationSummary || buildConversationSummary(lead)}</dd></div>
             <div><dt className="text-command-muted">Readiness Status</dt><dd>{readinessStatus(lead)}</dd></div>
@@ -182,11 +185,11 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <div><dt className="text-command-muted">Assigned To</dt><dd>{lead.assignedTo || "Unassigned"}</dd></div>
             <div><dt className="text-command-muted">Bot Control</dt><dd>{lead.botPaused ? `Paused - ${lead.botPauseReason || "Manual"}` : "Active"}</dd></div>
           </dl>
-          <form action={updateLeadStatusAction} className="mt-5 flex flex-wrap items-end gap-3 rounded border border-command-line bg-command-panel2 p-4">
+          <form action={updateLeadStatusAction} className="mt-5 flex flex-wrap items-end gap-3 rounded-lg border border-command-line bg-command-elevated p-4">
             <input type="hidden" name="lead_id" value={lead.id} />
             <label className="grid gap-1 text-sm">
               <span className="text-command-muted">Update status</span>
-              <select name="status" defaultValue={lead.status} className="rounded border border-command-line bg-command-bg px-3 py-2 text-command-text">
+              <select name="status" defaultValue={lead.status} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text">
                 {statuses.map((status) => (
                   <option key={status}>{status}</option>
                 ))}
@@ -204,9 +207,9 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
               <ActionButton type="submit" tone="danger">Mark Not Suitable</ActionButton>
             </form>
           </div>
-          <div className="mt-5 rounded border border-command-line bg-command-panel2 p-4">
-            <p className="text-sm font-semibold text-command-text">Human takeover and cleanup controls</p>
-            <p className="mt-1 text-sm text-command-muted">
+          <div id="bot-controls" className="mt-5 rounded-lg border border-command-line bg-command-elevated p-5">
+            <p className="text-lg font-semibold text-command-text">Human takeover and cleanup controls</p>
+            <p className="mt-1 text-base text-command-muted">
               Normal delete is soft delete. Permanent delete is boss/admin only, requires prior soft delete, typed confirmation, reason, and an audit before deletion.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -216,7 +219,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
               </form>
               <form action={pauseBotForLeadAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="lead_id" value={lead.id} />
-                <input name="reason" placeholder="Pause reason" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+                <input name="reason" placeholder="Pause reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
                 <ActionButton type="submit" tone="muted">Pause Bot</ActionButton>
               </form>
               <form action={resumeBotForLeadAction}>
@@ -242,17 +245,17 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
               </form>
               <form action={markLeadDuplicateAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="lead_id" value={lead.id} />
-                <input name="duplicate_of" placeholder="Duplicate of lead id" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+                <input name="duplicate_of" placeholder="Duplicate of lead id" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
                 <ActionButton type="submit" tone="muted">Mark Duplicate</ActionButton>
               </form>
               <form action={archiveLeadAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="lead_id" value={lead.id} />
-                <input name="reason" placeholder="Archive reason" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+                <input name="reason" placeholder="Archive reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
                 <ActionButton type="submit" tone="muted">Archive Lead</ActionButton>
               </form>
               <form action={softDeleteLeadAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="lead_id" value={lead.id} />
-                <input name="reason" placeholder="Soft delete reason" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+                <input name="reason" placeholder="Soft delete reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
                 <ActionButton type="submit" tone="danger">Soft Delete Lead</ActionButton>
               </form>
               <form action={restoreLeadAction}>
@@ -260,16 +263,16 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                 <ActionButton type="submit" tone="muted">Restore Lead</ActionButton>
               </form>
             </div>
-            <form action={hardDeleteLeadAction} className="mt-4 grid gap-2 rounded border border-command-red/60 bg-command-bg p-3 md:grid-cols-[1fr_1fr_auto]">
+            <form action={hardDeleteLeadAction} className="mt-5 grid gap-3 rounded-lg border border-command-red/60 bg-command-bg p-4 md:grid-cols-[1fr_1fr_auto]">
               <input type="hidden" name="lead_id" value={lead.id} />
-              <input name="reason" placeholder="Permanent delete reason" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
-              <input name="confirmation" placeholder="Type PERMANENT DELETE" className="rounded border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text" />
+              <input name="reason" placeholder="Permanent delete reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
+              <input name="confirmation" placeholder="Type PERMANENT DELETE" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
               <ActionButton type="submit" tone="danger" disabled={!lead.deletedAt}>Permanent Delete</ActionButton>
             </form>
           </div>
         </div>
-        <aside className="rounded border border-command-line bg-command-panel p-5 shadow-command">
-          <h3 className="text-lg font-semibold">Readiness</h3>
+        <aside className="rounded-lg border border-command-line bg-command-card p-5 shadow-premium">
+          <h3 className="text-xl font-semibold">Readiness</h3>
           <p className="mt-4 text-sm text-command-muted">Appointment readiness</p>
           <p className="text-3xl font-semibold">{lead.appointmentReadiness}%</p>
           <p className="mt-4 text-sm text-command-muted">Quotation readiness</p>
@@ -284,10 +287,10 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           </div>
         </aside>
       </section>
-      <section className="mt-6 rounded border border-command-line bg-command-panel p-5 shadow-command">
+      <section className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">WhatsApp Auto-Reply</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">WhatsApp Auto-Reply</p>
             <h2 className="mt-1 text-xl font-semibold">Inbound and auto-reply audit</h2>
             <p className="mt-2 max-w-3xl text-sm text-command-muted">
               {whatsapp.statusLabel}. This section shows WhatsApp messages saved for this lead and any auto-reply status.
@@ -341,8 +344,8 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
         </div>
       </section>
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_24rem]">
-        <div className="rounded border border-command-line bg-command-panel p-5 shadow-command">
-          <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">WhatsApp Sales Brain</p>
+        <div className="rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
+          <p className="text-xs uppercase tracking-[0.24em] text-command-gold">WhatsApp Sales Brain</p>
           <h2 className="mt-1 text-xl font-semibold">Reply intelligence and safety metadata</h2>
           <p className="mt-2 text-sm text-command-muted">
             This shows the latest WhatsApp reply decision if the v5 sales brain has processed this lead. Every live reply still passes safety,
@@ -369,8 +372,8 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <div className="sm:col-span-2"><dt className="text-command-muted">Blocked reason</dt><dd>{metadataText("blocked_reason", "None")}</dd></div>
           </dl>
         </div>
-        <aside className="rounded border border-command-line bg-command-panel p-5 shadow-command">
-          <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">Calendar Foundation</p>
+        <aside className="rounded-lg border border-command-line bg-command-card p-5 shadow-premium">
+          <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Calendar Foundation</p>
           <h2 className="mt-1 text-xl font-semibold">Boss-approved booking only</h2>
           <p className="mt-2 text-sm text-command-muted">
             Do not confirm booking until event is created. Calendar is disabled by default and auto booking is disabled.
@@ -406,10 +409,10 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           </div>
         </aside>
       </section>
-      <section className="mt-6 rounded border border-command-line bg-command-panel p-5 shadow-command">
+      <section className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">OpenAI Brain Dry-Run</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">OpenAI Brain Dry-Run</p>
             <h2 className="mt-1 text-xl font-semibold">Draft only - boss approval required</h2>
             <p className="mt-2 max-w-3xl text-sm text-command-muted">
               {openAi.label}. This panel can only prepare structured recommendations for Marcus review.

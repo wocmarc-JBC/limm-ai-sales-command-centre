@@ -58,6 +58,7 @@ for (const required of [
   "V5_2_WHATSAPP_QUESTION_BANK_REPORT.md",
   "V5_3_WHATSAPP_REPLY_COACH_REPORT.md",
   "V6_ULTIMATE_SALES_COMMAND_CENTRE_REPORT.md",
+  "docs/V6_1_UI_POLISH_TEST_CLEANUP.md",
   "docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md",
   "docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md",
   "docs/V6_HUMAN_LIKE_SALES_BRAIN.md",
@@ -66,6 +67,7 @@ for (const required of [
   "reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md",
   "reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md",
   "reports/V6_ULTIMATE_DEEP_QA_REPORT.md",
+  "reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md",
   "CALENDAR_BOOKING_SETUP_GUIDE.md",
   "CALENDAR_BOOKING_SAFETY_RULES.md",
   "WHATSAPP_QUESTION_BANK_PLAYBOOK.md",
@@ -196,6 +198,8 @@ for (const required of [
   "scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs",
   "scripts/test_v6_human_like_sales_brain_deep_qa.mjs",
   "scripts/test_v6_ultimate_deep_qa.mjs",
+  "scripts/test_v6_1_ui_polish_cleanup.mjs",
+  "scripts/cleanup_old_test_leads_v6_1.mjs",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
   "supabase/migrations/019_v6_ultimate_command_centre.sql"
 ]) {
@@ -301,7 +305,7 @@ assert(shellChrome.includes("No Live Actions"), "Review shell header must show N
 assert(shellChrome.includes("Demo Data Only"), "Review shell header must show Demo Data Only.");
 assert(!reviewRoute.includes("Login required"), "Review route body must not show protected login copy.");
 assert(!reviewRoute.includes("Logout"), "Review route body must not show logout.");
-assert(/auth\.profile\s*&&\s*auth\.authenticated[\s\S]{0,260}<LogoutButton/.test(shellChrome), "Logout must only render for an authenticated profile.");
+assert(/auth\.profile\s*&&\s*auth\.authenticated\s*&&\s*clientAuthenticated[\s\S]{0,700}<LogoutButton/.test(shellChrome), "Logout must only render for an authenticated profile.");
 assert(shellChrome.includes("reviewNavItems"), "Review route must use dedicated review nav items.");
 assert(shellChrome.includes("#dashboard") && shellChrome.includes("#client-files"), "Review nav must use internal anchors.");
 assert(!/reviewNavItems[\s\S]{0,900}href:\s*["']\/(leads|appointments|settings|audit-log)/.test(shellChrome), "Review nav must not link to protected app routes.");
@@ -405,8 +409,14 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
-  "version: \"v6_ultimate_sales_command_centre\"",
+  "version: \"v6_1_ui_polish_test_cleanup\"",
   "salesBrainVersion: \"v6.ultimate\"",
+  "uiPolishAvailable",
+  "premiumGoldCommandCentreThemeAvailable",
+  "largerReadableFontsAvailable",
+  "testLeadCleanupAvailable",
+  "testLeadCleanupDryRunAvailable",
+  "testLeadCleanupSoftDeleteDefault",
   "humanLikeSalesBrainAvailable",
   "contextTruthGateAvailable",
   "singaporeRenovationMeaningBrainAvailable",
@@ -622,6 +632,7 @@ for (const script of ["doctor", "verify", "audit:launch", "start:local", "test:v
   assert(pkg.scripts?.[script], `package.json missing ${script}`);
 }
 assert(pkg.devDependencies?.["@playwright/test"], "package.json missing Playwright dev dependency.");
+assert(pkg.scripts?.["test:v6.1"], "package.json missing v6.1 UI/cleanup test script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);
 }
@@ -639,5 +650,16 @@ assert(/urgency/.test(nextBestAction) && /blockers/.test(nextBestAction), "Next 
 const approvalGateMatrix = read("lib/approval-gates.ts");
 assert(/approvalGateMatrix/.test(approvalGateMatrix), "Approval gate matrix missing.");
 assert(/landed_extension/.test(approvalGateMatrix) && /commercial_project/.test(approvalGateMatrix), "Approval gates missing key risky scopes.");
+
+const v61Docs = read("docs/V6_1_UI_POLISH_TEST_CLEANUP.md");
+const v61Cleanup = read("scripts/cleanup_old_test_leads_v6_1.mjs");
+const v61Test = read("scripts/test_v6_1_ui_polish_cleanup.mjs");
+for (const phrase of ["Dry run is the default", "--apply", "--hard-delete-test-data", "reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md"]) {
+  assert(v61Docs.includes(phrase), `v6.1 cleanup docs missing ${phrase}`);
+}
+for (const phrase of ["lead_test_cleanup_soft_delete_planned", "lead_test_cleanup_hard_delete_pre_audit", "Not clearly test data", "--apply"]) {
+  assert(v61Cleanup.includes(phrase), `v6.1 cleanup script missing ${phrase}`);
+}
+assert(v61Test.includes("Real Homeowner") && v61Test.includes("Action: not_touched"), "v6.1 cleanup test must protect real-looking leads.");
 
 console.log("PASS: v3 package audit passed.");

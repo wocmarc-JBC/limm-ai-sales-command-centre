@@ -184,7 +184,7 @@ const source = sourceFiles.filter(exists).map(read).join("\n") + read("lib/adapt
 const forbiddenWrongPhoneNumberId = "115395" + "2887800145";
 const staticChecks = [
   ["minimum_case_count", () => caseIndex >= 200],
-  ["version_health", () => /version:\s*"v6_ultimate_sales_command_centre"/.test(source)],
+  ["version_health", () => /version:\s*"v6_1_ui_polish_test_cleanup"/.test(source)],
   ["sales_brain_label", () => /salesBrainVersion:\s*"v6\.ultimate"/.test(source)],
   ["soft_delete", () => /softDeleteAvailable|lead_soft_deleted|deleted_at/.test(source)],
   ["restore", () => /restoreAvailable|lead_restored|restored_at/.test(source)],
@@ -194,7 +194,7 @@ const staticChecks = [
   ["mission_queue", () => /missionQueueAvailable|buildMissionQueue|Mission Queue/.test(source)],
   ["weekly_report_draft", () => /weeklyBossReportDraftAvailable|buildWeeklyBossReportDraft|Weekly Boss Report Draft/.test(source)],
   ["settings_page", () => /settingsPageAvailable|In-App QA Centre|Handoff email/.test(source)],
-  ["gold_ui", () => /goldCommandCentreUiAvailable|#120c07|Gold Sales Command Centre/.test(source)],
+  ["gold_ui", () => /goldCommandCentreUiAvailable|#120D08|Premium Sales Command Centre/.test(source)],
   ["known_payload", () => /messaging_product:\s*"whatsapp"[\s\S]*recipient_type:\s*"individual"[\s\S]*preview_url:\s*false/.test(source)],
   ["wrong_phone_absent", () => !source.includes(forbiddenWrongPhoneNumberId)],
   ["openai_default_off", () => /WHATSAPP_AI_SALES_BRAIN_ENABLED=false/.test(source)],

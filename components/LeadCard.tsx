@@ -18,11 +18,11 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const mission = lead.missionCategory || missionForLead(lead);
   const infoCollected = Math.max(0, Math.min(100, 100 - lead.missingInfo.length * 18));
   return (
-    <article className="rounded border border-command-line bg-command-panel p-4 shadow-command">
+    <article className="rounded-lg border border-command-line bg-command-card p-5 shadow-premium">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/leads/${lead.id}`} className="text-lg font-semibold text-command-text hover:text-command-cyan">
+            <Link href={`/leads/${lead.id}`} className="text-xl font-semibold leading-7 text-command-text hover:text-command-gold">
               {lead.clientName}
             </Link>
             <StatusBadge label={lead.leadCategory} />
@@ -41,30 +41,30 @@ export function LeadCard({ lead }: { lead: Lead }) {
             {questionMatch?.entry.escalation_rule !== "auto_safe" && showQuestionBadge ? <StatusBadge label="Boss Review Required" /> : null}
             {needsFiles ? <StatusBadge label="Needs Floor Plan / Photos" /> : null}
           </div>
-          <p className="mt-1 text-sm text-command-muted">
+          <p className="mt-2 text-base text-command-muted">
             {lead.phone} | {lead.source} | {lead.division}
           </p>
         </div>
-        <div className="rounded border border-command-line bg-command-panel2 px-3 py-2 text-right">
-          <p className="text-xs text-command-muted">Lead Heat Score</p>
-          <p className="text-xl font-semibold text-command-text">{lead.leadScore}</p>
+        <div className="rounded-lg border border-command-line bg-command-elevated px-4 py-3 text-right">
+          <p className="text-[13px] text-command-muted">Lead Heat Score</p>
+          <p className="text-2xl font-semibold text-command-text">{lead.leadScore}</p>
         </div>
       </div>
-      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_14rem]">
-        <div className="rounded border border-command-line bg-command-panel2 p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-command-cyan">Mission Brief</p>
-          <p className="mt-2 text-sm text-command-text">{buildConversationSummary(lead)}</p>
-          <p className="mt-2 text-xs text-command-muted">{buildFollowUpReminder(lead)}</p>
+      <div className="mt-5 grid gap-4 md:grid-cols-[1fr_15rem]">
+        <div className="rounded-lg border border-command-line bg-command-elevated p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-command-gold">Mission Brief</p>
+          <p className="mt-2 text-base leading-7 text-command-text">{buildConversationSummary(lead)}</p>
+          <p className="mt-2 text-sm text-command-muted">{buildFollowUpReminder(lead)}</p>
         </div>
-        <div className="rounded border border-command-line bg-command-panel2 p-3">
-          <p className="text-xs text-command-muted">Info Collected</p>
+        <div className="rounded-lg border border-command-line bg-command-elevated p-4">
+          <p className="text-sm text-command-muted">Info Collected</p>
           <div className="mt-2 h-2 rounded-full bg-command-bg">
-            <div className="h-2 rounded-full bg-command-cyan" style={{ width: `${infoCollected}%` }} />
+            <div className="h-2 rounded-full bg-command-gold" style={{ width: `${infoCollected}%` }} />
           </div>
           <p className="mt-2 text-sm font-semibold text-command-text">{infoCollected}% | {readinessStatus(lead)}</p>
         </div>
       </div>
-      <dl className="mt-4 grid gap-3 text-sm lg:grid-cols-3">
+      <dl className="mt-5 grid gap-4 text-base lg:grid-cols-3">
         <div>
           <dt className="text-command-muted">Property type</dt>
           <dd className="text-command-text">{lead.propertyType}</dd>
@@ -91,31 +91,37 @@ export function LeadCard({ lead }: { lead: Lead }) {
         </div>
       </dl>
       {isWhatsapp ? (
-        <div className="mt-4 rounded border border-command-line bg-command-panel2 p-3 text-sm">
+        <div className="mt-5 rounded-lg border border-command-line bg-command-elevated p-4 text-base">
           <p className="text-command-muted">Last WhatsApp message</p>
-          <p className="mt-1 text-command-text">{lead.lastClientMessage || "No WhatsApp message preview yet."}</p>
-          <p className="mt-2 text-xs text-command-muted">
+          <p className="mt-2 text-command-text">{lead.lastClientMessage || "No WhatsApp message preview yet."}</p>
+          <p className="mt-3 text-sm text-command-muted">
             Booking readiness: {humanizeLabel(booking.status)} | Missing booking info: {humanizeList(booking.missingInfo)}
           </p>
           {showQuestionBadge ? (
-            <p className="mt-2 text-xs text-command-muted">
+            <p className="mt-2 text-sm text-command-muted">
               Question category: {questionMatch!.entry.category} | Reply strategy: {questionMatch!.entry.safe_answer_strategy}
             </p>
           ) : null}
         </div>
       ) : null}
-      <div className="mt-4 rounded border border-command-line bg-command-panel2 p-3 text-sm">
+      <div className="mt-5 rounded-lg border border-command-line bg-command-elevated p-4 text-base">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold text-command-text">{next.action}</p>
             <p className="mt-1 text-command-muted">{next.reason}</p>
           </div>
-          <span className="rounded border border-command-line px-2 py-1 text-xs text-command-muted">Urgency: {next.urgency}</span>
+          <span className="rounded-md border border-command-line px-3 py-1 text-sm text-command-muted">Urgency: {next.urgency}</span>
         </div>
       </div>
-      <div className="mt-4">
-        <Link href={`/leads/${lead.id}`} className="inline-flex rounded border border-command-cyan bg-command-cyan px-4 py-2 text-sm font-semibold text-black transition hover:brightness-110">
-          Review Lead
+      <div className="mt-5 flex flex-wrap gap-2">
+        <Link href={`/leads/${lead.id}`} className="inline-flex min-h-11 items-center rounded-md border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
+          Open Lead
+        </Link>
+        <Link href={`/leads/${lead.id}#bot-controls`} className="inline-flex min-h-11 items-center rounded-md border border-command-line bg-command-elevated px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+          Pause Bot
+        </Link>
+        <Link href={`/leads/${lead.id}#bot-controls`} className="inline-flex min-h-11 items-center rounded-md border border-command-line bg-command-elevated px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+          Take Over
         </Link>
       </div>
     </article>

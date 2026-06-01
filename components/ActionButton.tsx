@@ -7,14 +7,14 @@ type ActionButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function ActionButton({ children, tone = "primary", type = "button", ...props }: ActionButtonProps) {
   const tones = {
-    primary: "border-command-cyan bg-command-cyan text-black",
-    muted: "border-command-line bg-command-panel2 text-command-text",
-    danger: "border-command-red bg-command-red/12 text-command-red"
+    primary: "border-command-gold bg-command-gold text-black hover:bg-command-goldHover",
+    muted: "border-command-line bg-command-elevated text-command-text hover:border-command-gold/60",
+    danger: "border-command-red bg-command-red/12 text-command-red hover:bg-command-red/18"
   };
   return (
     <button
       type={type}
-      className={`inline-flex min-h-10 items-center justify-center rounded border px-4 py-2 text-sm font-semibold transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-55 ${tones[tone]}`}
+      className={`inline-flex min-h-11 items-center justify-center rounded-md border px-4 py-2 text-base font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 ${tones[tone]}`}
       {...props}
     >
       {children}

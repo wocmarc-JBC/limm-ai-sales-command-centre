@@ -102,7 +102,8 @@ const requiredScripts = [
   "scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs",
   "scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs",
   "scripts/test_v6_human_like_sales_brain_deep_qa.mjs",
-  "scripts/test_v6_ultimate_deep_qa.mjs"
+  "scripts/test_v6_ultimate_deep_qa.mjs",
+  "scripts/test_v6_1_ui_polish_cleanup.mjs"
 ];
 
 let hardFail = false;
@@ -194,7 +195,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v6 Ultimate Sales Command Centre is ready for controlled live retest after the health endpoint proves the Vercel deployment. Next recommended phase: apply migration 019 in Supabase, verify cleanup/bot-pause actions with a test lead, then observe real WhatsApp traces."
+      : "v6.1 UI polish and test-lead cleanup is ready for controlled deploy proof after the health endpoint shows v6_1_ui_polish_test_cleanup. Next recommended phase: apply migration 019 if needed, run cleanup dry-run, review the report, then apply soft-delete cleanup only if safe."
   };
 }
 

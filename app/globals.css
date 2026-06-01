@@ -4,8 +4,8 @@
 
 :root {
   color-scheme: dark;
-  background: #120c07;
-  color: #fff8e7;
+  background: #120d08;
+  color: #fff7e6;
 }
 
 * {
@@ -16,10 +16,12 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(246, 211, 107, 0.11), transparent 26rem),
-    radial-gradient(circle at top right, rgba(138, 97, 47, 0.18), transparent 26rem),
-    #120c07;
-  color: #fff8e7;
+    linear-gradient(180deg, rgba(214, 168, 79, 0.13) 0, rgba(27, 18, 11, 0.42) 18rem, rgba(18, 13, 8, 0) 36rem),
+    linear-gradient(135deg, rgba(36, 23, 13, 0.82), rgba(18, 13, 8, 0.96) 46rem),
+    #120d08;
+  color: #fff7e6;
+  font-size: 15.5px;
+  line-height: 1.55;
   font-family:
     Inter,
     ui-sans-serif,
@@ -42,13 +44,25 @@ textarea {
   font: inherit;
 }
 
+input,
+select,
+textarea {
+  min-height: 2.75rem;
+}
+
 .command-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+  gap: 1rem;
 }
 
 .thin-scrollbar {
-  scrollbar-color: #39424e transparent;
+  scrollbar-color: #b88935 transparent;
   scrollbar-width: thin;
+}
+
+.premium-card {
+  border: 1px solid rgba(212, 164, 74, 0.22);
+  background: linear-gradient(180deg, rgba(42, 27, 16, 0.96), rgba(32, 21, 14, 0.96));
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 247, 230, 0.04);
 }

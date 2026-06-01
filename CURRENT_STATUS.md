@@ -1,5 +1,37 @@
 # Current Status
 
+## v6.1 UI Polish + Test Lead Cleanup
+
+Status: implemented locally as a controlled polish and cleanup pass; pending deploy health proof.
+
+Reason for patch:
+
+- Marcus said the current colour template was not nice enough.
+- Fonts and lead cards needed better readability.
+- Old test leads need a safe cleanup workflow.
+- The app should feel more like a premium internal command centre and less like a dense test dashboard.
+
+What changed:
+
+- Health endpoint target is now `v6_1_ui_polish_test_cleanup`.
+- Premium espresso/coffee/bronze/gold palette added.
+- Base font size and common card/button/input sizes were increased.
+- Dashboard now leads with `Today's Missions`.
+- Lead cards are clearer, with mission brief, readiness, WhatsApp preview, and quick links for open/pause/takeover.
+- Lead detail now surfaces next best action near the top and anchors cleanup/bot controls.
+- Settings are grouped into Bot/WhatsApp, Handoff/Portfolio, Safety, Calendar/Roles, and QA/theme cards.
+- Reports page has clearer boss-friendly QA/build cards.
+- Added `scripts/cleanup_old_test_leads_v6_1.mjs`.
+- Cleanup dry-run is default and writes `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`.
+- Cleanup apply requires `--apply` and defaults to mark test + soft delete only.
+- Hard delete remains explicit, only for already-soft-deleted test data, and requires audit before deletion.
+
+Current Go/No-Go:
+
+- GO for controlled v6.1 UI deploy proof after push and Vercel health check.
+- GO for cleanup dry-run after migration 019 is live.
+- NO-GO for automatic hard delete of real leads, WhatsApp pipeline changes, autonomous Calendar booking, pricing, or any weakening of audit rules.
+
 ## v6 Ultimate Sales Command Centre
 
 Status: implemented locally as launch-candidate foundation; pending push/deploy and live health proof.

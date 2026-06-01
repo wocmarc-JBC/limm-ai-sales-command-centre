@@ -6,22 +6,29 @@ const config: Config = {
     extend: {
       colors: {
         command: {
-          bg: "#120c07",
-          panel: "#1d140d",
-          panel2: "#271b11",
-          line: "#5a4227",
-          text: "#fff8e7",
-          muted: "#c8b58e",
-          cyan: "#f4c95d",
-          green: "#7bd88f",
-          amber: "#f2c94c",
-          red: "#ff7b6f",
-          bronze: "#8a612f",
-          gold: "#f6d36b"
+          bg: "#120D08",
+          panel: "#1B120B",
+          panel2: "#24170D",
+          card: "#20150E",
+          elevated: "#2A1B10",
+          line: "rgba(212, 164, 74, 0.22)",
+          text: "#FFF7E6",
+          muted: "#D8C4A5",
+          subtle: "#A88F6A",
+          cyan: "#D6A84F",
+          green: "#72C38C",
+          amber: "#D6A84F",
+          red: "#D9786D",
+          blue: "#6FA8A6",
+          bronze: "#B88935",
+          gold: "#D6A84F",
+          goldHover: "#E8C76A",
+          yellow: "#F1D27A"
         }
       },
       boxShadow: {
-        command: "0 18px 55px rgba(34,18,4,0.45)"
+        command: "0 18px 55px rgba(5, 3, 2, 0.42)",
+        premium: "0 22px 70px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 247, 230, 0.04)"
       }
     }
   },

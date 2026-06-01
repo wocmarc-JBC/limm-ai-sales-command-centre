@@ -1,9 +1,11 @@
 export function StatusBadge({ label }: { label: string }) {
   const lower = label.toLowerCase();
-  const tone = lower.includes("hot") || lower.includes("approval")
+  const tone = lower.includes("hot") || lower.includes("approval") || lower.includes("marcus")
     ? "border-command-red/60 bg-command-red/10 text-command-red"
-    : lower.includes("ready")
+    : lower.includes("ready") || lower.includes("sent") || lower.includes("gold")
       ? "border-command-green/60 bg-command-green/10 text-command-green"
-      : "border-command-line bg-command-panel2 text-command-muted";
-  return <span className={`rounded border px-2 py-1 text-xs font-semibold ${tone}`}>{label}</span>;
+      : lower.includes("paused") || lower.includes("test") || lower.includes("archive") || lower.includes("spam")
+        ? "border-command-gold/55 bg-command-gold/10 text-command-yellow"
+        : "border-command-line bg-command-elevated text-command-muted";
+  return <span className={`rounded-md border px-2.5 py-1 text-[13px] font-semibold leading-5 ${tone}`}>{label}</span>;
 }

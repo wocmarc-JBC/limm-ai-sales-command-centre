@@ -301,7 +301,7 @@ const cases = [
     expected: "Health proves v5.3.2 features with booleans only.",
     check() {
       for (const phrase of [
-        'version: "v6_ultimate_sales_command_centre"',
+        'version: "v6_1_ui_polish_test_cleanup"',
         'salesBrainVersion: "v6.ultimate"',
         "deepWhatsappAgentQaAvailable",
         "mediaContextDetectionAvailable",
