@@ -9,18 +9,50 @@ import type { AuthContext } from "@/lib/auth/session";
 import { getSupabaseBrowserClient } from "@/lib/data/supabase-browser";
 import { isReviewRouteEnabled } from "@/lib/review-route";
 
-const appNavItems = [
-  { href: "/", label: "Dashboard" },
-  { href: "/leads", label: "AI Lead Inbox" },
-  { href: "/appointments", label: "Appointments" },
-  { href: "/appointment-settings", label: "Appointment Settings" },
-  { href: "/approvals", label: "Boss Approval" },
-  { href: "/followups", label: "Follow-Ups" },
-  { href: "/quotation-readiness", label: "Quotation Readiness" },
-  { href: "/client-files", label: "Client Files" },
-  { href: "/reports", label: "Reports" },
-  { href: "/settings", label: "Settings" },
-  { href: "/audit-log", label: "Audit Log" }
+const appNavGroups = [
+  {
+    title: "Command",
+    items: [
+      { href: "/", label: "Dashboard" },
+      { href: "/leads", label: "AI Lead Inbox" },
+      { label: "Mission Queue", disabled: true }
+    ]
+  },
+  {
+    title: "Sales",
+    items: [
+      { label: "Sales Pipeline", disabled: true },
+      { href: "/quotation-readiness", label: "Quotation Readiness" },
+      { href: "/followups", label: "Follow-Ups" },
+      { href: "/appointments", label: "Appointments" },
+      { href: "/appointment-settings", label: "Appointment Settings" },
+      { href: "/approvals", label: "Boss Approval" }
+    ]
+  },
+  {
+    title: "Accounts",
+    items: [
+      { label: "Sales & Collection", disabled: true },
+      { label: "Targets", disabled: true },
+      { href: "/reports", label: "Boss Report" }
+    ]
+  },
+  {
+    title: "Operations",
+    items: [
+      { href: "/client-files", label: "Client Files", disabled: true, note: "soon" },
+      { href: "/settings#test-lead-cleanup", label: "Cleanup" },
+      { href: "/audit-log", label: "Audit Log" }
+    ]
+  },
+  {
+    title: "System",
+    items: [
+      { href: "/settings", label: "Settings" },
+      { href: "/reports", label: "QA Centre" },
+      { href: "/settings", label: "Health / Diagnostics" }
+    ]
+  }
 ] as const;
 
 const reviewNavItems = [
@@ -67,12 +99,14 @@ function ShellStatus({
     );
   }
 
+  const statusCardClass = "rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted md:mt-5";
+
   if (auth.profile && auth.authenticated && clientAuthenticated) {
     return (
-      <div className="rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted md:mt-5">
+      <div className={statusCardClass}>
+        <LogoutButton mode={auth.mode} />
         <p>{auth.mode}</p>
         <p>{auth.profile.fullName} | {auth.profile.role}</p>
-        <LogoutButton mode={auth.mode} />
       </div>
     );
   }
@@ -127,7 +161,7 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
           </div>
           <ShellStatus auth={auth} clientAuthenticated={clientAuthenticated} isTemporaryReviewRoute={isTemporaryReviewRoute} isLoginRoute={isLoginRoute} />
         </div>
-        <nav className="thin-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1 md:mt-8 md:block md:space-y-1.5 md:overflow-visible md:pb-0">
+        <nav className="thin-scrollbar mt-4 flex gap-3 overflow-x-auto pb-1 md:mt-8 md:block md:space-y-5 md:overflow-visible md:pb-0">
           {isTemporaryReviewRoute
             ? reviewNavItems.map((item) => (
                 <a
@@ -138,14 +172,32 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
                   {item.label}
                 </a>
               ))
-            : appNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="block whitespace-nowrap rounded-xl border border-transparent px-3 py-2.5 text-[15px] text-command-muted transition hover:border-command-line hover:bg-command-card hover:text-command-text"
-                >
-                  {item.label}
-                </Link>
+            : appNavGroups.map((group) => (
+                <div key={group.title} className="flex shrink-0 gap-2 md:block md:space-y-1">
+                  <p className="hidden px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-command-subtle md:block">{group.title}</p>
+                  {group.items.map((item) => {
+                    const itemKey = `${group.title}-${item.label}`;
+                    const active = "href" in item && item.href
+                      ? item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("#")[0])
+                      : false;
+                    const className = `block whitespace-nowrap rounded-xl border px-3 py-2.5 text-[15px] transition ${
+                      active
+                        ? "border-command-cyan/60 bg-command-cyan/10 text-command-text"
+                        : "border-transparent text-command-muted hover:border-command-line hover:bg-command-card hover:text-command-text"
+                    }`;
+                    if (!("href" in item) || ("disabled" in item && item.disabled)) {
+                      return (
+                        <span key={itemKey} className="block whitespace-nowrap rounded-xl border border-transparent px-3 py-2.5 text-[15px] text-command-subtle opacity-65">
+                          {item.label}{("note" in item && item.note) ? ` (${item.note})` : ""}
+                        </span>
+                      );
+                    }
+                    if (item.href.includes("#")) {
+                      return <a key={itemKey} href={item.href} className={className}>{item.label}</a>;
+                    }
+                    return <Link key={itemKey} href={item.href} className={className}>{item.label}</Link>;
+                  })}
+                </div>
               ))}
         </nav>
       </aside>

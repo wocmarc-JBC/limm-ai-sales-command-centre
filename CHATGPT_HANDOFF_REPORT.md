@@ -6,12 +6,12 @@ v6.1 UI Polish + Test Lead Cleanup implemented on top of the v6 Ultimate live Wh
 
 ## Latest Report
 
-`DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
+`DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`.
 
 ## Tests / Audit Status
 
-Status: UNKNOWN
-Browser QA: Playwright browser QA did not complete.
+Status: PASS WITH MANUAL AUTH REQUIRED
+Browser QA: Playwright browser QA completed.
 
 ## Open Issues
 
@@ -43,19 +43,19 @@ Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
 
 ## Browser QA Status
 
-Playwright browser QA did not complete.
-Report: not generated.
+Playwright browser QA completed.
+Report: V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md
 
 ## Next Recommended Action
 
-v6.1.2 Mission Control UI and live cleanup is ready for controlled deploy proof after the health endpoint shows v6_1_2_mission_control_ui_live_cleanup. Next recommended phase: apply migration 019 if needed, review Settings cleanup counts, then apply soft-delete cleanup only if safe.
+v6.1.4 Mission Control UX final polish is ready for controlled deploy proof after the health endpoint shows v6_1_4_mission_control_ux_final_polish. Next recommended phase: apply migration 019 if needed, review Settings cleanup counts, then apply soft-delete cleanup only if safe.
 
 ## Marcus Paste Block For ChatGPT
 
 ```text
 We are continuing LIMM AI Sales Command Centre after v6.1 UI Polish + Test Lead Cleanup.
-Latest Dev Brain QA status: UNKNOWN.
-Playwright browser QA did not complete.
+Latest Dev Brain QA status: PASS WITH MANUAL AUTH REQUIRED.
+Playwright browser QA completed.
 Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
 Confirmed live result: inbound WhatsApp received, lead created, lead visible, audit logs written, and WhatsApp auto-reply sent successfully.
 v5.3 fixes the live silence issue by changing the old 3-in-10-min auto-reply gate into a warning, then forcing valid client text through the reply coach, safety/quality/repetition gates, and a no-silence fallback.

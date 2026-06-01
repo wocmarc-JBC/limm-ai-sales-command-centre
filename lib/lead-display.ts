@@ -1,7 +1,7 @@
 import type { Lead } from "@/lib/types";
 
 export function containsProtectedName(text: string) {
-  return /marcus|fio/i.test(text);
+  return /marcus|fio|fion/i.test(text);
 }
 
 export function maskPhone(phone: string) {

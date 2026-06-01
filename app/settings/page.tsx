@@ -13,8 +13,23 @@ import { buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 
 export default async function SettingsPage() {
-  const { health } = await getSettingsSummary();
   const auth = await getCurrentProfile();
+  if (!auth.authenticated || !auth.profile) {
+    return (
+      <>
+        <PageHeader title="Settings" eyebrow="System controls" />
+        <section className="rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
+          <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Protected controls</p>
+          <h2 className="mt-1 text-2xl font-semibold">Login required</h2>
+          <p className="mt-2 text-base text-command-muted">
+            Sign in before loading live settings, cleanup counts, and system health details.
+          </p>
+        </section>
+      </>
+    );
+  }
+
+  const { health } = await getSettingsSummary();
   const openAi = getOpenAiBrainRuntime();
   const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
   const whatsapp = getWhatsAppRuntime();
@@ -41,6 +56,7 @@ export default async function SettingsPage() {
       detail: "Connection, auth, RLS, and live verification proof.",
       rows: [
         ["Current mode", health.mode],
+        ["Supabase connected", health.supabaseUrlDetected && health.supabaseAnonKeyDetected ? "Yes" : "No"],
         ["Supabase URL detected", health.supabaseUrlDetected ? "Yes" : "No"],
         ["Supabase anon key detected", health.supabaseAnonKeyDetected ? "Yes" : "No"],
         ["Auth status", health.authEnabled ? "Enabled in Supabase Mode" : "Disabled in Mock Mode"],
@@ -49,6 +65,7 @@ export default async function SettingsPage() {
         ["Current role", auth.profile ? auth.profile.role : "None"],
         ["Audit log writable", health.mode === "Supabase Mode" ? "Unknown until action test" : "Yes in Mock Mode"],
         ["RLS expected", health.rlsExpected ? "Yes" : "No"],
+        ["RLS enforced status", health.rlsExpected ? "Expected through Supabase policies" : "Not active in Mock Mode"],
         ["Environment", process.env.NEXT_PUBLIC_APP_ENV ?? "local"],
         ["Live verification", process.env.LIVE_SUPABASE_VERIFIED_AT ? `Last marked: ${process.env.LIVE_SUPABASE_VERIFIED_AT}` : "Run npm run verify:live-supabase manually"]
       ]
@@ -97,6 +114,7 @@ export default async function SettingsPage() {
         ["Calendar boss approval required", calendar.bossApprovalRequired ? "Yes" : "No"],
         ["Calendar auto booking", calendar.autoBookingEnabled ? "Enabled" : "Disabled"],
         ["Google Calendar connected", calendar.googleCalendarConnected ? "Connected" : "Not connected"],
+        ["Calendar timezone", calendar.timezone],
         ["Appointment settings writable", auth.profile?.role === "boss" ? "Yes for boss role" : "Boss role required"]
       ]
     },

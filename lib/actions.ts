@@ -364,14 +364,14 @@ export async function cleanupOldTestLeadsAction(formData: FormData) {
       if (item.action !== "hard_delete_test_data") continue;
       await hardDeleteLead(
         item.lead.id,
-        `v6.1.2 in-app hard cleanup for already-soft-deleted test lead: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`
+        `v6.1.4 in-app hard cleanup for already-soft-deleted test lead: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`
       );
     } else {
       if (item.action !== "mark_test_and_soft_delete") continue;
       await markLeadAsTest(item.lead.id);
       await softDeleteLead(
         item.lead.id,
-        `v6.1.2 in-app cleanup: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`,
+        `v6.1.4 in-app cleanup: ${[...item.reasons, ...item.weakReasons].join("; ") || "clearly identified test lead"}`,
         actor
       );
     }

@@ -195,7 +195,7 @@ const v6Understanding = read("lib/whatsapp-v6/message-understanding.ts");
 const v6Composer = read("lib/whatsapp-v6/natural-reply-composer.ts");
 
 for (const field of [
-  'version: "v6_1_2_mission_control_ui_live_cleanup"',
+  'version: "v6_1_4_mission_control_ux_final_polish"',
   "uiPolishAvailable",
   "missionControlUiAvailable",
   "futuristicCockpitThemeAvailable",
@@ -241,17 +241,17 @@ assert(!dashboard.includes("System Health"), "main dashboard must not show syste
 assert(!dashboard.includes("Mission Queue"), "main dashboard must not show dense mission queue grid");
 assert(dashboard.includes("System Core") && dashboard.includes("Quick Actions"), "dashboard must keep system core compact and action-first");
 assert(leadInbox.includes("show_test") && leadInbox.includes("Show Test Leads") && leadInbox.includes("Archived / Deleted") && leadInbox.includes("Show Spam") && leadInbox.includes("Show All"), "lead inbox must include active/test/archive/spam/all filters");
-assert(leadCard.includes("Open Lead") && leadCard.includes("Pause Bot") && leadCard.includes("Take Over"), "lead cards must include clearer quick actions");
+assert(leadCard.includes("Open") && leadCard.includes("Pause Bot") && leadCard.includes("Take Over"), "lead cards must include clearer quick actions");
 assert(leadCard.includes("text-xl") && leadCard.includes("text-base"), "lead cards should use larger readable text");
-assert(leadCard.includes("cleanLeadDisplayName"), "lead cards must clean generated/test display names");
+assert(leadCard.includes("formatLeadDisplayName"), "lead cards must clean generated/test display names");
 assert(leadDisplay.includes("formatLeadDisplayName") && leadDisplay.includes("Unknown WhatsApp Lead") && leadDisplay.includes("maskPhone") && leadDisplay.includes("containsProtectedName"), "lead display cleanup helper missing expected generated-name handling");
 assert(leadDetail.includes('id="bot-controls"'), "lead detail must anchor bot controls from cards");
 assert(leadDetail.includes("Next best action"), "lead detail must surface next best action near top");
 assert(settings.includes("Bot / WhatsApp") && settings.includes("Handoff Email / Portfolio") && settings.includes("Safety Rules") && settings.includes("Dry Run Test Lead Cleanup"), "settings page must group key control cards and expose cleanup commands");
-assert(settings.includes("CleanupPanel") && cleanupPanel.includes("Live Test Lead Cleanup") && cleanupPanel.includes("Soft Delete Test Leads") && cleanupPanel.includes("Marcus/Fio protected"), "settings page must expose live in-app cleanup action and protection proof");
+assert(settings.includes("CleanupPanel") && cleanupPanel.includes("Live Test Lead Cleanup") && cleanupPanel.includes("Soft Delete Test Leads") && cleanupPanel.includes("Marcus/Fio/Fion protected"), "settings page must expose live in-app cleanup action and protection proof");
 assert(cleanupPanel.includes("Permanently Delete Soft-Deleted Test Leads") && cleanupPanel.includes("window.confirm"), "cleanup panel must support normal confirmation modal and danger-zone hard delete");
 assert(actions.includes("cleanupOldTestLeadsAction") && actions.includes("hard_delete_soft_deleted") && actions.includes("buildTestLeadCleanupPlan"), "server actions must expose guarded in-app cleanup actions without typed cleanup phrase");
-assert(sharedCleanup.includes("protectedPersonEvidence") && sharedCleanup.includes("laminated wall cladding test"), "shared cleanup rules must include Marcus/Fio protection and latest test phrase");
+assert(sharedCleanup.includes("protectedPersonEvidence") && sharedCleanup.includes("laminated wall cladding test"), "shared cleanup rules must include Marcus/Fio/Fion protection and latest test phrase");
 assert(v6Understanding.includes("specific_works") && v6Composer.includes("laminated wall cladding"), "specific works brain must detect and answer laminated wall cladding directly");
 assert(reports.includes("Latest QA") && reports.includes("Deep QA Cases"), "reports page must include boss-friendly QA cards");
 

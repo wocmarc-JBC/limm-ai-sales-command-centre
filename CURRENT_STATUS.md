@@ -1,12 +1,35 @@
 # Current Status
 
+## v6.1.4 Mission Control UX Final Polish
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_1_4_mission_control_ux_final_polish`.
+- Dashboard has a final action-first Mission Control layout.
+- `Marcus Today` hero panel shows top priority actions only.
+- Top command bar adds search placeholder, cleanup, QA Centre, Settings, and Focus Mode.
+- Sidebar navigation is grouped into Command, Sales, Accounts, Operations, and System.
+- Lead cards are simplified to stage, next action, risk chips, missing info, last message, and quick actions.
+- Fake Client Files data was removed from live UI; Client Files now clearly says storage is not enabled yet.
+- Active views continue hiding test/generated leads by default.
+- Cleanup still soft-deletes by default and protects Marcus/Fio/Fion.
+- Non-GST mode is preserved; price guide automation remains on hold.
+
+Current Go/No-Go:
+
+- GO for controlled v6.1.4 deploy proof after push and Vercel health check.
+- GO for cleanup only after Marcus reviews dry-run counts.
+- NO-GO for pricing automation, Calendar auto-booking, voice transcription, fake client files, or GST/Tax Invoice wording.
+
 ## v6.1.2 Mission Control UI + Live Test Lead Cleanup
 
 Status: implemented locally; pending push/deploy health proof.
 
 What changed:
 
-- Health endpoint target is now `v6_1_2_mission_control_ui_live_cleanup`.
+- Health endpoint target is now `v6_1_4_mission_control_ux_final_polish`.
 - Dashboard is redesigned as `LIMM Mission Control`, a compact cockpit view focused on what Marcus must do now.
 - Debug/system clutter stays off the main dashboard and lives in Settings/Reports.
 - Lead names are cleaned with `formatLeadDisplayName()` so raw QA/generated titles do not appear as client names.
@@ -29,7 +52,7 @@ Status: implemented locally; pending push/deploy health proof.
 
 What changed:
 
-- Health endpoint target is now `v6_1_2_mission_control_ui_live_cleanup`.
+- Health endpoint target is now `v6_1_4_mission_control_ux_final_polish`.
 - Dashboard was simplified to a boss-first live sales view.
 - System health and QA/debug clutter were moved away from the main dashboard and remain in Settings/Reports.
 - Lead inbox hides test leads by default and includes a show/hide test leads filter.

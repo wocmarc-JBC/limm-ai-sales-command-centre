@@ -28,7 +28,7 @@ export function CleanupPanel({
   samples: CleanupSample[];
 }) {
   const confirmSoftDelete = (event: FormEvent<HTMLFormElement>) => {
-    if (!window.confirm("Soft-delete clearly identified test leads? Marcus and Fio are protected.")) event.preventDefault();
+    if (!window.confirm("Soft-delete clearly identified test leads? Marcus, Fio, and Fion are protected.")) event.preventDefault();
   };
   const confirmHardDelete = (event: FormEvent<HTMLFormElement>) => {
     if (!window.confirm("Permanently delete only already-soft-deleted test leads? Audit must pass first.")) event.preventDefault();
@@ -42,7 +42,7 @@ export function CleanupPanel({
           <h2 className="mt-1 text-2xl font-semibold text-command-text">Live Test Lead Cleanup</h2>
           <p className="mt-2 max-w-3xl text-base text-command-muted">
             This dry run scans live CRM data from the server. Default cleanup only soft-deletes clear QA/test leads and hides them from the active dashboard.
-            Marcus and Fio are excluded completely if their names appear anywhere in the lead or messages.
+            Marcus, Fio, and Fion are excluded completely if their names appear anywhere in the lead or messages.
           </p>
         </div>
         <a href="/settings#test-lead-cleanup" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-command-line bg-command-card px-4 py-2 font-semibold text-command-text hover:border-command-cyan/70">
@@ -54,7 +54,7 @@ export function CleanupPanel({
         {[
           ["Leads scanned", scanned],
           ["Test leads found", targets],
-          ["Marcus/Fio protected", protectedCount],
+          ["Marcus/Fio/Fion protected", protectedCount],
           ["Uncertain skipped", uncertain],
           ["Soft-deleted test leads", alreadySoftDeleted]
         ].map(([label, value]) => (
@@ -98,7 +98,7 @@ export function CleanupPanel({
           <input type="hidden" name="cleanup_mode" value="hard_delete_soft_deleted" />
           <p className="font-semibold text-command-text">Danger Zone</p>
           <p className="mt-2 text-sm leading-6 text-command-muted">
-            Permanently delete only already-soft-deleted test leads. This is never the default and Marcus/Fio remain protected.
+            Permanently delete only already-soft-deleted test leads. This is never the default and Marcus/Fio/Fion remain protected.
           </p>
           <div className="mt-4">
             <ActionButton type="submit" tone="danger" disabled={alreadySoftDeleted === 0}>

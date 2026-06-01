@@ -87,6 +87,7 @@ function protectedPersonEvidence(lead, messages) {
   const matches = [];
   if (/marcus/i.test(protectedText)) matches.push("Marcus");
   if (/fio/i.test(protectedText)) matches.push("Fio");
+  if (/fion/i.test(protectedText)) matches.push("Fion");
   return [...new Set(matches)];
 }
 

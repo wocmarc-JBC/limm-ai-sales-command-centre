@@ -104,7 +104,8 @@ const requiredScripts = [
   "scripts/test_v6_human_like_sales_brain_deep_qa.mjs",
   "scripts/test_v6_ultimate_deep_qa.mjs",
   "scripts/test_v6_1_ui_polish_cleanup.mjs",
-  "scripts/test_v6_1_2_mission_control_ui_cleanup.mjs"
+  "scripts/test_v6_1_2_mission_control_ui_cleanup.mjs",
+  "scripts/test_v6_1_4_mission_control_ux_final_polish.mjs"
 ];
 
 let hardFail = false;
@@ -196,7 +197,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v6.1.2 Mission Control UI and live cleanup is ready for controlled deploy proof after the health endpoint shows v6_1_2_mission_control_ui_live_cleanup. Next recommended phase: apply migration 019 if needed, review Settings cleanup counts, then apply soft-delete cleanup only if safe."
+      : "v6.1.4 Mission Control UX final polish is ready for controlled deploy proof after the health endpoint shows v6_1_4_mission_control_ux_final_polish. Next recommended phase: apply migration 019 if needed, review Settings cleanup counts, then apply soft-delete cleanup only if safe."
   };
 }
 
