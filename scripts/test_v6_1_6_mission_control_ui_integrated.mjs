@@ -99,7 +99,7 @@ for (const forbidden of ["Daniel Tan", "Apex Clinic", "Mock folder", "Placeholde
 }
 
 for (const field of [
-  'version: "v6_1_7_mission_control_ui_refinement"',
+  'version: "v6_1_8_dashboard_compression_zero_state_polish"',
   "missionControlUiIntegrated",
   "julesUiIdeasAppliedByCodex",
   "cockpitGlassmorphismThemeAvailable",
@@ -137,7 +137,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
 }
 
 assert(packageJson.includes('"test:v6.1.6"'), "package.json must expose v6.1.6 test script.");
-assert(packageJson.includes("test_v6_1_7_mission_control_ui_refinement.mjs"), "package.json must wire v6.1.6 test script.");
+assert(packageJson.includes("test_v6_1_6_mission_control_ui_integrated.mjs"), "package.json must wire v6.1.6 test script.");
 assert(exists("docs/V6_1_6_MISSION_CONTROL_UI_INTEGRATED.md"), "v6.1.6 docs must exist.");
 assert(docs.includes("Jules UI ideas") && docs.includes("v6.1.5 follow-up performance"), "v6.1.6 docs must explain scope and preservation.");
 

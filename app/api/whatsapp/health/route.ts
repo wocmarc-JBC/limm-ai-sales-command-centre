@@ -29,9 +29,15 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v6_1_7_mission_control_ui_refinement",
+      version: "v6_1_8_dashboard_compression_zero_state_polish",
       salesBrainVersion: "v6.ultimate",
       runtime: "vercel",
+      scrollableSidebarAvailable: true,
+      usefulMissionRadarAvailable: true,
+      radarPriorityLegendAvailable: true,
+      radarActionButtonAvailable: true,
+      dashboardCompressionAvailable: true,
+      zeroStatePolishAvailable: true,
       missionControlUiRefinementAvailable: true,
       marcusTodayHeroPanelAvailable: true,
       leadHeatMeterAvailable: true,
@@ -192,9 +198,15 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_1_7_mission_control_ui_refinement",
+      version: "v6_1_8_dashboard_compression_zero_state_polish",
       salesBrainVersion: "v6.ultimate",
       runtime: "vercel",
+      scrollableSidebarAvailable: false,
+      usefulMissionRadarAvailable: false,
+      radarPriorityLegendAvailable: false,
+      radarActionButtonAvailable: false,
+      dashboardCompressionAvailable: false,
+      zeroStatePolishAvailable: false,
       missionControlUiRefinementAvailable: false,
       marcusTodayHeroPanelAvailable: false,
       leadHeatMeterAvailable: false,

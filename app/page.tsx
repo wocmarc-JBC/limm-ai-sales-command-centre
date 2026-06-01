@@ -22,6 +22,14 @@ type TodayItem = {
   href: string;
 };
 
+type RadarTone = "gold" | "cyan" | "amber" | "red" | "green" | "slate";
+
+type RadarItem = {
+  label: string;
+  count: number;
+  tone: RadarTone;
+};
+
 function priorityClasses(priority: Priority) {
   return {
     critical: "border-command-red/70 bg-command-red/12 text-command-red",
@@ -29,6 +37,28 @@ function priorityClasses(priority: Priority) {
     medium: "border-command-cyan/55 bg-command-cyan/10 text-command-cyan",
     low: "border-command-line bg-command-card text-command-muted"
   }[priority];
+}
+
+function radarToneClasses(tone: RadarTone) {
+  return {
+    gold: "border-command-gold/60 bg-command-gold/12 text-command-yellow",
+    cyan: "border-command-cyan/60 bg-command-cyan/10 text-command-cyan",
+    amber: "border-command-amber/60 bg-command-amber/10 text-command-amber",
+    red: "border-command-red/60 bg-command-red/10 text-command-red",
+    green: "border-command-green/60 bg-command-green/10 text-command-green",
+    slate: "border-command-line bg-command-card text-command-muted"
+  }[tone];
+}
+
+function radarDotClass(tone: RadarTone) {
+  return {
+    gold: "bg-command-gold",
+    cyan: "bg-command-cyan",
+    amber: "bg-command-amber",
+    red: "bg-command-red",
+    green: "bg-command-green",
+    slate: "bg-command-subtle"
+  }[tone];
 }
 
 function statusText(ok: boolean, enabled = "Online", disabled = "Check") {
@@ -46,6 +76,30 @@ function CompactLink({ href, children }: { href: string; children: React.ReactNo
   );
 }
 
+function SystemCoreStrip({ whatsapp, supabaseMode, emailConfigured }: { whatsapp: ReturnType<typeof getWhatsAppRuntime>; supabaseMode: string; emailConfigured: boolean }) {
+  const statuses = [
+    { label: "WhatsApp", value: statusText(whatsapp.liveInboundEnabled && whatsapp.credentialsReady, "Online", "Check env"), tone: "cyan" as const },
+    { label: "Bot", value: whatsapp.testAutoReplyEnabled ? "Active" : "Paused", tone: "cyan" as const },
+    { label: "Supabase", value: supabaseMode === "Supabase Mode" ? "Live" : "Mock", tone: "green" as const },
+    { label: "Email Handoff", value: emailConfigured ? "On" : "Pending", tone: emailConfigured ? "green" as const : "amber" as const }
+  ];
+
+  return (
+    <section className="mission-panel mb-6 rounded-2xl px-4 py-3">
+      <p className="sr-only">Compact System Core status strip</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">System Core</span>
+        {statuses.map((item) => (
+          <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-command-line bg-command-bg/50 px-3 py-1.5 text-sm text-command-muted">
+            <span className={`h-2.5 w-2.5 rounded-full ${radarDotClass(item.tone)}`} />
+            {item.label}: <strong className="text-command-text">{item.value}</strong>
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MissionCard({ label, value, detail, priority = "medium" }: { label: string; value: number; detail: string; priority?: Priority }) {
   return (
     <article className="mission-panel relative overflow-hidden rounded-2xl p-4">
@@ -57,13 +111,94 @@ function MissionCard({ label, value, detail, priority = "medium" }: { label: str
   );
 }
 
+function MissionRadarPanel({ items, primary }: { items: RadarItem[]; primary: TodayItem | null }) {
+  const activeItems = items.filter((item) => item.count > 0);
+  const radarBlips = activeItems.slice(0, 5);
+  const blipPositions = [
+    "left-1/2 top-4 -translate-x-1/2",
+    "right-5 top-1/3",
+    "bottom-8 right-12",
+    "bottom-8 left-12",
+    "left-5 top-1/3"
+  ];
+  const primaryCount = primary?.count ?? (primary ? 1 : 0);
+  const centerStatus = primary
+    ? `${primaryCount} item${primaryCount === 1 ? "" : "s"} need attention`
+    : "All clear";
+  const centerDetail = primary?.label ?? "No urgent queue";
+
+  return (
+    <section className="mission-panel relative overflow-hidden rounded-3xl p-5 md:p-6">
+      <div className="cockpit-grid absolute inset-0 opacity-50" />
+      <div className="relative">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Mission Radar</p>
+            <h2 className="mt-1 text-3xl font-semibold text-command-text">{centerStatus}</h2>
+          </div>
+          <span className={`w-fit rounded-full border px-3 py-1 text-sm font-semibold ${primary?.priority ? priorityClasses(primary.priority) : "border-command-green/60 bg-command-green/10 text-command-green"}`}>
+            {centerDetail}
+          </span>
+        </div>
+
+        <div className="relative mx-auto mt-6 flex h-80 w-full max-w-[26rem] items-center justify-center rounded-full border border-command-cyan/25 radar-ring">
+          <div className="absolute inset-8 rounded-full border border-command-cyan/15" />
+          <div className="absolute inset-16 rounded-full border border-command-gold/20" />
+          <div className="relative z-10 max-w-[13rem] rounded-3xl border border-command-line bg-command-bg/80 p-4 text-center shadow-command backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-muted">Highest Priority</p>
+            <p className="mt-2 text-2xl font-semibold leading-tight text-command-text">{centerDetail}</p>
+            <p className="mt-2 text-sm text-command-muted">{primary ? primary.reason : "All clear: no urgent queue"}</p>
+          </div>
+          {radarBlips.map((item, index) => (
+            <div
+              key={item.label}
+              className={`absolute ${blipPositions[index]} rounded-full border px-2.5 py-1 text-xs font-semibold shadow-command ${radarToneClasses(item.tone)}`}
+            >
+              {item.count}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-2 text-sm sm:grid-cols-2">
+          {items.map((item) => (
+            <div key={item.label} className="flex items-center justify-between gap-3 rounded-xl border border-command-line bg-command-bg/45 px-3 py-2">
+              <span className="inline-flex items-center gap-2 text-command-muted">
+                <span className={`h-2.5 w-2.5 rounded-full ${radarDotClass(item.tone)}`} />
+                {item.label}
+              </span>
+              <strong className="text-command-text">{item.count}</strong>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2 text-xs font-semibold">
+            <span className="rounded-full border border-command-gold/60 bg-command-gold/10 px-2.5 py-1 text-command-yellow">Gold = Hot / priority</span>
+            <span className="rounded-full border border-command-cyan/60 bg-command-cyan/10 px-2.5 py-1 text-command-cyan">Cyan = system / bot</span>
+            <span className="rounded-full border border-command-amber/60 bg-command-amber/10 px-2.5 py-1 text-command-amber">Amber = follow-up</span>
+            <span className="rounded-full border border-command-red/60 bg-command-red/10 px-2.5 py-1 text-command-red">Red = risk</span>
+            <span className="rounded-full border border-command-green/60 bg-command-green/10 px-2.5 py-1 text-command-green">Green = clear</span>
+          </div>
+          <a
+            href={primary?.href ?? "/leads"}
+            className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover"
+          >
+            {primary?.actionLabel ?? "Open Priority Lead"}
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function MarcusTodayPanel({ items }: { items: TodayItem[] }) {
   return (
     <section className="mission-panel rounded-3xl p-5 md:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Marcus Today</p>
-          <h2 className="mt-1 text-3xl font-semibold text-command-text">What must Marcus do now?</h2>
+          <h2 className="mt-1 text-3xl font-semibold text-command-text">Next Best Action</h2>
+          <p className="sr-only">What must Marcus do now?</p>
           <p className="sr-only">Clear these first</p>
         </div>
         <span className="w-fit rounded-full border border-command-cyan/50 bg-command-cyan/10 px-3 py-1 text-sm font-semibold text-command-cyan">
@@ -137,6 +272,8 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
   const floorPlanReady = leads.filter((lead) => !lead.missingInfo.includes("floor_plan") && /floor plan|drawing|layout|attached|image|photo/i.test(lead.lastClientMessage));
   const priceQuestions = leads.filter((lead) => /how much|rough|price|budget|quotation|quote/i.test(lead.lastClientMessage));
   const riskQuestions = leads.filter((lead) => /hack|hacking|approval|submission|permit|wall|structural|refund|lawyer|complaint/i.test(lead.lastClientMessage) || lead.riskFlags.length > 0);
+  const detectedTestData = leads.filter((lead) => lead.isTest).length;
+  const emailHandoffPending = handoff.configured ? 0 : 1;
 
   const todayItems: TodayItem[] = [
     ...needsMarcus.slice(0, 2).map((lead) => makeLeadItem("Needs Marcus review", "critical", lead, "Open review", needsMarcus.length)),
@@ -177,9 +314,20 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     { label: "Appointment Requests", value: appointmentRequests.length, detail: "Check availability before confirming", priority: "high" as const },
     { label: "Ready for Quotation Review", value: leads.filter((lead) => lead.status === "Quotation Readiness" || lead.quotationReadiness >= 70).length, detail: "Readiness only, no amounts", priority: "medium" as const },
     { label: "Follow-Up Due", value: followUpDue.length, detail: "Clients waiting for follow-up", priority: "medium" as const },
-    { label: "Collections Due", value: 0, detail: "Accounts module on hold", priority: "low" as const },
     { label: "Bot Paused", value: botPaused.length, detail: "Human takeover active", priority: "medium" as const }
+  ].filter((card) => card.value > 0);
+  const allClear = todayItems.length === 0 && missionCards.length === 0;
+  const radarItems: RadarItem[] = [
+    { label: "Hot Leads", count: hotLeads.length, tone: "gold" },
+    { label: "Needs Marcus", count: needsMarcus.length, tone: "red" },
+    { label: "Follow-Up Due", count: followUpDue.length, tone: "amber" },
+    { label: "Appointment Requests", count: appointmentRequests.length, tone: "gold" },
+    { label: "Bot Paused", count: botPaused.length, tone: "cyan" },
+    { label: "Hacking / Approval Risk", count: riskQuestions.length, tone: "red" },
+    { label: "Test Data Detected", count: detectedTestData, tone: "slate" },
+    { label: "Email Handoff Pending", count: emailHandoffPending, tone: handoff.configured ? "green" : "amber" }
   ];
+  const radarPrimary = todayItems[0] ?? null;
 
   return (
     <>
@@ -214,46 +362,25 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
         </div>
       </section>
 
-      <section className="mission-panel relative overflow-hidden rounded-3xl p-6 md:p-8">
-        <div className="cockpit-grid absolute inset-0 opacity-60" />
-        <div className="absolute right-8 top-8 hidden h-36 w-36 rounded-full border border-command-cyan/30 radar-ring opacity-75 lg:block" />
-        <div className="relative max-w-4xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-command-cyan">Command status</p>
-          <h2 className="mt-3 text-4xl font-semibold leading-tight text-command-text md:text-5xl">What must Marcus do now?</h2>
-          <p className="mt-4 text-lg leading-8 text-command-muted">
-            Today&apos;s command priority: {priorityCount} high-priority item{priorityCount === 1 ? "" : "s"} need attention. Pricing automation, Calendar auto-booking, and voice transcription remain off. Deep QA and diagnostics stay in Settings and Reports.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <p className="sr-only">Compact System Core status strip</p>
-            {[
-              ["WhatsApp", statusText(whatsapp.liveInboundEnabled && whatsapp.credentialsReady, "Online", "Check env"), "cyan"],
-              ["Bot", whatsapp.testAutoReplyEnabled ? "Active" : "Paused", "cyan"],
-              ["Supabase", settings.health.mode === "Supabase Mode" ? "Live" : "Mock", "green"],
-              ["Email", handoff.configured ? "Configured" : "Pending", handoff.configured ? "green" : "amber"]
-            ].map(([label, value, tone]) => (
-              <span key={label} className="inline-flex items-center gap-2 rounded-full border border-command-line bg-command-bg/50 px-3 py-1.5 text-sm text-command-muted">
-                <span className={`h-2.5 w-2.5 rounded-full ${tone === "green" ? "bg-command-green" : tone === "amber" ? "bg-command-amber" : "bg-command-cyan"}`} />
-                {label}: <strong className="text-command-text">{value}</strong>
-              </span>
+      <SystemCoreStrip whatsapp={whatsapp} supabaseMode={settings.health.mode} emailConfigured={handoff.configured} />
+
+      <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,30rem)]">
+        <MarcusTodayPanel items={todayItems} />
+        <MissionRadarPanel items={radarItems} primary={radarPrimary} />
+      </section>
+
+      <section className="mt-6">
+        {missionCards.length ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {missionCards.map((card) => (
+              <MissionCard key={card.label} {...card} />
             ))}
           </div>
-        </div>
-      </section>
-
-      <div className="mt-6">
-        <MarcusTodayPanel items={todayItems} />
-      </div>
-
-      <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {missionCards.map((card) => (
-          <MissionCard key={card.label} {...card} />
-        ))}
-      </section>
-
-      <section className="mt-6 grid gap-3 text-base text-command-muted md:grid-cols-3">
-        <div className="mission-panel rounded-2xl p-4">No urgent leads right now when Marcus Today is clear.</div>
-        <div className="mission-panel rounded-2xl p-4">No follow-ups overdue means the active queue is current.</div>
-        <div className="mission-panel rounded-2xl p-4">No appointment requests now unless a lead asks for a slot.</div>
+        ) : (
+          <div className="mission-panel rounded-2xl p-4 text-base text-command-muted">
+            {allClear ? "All clear: no urgent leads, overdue follow-ups, appointment requests, or paused bots right now." : "No mission cards need attention right now."}
+          </div>
+        )}
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(21rem,0.75fr)]">
@@ -287,7 +414,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
               </Link>
             )) : (
               <div className="rounded-2xl border border-command-line bg-command-bg/55 p-5 text-command-muted">
-                No action queue items right now.
+                Action queue clear.
               </div>
             )}
           </div>

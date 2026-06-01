@@ -222,7 +222,7 @@ for (const phrase of [
 }
 
 for (const field of [
-  "version: \"v6_1_7_mission_control_ui_refinement\"",
+  "version: \"v6_1_8_dashboard_compression_zero_state_polish\"",
   "salesBrainVersion: \"v6.ultimate\"",
   "replyCoachAvailable",
   "replyDecisionEngineAvailable",

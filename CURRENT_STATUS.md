@@ -1,5 +1,25 @@
 # Current Status
 
+## v6.1.8 Dashboard Compression + Zero-State Polish
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_1_8_dashboard_compression_zero_state_polish`.
+- Desktop sidebar is independently scrollable while main content scrolls separately.
+- The grand radar visual is preserved and upgraded into a useful Mission Radar panel with operational counts, status, legend, and one contextual action button.
+- Dashboard is compressed into command bar, compact System Core, Marcus Today, Mission Radar, non-zero mission cards, compact action queue, and recent active leads.
+- Duplicate visible `What must Marcus do now?` copy and repeated zero-state cards were removed.
+- Client Files remains Coming Soon only, with no fake folders or upload links.
+- v6.1.5 Follow-Up Queue pagination, filters, button pending states, test cleanup, and cleanup-scan-on-click behavior are preserved.
+
+Current Go/No-Go:
+
+- GO for controlled v6.1.8 deploy proof after push and Vercel health check.
+- GO for visual UI retest after health shows v6.1.8.
+- NO-GO for backend rebuilds, WhatsApp webhook changes, Supabase schema changes, pricing automation, Calendar auto-booking, voice transcription, GST-related invoice wording, or fake Client Files data.
+
 ## v6.1.7 Mission Control UI Refinement
 
 Status: implemented locally; pending push/deploy health proof.

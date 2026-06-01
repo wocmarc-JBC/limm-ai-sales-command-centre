@@ -43,9 +43,9 @@ for (const phrase of [
   "Search lead / phone / scope",
   "Clean Test Data",
   "Compact System Core status strip",
-  "No urgent leads right now",
-  "No follow-ups overdue",
-  "No appointment requests now"
+  "Mission Radar",
+  "All clear: no urgent leads",
+  "Action queue clear."
 ]) {
   assert(dashboard.includes(phrase), `dashboard missing v6.1.7 refinement marker: ${phrase}`);
 }
@@ -100,7 +100,7 @@ for (const forbidden of ["Daniel Tan", "Apex Clinic", "Mock folder", "Placeholde
 }
 
 for (const field of [
-  'version: "v6_1_7_mission_control_ui_refinement"',
+  'version: "v6_1_8_dashboard_compression_zero_state_polish"',
   'salesBrainVersion: "v6.ultimate"',
   "missionControlUiRefinementAvailable",
   "marcusTodayHeroPanelAvailable",

@@ -153,7 +153,7 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-x-0 top-0 z-20 border-b border-command-line bg-command-bg/90 px-4 py-3 shadow-command backdrop-blur-xl md:bottom-0 md:left-0 md:right-auto md:w-64 md:border-b-0 md:border-r md:px-5 md:py-6">
+      <aside className="thin-scrollbar fixed inset-x-0 top-0 z-20 border-b border-command-line bg-command-bg/90 px-4 py-3 shadow-command backdrop-blur-xl md:bottom-0 md:left-0 md:right-auto md:h-screen md:w-64 md:overflow-y-auto md:overscroll-contain md:border-b-0 md:border-r md:px-5 md:py-6">
         <div className="flex items-center justify-between gap-3 md:block">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">LIMM Works</p>
@@ -161,7 +161,7 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
           </div>
           <ShellStatus auth={auth} clientAuthenticated={clientAuthenticated} isTemporaryReviewRoute={isTemporaryReviewRoute} isLoginRoute={isLoginRoute} />
         </div>
-        <nav className="thin-scrollbar mt-4 flex gap-3 overflow-x-auto pb-1 md:mt-8 md:block md:space-y-5 md:overflow-visible md:pb-0">
+        <nav className="thin-scrollbar mt-4 flex gap-3 overflow-x-auto pb-1 md:mt-8 md:block md:space-y-5 md:overflow-visible md:pb-6">
           {isTemporaryReviewRoute
             ? reviewNavItems.map((item) => (
                 <a

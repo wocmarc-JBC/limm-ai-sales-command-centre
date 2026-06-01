@@ -191,7 +191,7 @@ for (const file of sourceFiles) {
 
 const source = sourceFiles.filter(exists).map(read).join("\n") + read("lib/adapters/whatsapp-adapter.ts") + read(".env.example");
 const staticChecks = [
-  ["health_version", /version:\s*"v6_1_7_mission_control_ui_refinement"/],
+  ["health_version", /version:\s*"v6_1_8_dashboard_compression_zero_state_polish"/],
   ["truth_gate", /contextTruthGateAvailable/],
   ["singapore_brain", /singaporeRenovationMeaningBrainAvailable/],
   ["quality_judge", /replyQualityJudgeAvailable/],
