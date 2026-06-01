@@ -135,6 +135,22 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
     if (typeof value === "string" && value) return humanizeLabel(value);
     return fallback;
   };
+  const commandTimeline = [
+    ...leadMessages.slice(0, 5).map((message) => ({
+      id: `message-${message.id}`,
+      at: message.createdAt,
+      title: message.direction === "inbound" ? "Client message received" : "Bot reply recorded",
+      detail: message.body || "Message body not available"
+    })),
+    ...whatsappAuditTrail.slice(0, 5).map((entry) => ({
+      id: `audit-${entry.id}`,
+      at: entry.createdAt,
+      title: humanizeLabel(entry.action),
+      detail: entry.summary || "Audit event recorded"
+    }))
+  ]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 6);
 
   return (
     <>
@@ -293,6 +309,32 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             ))}
           </div>
         </aside>
+      </section>
+      <section className="mission-panel mt-6 rounded-2xl p-5 md:p-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Command Timeline</p>
+            <h2 className="mt-1 text-2xl font-semibold text-command-text">Recent activity</h2>
+          </div>
+          <span className="w-fit rounded-full border border-command-line bg-command-bg/55 px-3 py-1 text-sm text-command-muted">
+            Latest {commandTimeline.length || 0}
+          </span>
+        </div>
+        <div className="mt-5 space-y-3">
+          {commandTimeline.length ? commandTimeline.map((item) => (
+            <div key={item.id} className="grid gap-3 rounded-2xl border border-command-line bg-command-bg/55 p-4 md:grid-cols-[10rem_1fr]">
+              <p className="text-sm font-semibold text-command-muted">{item.at}</p>
+              <div>
+                <p className="font-semibold text-command-text">{item.title}</p>
+                <p className="mt-1 line-clamp-2 text-sm leading-6 text-command-muted">{item.detail}</p>
+              </div>
+            </div>
+          )) : (
+            <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4 text-command-muted">
+              No recent activity yet. New WhatsApp messages, bot replies, and audit events will appear here once recorded.
+            </div>
+          )}
+        </div>
       </section>
       <section className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
         <div className="flex flex-wrap items-start justify-between gap-4">

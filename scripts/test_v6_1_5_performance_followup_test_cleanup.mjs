@@ -133,7 +133,7 @@ assert(leadsRepo.includes("scoreTestLead") && leadsRepo.includes("!options?.incl
 assert(reports.includes("listFollowUps()"), "Reports must read follow-ups through repository defaults so test/completed rows remain filtered.");
 
 for (const field of [
-  'version: "v6_1_6_mission_control_ui_integrated"',
+  'version: "v6_1_7_mission_control_ui_refinement"',
   "followUpQueuePaginationAvailable",
   "followUpButtonsFixed",
   "testFollowUpsHiddenByDefault",

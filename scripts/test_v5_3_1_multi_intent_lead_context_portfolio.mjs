@@ -191,7 +191,7 @@ for (const phrase of [
 }
 
 for (const field of [
-  "version: \"v6_1_6_mission_control_ui_integrated\"",
+  "version: \"v6_1_7_mission_control_ui_refinement\"",
   "salesBrainVersion: \"v6.ultimate\"",
   "multiIntentDetectorAvailable",
   "combinedReplyComposerAvailable",

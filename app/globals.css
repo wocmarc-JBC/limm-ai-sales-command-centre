@@ -108,3 +108,15 @@ textarea {
   background-size: 40px 40px, 40px 40px, auto;
   mask-image: radial-gradient(circle at 70% 20%, rgba(0, 0, 0, 0.72), transparent 70%);
 }
+
+.command-hover-lift {
+  transform: translateY(0);
+}
+
+.command-hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.command-press:active {
+  transform: translateY(1px) scale(0.99);
+}

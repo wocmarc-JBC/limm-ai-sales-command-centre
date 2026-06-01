@@ -24,6 +24,38 @@ function chips(items: string[], fallback: string) {
   ));
 }
 
+function leadHeatTone(lead: Lead) {
+  const score = Number.isFinite(lead.leadScore) ? lead.leadScore : null;
+  const risk = lead.riskFlags.length > 0 || lead.leadLevel === "Risk Lead";
+  if (risk) return { label: "Risk", color: "bg-command-red", text: "text-command-red" };
+  if (score !== null && score >= 70) return { label: "Hot", color: "bg-command-gold", text: "text-command-yellow" };
+  if (score !== null && score >= 40) return { label: "Warm", color: "bg-command-amber", text: "text-command-amber" };
+  return { label: "Cold", color: "bg-command-subtle", text: "text-command-muted" };
+}
+
+function LeadHeatMeter({ lead }: { lead: Lead }) {
+  if (!Number.isFinite(lead.leadScore)) return null;
+  const score = Math.max(0, Math.min(100, lead.leadScore));
+  const filled = Math.max(1, Math.ceil(score / 10));
+  const tone = leadHeatTone(lead);
+  return (
+    <div className="mt-4 rounded-2xl border border-command-line bg-command-bg/55 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-command-muted">Lead Heat</p>
+        <p className={`text-sm font-semibold ${tone.text}`}>{tone.label} {score}%</p>
+      </div>
+      <div className="mt-3 grid grid-cols-10 gap-1" aria-label={`Lead Heat ${score}%`}>
+        {Array.from({ length: 10 }, (_, index) => (
+          <span
+            key={index}
+            className={`h-2.5 rounded-full ${index < filled ? tone.color : "bg-command-line/45"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function LeadCard({ lead }: { lead: Lead }) {
   const next = getNextBestAction(lead);
   const booking = evaluateBookingReadiness({ lead, latestText: lead.lastClientMessage });
@@ -36,7 +68,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const stage = booking.appointmentIntent ? "Appointment requested" : lead.status;
 
   return (
-    <article className="mission-panel rounded-2xl p-5 transition hover:border-command-cyan/70 hover:shadow-glow">
+    <article className="mission-panel command-hover-lift rounded-2xl p-5 transition hover:border-command-cyan/70 hover:shadow-glow">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -75,6 +107,8 @@ export function LeadCard({ lead }: { lead: Lead }) {
         </div>
       </div>
 
+      <LeadHeatMeter lead={lead} />
+
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Next Action</p>
@@ -99,13 +133,13 @@ export function LeadCard({ lead }: { lead: Lead }) {
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link href={`/leads/${lead.id}`} className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
-          Open
+        <Link href={`/leads/${lead.id}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
+          Open Lead
         </Link>
-        <Link href={`/leads/${lead.id}#bot-controls`} className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+        <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
           Take Over
         </Link>
-        <Link href={`/leads/${lead.id}#bot-controls`} className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+        <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
           Pause Bot
         </Link>
       </div>

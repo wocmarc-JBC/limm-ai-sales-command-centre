@@ -203,11 +203,13 @@ for (const required of [
   "scripts/test_v6_1_4_mission_control_ux_final_polish.mjs",
   "scripts/test_v6_1_5_performance_followup_test_cleanup.mjs",
   "scripts/test_v6_1_6_mission_control_ui_integrated.mjs",
+  "scripts/test_v6_1_7_mission_control_ui_refinement.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
   "docs/V6_1_2_MISSION_CONTROL_UI_LIVE_CLEANUP.md",
   "docs/V6_1_4_MISSION_CONTROL_UX_FINAL_POLISH.md",
   "docs/V6_1_5_PERFORMANCE_FOLLOWUP_TEST_CLEANUP.md",
   "docs/V6_1_6_MISSION_CONTROL_UI_INTEGRATED.md",
+  "docs/V6_1_7_MISSION_CONTROL_UI_REFINEMENT.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
   "supabase/migrations/019_v6_ultimate_command_centre.sql"
 ]) {
@@ -417,8 +419,17 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
-  "version: \"v6_1_6_mission_control_ui_integrated\"",
+  "version: \"v6_1_7_mission_control_ui_refinement\"",
   "salesBrainVersion: \"v6.ultimate\"",
+  "missionControlUiRefinementAvailable",
+  "marcusTodayHeroPanelAvailable",
+  "leadHeatMeterAvailable",
+  "stickyTopCommandBarAvailable",
+  "compactSystemCoreAvailable",
+  "commandTimelineAvailable",
+  "emptyStatesPolished",
+  "microInteractionsAvailable",
+  "colourHierarchyRefined",
   "missionControlUiIntegrated",
   "julesUiIdeasAppliedByCodex",
   "cockpitGlassmorphismThemeAvailable",
@@ -683,6 +694,7 @@ assert(pkg.devDependencies?.["@playwright/test"], "package.json missing Playwrig
 assert(pkg.scripts?.["test:v6.1"], "package.json missing v6.1 UI/cleanup test script.");
 assert(pkg.scripts?.["test:v6.1.5"], "package.json missing v6.1.5 performance/follow-up cleanup test script.");
 assert(pkg.scripts?.["test:v6.1.6"], "package.json missing v6.1.6 Mission Control UI integration test script.");
+assert(pkg.scripts?.["test:v6.1.7"], "package.json missing v6.1.7 Mission Control UI refinement test script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);
 }

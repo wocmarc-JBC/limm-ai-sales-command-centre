@@ -1,25 +1,39 @@
 # Current Status
 
-## v6.1.6 Mission Control UI Integrated
+## v6.1.7 Mission Control UI Refinement
 
 Status: implemented locally; pending push/deploy health proof.
 
 What changed:
 
-- Health endpoint target is now `v6_1_6_mission_control_ui_integrated`.
-- Jules UI direction was integrated directly by Codex on top of v6.1.5.
-- Dashboard keeps the Mission Control cockpit layout with radar-grid/glassmorphism styling.
-- Sidebar remains grouped into Command, Sales, Accounts, Operations, and System.
-- Marcus Today, Main Action Queue, Recent WhatsApp Leads, Quick Actions, and compact System Core remain the primary dashboard flow.
-- Lead cards now show full phone numbers in protected app views.
+- Health endpoint target is now `v6_1_7_mission_control_ui_refinement`.
+- Marcus Today is limited to the top five real priorities and remains the first useful dashboard section.
+- Focus Mode, sticky command bar, compact System Core, and polished empty states make the dashboard calmer.
+- Lead cards now include a subtle Lead Heat Meter, stronger next-action hierarchy, full phone number, and clearer quick actions.
+- Lead detail now includes a compact Command Timeline / recent activity section.
 - Client Files remains Coming Soon only, with no fake folders or upload links.
 - v6.1.5 Follow-Up Queue pagination, filters, button pending states, test cleanup, and cleanup-scan-on-click behavior are preserved.
 
 Current Go/No-Go:
 
-- GO for controlled v6.1.6 deploy proof after push and Vercel health check.
-- GO for visual UI retest after health shows v6.1.6.
-- NO-GO for backend rebuilds, WhatsApp webhook changes, Supabase schema changes, pricing automation, Calendar auto-booking, voice transcription, GST/Tax Invoice wording, or fake Client Files data.
+- GO for controlled v6.1.7 deploy proof after push and Vercel health check.
+- GO for visual UI retest after health shows v6.1.7.
+- NO-GO for backend rebuilds, WhatsApp webhook changes, Supabase schema changes, pricing automation, Calendar auto-booking, voice transcription, GST-related invoice wording, or fake Client Files data.
+
+## v6.1.6 Mission Control UI Integrated
+
+Status: implemented and pushed.
+
+What changed:
+
+- Health endpoint target moved to `v6_1_6_mission_control_ui_integrated`.
+- Jules UI direction was integrated directly by Codex on top of v6.1.5.
+- Dashboard kept the Mission Control cockpit layout with radar-grid/glassmorphism styling.
+- Sidebar remained grouped into Command, Sales, Accounts, Operations, and System.
+- Marcus Today, Main Action Queue, Recent WhatsApp Leads, Quick Actions, and compact System Core remained the primary dashboard flow.
+- Lead cards show full phone numbers in protected app views.
+- Client Files remained Coming Soon only, with no fake folders or upload links.
+- v6.1.5 Follow-Up Queue pagination, filters, button pending states, test cleanup, and cleanup-scan-on-click behavior were preserved.
 
 ## v6.1.5 Performance + Follow-Up Button Fix + Live Test Cleanup
 

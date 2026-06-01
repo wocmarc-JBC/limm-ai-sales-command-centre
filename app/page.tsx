@@ -17,6 +17,7 @@ type TodayItem = {
   label: string;
   priority: Priority;
   reason: string;
+  count?: number;
   actionLabel: string;
   href: string;
 };
@@ -62,10 +63,11 @@ function MarcusTodayPanel({ items }: { items: TodayItem[] }) {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Marcus Today</p>
-          <h2 className="mt-1 text-3xl font-semibold text-command-text">Clear these first</h2>
+          <h2 className="mt-1 text-3xl font-semibold text-command-text">What must Marcus do now?</h2>
+          <p className="sr-only">Clear these first</p>
         </div>
         <span className="w-fit rounded-full border border-command-cyan/50 bg-command-cyan/10 px-3 py-1 text-sm font-semibold text-command-cyan">
-          {items.length} mission{items.length === 1 ? "" : "s"}
+          Top {Math.min(items.length, 5)} priorit{items.length === 1 ? "y" : "ies"}
         </span>
       </div>
 
@@ -83,6 +85,11 @@ function MarcusTodayPanel({ items }: { items: TodayItem[] }) {
                     {item.priority}
                   </span>
                   <p className="text-lg font-semibold text-command-text">{item.label}</p>
+                  {item.count !== undefined ? (
+                    <span className="rounded-full border border-command-line bg-command-card px-2.5 py-1 text-xs font-semibold text-command-muted">
+                      {item.count}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-2 text-base leading-7 text-command-muted">{item.reason}</p>
               </div>
@@ -101,11 +108,12 @@ function MarcusTodayPanel({ items }: { items: TodayItem[] }) {
   );
 }
 
-function makeLeadItem(label: string, priority: Priority, lead: Lead, actionLabel = "Open lead"): TodayItem {
+function makeLeadItem(label: string, priority: Priority, lead: Lead, actionLabel = "Open lead", count?: number): TodayItem {
   return {
     label,
     priority,
     reason: `${formatLeadDisplayName(lead)} - ${leadSubtitle(lead)}`,
+    count,
     actionLabel,
     href: `/leads/${lead.id}`
   };
@@ -131,27 +139,21 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
   const riskQuestions = leads.filter((lead) => /hack|hacking|approval|submission|permit|wall|structural|refund|lawyer|complaint/i.test(lead.lastClientMessage) || lead.riskFlags.length > 0);
 
   const todayItems: TodayItem[] = [
-    ...needsMarcus.slice(0, 2).map((lead) => makeLeadItem("Needs Marcus review", "critical", lead)),
-    ...appointmentRequests.slice(0, 2).map((lead) => makeLeadItem("Confirm appointment request", "high", lead, "Check slot")),
-    ...floorPlanReady.slice(0, 1).map((lead) => makeLeadItem("Review floor plan", "high", lead)),
+    ...needsMarcus.slice(0, 2).map((lead) => makeLeadItem("Needs Marcus review", "critical", lead, "Open review", needsMarcus.length)),
+    ...appointmentRequests.slice(0, 2).map((lead) => makeLeadItem("Confirm appointment request", "high", lead, "Check slot", appointmentRequests.length)),
+    ...floorPlanReady.slice(0, 1).map((lead) => makeLeadItem("Review floor plan", "high", lead, "Open lead", floorPlanReady.length)),
     ...followUpDue.slice(0, 1).map((item) => ({
       label: "Follow up client",
       priority: "medium" as const,
       reason: `${item.clientName} - ${item.followupType}`,
+      count: followUpDue.length,
       actionLabel: "Open follow-ups",
       href: "/followups"
     })),
-    ...priceQuestions.slice(0, 1).map((lead) => makeLeadItem("Price question needs safe review", "high", lead)),
-    ...riskQuestions.slice(0, 1).map((lead) => makeLeadItem("Hacking / approval risk", "critical", lead)),
-    ...botPaused.slice(0, 1).map((lead) => makeLeadItem("Bot paused", "medium", lead, "Review bot")),
-    {
-      label: "Cleanup test data",
-      priority: "low" as const,
-      reason: "Run cleanup scan only from Settings when Marcus is ready.",
-      actionLabel: "Scan cleanup",
-      href: "/settings?cleanup=scan#test-lead-cleanup"
-    }
-  ].filter((item): item is TodayItem => Boolean(item)).slice(0, 7);
+    ...priceQuestions.slice(0, 1).map((lead) => makeLeadItem("Price question needs safe review", "high", lead, "Open lead", priceQuestions.length)),
+    ...riskQuestions.slice(0, 1).map((lead) => makeLeadItem("Hacking / approval risk", "critical", lead, "Open lead", riskQuestions.length)),
+    ...botPaused.slice(0, 1).map((lead) => makeLeadItem("Bot paused", "medium", lead, "Review bot", botPaused.length))
+  ].filter((item): item is TodayItem => Boolean(item)).slice(0, 5);
 
   const actionQueue = leads
     .map((lead) => ({ lead, next: getNextBestAction(lead) }))
@@ -188,7 +190,8 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
         </span>
       </PageHeader>
 
-      <section className="mission-panel mb-6 rounded-3xl p-4">
+      <section className="mission-panel sticky top-3 z-20 mb-6 rounded-3xl p-4 shadow-command">
+        <p className="sr-only">Sticky top command bar</p>
         <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
             <input
@@ -221,6 +224,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
             Today&apos;s command priority: {priorityCount} high-priority item{priorityCount === 1 ? "" : "s"} need attention. Pricing automation, Calendar auto-booking, and voice transcription remain off. Deep QA and diagnostics stay in Settings and Reports.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
+            <p className="sr-only">Compact System Core status strip</p>
             {[
               ["WhatsApp", statusText(whatsapp.liveInboundEnabled && whatsapp.credentialsReady, "Online", "Check env"), "cyan"],
               ["Bot", whatsapp.testAutoReplyEnabled ? "Active" : "Paused", "cyan"],
@@ -244,6 +248,12 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
         {missionCards.map((card) => (
           <MissionCard key={card.label} {...card} />
         ))}
+      </section>
+
+      <section className="mt-6 grid gap-3 text-base text-command-muted md:grid-cols-3">
+        <div className="mission-panel rounded-2xl p-4">No urgent leads right now when Marcus Today is clear.</div>
+        <div className="mission-panel rounded-2xl p-4">No follow-ups overdue means the active queue is current.</div>
+        <div className="mission-panel rounded-2xl p-4">No appointment requests now unless a lead asks for a slot.</div>
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(21rem,0.75fr)]">
