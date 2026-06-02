@@ -31,6 +31,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.4.8"
 // version: "v6_4_9_singapore_map_smooth_zoom_wheel_lock"
 // salesBrainVersion: "v6.4.9"
+// version: "v6_4_10_singapore_map_interaction_copy_cleanup"
+// salesBrainVersion: "v6.4.10"
 // version: "v6_5_smart_lead_intake_meeting_prep"
 // salesBrainVersion: "v6.5"
 // version: "v6_5_1_accurate_singapore_map_refinement"
@@ -57,9 +59,10 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_4_9_singapore_map_smooth_zoom_wheel_lock",
-      salesBrainVersion: "v6.4.9",
+      version: "v6_4_10_singapore_map_interaction_copy_cleanup",
+      salesBrainVersion: "v6.4.10",
       runtime: "vercel",
+      mapDefaultZoomStartsAt100: true,
       mapSmoothZoomControlsAvailable: true,
       mapResetClearsPanSelectionTooltip: true,
       mapWheelZoomAvailable: true,
@@ -67,6 +70,13 @@ export async function GET() {
       mapWheelListenerPassiveFalse: true,
       mapDefaultFitImproved: true,
       mapHorizontalSpaceOptimized: true,
+      mapResetClearsSelection: true,
+      mapFilterEmptyStatePolished: true,
+      mapTopLeftCopyDeduped: true,
+      mapHelperTextMovedToBottom: true,
+      mapNoStackedStatusLabels: true,
+      mapInspectorPanelAvailable: true,
+      mapHqMarkerScalePolished: true,
       mapResetButtonFixed: true,
       mapResetRestoresDefaultFit: true,
       mapZoomControlsReliable: true,
@@ -322,9 +332,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_9_singapore_map_smooth_zoom_wheel_lock",
-      salesBrainVersion: "v6.4.9",
+      version: "v6_4_10_singapore_map_interaction_copy_cleanup",
+      salesBrainVersion: "v6.4.10",
       runtime: "vercel",
+      mapDefaultZoomStartsAt100: false,
       mapSmoothZoomControlsAvailable: false,
       mapResetClearsPanSelectionTooltip: false,
       mapWheelZoomAvailable: false,
@@ -332,6 +343,13 @@ export async function GET() {
       mapWheelListenerPassiveFalse: false,
       mapDefaultFitImproved: false,
       mapHorizontalSpaceOptimized: false,
+      mapResetClearsSelection: false,
+      mapFilterEmptyStatePolished: false,
+      mapTopLeftCopyDeduped: false,
+      mapHelperTextMovedToBottom: false,
+      mapNoStackedStatusLabels: false,
+      mapInspectorPanelAvailable: false,
+      mapHqMarkerScalePolished: false,
       mapResetButtonFixed: false,
       mapResetRestoresDefaultFit: false,
       mapZoomControlsReliable: false,

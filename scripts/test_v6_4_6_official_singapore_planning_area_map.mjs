@@ -181,7 +181,7 @@ for (const label of [
 assert(geoMap.includes("data-official-planning-area-map") && geoMap.includes("data-map-fit=\"geojson-bounds\""), "GeoJSON renderer must expose official source and fit-to-bounds proof.");
 assert(missionMap.includes("SINGAPORE_AREA_LABELS.filter") && missionMap.includes("data-planning-area"), "Mission map labels must render only bounded polygon-derived labels.");
 assert(missionMap.includes("No mapped leads yet"), "Compact no-data badge must remain.");
-assert(!missionMap.includes("Add property area or postal code to activate location intelligence."), "Large/helper empty-state copy must be removed from the map area.");
+assert(missionMap.includes("data-testid=\"map-location-helper\"") && missionMap.includes("Add property area or postal code to activate location intelligence."), "Small helper copy should live below the map, not as a large blocking overlay.");
 assert(missionMap.includes("data-testid=\"map-zoom-in\"") && missionMap.includes("data-testid=\"map-zoom-reset\""), "Zoom/reset controls must remain.");
 assert(missionMap.includes("Gold = won / hot lead") && missionMap.includes("Amber = follow-up / appointment"), "Legend must remain.");
 assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(geoMap + missionMap + geometry), "No external map/geocoding dependency should be added.");

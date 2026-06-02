@@ -121,6 +121,7 @@ const requiredScripts = [
   "scripts/test_v6_4_6_official_singapore_planning_area_map.mjs",
   "scripts/test_v6_4_8_singapore_map_interaction_final_polish.mjs",
   "scripts/test_v6_4_9_singapore_map_smooth_zoom_wheel_lock.mjs",
+  "scripts/test_v6_4_10_singapore_map_interaction_copy_cleanup.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs"
 ];
@@ -214,7 +215,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v6.4.9 Singapore Map Smooth Zoom + Wheel Lock is ready for controlled deploy proof after the health endpoint shows v6_4_9_singapore_map_smooth_zoom_wheel_lock. Next recommended phase: Marcus should visually verify mouse wheel zoom does not scroll the page while over the map, plus/minus zoom feels smooth, reset clears pan/selection/tooltips, HQ and pins stay aligned, the official URA/data.gov.sg planning-area geometry fills the panel better, and no external map API appears."
+      : "v6.4.10 Singapore Map Interaction + Copy Cleanup is ready for controlled deploy proof after the health endpoint shows v6_4_10_singapore_map_interaction_copy_cleanup. Next recommended phase: Marcus should visually verify the map starts at 100%, top-left copy is not stacked, helper text is subtle, mouse wheel zoom does not scroll the page while over the map, plus/minus zoom feels smooth, reset clears pan/selection/tooltips, HQ and pins stay aligned, filters show one subtle empty state, and no external map API appears."
   };
 }
 

@@ -29,6 +29,17 @@ const maxZoom = 4;
 const zoomStep = 0.25;
 const wheelZoomStep = 0.12;
 const panLimitPerZoom = 220;
+const genericFilterEmptyStateText = "No mapped items for this filter.";
+const filterEmptyStateLabels: Record<MissionMapFilter, string> = {
+  all: "No mapped leads yet",
+  leads: "No mapped leads yet",
+  hot: "No mapped hot leads yet",
+  won: "No mapped won jobs yet",
+  site_visits: "No mapped appointments yet",
+  followups: "No mapped follow-ups yet",
+  collections: "No mapped collections yet",
+  overdue: "No mapped risks yet"
+};
 
 function projectPoint(pin: Pick<MissionMapPin, "lat" | "lng">) {
   return projectSingaporeCoordinate(pin);
@@ -115,6 +126,9 @@ export function SingaporeMissionMap({
   const hqPosition = useMemo(() => projectPoint(limmHqLocation), []);
   const canZoomOut = zoom > minZoom;
   const canZoomIn = zoom < maxZoom;
+  const showFilterEmptyState = activeFilter !== "all" && !hasFilteredMapData;
+  const mapStatusBadge = showFilterEmptyState ? filterEmptyStateLabels[activeFilter] : !hasMapData ? "No mapped leads yet" : "";
+  const showLocationHelper = !hasMapData || showFilterEmptyState;
 
   const updateZoom = useCallback((nextZoom: number) => {
     const bounded = boundedZoom(nextZoom);
@@ -252,10 +266,15 @@ export function SingaporeMissionMap({
           data-min-zoom={minZoom}
           data-max-zoom={maxZoom}
           data-zoom-step={zoomStep}
+          data-default-zoom-starts-at-100="true"
           data-wheel-zoom="native-passive-false"
           data-wheel-page-scroll-lock="true"
           data-default-fit-improved="true"
           data-horizontal-space-optimized="true"
+          data-map-top-left-copy-deduped="true"
+          data-map-no-stacked-status-labels="true"
+          data-map-helper-text-position="below-map"
+          data-filter-empty-state-copy={genericFilterEmptyStateText}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
@@ -291,17 +310,18 @@ export function SingaporeMissionMap({
 
             <button
               type="button"
-              className="singapore-hq-marker limm-hq-marker absolute z-30 -translate-x-1/2 -translate-y-1/2"
+              className="singapore-hq-marker limm-hq-marker map-hq-marker-compact absolute z-30 -translate-x-1/2 -translate-y-1/2"
               data-testid="limm-hq-marker"
+              data-hq-marker-scale-polished="true"
               style={hqPosition}
               title={limmHqLocation.title}
               aria-pressed={hqSelected}
               onClick={selectHq}
             >
               <div className="relative flex items-center justify-center">
-                <span className="absolute h-10 w-10 rounded-full border border-[#FFD54A]/40 bg-[#FFD54A]/10 shadow-[0_0_24px_rgba(255,213,74,0.34)]" />
-                <span className="relative h-4 w-4 rounded-full border-2 border-black bg-[#FFD54A] shadow-command" />
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-[#FFD54A]/40 bg-command-bg/78 px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[#FFD54A] backdrop-blur">
+                <span className="absolute h-8 w-8 rounded-full border border-[#FFD54A]/35 bg-[#FFD54A]/10 shadow-[0_0_18px_rgba(255,213,74,0.28)]" />
+                <span className="relative h-3 w-3 rounded-full border-2 border-black bg-[#FFD54A] shadow-command" />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-[#FFD54A]/35 bg-command-bg/78 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.14em] text-[#FFD54A] backdrop-blur">
                   {limmHqLocation.label}
                 </span>
               </div>
@@ -378,24 +398,17 @@ export function SingaporeMissionMap({
               Reset
             </button>
           </div>
-          <div className="absolute left-3 top-3 z-30 rounded-full border border-command-line bg-command-bg/64 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur" data-testid="map-wheel-zoom-affordance">
-            Scroll to zoom map
+          <div className="absolute right-3 top-14 z-40 rounded-full border border-command-line bg-command-bg/60 px-3 py-1 text-[0.63rem] font-semibold uppercase tracking-[0.14em] text-command-muted backdrop-blur" data-testid="map-wheel-zoom-affordance">
+            Scroll to zoom map - Drag to pan - Click zones or pins
           </div>
 
-          {!hasMapData ? (
-            <>
-              <div className="absolute left-3 top-11 z-30 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur">
-                No mapped leads yet
-              </div>
-              <p className="absolute left-4 top-20 z-30 max-w-[18rem] text-xs leading-5 text-command-muted/70">
-                Area-level only. Add area or postal details to place live work.
-              </p>
-            </>
-          ) : null}
-
-          {activeFilter !== "all" && !hasFilteredMapData ? (
-            <div className="absolute left-3 top-14 z-30 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur">
-              No mapped items for this filter.
+          {mapStatusBadge ? (
+            <div
+              className="absolute left-3 top-3 z-30 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur"
+              data-testid="map-status-badge"
+              data-top-left-map-status-badge="single"
+            >
+              {mapStatusBadge}
             </div>
           ) : null}
 
@@ -433,8 +446,37 @@ export function SingaporeMissionMap({
           </div>
         </div>
 
+        {showLocationHelper ? (
+          <p className="mt-2 text-xs leading-5 text-command-muted/70" data-testid="map-location-helper">
+            Add property area or postal code to activate location intelligence.
+          </p>
+        ) : null}
+
         <div className="map-area-summary-panel mt-5 rounded-2xl border border-command-line bg-command-bg/55 p-4" data-testid="map-area-summary-panel">
-          {inspectedArea ? (
+          {selectedPin ? (
+            <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center" data-testid="map-inspector-pin">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-command-cyan">Selected Pin</p>
+                <h3 className="mt-1 text-2xl font-semibold text-command-text">{selectedPin.label}</h3>
+                <p className="mt-2 text-sm text-command-muted">{selectedPin.type.replace(/_/g, " ")} - {selectedPin.area}</p>
+                <p className="mt-1 text-sm text-command-muted">{selectedPin.description}</p>
+              </div>
+              {selectedPin.href ? (
+                <a href={selectedPin.href} className="w-fit rounded-xl border border-command-cyan/45 bg-command-cyan/10 px-3 py-2 text-sm font-semibold text-command-cyan hover:border-command-cyan">
+                  Open item
+                </a>
+              ) : null}
+            </div>
+          ) : hqSelected ? (
+            <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center" data-testid="map-inspector-hq">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#FFD54A]">HQ Marker</p>
+                <h3 className="mt-1 text-2xl font-semibold text-command-text">LIMM HQ</h3>
+                <p className="mt-2 text-sm text-command-muted">Postal: 228397</p>
+                <p className="mt-1 text-sm text-command-muted">Office base marker only. Not a lead pin.</p>
+              </div>
+            </div>
+          ) : inspectedArea ? (
             <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-command-cyan">

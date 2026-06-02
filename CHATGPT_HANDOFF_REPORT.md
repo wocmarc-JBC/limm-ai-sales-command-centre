@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-v6.4.9 Singapore Map Smooth Zoom + Wheel Lock added on top of the official URA/data.gov.sg planning-area map, v6.4.8 interaction polish, v6.5 Smart Lead Intake, v6.4.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.
+v6.4.10 Singapore Mission Map Interaction + Copy Cleanup added on top of the official URA/data.gov.sg planning-area map, v6.4.9 smooth zoom / wheel lock, v6.4.8 interaction polish, v6.5 Smart Lead Intake, v6.4.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.
 
 ## Latest Report
 
-`docs/V6_4_9_SINGAPORE_MAP_SMOOTH_ZOOM_WHEEL_LOCK.md`, `docs/V6_4_8_SINGAPORE_MAP_INTERACTION_FINAL_POLISH.md`, `docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md`, `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`, `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`, `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`, `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`, `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
+`docs/V6_4_10_SINGAPORE_MAP_INTERACTION_COPY_CLEANUP.md`, `docs/V6_4_9_SINGAPORE_MAP_SMOOTH_ZOOM_WHEEL_LOCK.md`, `docs/V6_4_8_SINGAPORE_MAP_INTERACTION_FINAL_POLISH.md`, `docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md`, `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`, `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`, `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`, `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`, `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
 
 ## Tests / Audit Status
 
@@ -38,6 +38,7 @@ Browser QA: Playwright browser QA did not complete.
 - v6.4.6 commits the official URA/data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea) geometry after Marcus ran the downloader locally.
 - v6.4.8 fixes the map reset/zoom interaction layer, tightens default fit, adds selected area/pin/HQ summaries, keeps filters meaningful, and preserves the official geometry.
 - v6.4.9 smooths map zoom, adds a non-passive wheel zoom lock so the page does not scroll while Marcus zooms the map, increases max zoom to 400%, and optimizes the official map fit without cropping.
+- v6.4.10 keeps the map default zoom at 100%, removes stacked top-left map copy, moves helper text below the map, polishes filter empty states, and adds pin/HQ inspector feedback.
 - v6.5 adds Smart Lead Intake, missing-info detection, a 3-5 next-question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness, Proposal Readiness, lead profile storage, and audit trace.
 - v6.5.1 refines the Singapore map with a more accurate local static outline, calibrated HQ marker around Orchard/Dhoby Ghaut, smaller island-shaped Sentosa, faint area labels, and no large helper box.
 - Question bank replies include non-repetition handling, escalation rules, and audit metadata.
@@ -60,12 +61,12 @@ Report: not generated.
 
 ## Next Recommended Action
 
-Push the v6.4.9 smooth zoom / wheel lock patch, wait for Vercel, confirm health shows `v6_4_9_singapore_map_smooth_zoom_wheel_lock`, then visually retest wheel zoom without page scroll, reset, zoom plus/minus, pan, HQ tooltip, area/pin summaries, filters, privacy-safe display, and WhatsApp continuity.
+Push the v6.4.10 interaction/copy cleanup patch, wait for Vercel, confirm health shows `v6_4_10_singapore_map_interaction_copy_cleanup`, then visually retest 100% default zoom, no stacked top-left copy, subtle helper text, wheel zoom without page scroll, reset, zoom plus/minus, pan, HQ/pin inspector, filters, privacy-safe display, and WhatsApp continuity.
 
 ## Marcus Paste Block For ChatGPT
 
 ```text
-We are continuing LIMM AI Sales Command Centre after v6.4.9 Singapore Map Smooth Zoom + Wheel Lock.
+We are continuing LIMM AI Sales Command Centre after v6.4.10 Singapore Mission Map Interaction + Copy Cleanup.
 Latest Dev Brain QA status: UNKNOWN.
 Playwright browser QA did not complete.
 Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
@@ -86,8 +87,9 @@ v6.4.5 replaces the hand-drawn map path with a local real Singapore GeoJSON asse
 v6.4.6 commits the official URA/data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea) geometry after Marcus ran the downloader locally.
 v6.4.8 fixes reset and zoom interaction, tightens the default official-map fit, adds area/pin/HQ summaries, keeps filters meaningful, and preserves privacy-safe local-only map rendering.
 v6.4.9 smooths map zoom, adds a non-passive wheel zoom lock so scrolling over the map zooms the map instead of the page, increases max zoom to 400%, and improves horizontal map fill without cropping.
+v6.4.10 keeps default zoom at 100%, removes stacked top-left map copy, moves helper text below the map, polishes filter empty states, and adds pin/HQ inspector feedback while preserving official geometry.
 v6.5 adds Smart Lead Intake, missing-info detection, a 3-5 next-question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness, Proposal Readiness, lead profile storage, and audit trace.
 v6.5.1 refines the Singapore map with a more accurate local static outline, calibrated HQ marker around Orchard/Dhoby Ghaut, smaller island-shaped Sentosa, faint area labels, and no large helper box.
 OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.
-Please review docs/V6_4_9_SINGAPORE_MAP_SMOOTH_ZOOM_WHEEL_LOCK.md, confirm health shows v6_4_9_singapore_map_smooth_zoom_wheel_lock after deploy, then visually test wheel zoom without page scroll, reset, zoom, pan, HQ tooltip, area/pin summaries, filters, and WhatsApp continuity.
+Please review docs/V6_4_10_SINGAPORE_MAP_INTERACTION_COPY_CLEANUP.md, confirm health shows v6_4_10_singapore_map_interaction_copy_cleanup after deploy, then visually test 100% default zoom, no stacked top-left copy, wheel zoom without page scroll, reset, zoom, pan, HQ/pin inspector, filters, and WhatsApp continuity.
 ```

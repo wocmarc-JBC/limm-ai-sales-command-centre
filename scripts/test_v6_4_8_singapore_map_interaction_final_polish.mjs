@@ -107,7 +107,7 @@ for (const label of ["Woodlands", "Jurong", "Bukit Timah", "Orchard / CBD", "Ser
 }
 
 assert(missionMap.includes("No mapped leads yet"), "Small no-data badge must remain.");
-assert(missionMap.includes("Area-level only. Add area or postal details to place live work."), "Small helper text must remain without a blocking overlay.");
+assert(missionMap.includes("data-testid=\"map-location-helper\"") && missionMap.includes("Add property area or postal code to activate location intelligence."), "Small helper text must remain below the map without a blocking overlay.");
 assert(!missionMap.includes("Singapore Mission Map ready") && !missionMap.includes("left-1/2 top-1/2"), "Large blocking empty overlay must not return.");
 assert(!missionMap.includes("projectAddress") && !missionMap.includes("project_address"), "Dashboard map must not expose full exact address fields.");
 assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(missionMap + geoMap + geometry), "No external geocoding/API key should be added.");

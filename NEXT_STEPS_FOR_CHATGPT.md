@@ -2,18 +2,19 @@
 
 ## Review First
 
-1. Review `docs/V6_4_9_SINGAPORE_MAP_SMOOTH_ZOOM_WHEEL_LOCK.md`.
-2. Review `docs/V6_4_8_SINGAPORE_MAP_INTERACTION_FINAL_POLISH.md`.
-3. Review `docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md`.
-4. Review `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`.
-5. Review `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`.
-6. Review `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`.
-7. Review `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`.
-8. Review `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`.
-9. Review `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`.
-10. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
-11. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
-12. Confirm `/api/whatsapp/health` shows the deployed map version before judging the deployed UI.
+1. Review `docs/V6_4_10_SINGAPORE_MAP_INTERACTION_COPY_CLEANUP.md`.
+2. Review `docs/V6_4_9_SINGAPORE_MAP_SMOOTH_ZOOM_WHEEL_LOCK.md`.
+3. Review `docs/V6_4_8_SINGAPORE_MAP_INTERACTION_FINAL_POLISH.md`.
+4. Review `docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md`.
+5. Review `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`.
+6. Review `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`.
+7. Review `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`.
+8. Review `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`.
+9. Review `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`.
+10. Review `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`.
+11. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
+12. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
+13. Confirm `/api/whatsapp/health` shows the deployed map version before judging the deployed UI.
 1. Review `docs/V6_ULTIMATE_BLUEPRINT.md`.
 2. Review `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`.
 3. Review `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`.
@@ -22,7 +23,7 @@
 
 ## Recommended Next Prompt For Marcus PowerShell
 
-Prepare the controlled live v6.4.9 Singapore Map Smooth Zoom + Wheel Lock retest:
+Prepare the controlled live v6.4.10 Singapore Mission Map Interaction + Copy Cleanup retest:
 
 - Keep all v4/v5 safety rules unchanged.
 - Confirm health endpoint first; local PASS is not production PASS.
@@ -42,6 +43,7 @@ Prepare the controlled live v6.4.9 Singapore Map Smooth Zoom + Wheel Lock retest
 - v6.4.6 commits the official URA/data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea) geometry after Marcus ran the downloader locally.
 - v6.4.8 fixes the Singapore Mission Map reset/zoom interaction layer, tightens default fit, adds selected area/pin/HQ summaries, keeps filters meaningful, and preserves the official geometry.
 - v6.4.9 smooths `+` / `-` zoom, adds a non-passive wheel zoom lock so the page does not scroll while zooming the map, increases max zoom to 400%, and optimizes the map fill without cropping.
+- v6.4.10 keeps default zoom at 100%, dedupes the top-left map copy, moves helper text below the map, polishes filter empty states, adds pin/HQ inspector feedback, and keeps the official geometry intact.
 - v6.5 adds a Smart Lead Intake profile, missing-info detector, 3-5 question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness score, Proposal Readiness score, and lead intake audit trace.
 - v6.5.1 replaces the previous weak mainland path with a more accurate local static Singapore outline, recalibrates HQ around Orchard/Dhoby Ghaut, makes Sentosa smaller and more island-shaped, removes the large map helper box, and adds faint area labels.
 - v6 Ultimate adds human-like reply planning, Context Truth Gate, Singapore renovation shorthand understanding, Safety Governor, Reply Quality Judge, cleanup controls, human takeover, bot pause/resume, mission queue, lead scoring, gold UI, settings/QA centre, and 200+ case QA.
@@ -80,6 +82,7 @@ node scripts/test_v6_4_5_real_singapore_geojson_map.mjs
 node scripts/test_v6_4_6_official_singapore_planning_area_map.mjs
 node scripts/test_v6_4_8_singapore_map_interaction_final_polish.mjs
 node scripts/test_v6_4_9_singapore_map_smooth_zoom_wheel_lock.mjs
+node scripts/test_v6_4_10_singapore_map_interaction_copy_cleanup.mjs
 node scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs
 node scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs
 node scripts/cleanup_old_test_leads_v6_1.mjs
@@ -89,7 +92,7 @@ node scripts/audit_v3_package.mjs
 ## What Codex Should Build Next
 
 - The next phase should only happen after Marcus confirms v6 deployed health and live retest results.
-- Recommended next scope: confirm v6.4.9 health, visually verify wheel zoom over the map does not scroll the page, `+` / `-` zoom feels smooth, Reset returns to a perfect fitted Singapore view, panning clears on reset, HQ and pins stay aligned, area/pin summaries work, filters affect visible map items, and no external map API appears.
+- Recommended next scope: confirm v6.4.10 health, visually verify the map starts at 100%, top-left copy is not double-stacked, helper text is subtle, wheel zoom over the map does not scroll the page, `+` / `-` zoom feels smooth, Reset returns to a perfect fitted Singapore view, panning clears on reset, HQ and pins stay aligned, filters show one subtle empty state, and no external map API appears.
 - Optional OpenAI/AI WhatsApp reply testing should remain disabled until v6 deterministic local brain is proven live.
 
 ## Avoid

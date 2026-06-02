@@ -1,5 +1,26 @@
 # Current Status
 
+## v6.4.10 Singapore Mission Map Interaction + Copy Cleanup
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Default map zoom stays at `100%`.
+- The top-left map status is deduped to one compact badge only.
+- Filter empty states now use specific compact messages such as `No mapped follow-ups yet`.
+- Helper copy moved below the map: `Add property area or postal code to activate location intelligence.`
+- `+`, `-`, Reset, wheel zoom lock, and bounded pan remain preserved from v6.4.9.
+- Reset clears zoom, pan, selected pin, selected area, HQ tooltip/selection, and drag state.
+- HQ marker scale is polished so it is visible without overpowering the official map.
+- Pin and HQ click feedback now appears in the inspector panel below the map.
+
+Current Go/No-Go:
+
+- GO for controlled deploy proof after push, Vercel deployment, and health check.
+- GO for visual retest after health shows `v6_4_10_singapore_map_interaction_copy_cleanup`.
+- NO-GO for external map APIs, fake map data, full exact address display, price guide automation, Calendar auto-booking, voice transcription, Supabase schema changes, auth changes, delete logic changes, or WhatsApp webhook changes.
+
 ## v6.4.9 Singapore Map Smooth Zoom + Wheel Lock
 
 Status: implemented locally; pending push/deploy health proof.
