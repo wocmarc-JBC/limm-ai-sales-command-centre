@@ -2,15 +2,16 @@
 
 ## Review First
 
-1. Review `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`.
-2. Review `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`.
-3. Review `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`.
-4. Review `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`.
-5. Review `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`.
-6. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
-7. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
-8. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
-9. Confirm `/api/whatsapp/health` shows `version: v6_5_1_accurate_singapore_map_refinement` before judging the deployed UI.
+1. Review `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`.
+2. Review `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`.
+3. Review `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`.
+4. Review `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`.
+5. Review `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`.
+6. Review `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`.
+7. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
+8. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
+9. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
+10. Confirm `/api/whatsapp/health` shows `version: v6_4_5_real_singapore_geojson_map` before judging the deployed UI.
 1. Review `docs/V6_ULTIMATE_BLUEPRINT.md`.
 2. Review `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`.
 3. Review `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`.
@@ -19,7 +20,7 @@
 
 ## Recommended Next Prompt For Marcus PowerShell
 
-Prepare the controlled live v6.5.1 Accurate Singapore Map Refinement retest:
+Prepare the controlled live v6.4.5 Real Singapore GeoJSON Map retest:
 
 - Keep all v4/v5 safety rules unchanged.
 - Confirm health endpoint first; local PASS is not production PASS.
@@ -35,6 +36,7 @@ Prepare the controlled live v6.5.1 Accurate Singapore Map Refinement retest:
 - v6.4.2 upgrades the map base to a more accurate Singapore outline and removes the blocking empty-state overlay so the map remains visible even with no data.
 - v6.4.3 widens the map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal `228397`, and fixes gold/amber visual separation.
 - v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG component, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on the central main island.
+- v6.4.5 replaces the hand-drawn static outline with a local real Singapore GeoJSON asset, renders it into SVG, keeps HQ at postal 228397 around Orchard / Dhoby Ghaut, and keeps Sentosa small and island-shaped.
 - v6.5 adds a Smart Lead Intake profile, missing-info detector, 3-5 question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness score, Proposal Readiness score, and lead intake audit trace.
 - v6.5.1 replaces the previous weak mainland path with a more accurate local static Singapore outline, recalibrates HQ around Orchard/Dhoby Ghaut, makes Sentosa smaller and more island-shaped, removes the large map helper box, and adds faint area labels.
 - v6 Ultimate adds human-like reply planning, Context Truth Gate, Singapore renovation shorthand understanding, Safety Governor, Reply Quality Judge, cleanup controls, human takeover, bot pause/resume, mission queue, lead scoring, gold UI, settings/QA centre, and 200+ case QA.
@@ -69,6 +71,7 @@ node scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs
 node scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs
 node scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs
 node scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs
+node scripts/test_v6_4_5_real_singapore_geojson_map.mjs
 node scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs
 node scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs
 node scripts/cleanup_old_test_leads_v6_1.mjs
@@ -78,7 +81,7 @@ node scripts/audit_v3_package.mjs
 ## What Codex Should Build Next
 
 - The next phase should only happen after Marcus confirms v6 deployed health and live retest results.
-- Recommended next scope: confirm v6.5.1 health, visually verify the dashboard map reads as Singapore, LIMM HQ sits around Orchard/Dhoby Ghaut on the mainland, Sentosa is smaller and island-like, area labels are subtle, zoom controls and legend remain, and no large helper box or external map API appears.
+- Recommended next scope: confirm v6.4.5 health, visually verify the dashboard map uses the local real GeoJSON outline, LIMM HQ sits around Orchard/Dhoby Ghaut on the mainland, Sentosa is smaller and island-like, area labels are subtle, zoom controls and legend remain, and no large helper box or external map API appears.
 - Optional OpenAI/AI WhatsApp reply testing should remain disabled until v6 deterministic local brain is proven live.
 
 ## Avoid

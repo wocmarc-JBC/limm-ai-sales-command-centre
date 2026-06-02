@@ -9,49 +9,20 @@ import {
   type WheelEvent as ReactWheelEvent
 } from "react";
 import { SingaporeSvgMap } from "@/components/SingaporeSvgMap";
+import {
+  LIMM_HQ_COORDINATE,
+  projectSingaporeCoordinate,
+  SINGAPORE_AREA_LABELS
+} from "@/lib/singapore-map-geometry";
 import type { MissionMapColorCategory, MissionMapData, MissionMapFilter, MissionMapPin } from "@/lib/mission-map";
 
-const singaporeBounds = {
-  north: 1.47,
-  south: 1.23,
-  west: 103.62,
-  east: 104.04
-};
-
-const mapProjectionFrame = {
-  left: 10,
-  right: 90,
-  top: 18,
-  bottom: 74
-};
-
 const limmHqLocation = {
-  lat: 1.315,
-  lng: 103.835,
-  label: "LIMM HQ",
-  title: "LIMM Works HQ - Postal: 228397"
+  ...LIMM_HQ_COORDINATE,
+  title: "LIMM Works HQ / Postal: 228397"
 };
-
-const faintAreaLabels = [
-  { label: "Woodlands", left: "35%", top: "28%" },
-  { label: "Jurong", left: "20%", top: "57%" },
-  { label: "Bukit Timah", left: "40%", top: "49%" },
-  { label: "Orchard", left: "52%", top: "55%" },
-  { label: "CBD", left: "55%", top: "64%" },
-  { label: "Serangoon", left: "59%", top: "45%" },
-  { label: "Tampines", left: "77%", top: "52%" },
-  { label: "East Coast", left: "70%", top: "65%" }
-];
 
 function projectPoint(pin: Pick<MissionMapPin, "lat" | "lng">) {
-  const xRatio = (pin.lng - singaporeBounds.west) / (singaporeBounds.east - singaporeBounds.west);
-  const yRatio = (singaporeBounds.north - pin.lat) / (singaporeBounds.north - singaporeBounds.south);
-  const x = mapProjectionFrame.left + xRatio * (mapProjectionFrame.right - mapProjectionFrame.left);
-  const y = mapProjectionFrame.top + yRatio * (mapProjectionFrame.bottom - mapProjectionFrame.top);
-  return {
-    left: `${Math.min(92, Math.max(8, x))}%`,
-    top: `${Math.min(80, Math.max(12, y))}%`
-  };
+  return projectSingaporeCoordinate(pin);
 }
 
 function boundedZoom(nextZoom: number) {
@@ -212,16 +183,19 @@ export function SingaporeMissionMap({
           >
             <SingaporeSvgMap />
 
-            {faintAreaLabels.map((area) => (
+            {SINGAPORE_AREA_LABELS.map((area) => {
+              const position = projectSingaporeCoordinate(area);
+              return (
               <span
                 key={area.label}
                 className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-command-muted/45"
                 data-testid={`map-area-label-${area.label.toLowerCase().replace(/\s+/g, "-")}`}
-                style={{ left: area.left, top: area.top }}
+                style={position}
               >
                 {area.label}
               </span>
-            ))}
+              );
+            })}
 
             <button
               type="button"

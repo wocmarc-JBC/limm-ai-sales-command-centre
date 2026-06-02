@@ -22,8 +22,12 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.4.3"
 // version: "v6_4_4_accurate_singapore_svg_map_fix"
 // salesBrainVersion: "v6.4.4"
+// version: "v6_4_5_real_singapore_geojson_map"
+// salesBrainVersion: "v6.4.5"
 // version: "v6_5_smart_lead_intake_meeting_prep"
 // salesBrainVersion: "v6.5"
+// version: "v6_5_1_accurate_singapore_map_refinement"
+// salesBrainVersion: "v6.5.1"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -45,9 +49,15 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v6_5_1_accurate_singapore_map_refinement",
-      salesBrainVersion: "v6.5.1",
+      version: "v6_4_5_real_singapore_geojson_map",
+      salesBrainVersion: "v6.4.5",
       runtime: "vercel",
+      realSingaporeGeojsonMapAvailable: true,
+      realMapGeometryAssetAvailable: true,
+      manualBlobMapRemoved: true,
+      hqMarkerPostal228397Available: true,
+      hqMarkerCentralSingaporeAvailable: true,
+      googleMapsEnabled: false,
       realSingaporeOutlineAvailable: true,
       hqMarkerCentralSingaporeCalibrated: true,
       sentosaScaledShapeRefined: true,
@@ -279,9 +289,15 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_5_1_accurate_singapore_map_refinement",
-      salesBrainVersion: "v6.5.1",
+      version: "v6_4_5_real_singapore_geojson_map",
+      salesBrainVersion: "v6.4.5",
       runtime: "vercel",
+      realSingaporeGeojsonMapAvailable: false,
+      realMapGeometryAssetAvailable: false,
+      manualBlobMapRemoved: false,
+      hqMarkerPostal228397Available: false,
+      hqMarkerCentralSingaporeAvailable: false,
+      googleMapsEnabled: false,
       realSingaporeOutlineAvailable: false,
       hqMarkerCentralSingaporeCalibrated: false,
       sentosaScaledShapeRefined: false,

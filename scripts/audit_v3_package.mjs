@@ -211,6 +211,7 @@ for (const required of [
   "scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs",
   "scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs",
   "scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs",
+  "scripts/test_v6_4_5_real_singapore_geojson_map.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
@@ -226,6 +227,7 @@ for (const required of [
   "docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md",
   "docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md",
   "docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md",
+  "docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md",
   "docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md",
   "docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
@@ -236,10 +238,14 @@ for (const required of [
   "lib/sales-collection.ts",
   "lib/data/sales-collection-repository.ts",
   "lib/singapore-location.ts",
+  "lib/singapore-map-data.json",
+  "lib/singapore-map-geometry.ts",
   "lib/mission-map.ts",
   "lib/lead-intake.ts",
   "components/SingaporeMissionMap.tsx",
   "components/SingaporeSvgMap.tsx",
+  "components/SingaporeGeoMap.tsx",
+  "public/maps/singapore.geojson",
   "app/sales-pipeline/page.tsx",
   "app/sales-collection/page.tsx",
   "app/targets/page.tsx"
@@ -450,6 +456,14 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
+  "version: \"v6_4_5_real_singapore_geojson_map\"",
+  "salesBrainVersion: \"v6.4.5\"",
+  "realSingaporeGeojsonMapAvailable",
+  "realMapGeometryAssetAvailable",
+  "manualBlobMapRemoved",
+  "hqMarkerPostal228397Available",
+  "hqMarkerCentralSingaporeAvailable",
+  "googleMapsEnabled: false",
   "version: \"v6_5_1_accurate_singapore_map_refinement\"",
   "salesBrainVersion: \"v6.5.1\"",
   "realSingaporeOutlineAvailable",
@@ -814,6 +828,7 @@ assert(pkg.scripts?.["test:v6.4.1"], "package.json missing v6.4.1 Singapore tact
 assert(pkg.scripts?.["test:v6.4.2"], "package.json missing v6.4.2 accurate Singapore map no-overlay test script.");
 assert(pkg.scripts?.["test:v6.4.3"], "package.json missing v6.4.3 Singapore map zoom/HQ redesign test script.");
 assert(pkg.scripts?.["test:v6.4.4"], "package.json missing v6.4.4 accurate Singapore SVG map fix test script.");
+assert(pkg.scripts?.["test:v6.4.5"], "package.json missing v6.4.5 real Singapore GeoJSON map test script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);
 }

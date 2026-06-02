@@ -14,6 +14,7 @@ function assert(condition, message) {
 
 const mapComponent = read("components/SingaporeMissionMap.tsx");
 const svgMapComponent = read("components/SingaporeSvgMap.tsx");
+const geoMapComponent = read("components/SingaporeGeoMap.tsx");
 const dashboard = read("app/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const audit = read("scripts/audit_v3_package.mjs");
@@ -53,10 +54,11 @@ for (const phrase of [
   assert(mapComponent.includes(phrase), `Zoom/pan map control missing ${phrase}`);
 }
 
-assert(svgMapComponent.includes("singapore-sentosa"), "Map must render only the Sentosa lower island marker.");
-assert(!svgMapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
-assert(svgMapComponent.includes("M58 313 L78 286"), "Main Singapore island outline must remain the accurate local vector path.");
-assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"/i.test(mapComponent + svgMapComponent), "Map base must not regress to a generic ellipse/circle.");
+assert(svgMapComponent.includes("SingaporeGeoMap"), "SingaporeSvgMap wrapper must delegate to the real GeoJSON map renderer.");
+assert(geoMapComponent.includes("singapore-sentosa"), "Map must render only the Sentosa lower island marker.");
+assert(!geoMapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
+assert(geoMapComponent.includes("data-map-source=\"/maps/singapore.geojson\""), "Main Singapore island outline must remain the local real GeoJSON vector source.");
+assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"/i.test(mapComponent + svgMapComponent + geoMapComponent), "Map base must not regress to a generic ellipse/circle.");
 
 for (const phrase of [
   "limmHqLocation",
@@ -108,7 +110,7 @@ for (const field of [
 
 assert(dashboard.includes("SingaporeMissionMap") && dashboard.includes("selectedArea={selectedMapArea}"), "Dashboard must still render the map with selected area support.");
 assert(!mapComponent.includes("projectAddress") && !mapComponent.includes("project_address"), "Dashboard map must not render exact/full addresses.");
-assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(mapComponent + svgMapComponent), "No external geocoding or map API key should be added.");
+assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(mapComponent + svgMapComponent + geoMapComponent), "No external geocoding or map API key should be added.");
 
 assert(audit.includes("docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md"), "Package audit must require v6.4.3 docs.");
 assert(audit.includes("scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs"), "Package audit must require v6.4.3 test.");
@@ -123,7 +125,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
   assert(whatsappAdapter.includes(phrase), `Known-good WhatsApp payload shape missing ${phrase}`);
 }
 
-const checkedSources = [mapComponent, svgMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [mapComponent, svgMapComponent, geoMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",

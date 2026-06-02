@@ -1,5 +1,26 @@
 # Current Status
 
+## v6.4.5 Real Singapore GeoJSON Map
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_4_5_real_singapore_geojson_map`.
+- The Singapore Mission Map now uses a local real-geometry GeoJSON asset at `public/maps/singapore.geojson`.
+- `SingaporeGeoMap` renders the local geometry into SVG paths instead of relying on hand-drawn Singapore blobs.
+- HQ postal `228397` is calibrated around Orchard / Dhoby Ghaut / central Singapore.
+- Sentosa is a smaller island-shaped geometry feature, not a generic oval.
+- Large blocking/helper overlays remain removed; only subtle no-data guidance is shown.
+- Faint area labels remain for Orchard, Bukit Timah, Serangoon, Tampines, East Coast, Jurong, Woodlands, and CBD.
+- Zoom, pan, reset, legend, clickable pins, area halos, privacy-safe display, non-GST mode, price guide hold, Calendar auto-booking off, and voice transcription off are preserved.
+
+Current Go/No-Go:
+
+- GO for controlled v6.4.5 deploy proof after push, Vercel deployment, and health check.
+- GO for visual dashboard retest after health shows `v6_4_5_real_singapore_geojson_map`.
+- NO-GO for external map APIs, Google Maps, geocoding, exact-address dashboard display, WhatsApp webhook changes, Supabase schema changes, auth/delete logic changes, price guide automation, Calendar auto-booking, or voice transcription.
+
 ## v6.5.1 Accurate Singapore Map Refinement
 
 Status: implemented locally; pending push/deploy health proof.

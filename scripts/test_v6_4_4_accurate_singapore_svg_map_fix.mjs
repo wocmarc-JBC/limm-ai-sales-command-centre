@@ -14,6 +14,8 @@ function assert(condition, message) {
 
 const missionMapComponent = read("components/SingaporeMissionMap.tsx");
 const svgMapComponent = read("components/SingaporeSvgMap.tsx");
+const geoMapComponent = read("components/SingaporeGeoMap.tsx");
+const geometry = read("lib/singapore-map-geometry.ts");
 const dashboard = read("app/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const audit = read("scripts/audit_v3_package.mjs");
@@ -25,23 +27,23 @@ const whatsappAdapter = read("lib/adapters/whatsapp-adapter.ts");
 
 assert(svgMapComponent.includes("export function SingaporeSvgMap"), "Accurate Singapore SVG component must exist.");
 assert(missionMapComponent.includes("SingaporeSvgMap"), "Mission map must use the SingaporeSvgMap component.");
-assert(svgMapComponent.includes("singapore-map-svg"), "SVG map class must exist.");
-assert(svgMapComponent.includes("singapore-mainland"), "Main island must render with class singapore-mainland.");
-assert(svgMapComponent.includes("singapore-sentosa"), "Sentosa must render with class singapore-sentosa.");
-assert((svgMapComponent.match(/singapore-sentosa/g) ?? []).length === 1, "Only one Sentosa island class should be rendered.");
-assert(!svgMapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
-assert(!svgMapComponent.includes("sentosa-island singapore-sentosa-only"), "Oversized old Sentosa path must be removed.");
-assert(svgMapComponent.includes("data-outline-source=\"local-static-real-singapore-outline\""), "Singapore mainland should use the local static real-outline source marker.");
-assert(svgMapComponent.includes("M71 302 C82 284"), "Singapore mainland should use the refined local SVG path.");
-assert(svgMapComponent.includes("C846 262 871 282 874 299"), "Mainland outline should include the eastern Changi-side reach.");
-assert(svgMapComponent.includes("C90 331 69 319 71 302"), "Mainland outline should include the western/Jurong-side return.");
-assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"|rounded-\[48%_52%_45%_55%]/i.test(svgMapComponent + missionMapComponent), "Generic blob/oval/ellipse placeholder must be gone.");
+assert(svgMapComponent.includes("SingaporeGeoMap"), "Legacy wrapper must delegate to the real GeoJSON map renderer.");
+assert(geoMapComponent.includes("singapore-map-svg"), "SVG map class must exist.");
+assert(geoMapComponent.includes("singapore-mainland"), "Main island must render with class singapore-mainland.");
+assert(geoMapComponent.includes("singapore-sentosa"), "Sentosa must render with class singapore-sentosa.");
+assert((geoMapComponent.match(/singapore-sentosa/g) ?? []).length >= 1, "Sentosa island class should be rendered by the GeoJSON map.");
+assert(!geoMapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
+assert(!geoMapComponent.includes("sentosa-island singapore-sentosa-only"), "Oversized old Sentosa path must be removed.");
+assert(geoMapComponent.includes("data-map-source=\"/maps/singapore.geojson\""), "Singapore mainland should use the local real GeoJSON source marker.");
+assert(geometry.includes("buildSingaporeGeoPaths"), "Singapore mainland should be generated from the real GeoJSON path builder.");
+assert(geometry.includes("SINGAPORE_AREA_LABELS"), "Real-coordinate area labels must come from the geometry helper.");
+assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"|rounded-\[48%_52%_45%_55%]/i.test(svgMapComponent + geoMapComponent + missionMapComponent), "Generic blob/oval/ellipse placeholder must be gone.");
 
 assert(missionMapComponent.includes("singapore-hq-marker") && missionMapComponent.includes("limm-hq-marker"), "HQ marker class must exist.");
 assert(missionMapComponent.includes("LIMM HQ"), "HQ marker label must include LIMM HQ.");
 assert(missionMapComponent.includes("Postal: 228397"), "HQ tooltip must include postal 228397.");
-assert(missionMapComponent.includes("lat: 1.315") && missionMapComponent.includes("lng: 103.835"), "HQ marker must be positioned on the central main island area.");
-assert(missionMapComponent.includes("mapProjectionFrame"), "Map projection frame must keep pins aligned to the island body.");
+assert(geometry.includes("lat: 1.3008") && geometry.includes("lng: 103.8375"), "HQ marker must be positioned on the central Orchard/Dhoby Ghaut main island area.");
+assert(missionMapComponent.includes("projectSingaporeCoordinate"), "Real map projection helper must keep pins aligned to the island body.");
 assert(missionMapComponent.includes("<button") && missionMapComponent.includes("data-testid=\"limm-hq-marker\""), "HQ marker should be a clickable marker/control.");
 
 for (const phrase of [
@@ -81,7 +83,7 @@ assert(missionMapComponent.includes("areaSelectHref(activeFilter, area.area)"), 
 assert(dashboard.includes("SingaporeMissionMap") && dashboard.includes("selectedArea={selectedMapArea}"), "Dashboard must still render selected-area map support.");
 
 assert(!missionMapComponent.includes("projectAddress") && !missionMapComponent.includes("project_address"), "Dashboard map must not render full project/client address fields.");
-assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(missionMapComponent + svgMapComponent), "No external geocoding or map API key should be added.");
+assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(missionMapComponent + svgMapComponent + geoMapComponent + geometry), "No external geocoding or map API key should be added.");
 assert(!/demo pin|sample pin|fake pin|fake map/i.test(missionMapComponent + svgMapComponent), "Map component must not include fake/demo map data.");
 
 for (const field of [
@@ -121,7 +123,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
 }
 
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
-const checkedSources = [missionMapComponent, svgMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [missionMapComponent, svgMapComponent, geoMapComponent, geometry, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",

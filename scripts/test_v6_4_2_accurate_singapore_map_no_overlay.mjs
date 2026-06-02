@@ -14,6 +14,7 @@ function assert(condition, message) {
 
 const mapComponent = read("components/SingaporeMissionMap.tsx");
 const svgMapComponent = read("components/SingaporeSvgMap.tsx");
+const geoMapComponent = read("components/SingaporeGeoMap.tsx");
 const dashboard = read("app/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const audit = read("scripts/audit_v3_package.mjs");
@@ -23,14 +24,15 @@ const whatsappRoute = read("app/api/whatsapp/webhook/route.ts");
 const whatsappAdapter = read("lib/adapters/whatsapp-adapter.ts");
 const clientFilesPage = read("app/client-files/page.tsx");
 
-assert(svgMapComponent.includes("accurate-singapore-map"), "Accurate Singapore map class must exist.");
-assert(svgMapComponent.includes("singapore-mainland") && svgMapComponent.includes("singapore-island-silhouette"), "Main Singapore island silhouette must exist.");
-assert(svgMapComponent.includes("singapore-sentosa"), "Sentosa-only lower island massing must exist.");
-assert(!svgMapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
-assert(svgMapComponent.includes("viewBox=\"0 0 900 520\""), "Updated wider Singapore map viewBox must exist.");
-assert(svgMapComponent.includes("M58 313 L78 286"), "Singapore outline should use the updated detailed local vector path.");
-assert(!mapComponent.includes("rounded-[48%_52%_45%_55%]") && !svgMapComponent.includes("rounded-[48%_52%_45%_55%]"), "Generic oval placeholder shape must be gone.");
-assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"/i.test(mapComponent + svgMapComponent), "Map base must not be a generic ellipse/circle.");
+assert(svgMapComponent.includes("SingaporeGeoMap"), "SingaporeSvgMap wrapper must delegate to the real GeoJSON map renderer.");
+assert(geoMapComponent.includes("accurate-singapore-map"), "Accurate Singapore map class must exist.");
+assert(geoMapComponent.includes("singapore-mainland") && geoMapComponent.includes("singapore-island-silhouette"), "Main Singapore island silhouette must exist.");
+assert(geoMapComponent.includes("singapore-sentosa"), "Sentosa-only lower island massing must exist.");
+assert(!geoMapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
+assert(geoMapComponent.includes("SINGAPORE_MAP_VIEWBOX"), "Updated wider Singapore map viewBox must use shared GeoJSON geometry.");
+assert(geoMapComponent.includes("data-map-source=\"/maps/singapore.geojson\""), "Singapore outline should use the local real GeoJSON asset.");
+assert(!mapComponent.includes("rounded-[48%_52%_45%_55%]") && !geoMapComponent.includes("rounded-[48%_52%_45%_55%]"), "Generic oval placeholder shape must be gone.");
+assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"/i.test(mapComponent + svgMapComponent + geoMapComponent), "Map base must not be a generic ellipse/circle.");
 
 assert(!mapComponent.includes("Singapore Mission Map ready"), "Blocking empty-state title must be removed.");
 assert(!mapComponent.includes("Add property area or postal code to leads to activate location intelligence."), "Old blocking empty-state copy must be removed.");
@@ -69,8 +71,8 @@ assert(audit.includes("scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs
 assert(packageJson.includes('"test:v6.4.2"'), "package.json must expose v6.4.2 test script.");
 assert(docs.toLowerCase().includes("accurate singapore map") && docs.toLowerCase().includes("blocking empty overlay"), "v6.4.2 docs must explain accurate map and overlay removal.");
 
-assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(mapComponent + svgMapComponent), "No external geocoding or map API key should be added.");
-assert(!/demo pin|sample pin|fake pin|fake map/i.test(mapComponent + svgMapComponent), "Map component must not include fake/demo map data.");
+assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(mapComponent + svgMapComponent + geoMapComponent), "No external geocoding or map API key should be added.");
+assert(!/demo pin|sample pin|fake pin|fake map/i.test(mapComponent + svgMapComponent + geoMapComponent), "Map component must not include fake/demo map data.");
 assert(clientFilesPage.includes("Coming Soon") || clientFilesPage.includes("coming soon") || clientFilesPage.includes("not enabled"), "Client Files must remain Coming Soon / not live.");
 assert(whatsappRoute.includes("whatsapp_webhook_received_start") && whatsappRoute.includes("handleWhatsAppInboundMessage"), "WhatsApp webhook must remain intact.");
 for (const phrase of ["messaging_product", "recipient_type", "preview_url", "body"]) {
@@ -78,7 +80,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
 }
 
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
-const checkedSources = [mapComponent, svgMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [mapComponent, svgMapComponent, geoMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",
