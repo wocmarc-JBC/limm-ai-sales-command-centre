@@ -2,8 +2,9 @@
 
 ## Review First
 
-1. Review `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`.
-2. Review `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`.
+1. Review `docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md`.
+2. Review `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`.
+3. Review `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`.
 3. Review `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`.
 4. Review `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`.
 5. Review `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`.
@@ -11,7 +12,8 @@
 7. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
 8. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
 9. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
-10. Confirm `/api/whatsapp/health` shows `version: v6_4_5_real_singapore_geojson_map` before judging the deployed UI.
+10. Run `npm.cmd run map:download-official` from a normal internet-connected PowerShell before claiming the map asset is official URA/data.gov.sg geometry.
+11. Confirm `/api/whatsapp/health` shows the deployed map version before judging the deployed UI.
 1. Review `docs/V6_ULTIMATE_BLUEPRINT.md`.
 2. Review `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`.
 3. Review `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`.
@@ -20,7 +22,7 @@
 
 ## Recommended Next Prompt For Marcus PowerShell
 
-Prepare the controlled live v6.4.5 Real Singapore GeoJSON Map retest:
+Prepare the controlled live v6.4.6 Official URA No-Sea Map Source retest:
 
 - Keep all v4/v5 safety rules unchanged.
 - Confirm health endpoint first; local PASS is not production PASS.
@@ -37,6 +39,7 @@ Prepare the controlled live v6.4.5 Real Singapore GeoJSON Map retest:
 - v6.4.3 widens the map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal `228397`, and fixes gold/amber visual separation.
 - v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG component, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on the central main island.
 - v6.4.5 replaces the hand-drawn static outline with a local real Singapore GeoJSON asset, renders it into SVG, keeps HQ at postal 228397 around Orchard / Dhoby Ghaut, and keeps Sentosa small and island-shaped.
+- v6.4.6 adds a source downloader for the official URA/data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea). The Codex sandbox could not download it because outbound access to `api-open.data.gov.sg` is blocked, so Marcus must run `npm.cmd run map:download-official` locally before the official source claim is complete.
 - v6.5 adds a Smart Lead Intake profile, missing-info detector, 3-5 question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness score, Proposal Readiness score, and lead intake audit trace.
 - v6.5.1 replaces the previous weak mainland path with a more accurate local static Singapore outline, recalibrates HQ around Orchard/Dhoby Ghaut, makes Sentosa smaller and more island-shaped, removes the large map helper box, and adds faint area labels.
 - v6 Ultimate adds human-like reply planning, Context Truth Gate, Singapore renovation shorthand understanding, Safety Governor, Reply Quality Judge, cleanup controls, human takeover, bot pause/resume, mission queue, lead scoring, gold UI, settings/QA centre, and 200+ case QA.
@@ -72,6 +75,7 @@ node scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs
 node scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs
 node scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs
 node scripts/test_v6_4_5_real_singapore_geojson_map.mjs
+node scripts/download_official_singapore_map.mjs planning-area
 node scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs
 node scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs
 node scripts/cleanup_old_test_leads_v6_1.mjs

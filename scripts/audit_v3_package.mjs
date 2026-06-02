@@ -212,6 +212,8 @@ for (const required of [
   "scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs",
   "scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs",
   "scripts/test_v6_4_5_real_singapore_geojson_map.mjs",
+  "scripts/test_v6_4_6_official_ura_map_source.mjs",
+  "scripts/download_official_singapore_map.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
@@ -228,6 +230,7 @@ for (const required of [
   "docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md",
   "docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md",
   "docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md",
+  "docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md",
   "docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md",
   "docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
@@ -829,6 +832,8 @@ assert(pkg.scripts?.["test:v6.4.2"], "package.json missing v6.4.2 accurate Singa
 assert(pkg.scripts?.["test:v6.4.3"], "package.json missing v6.4.3 Singapore map zoom/HQ redesign test script.");
 assert(pkg.scripts?.["test:v6.4.4"], "package.json missing v6.4.4 accurate Singapore SVG map fix test script.");
 assert(pkg.scripts?.["test:v6.4.5"], "package.json missing v6.4.5 real Singapore GeoJSON map test script.");
+assert(pkg.scripts?.["test:v6.4.6"], "package.json missing v6.4.6 official URA map source test script.");
+assert(pkg.scripts?.["map:download-official"], "package.json missing official URA map download script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);
 }

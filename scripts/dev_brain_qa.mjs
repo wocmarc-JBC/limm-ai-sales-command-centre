@@ -117,6 +117,7 @@ const requiredScripts = [
   "scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs",
   "scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs",
   "scripts/test_v6_4_5_real_singapore_geojson_map.mjs",
+  "scripts/test_v6_4_6_official_ura_map_source.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs"
 ];

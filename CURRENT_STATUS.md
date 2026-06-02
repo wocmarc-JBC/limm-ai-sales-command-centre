@@ -1,5 +1,23 @@
 # Current Status
 
+## v6.4.6 Official URA / data.gov.sg No-Sea Map Source
+
+Status: downloader added; official download blocked inside Codex sandbox by network restrictions.
+
+What changed:
+
+- Added `scripts/download_official_singapore_map.mjs`.
+- Added package command `npm.cmd run map:download-official`.
+- Preferred source is data.gov.sg / URA Master Plan 2019 Planning Area Boundary (No Sea), dataset `d_4765db0e87b9c86336792efe8a1f7a66`.
+- Fallback source is data.gov.sg / URA Master Plan 2019 Region Boundary (No Sea), dataset `d_bf4d24df9129d5a8ff8cf82e20959ee0`.
+- The downloader writes the official local GeoJSON to `public/maps/singapore-planning-area-no-sea.geojson`, `public/maps/singapore.geojson`, and `lib/singapore-map-data.json`.
+- Dashboard rendering remains local-only with no runtime external map API calls.
+
+Current limitation:
+
+- The official file is not downloaded yet because this runner cannot connect to `api-open.data.gov.sg`.
+- Marcus should run `npm.cmd run map:download-official` from a normal internet-connected PowerShell, then rebuild, test, commit, and push.
+
 ## v6.4.5 Real Singapore GeoJSON Map
 
 Status: implemented locally; pending push/deploy health proof.

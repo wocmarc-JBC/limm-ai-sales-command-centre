@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-v6.4.5 Real Singapore GeoJSON Map implemented on top of the v6.5 Smart Lead Intake, v6.4.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.
+v6.4.6 Official URA / data.gov.sg No-Sea Map Source downloader added on top of the v6.4.5 local GeoJSON map, v6.5 Smart Lead Intake, v6.4.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.
 
 ## Latest Report
 
-`docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`, `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`, `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`, `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`, `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
+`docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md`, `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`, `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`, `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`, `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`, `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
 
 ## Tests / Audit Status
 
@@ -35,6 +35,7 @@ Browser QA: Playwright browser QA did not complete.
 - v6.4.3 widens the map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal `228397`, and fixes gold/amber visual separation.
 - v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG layer, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on the central main island.
 - v6.4.5 replaces the hand-drawn map path with a local real Singapore GeoJSON asset, renders it into SVG paths, keeps LIMM HQ postal `228397` around Orchard / Dhoby Ghaut, keeps Sentosa small and island-shaped, and preserves no external map APIs.
+- v6.4.6 adds `npm.cmd run map:download-official` to fetch the official URA/data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea) once and write it locally. Codex could not run the download here because outbound access to `api-open.data.gov.sg` is blocked.
 - v6.5 adds Smart Lead Intake, missing-info detection, a 3-5 next-question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness, Proposal Readiness, lead profile storage, and audit trace.
 - v6.5.1 refines the Singapore map with a more accurate local static outline, calibrated HQ marker around Orchard/Dhoby Ghaut, smaller island-shaped Sentosa, faint area labels, and no large helper box.
 - Question bank replies include non-repetition handling, escalation rules, and audit metadata.
@@ -57,12 +58,12 @@ Report: not generated.
 
 ## Next Recommended Action
 
-v6.4.5 Real Singapore GeoJSON Map is ready for controlled deploy proof after the health endpoint shows v6_4_5_real_singapore_geojson_map. Next recommended phase: visually verify the dashboard map uses the local real GeoJSON outline, LIMM HQ sits around Orchard/Dhoby Ghaut on the mainland, Sentosa is smaller and island-like, area labels are subtle, zoom controls and legend remain, and no external map/geocoding API appears.
+Run `npm.cmd run map:download-official` from a normal internet-connected PowerShell before claiming the dashboard map asset is official URA/data.gov.sg geometry. Then rebuild, run map tests/audit, commit the downloaded official files, push, and verify health before visual dashboard review.
 
 ## Marcus Paste Block For ChatGPT
 
 ```text
-We are continuing LIMM AI Sales Command Centre after v6.4.5 Real Singapore GeoJSON Map.
+We are continuing LIMM AI Sales Command Centre after v6.4.6 Official URA No-Sea Map Source downloader.
 Latest Dev Brain QA status: UNKNOWN.
 Playwright browser QA did not complete.
 Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
@@ -80,8 +81,9 @@ v6.4.2 upgrades that visual to a more accurate Singapore outline and removes the
 v6.4.3 widens the Singapore map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal 228397, and fixes gold/amber colour separation.
 v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG layer, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on central Singapore instead of below the island.
 v6.4.5 replaces the hand-drawn map path with a local real Singapore GeoJSON asset, renders it into SVG paths, keeps LIMM HQ postal 228397 around Orchard/Dhoby Ghaut, and keeps Sentosa small and island-shaped.
+v6.4.6 adds a downloader for the official URA/data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea). Codex could not complete the download because this sandbox cannot connect to api-open.data.gov.sg, so Marcus must run npm.cmd run map:download-official locally before official-source deployment.
 v6.5 adds Smart Lead Intake, missing-info detection, a 3-5 next-question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness, Proposal Readiness, lead profile storage, and audit trace.
 v6.5.1 refines the Singapore map with a more accurate local static outline, calibrated HQ marker around Orchard/Dhoby Ghaut, smaller island-shaped Sentosa, faint area labels, and no large helper box.
 OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.
-Please review docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md and use the health endpoint first before Marcus judges the deployed dashboard map.
+Please review docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md, run npm.cmd run map:download-official locally, then rebuild/test/audit before Marcus judges the deployed dashboard map.
 ```
