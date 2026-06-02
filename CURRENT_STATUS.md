@@ -1,5 +1,25 @@
 # Current Status
 
+## v6.4.9 Singapore Map Smooth Zoom + Wheel Lock
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Official URA/data.gov.sg planning-area geometry is preserved.
+- Mouse wheel over the Singapore Mission Map now zooms the map without scrolling the dashboard page.
+- Wheel zoom uses a non-passive native listener with default page scroll prevention.
+- `+`, `-`, and Reset controls remain bounded and smoother, with max zoom increased to `400%`.
+- Reset restores the default fitted map view and clears pan, selected pin, selected area, and HQ tooltip state.
+- Map projection padding and SVG layer sizing are tightened so Singapore uses more horizontal space without cropping.
+- Pan/drag remains available when zoomed in, and pins/HQ stay aligned to the official projection.
+
+Current Go/No-Go:
+
+- GO for controlled deploy proof after push, Vercel deployment, and health check.
+- GO for visual retest after health shows `v6_4_9_singapore_map_smooth_zoom_wheel_lock`.
+- NO-GO for external map APIs, fake map data, full exact address display, price guide automation, Calendar auto-booking, voice transcription, Supabase schema changes, auth changes, delete logic changes, or WhatsApp webhook changes.
+
 ## v6.4.8 Singapore Mission Map Interaction Final Polish
 
 Status: implemented locally; pending push/deploy health proof.

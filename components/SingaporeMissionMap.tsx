@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent
+  type PointerEvent as ReactPointerEvent
 } from "react";
 import { SingaporeSvgMap } from "@/components/SingaporeSvgMap";
 import {
@@ -25,10 +25,10 @@ const limmHqLocation = {
 
 const defaultZoom = 1;
 const minZoom = 1;
-const maxZoom = 3;
+const maxZoom = 4;
 const zoomStep = 0.25;
 const wheelZoomStep = 0.12;
-const panLimitPerZoom = 190;
+const panLimitPerZoom = 220;
 
 function projectPoint(pin: Pick<MissionMapPin, "lat" | "lng">) {
   return projectSingaporeCoordinate(pin);
@@ -116,24 +116,34 @@ export function SingaporeMissionMap({
   const canZoomOut = zoom > minZoom;
   const canZoomIn = zoom < maxZoom;
 
-  useEffect(() => {
-    setSelectedAreaName(selectedArea);
-  }, [selectedArea]);
-
-  function updateZoom(nextZoom: number) {
+  const updateZoom = useCallback((nextZoom: number) => {
     const bounded = boundedZoom(nextZoom);
     setZoom(bounded);
     setPan((current) => ({
       x: boundedPan(current.x, bounded),
       y: boundedPan(current.y, bounded)
     }));
-  }
+  }, []);
 
-  function handleWheel(event: ReactWheelEvent<HTMLDivElement>) {
-    if (!event.ctrlKey && Math.abs(event.deltaY) < 20) return;
-    event.preventDefault();
-    updateZoom(zoom + (event.deltaY < 0 ? wheelZoomStep : -wheelZoomStep));
-  }
+  useEffect(() => {
+    setSelectedAreaName(selectedArea);
+  }, [selectedArea]);
+
+  useEffect(() => {
+    const viewport = mapViewportRef.current;
+    if (!viewport) return undefined;
+
+    function handleNativeWheel(event: WheelEvent) {
+      const wheelDelta = event.deltaY || event.deltaX;
+      event.preventDefault();
+      event.stopPropagation();
+      if (wheelDelta === 0) return;
+      updateZoom(zoom + (wheelDelta < 0 ? wheelZoomStep : -wheelZoomStep));
+    }
+
+    viewport.addEventListener("wheel", handleNativeWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", handleNativeWheel);
+  }, [updateZoom, zoom]);
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     dragMovedRef.current = false;
@@ -154,7 +164,9 @@ export function SingaporeMissionMap({
   }
 
   function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
-    if (dragStart) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (dragStart && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     setDragStart(null);
   }
 
@@ -240,10 +252,14 @@ export function SingaporeMissionMap({
           data-min-zoom={minZoom}
           data-max-zoom={maxZoom}
           data-zoom-step={zoomStep}
-          onWheel={handleWheel}
+          data-wheel-zoom="native-passive-false"
+          data-wheel-page-scroll-lock="true"
+          data-default-fit-improved="true"
+          data-horizontal-space-optimized="true"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
+          onPointerLeave={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.11)_0_1px,transparent_2px)] [background-size:30px_30px]" />
@@ -256,7 +272,7 @@ export function SingaporeMissionMap({
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transformOrigin: "50% 50%",
-              transition: dragStart ? "none" : "transform 180ms ease"
+              transition: dragStart ? "none" : "transform 160ms ease-out"
             }}
           >
             <SingaporeSvgMap />
@@ -334,6 +350,7 @@ export function SingaporeMissionMap({
               className={`h-8 w-8 rounded-full border text-sm font-bold transition ${canZoomOut ? "border-command-cyan/35 bg-command-card text-command-cyan hover:border-command-cyan hover:text-command-text" : "cursor-not-allowed border-command-line bg-command-card/70 text-command-subtle opacity-55"}`}
               data-testid="map-zoom-out"
               aria-label="Zoom out Singapore map"
+              title="Zoom out"
               disabled={!canZoomOut}
               onClick={() => updateZoom(zoom - zoomStep)}
             >
@@ -345,6 +362,7 @@ export function SingaporeMissionMap({
               className={`h-8 w-8 rounded-full border text-sm font-bold transition ${canZoomIn ? "border-command-cyan/35 bg-command-card text-command-cyan hover:border-command-cyan hover:text-command-text" : "cursor-not-allowed border-command-line bg-command-card/70 text-command-subtle opacity-55"}`}
               data-testid="map-zoom-in"
               aria-label="Zoom in Singapore map"
+              title="Zoom in"
               disabled={!canZoomIn}
               onClick={() => updateZoom(zoom + zoomStep)}
             >
@@ -360,13 +378,16 @@ export function SingaporeMissionMap({
               Reset
             </button>
           </div>
+          <div className="absolute left-3 top-3 z-30 rounded-full border border-command-line bg-command-bg/64 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur" data-testid="map-wheel-zoom-affordance">
+            Scroll to zoom map
+          </div>
 
           {!hasMapData ? (
             <>
-              <div className="absolute left-3 top-3 z-30 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur">
+              <div className="absolute left-3 top-11 z-30 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur">
                 No mapped leads yet
               </div>
-              <p className="absolute left-4 top-12 z-30 max-w-[18rem] text-xs leading-5 text-command-muted/70">
+              <p className="absolute left-4 top-20 z-30 max-w-[18rem] text-xs leading-5 text-command-muted/70">
                 Area-level only. Add area or postal details to place live work.
               </p>
             </>

@@ -78,7 +78,7 @@ function featureCentroid(feature) {
   return ringCentroid(ring);
 }
 
-function project({ lat, lng }, bounds, viewBox = { width: 900, height: 560, padding: 34 }) {
+function project({ lat, lng }, bounds, viewBox = { width: 900, height: 560, padding: 28 }) {
   const geoWidth = bounds.east - bounds.west;
   const geoHeight = bounds.north - bounds.south;
   const scale = Math.min((viewBox.width - viewBox.padding * 2) / geoWidth, (viewBox.height - viewBox.padding * 2) / geoHeight);
@@ -135,7 +135,7 @@ const bounds = {
 assert(bounds.west > 103.55 && bounds.east < 104.12, "Singapore longitude bounds should be realistic and not cropped.");
 assert(bounds.south > 1.1 && bounds.north < 1.5, "Singapore latitude bounds should be realistic and not cropped.");
 
-const viewBox = { width: 900, height: 560, padding: 34 };
+const viewBox = { width: 900, height: 560, padding: 28 };
 const projectedPositions = allPositions.map(([lng, lat]) => project({ lat, lng }, bounds, viewBox));
 const minX = Math.min(...projectedPositions.map((point) => point.x));
 const maxX = Math.max(...projectedPositions.map((point) => point.x));

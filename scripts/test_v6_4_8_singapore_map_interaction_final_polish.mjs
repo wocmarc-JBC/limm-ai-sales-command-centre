@@ -48,7 +48,7 @@ for (const forbidden of [
 for (const required of [
   "const defaultZoom = 1",
   "const minZoom = 1",
-  "const maxZoom = 3",
+  "const maxZoom = 4",
   "const zoomStep = 0.25",
   "function boundedZoom",
   "function boundedPan",
@@ -66,6 +66,7 @@ for (const required of [
   "disabled={!canZoomIn}",
   "Math.round((zoom / defaultZoom) * 100)",
   "transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`",
+  "transform 160ms ease-out",
   "data-min-zoom={minZoom}",
   "data-max-zoom={maxZoom}",
   "data-zoom-step={zoomStep}"
@@ -98,8 +99,8 @@ for (const required of [
   assert(missionMap.includes(required), `Useful map interaction missing: ${required}`);
 }
 
-assert(geometry.includes("padding: 34"), "Default fit must reduce v6.4.6 padding and make Singapore larger without cropping.");
-assert(geoMap.includes("h-[92%]"), "Map SVG layer should fill more of the map canvas.");
+assert(geometry.includes("padding: 28"), "Default fit must reduce v6.4.6 padding and make Singapore larger without cropping.");
+assert(geoMap.includes("h-[94%]"), "Map SVG layer should fill more of the map canvas.");
 assert(geometry.includes("Orchard / CBD") && !geometry.includes('{ label: "CBD"'), "Major labels should be compacted and polished.");
 for (const label of ["Woodlands", "Jurong", "Bukit Timah", "Orchard / CBD", "Serangoon", "Tampines", "East Coast"]) {
   assert(geometry.includes(label), `Major map label missing: ${label}`);

@@ -215,6 +215,7 @@ for (const required of [
   "scripts/test_v6_4_6_official_ura_map_source.mjs",
   "scripts/test_v6_4_6_official_singapore_planning_area_map.mjs",
   "scripts/test_v6_4_8_singapore_map_interaction_final_polish.mjs",
+  "scripts/test_v6_4_9_singapore_map_smooth_zoom_wheel_lock.mjs",
   "scripts/download_official_singapore_map.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
@@ -234,6 +235,7 @@ for (const required of [
   "docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md",
   "docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md",
   "docs/V6_4_8_SINGAPORE_MAP_INTERACTION_FINAL_POLISH.md",
+  "docs/V6_4_9_SINGAPORE_MAP_SMOOTH_ZOOM_WHEEL_LOCK.md",
   "docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md",
   "docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
@@ -469,6 +471,15 @@ for (const field of [
   "salesBrainVersion: \"v6.4.6\"",
   "version: \"v6_4_8_singapore_map_interaction_final_polish\"",
   "salesBrainVersion: \"v6.4.8\"",
+  "version: \"v6_4_9_singapore_map_smooth_zoom_wheel_lock\"",
+  "salesBrainVersion: \"v6.4.9\"",
+  "mapSmoothZoomControlsAvailable",
+  "mapResetClearsPanSelectionTooltip",
+  "mapWheelZoomAvailable",
+  "mapWheelPreventsPageScroll",
+  "mapWheelListenerPassiveFalse",
+  "mapDefaultFitImproved",
+  "mapHorizontalSpaceOptimized",
   "mapResetButtonFixed",
   "mapResetRestoresDefaultFit",
   "mapZoomControlsReliable",
@@ -859,6 +870,7 @@ assert(pkg.scripts?.["test:v6.4.3"], "package.json missing v6.4.3 Singapore map 
 assert(pkg.scripts?.["test:v6.4.4"], "package.json missing v6.4.4 accurate Singapore SVG map fix test script.");
 assert(pkg.scripts?.["test:v6.4.5"], "package.json missing v6.4.5 real Singapore GeoJSON map test script.");
 assert(pkg.scripts?.["test:v6.4.6"], "package.json missing v6.4.6 official URA map source test script.");
+assert(pkg.scripts?.["test:v6.4.9"], "package.json missing v6.4.9 smooth zoom/wheel lock test script.");
 assert(pkg.scripts?.["map:download-official"], "package.json missing official URA map download script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);

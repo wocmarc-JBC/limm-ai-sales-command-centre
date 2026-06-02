@@ -53,7 +53,7 @@ export type SingaporeGeoPath = {
 export const SINGAPORE_MAP_VIEWBOX = {
   width: 900,
   height: 560,
-  padding: 34
+  padding: 28
 } as const;
 
 export const LIMM_HQ_COORDINATE = {

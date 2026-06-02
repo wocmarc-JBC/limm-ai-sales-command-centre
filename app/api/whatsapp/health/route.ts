@@ -29,6 +29,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.4.6"
 // version: "v6_4_8_singapore_map_interaction_final_polish"
 // salesBrainVersion: "v6.4.8"
+// version: "v6_4_9_singapore_map_smooth_zoom_wheel_lock"
+// salesBrainVersion: "v6.4.9"
 // version: "v6_5_smart_lead_intake_meeting_prep"
 // salesBrainVersion: "v6.5"
 // version: "v6_5_1_accurate_singapore_map_refinement"
@@ -55,9 +57,16 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_4_8_singapore_map_interaction_final_polish",
-      salesBrainVersion: "v6.4.8",
+      version: "v6_4_9_singapore_map_smooth_zoom_wheel_lock",
+      salesBrainVersion: "v6.4.9",
       runtime: "vercel",
+      mapSmoothZoomControlsAvailable: true,
+      mapResetClearsPanSelectionTooltip: true,
+      mapWheelZoomAvailable: true,
+      mapWheelPreventsPageScroll: true,
+      mapWheelListenerPassiveFalse: true,
+      mapDefaultFitImproved: true,
+      mapHorizontalSpaceOptimized: true,
       mapResetButtonFixed: true,
       mapResetRestoresDefaultFit: true,
       mapZoomControlsReliable: true,
@@ -313,9 +322,16 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_8_singapore_map_interaction_final_polish",
-      salesBrainVersion: "v6.4.8",
+      version: "v6_4_9_singapore_map_smooth_zoom_wheel_lock",
+      salesBrainVersion: "v6.4.9",
       runtime: "vercel",
+      mapSmoothZoomControlsAvailable: false,
+      mapResetClearsPanSelectionTooltip: false,
+      mapWheelZoomAvailable: false,
+      mapWheelPreventsPageScroll: false,
+      mapWheelListenerPassiveFalse: false,
+      mapDefaultFitImproved: false,
+      mapHorizontalSpaceOptimized: false,
       mapResetButtonFixed: false,
       mapResetRestoresDefaultFit: false,
       mapZoomControlsReliable: false,

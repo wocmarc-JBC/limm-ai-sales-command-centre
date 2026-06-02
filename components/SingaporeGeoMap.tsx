@@ -9,7 +9,7 @@ export function SingaporeGeoMap() {
   return (
     <svg
       aria-hidden="true"
-      className="accurate-singapore-map real-singapore-outline singapore-map-svg singapore-silhouette-map absolute inset-x-1 top-0 h-[92%] w-[calc(100%-0.5rem)] opacity-95 md:inset-x-3 md:w-[calc(100%-1.5rem)]"
+      className="accurate-singapore-map real-singapore-outline singapore-map-svg singapore-silhouette-map absolute inset-x-0 top-0 h-[94%] w-full opacity-95 md:inset-x-1 md:w-[calc(100%-0.5rem)]"
       data-testid="singapore-silhouette-map"
       data-outline-source="/maps/singapore.geojson"
       data-map-source="/maps/singapore.geojson"
