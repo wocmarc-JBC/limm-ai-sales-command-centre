@@ -223,6 +223,7 @@ for (const required of [
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
   "scripts/test_v6_ui_100_command_centre_polish.mjs",
   "scripts/test_v6_6_strategic_command_core_layout.mjs",
+  "scripts/test_v6_6_2_command_core_map_first_layout.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
   "docs/V6_1_2_MISSION_CONTROL_UI_LIVE_CLEANUP.md",
   "docs/V6_1_4_MISSION_CONTROL_UX_FINAL_POLISH.md",
@@ -244,6 +245,7 @@ for (const required of [
   "docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md",
   "docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md",
   "docs/V6_6_STRATEGIC_COMMAND_CORE_LAYOUT.md",
+  "docs/V6_6_2_COMMAND_CORE_MAP_FIRST_LAYOUT.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
   "supabase/migrations/019_v6_ultimate_command_centre.sql",
   "supabase/migrations/020_v6_3_sales_collection_command_centre.sql",
@@ -524,9 +526,16 @@ for (const field of [
   "version: \"v6_ui_100_command_centre_polish\"",
   "version: \"v6_6_1_strategic_command_core_ui_fit_polish\"",
   "version: \"v6_6_strategic_command_core_layout\"",
+  "version: \"v6_6_2_command_core_map_first_layout\"",
   "strategicCommandCoreAvailable",
   "commandCoreBetaRouteAvailable",
   "frostpunkInspiredLayoutAvailable",
+  "commandCoreMapFirstLayoutAvailable",
+  "commandCoreMapFullWidthHeroAvailable",
+  "commandCoreMapSameSizeAsDashboardAvailable",
+  "commandCoreResourceBarReadable",
+  "commandCorePaleResourceCardsRemoved",
+  "commandCoreSidePanelsNoLongerSqueezeMap",
   "commandCoreWideMapLayoutAvailable",
   "commandCoreMapDominantLayoutAvailable",
   "commandCoreMapUsesFullPanelWidth",
@@ -916,6 +925,7 @@ assert(pkg.scripts?.["test:v6.4.9"], "package.json missing v6.4.9 smooth zoom/wh
 assert(pkg.scripts?.["test:v6.4.10"], "package.json missing v6.4.10 interaction/copy cleanup test script.");
 assert(pkg.scripts?.["test:v6-ui-100"], "package.json missing v6 UI 100 command centre polish test script.");
 assert(pkg.scripts?.["test:v6.6"], "package.json missing v6.6 strategic command core layout test script.");
+assert(pkg.scripts?.["test:v6.6.2"], "package.json missing v6.6.2 command core map-first layout test script.");
 assert(pkg.scripts?.["map:download-official"], "package.json missing official URA map download script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);

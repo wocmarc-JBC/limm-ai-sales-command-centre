@@ -70,10 +70,14 @@ function ResourcePill({ label, value, href, tone }: { label: string; value: numb
   return (
     <a
       href={href}
-      className="command-press flex min-w-[9.5rem] shrink-0 items-center justify-between gap-3 rounded-2xl border border-command-line bg-command-card/70 px-4 py-3 transition hover:border-command-cyan/70 hover:bg-command-cyan/10"
+      className={`command-press flex min-w-[10rem] shrink-0 items-center justify-between gap-3 rounded-2xl border bg-[#04101d]/95 px-4 py-3 shadow-[inset_0_0_24px_rgba(34,211,238,0.05)] transition hover:border-command-cyan/70 hover:bg-[#071827] ${toneClasses(tone)}`}
+      data-readable-resource-card="true"
     >
-      <span className="text-sm font-semibold text-command-muted">{label}</span>
-      <span className={`rounded-full border px-2.5 py-1 text-sm font-bold ${toneClasses(tone)}`}>{value}</span>
+      <span className="inline-flex items-center gap-2 text-sm font-semibold text-command-text">
+        <span className={`h-2.5 w-2.5 rounded-full ${dotClass(tone)}`} />
+        {label}
+      </span>
+      <span className="text-2xl font-semibold text-command-text">{value}</span>
     </a>
   );
 }
@@ -256,7 +260,7 @@ export default async function CommandCorePage() {
         </a>
       </PageHeader>
 
-      <section className="mission-panel mb-6 rounded-3xl p-3 shadow-command" data-testid="command-core-resource-bar">
+      <section className="mission-panel mb-6 rounded-3xl border-command-cyan/20 bg-[#020b16]/88 p-3 shadow-command" data-testid="command-core-resource-bar" data-resource-bar-readable-dark="true">
         <div className="thin-scrollbar flex gap-3 overflow-x-auto pb-1">
           <ResourcePill label="New Leads" value={leads.filter((lead) => salesStageForLead(lead) === "New Lead").length} href="/leads" tone="cyan" />
           <ResourcePill label="Hot Leads" value={hotLeads.length} href="/leads" tone="gold" />
@@ -271,11 +275,45 @@ export default async function CommandCorePage() {
       </section>
 
       <section
-        className="command-core-wide-map-layout grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17.5rem,20rem)] 2xl:grid-cols-[minmax(16.25rem,18.75rem)_minmax(42rem,1fr)_minmax(17.5rem,21.25rem)]"
-        data-testid="command-core-shell-grid"
-        data-wide-map-layout="true"
+        className="command-core-centre-panel command-core-map-first-hero mb-6 w-full"
+        data-testid="command-core-map-hero"
+        data-command-core-map-first-layout="true"
+        data-command-core-map-full-width-hero="true"
+        data-command-core-map-dominant="true"
       >
-        <aside className="order-1 mission-panel rounded-3xl p-4 xl:order-2 xl:col-span-1 2xl:order-1 2xl:col-span-1" data-testid="marcus-decisions-panel" data-command-core-side-panel="decisions">
+        <section className="mission-panel relative mb-4 overflow-hidden rounded-3xl p-4 md:p-5">
+          <div className="cockpit-grid absolute inset-0 opacity-35" />
+          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Command Core</p>
+              <h2 className="mt-1 text-3xl font-semibold text-command-text">Singapore operating picture</h2>
+              <p className="mt-2 text-sm leading-6 text-command-muted">Map-first beta layout. Real CRM signals only, with no fake client files, project values, or external map API.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[30rem]">
+              {radarItems.map((item) => (
+                <div key={item.label} className="rounded-2xl border border-command-line bg-command-bg/70 px-4 py-3">
+                  <p className="flex items-center gap-2 text-sm text-command-muted">
+                    <span className={`h-2.5 w-2.5 rounded-full ${dotClass(item.tone)}`} />
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-command-text">{item.count}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+        <div
+          className="command-core-map-module w-full min-w-0 [&_.singapore-map-wide-layout]:w-full [&_.singapore-map-wide-layout]:p-2 [&_.singapore-map-wide-layout]:md:p-3 [&_.singapore-map-wide-layout]:lg:p-4 [&_.singapore-tactical-map]:min-h-[34rem] [&_.singapore-tactical-map]:md:min-h-[42rem]"
+          data-testid="command-core-map-module"
+          data-map-uses-full-panel-width="true"
+          data-map-same-size-as-dashboard="true"
+        >
+          <SingaporeMissionMap data={missionMap} />
+        </div>
+      </section>
+
+      <section className="command-core-panels-below-map grid gap-5 lg:grid-cols-2 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,0.95fr)_minmax(0,1.1fr)]" data-testid="command-core-panels-below-map" data-side-panels-no-longer-squeeze-map="true">
+        <aside className="mission-panel rounded-3xl p-5" data-testid="marcus-decisions-panel" data-command-core-side-panel="decisions-below-map">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Marcus Decisions</p>
           <h2 className="mt-1 text-2xl font-semibold text-command-text">What needs a call?</h2>
           <div className="mt-5 space-y-3">
@@ -298,36 +336,7 @@ export default async function CommandCorePage() {
           </div>
         </aside>
 
-        <main className="order-2 min-w-0 space-y-4 xl:order-1 xl:col-span-2 2xl:order-2 2xl:col-span-1" data-testid="command-core-centre-panel" data-command-core-map-dominant="true">
-          <section className="mission-panel relative overflow-hidden rounded-3xl p-4">
-            <div className="cockpit-grid absolute inset-0 opacity-35" />
-            <div className="relative">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Command Core</p>
-              <h2 className="mt-1 text-3xl font-semibold text-command-text">Singapore operating picture</h2>
-              <p className="mt-2 text-sm leading-6 text-command-muted">Real CRM signals only. No fake client files, fake project values, or external map API.</p>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {radarItems.map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-command-line bg-command-bg/55 px-4 py-3">
-                    <p className="flex items-center gap-2 text-sm text-command-muted">
-                      <span className={`h-2.5 w-2.5 rounded-full ${dotClass(item.tone)}`} />
-                      {item.label}
-                    </p>
-                    <p className="mt-2 text-3xl font-semibold text-command-text">{item.count}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-          <div
-            className="command-core-map-module w-full min-w-0 [&_.singapore-map-wide-layout]:w-full [&_.singapore-map-wide-layout]:p-3 [&_.singapore-map-wide-layout]:md:p-4 [&_.singapore-map-wide-layout]:lg:p-5"
-            data-testid="command-core-map-module"
-            data-map-uses-full-panel-width="true"
-          >
-            <SingaporeMissionMap data={missionMap} />
-          </div>
-        </main>
-
-        <aside className="order-3 mission-panel rounded-3xl p-4 xl:col-span-1 2xl:col-span-1" data-testid="command-core-inspector-panel" data-command-core-side-panel="inspector">
+        <aside className="mission-panel rounded-3xl p-5" data-testid="command-core-inspector-panel" data-command-core-side-panel="inspector-below-map">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Inspector</p>
           {topLead && topLeadAction ? (
             <div className="mt-4">
@@ -360,41 +369,41 @@ export default async function CommandCorePage() {
             </div>
           )}
         </aside>
-      </section>
 
-      <section className="mission-panel mt-6 rounded-3xl p-5" data-testid="command-core-timeline-strip">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-amber">Bottom Timeline</p>
-            <h2 className="mt-1 text-2xl font-semibold text-command-text">Pressure by time window</h2>
+        <section className="mission-panel rounded-3xl p-5" data-testid="command-core-timeline-strip" data-timeline-compact="true">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-amber">Bottom Timeline</p>
+              <h2 className="mt-1 text-2xl font-semibold text-command-text">Pressure by time window</h2>
+            </div>
+            <span className="w-fit rounded-full border border-command-line bg-command-bg/55 px-3 py-1 text-sm font-semibold text-command-muted">
+              {timelineItems.length} item{timelineItems.length === 1 ? "" : "s"}
+            </span>
           </div>
-          <span className="w-fit rounded-full border border-command-line bg-command-bg/55 px-3 py-1 text-sm font-semibold text-command-muted">
-            {timelineItems.length} item{timelineItems.length === 1 ? "" : "s"}
-          </span>
-        </div>
-        {timelineItems.length ? (
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {(["Today", "Tomorrow", "This Week", "Overdue"] as const).map((bucket) => (
-              <div key={bucket} className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
-                <p className="text-sm font-semibold text-command-text">{bucket}</p>
-                <div className="mt-3 space-y-2">
-                  {timelineItems.filter((item) => item.bucket === bucket).length ? timelineItems.filter((item) => item.bucket === bucket).map((item) => (
-                    <a key={`${bucket}-${item.label}-${item.detail}`} href={item.href} className={`block rounded-xl border px-3 py-2 text-sm transition hover:border-command-cyan/70 ${toneClasses(item.tone)}`}>
-                      <span className="font-semibold">{item.label}</span>
-                      <span className="mt-1 block text-command-muted">{item.detail}</span>
-                    </a>
-                  )) : (
-                    <p className="rounded-xl border border-command-line bg-command-card px-3 py-2 text-sm text-command-muted">No pressure.</p>
-                  )}
+          {timelineItems.length ? (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {(["Today", "Tomorrow", "This Week", "Overdue"] as const).map((bucket) => (
+                <div key={bucket} className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+                  <p className="text-sm font-semibold text-command-text">{bucket}</p>
+                  <div className="mt-3 space-y-2">
+                    {timelineItems.filter((item) => item.bucket === bucket).length ? timelineItems.filter((item) => item.bucket === bucket).map((item) => (
+                      <a key={`${bucket}-${item.label}-${item.detail}`} href={item.href} className={`block rounded-xl border px-3 py-2 text-sm transition hover:border-command-cyan/70 ${toneClasses(item.tone)}`}>
+                        <span className="font-semibold">{item.label}</span>
+                        <span className="mt-1 block text-command-muted">{item.detail}</span>
+                      </a>
+                    )) : (
+                      <p className="rounded-xl border border-command-line bg-command-card px-3 py-2 text-sm text-command-muted">No pressure.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-5 rounded-2xl border border-command-line bg-command-bg/55 p-5 text-command-muted">
-            No timeline pressure right now.
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-command-line bg-command-bg/55 p-4 text-command-muted">
+              No timeline pressure right now.
+            </div>
+          )}
+        </section>
       </section>
     </>
   );

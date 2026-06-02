@@ -40,6 +40,7 @@ export const dynamic = "force-dynamic";
 // version: "v6_ui_100_command_centre_polish"
 // version: "v6_6_strategic_command_core_layout"
 // version: "v6_6_1_strategic_command_core_ui_fit_polish"
+// version: "v6_6_2_command_core_map_first_layout"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -62,12 +63,18 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_6_1_strategic_command_core_ui_fit_polish",
-      salesBrainVersion: "v6.6.1",
+      version: "v6_6_2_command_core_map_first_layout",
+      salesBrainVersion: "v6.6.2",
       runtime: "vercel",
       strategicCommandCoreAvailable: true,
       commandCoreBetaRouteAvailable: true,
       frostpunkInspiredLayoutAvailable: true,
+      commandCoreMapFirstLayoutAvailable: true,
+      commandCoreMapFullWidthHeroAvailable: true,
+      commandCoreMapSameSizeAsDashboardAvailable: true,
+      commandCoreResourceBarReadable: true,
+      commandCorePaleResourceCardsRemoved: true,
+      commandCoreSidePanelsNoLongerSqueezeMap: true,
       commandCoreWideMapLayoutAvailable: true,
       commandCoreMapDominantLayoutAvailable: true,
       commandCoreMapUsesFullPanelWidth: true,
@@ -359,12 +366,18 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_6_1_strategic_command_core_ui_fit_polish",
-      salesBrainVersion: "v6.6.1",
+      version: "v6_6_2_command_core_map_first_layout",
+      salesBrainVersion: "v6.6.2",
       runtime: "vercel",
       strategicCommandCoreAvailable: false,
       commandCoreBetaRouteAvailable: false,
       frostpunkInspiredLayoutAvailable: false,
+      commandCoreMapFirstLayoutAvailable: false,
+      commandCoreMapFullWidthHeroAvailable: false,
+      commandCoreMapSameSizeAsDashboardAvailable: false,
+      commandCoreResourceBarReadable: false,
+      commandCorePaleResourceCardsRemoved: false,
+      commandCoreSidePanelsNoLongerSqueezeMap: false,
       commandCoreWideMapLayoutAvailable: false,
       commandCoreMapDominantLayoutAvailable: false,
       commandCoreMapUsesFullPanelWidth: false,

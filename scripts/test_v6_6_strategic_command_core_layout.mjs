@@ -62,14 +62,14 @@ for (const phrase of [
 
 for (const phrase of [
   "command-core-centre-panel",
-  "command-core-shell-grid",
-  "command-core-wide-map-layout",
-  "data-wide-map-layout=\"true\"",
-  "2xl:grid-cols-[minmax(16.25rem,18.75rem)_minmax(42rem,1fr)_minmax(17.5rem,21.25rem)]",
-  "xl:col-span-2",
+  "command-core-map-hero",
+  "command-core-map-first-hero",
+  "data-command-core-map-first-layout=\"true\"",
+  "data-command-core-map-full-width-hero=\"true\"",
   "data-command-core-map-dominant=\"true\"",
   "command-core-map-module",
   "data-map-uses-full-panel-width=\"true\"",
+  "data-map-same-size-as-dashboard=\"true\"",
   "[&_.singapore-map-wide-layout]:w-full",
   "Command Core",
   "SingaporeMissionMap",
@@ -79,8 +79,9 @@ for (const phrase of [
   assert(commandCore.includes(phrase), `central Command Core panel missing ${phrase}`);
 }
 
-assert(commandCore.includes("data-command-core-side-panel=\"decisions\"") && commandCore.includes("minmax(16.25rem,18.75rem)"), "left decisions panel must be constrained to roughly 260-300px at wide desktop.");
-assert(commandCore.includes("data-command-core-side-panel=\"inspector\"") && commandCore.includes("minmax(17.5rem,21.25rem)"), "right inspector panel must be constrained to roughly 280-340px at wide desktop.");
+assert(commandCore.includes("command-core-panels-below-map") && commandCore.includes("data-side-panels-no-longer-squeeze-map=\"true\""), "side panels must sit below/separate from map instead of squeezing it.");
+assert(commandCore.includes("data-command-core-side-panel=\"decisions-below-map\""), "Marcus Decisions must be below/separate from the map.");
+assert(commandCore.includes("data-command-core-side-panel=\"inspector-below-map\""), "Inspector must be below/separate from the map.");
 
 for (const phrase of [
   "command-core-inspector-panel",
@@ -118,11 +119,18 @@ assert(mapGeometry.includes("data\\.gov\\.sg") && mapGeometry.includes("URA"), "
 assert(mapData.includes("data.gov.sg / URA") && mapData.includes("d_4765db0e87b9c86336792efe8a1f7a66"), "local official Singapore map asset proof must remain.");
 
 for (const field of [
+  'version: "v6_6_2_command_core_map_first_layout"',
   'version: "v6_6_1_strategic_command_core_ui_fit_polish"',
   'version: "v6_6_strategic_command_core_layout"',
   "strategicCommandCoreAvailable",
   "commandCoreBetaRouteAvailable",
   "frostpunkInspiredLayoutAvailable",
+  "commandCoreMapFirstLayoutAvailable",
+  "commandCoreMapFullWidthHeroAvailable",
+  "commandCoreMapSameSizeAsDashboardAvailable",
+  "commandCoreResourceBarReadable",
+  "commandCorePaleResourceCardsRemoved",
+  "commandCoreSidePanelsNoLongerSqueezeMap",
   "commandCoreWideMapLayoutAvailable",
   "commandCoreMapDominantLayoutAvailable",
   "commandCoreMapUsesFullPanelWidth",
