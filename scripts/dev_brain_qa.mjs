@@ -124,7 +124,8 @@ const requiredScripts = [
   "scripts/test_v6_4_10_singapore_map_interaction_copy_cleanup.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
-  "scripts/test_v6_ui_100_command_centre_polish.mjs"
+  "scripts/test_v6_ui_100_command_centre_polish.mjs",
+  "scripts/test_v6_6_strategic_command_core_layout.mjs"
 ];
 
 let hardFail = false;

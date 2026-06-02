@@ -14,6 +14,7 @@ const appNavGroups = [
     title: "Command",
     items: [
       { href: "/", label: "Dashboard" },
+      { href: "/command-core", label: "Command Core Beta" },
       { href: "/leads", label: "AI Lead Inbox" },
       { label: "Mission Queue", disabled: true }
     ]

@@ -94,6 +94,7 @@ for (const required of [
   "app/login/page.tsx",
   "app/review-chatgpt-ui/page.tsx",
   "app/page.tsx",
+  "app/command-core/page.tsx",
   "components/ShellChrome.tsx",
   "components/auth/AuthGate.tsx",
   "components/auth/LoginForm.tsx",
@@ -221,6 +222,7 @@ for (const required of [
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
   "scripts/test_v6_ui_100_command_centre_polish.mjs",
+  "scripts/test_v6_6_strategic_command_core_layout.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
   "docs/V6_1_2_MISSION_CONTROL_UI_LIVE_CLEANUP.md",
   "docs/V6_1_4_MISSION_CONTROL_UX_FINAL_POLISH.md",
@@ -241,6 +243,7 @@ for (const required of [
   "docs/V6_4_10_SINGAPORE_MAP_INTERACTION_COPY_CLEANUP.md",
   "docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md",
   "docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md",
+  "docs/V6_6_STRATEGIC_COMMAND_CORE_LAYOUT.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
   "supabase/migrations/019_v6_ultimate_command_centre.sql",
   "supabase/migrations/020_v6_3_sales_collection_command_centre.sql",
@@ -519,6 +522,16 @@ for (const field of [
   "version: \"v6_5_1_accurate_singapore_map_refinement\"",
   "salesBrainVersion: \"v6.5.1\"",
   "version: \"v6_ui_100_command_centre_polish\"",
+  "version: \"v6_6_strategic_command_core_layout\"",
+  "strategicCommandCoreAvailable",
+  "commandCoreBetaRouteAvailable",
+  "frostpunkInspiredLayoutAvailable",
+  "topResourceBarAvailable",
+  "marcusDecisionsPanelAvailable",
+  "rightInspectorPanelAvailable",
+  "bottomTimelineStripAvailable",
+  "commandCoreUsesRealDataOnly",
+  "currentDashboardPreserved",
   "ui100CommandCentrePolishAvailable",
   "dashboardBossActionClarityAvailable",
   "marcusToday100PolishAvailable",
@@ -898,6 +911,7 @@ assert(pkg.scripts?.["test:v6.4.6"], "package.json missing v6.4.6 official URA m
 assert(pkg.scripts?.["test:v6.4.9"], "package.json missing v6.4.9 smooth zoom/wheel lock test script.");
 assert(pkg.scripts?.["test:v6.4.10"], "package.json missing v6.4.10 interaction/copy cleanup test script.");
 assert(pkg.scripts?.["test:v6-ui-100"], "package.json missing v6 UI 100 command centre polish test script.");
+assert(pkg.scripts?.["test:v6.6"], "package.json missing v6.6 strategic command core layout test script.");
 assert(pkg.scripts?.["map:download-official"], "package.json missing official URA map download script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);

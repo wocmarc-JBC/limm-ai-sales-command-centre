@@ -38,6 +38,7 @@ export const dynamic = "force-dynamic";
 // version: "v6_5_1_accurate_singapore_map_refinement"
 // salesBrainVersion: "v6.5.1"
 // version: "v6_ui_100_command_centre_polish"
+// version: "v6_6_strategic_command_core_layout"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -60,9 +61,18 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_ui_100_command_centre_polish",
-      salesBrainVersion: "v6-ui-100",
+      version: "v6_6_strategic_command_core_layout",
+      salesBrainVersion: "v6.6",
       runtime: "vercel",
+      strategicCommandCoreAvailable: true,
+      commandCoreBetaRouteAvailable: true,
+      frostpunkInspiredLayoutAvailable: true,
+      topResourceBarAvailable: true,
+      marcusDecisionsPanelAvailable: true,
+      rightInspectorPanelAvailable: true,
+      bottomTimelineStripAvailable: true,
+      commandCoreUsesRealDataOnly: true,
+      currentDashboardPreserved: true,
       ui100CommandCentrePolishAvailable: true,
       dashboardBossActionClarityAvailable: true,
       marcusToday100PolishAvailable: true,
@@ -345,9 +355,18 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_ui_100_command_centre_polish",
-      salesBrainVersion: "v6-ui-100",
+      version: "v6_6_strategic_command_core_layout",
+      salesBrainVersion: "v6.6",
       runtime: "vercel",
+      strategicCommandCoreAvailable: false,
+      commandCoreBetaRouteAvailable: false,
+      frostpunkInspiredLayoutAvailable: false,
+      topResourceBarAvailable: false,
+      marcusDecisionsPanelAvailable: false,
+      rightInspectorPanelAvailable: false,
+      bottomTimelineStripAvailable: false,
+      commandCoreUsesRealDataOnly: false,
+      currentDashboardPreserved: false,
       ui100CommandCentrePolishAvailable: false,
       dashboardBossActionClarityAvailable: false,
       marcusToday100PolishAvailable: false,
