@@ -208,6 +208,7 @@ for (const required of [
   "scripts/test_v6_3_sales_collection_command_centre.mjs",
   "scripts/test_v6_4_singapore_mission_map.mjs",
   "scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs",
+  "scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
   "docs/V6_1_2_MISSION_CONTROL_UI_LIVE_CLEANUP.md",
   "docs/V6_1_4_MISSION_CONTROL_UX_FINAL_POLISH.md",
@@ -218,6 +219,7 @@ for (const required of [
   "docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md",
   "docs/V6_4_SINGAPORE_MISSION_MAP.md",
   "docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md",
+  "docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
   "supabase/migrations/019_v6_ultimate_command_centre.sql",
   "supabase/migrations/020_v6_3_sales_collection_command_centre.sql",
@@ -437,6 +439,12 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
+  "version: \"v6_4_2_accurate_singapore_map_no_overlay\"",
+  "salesBrainVersion: \"v6.4.2\"",
+  "accurateSingaporeMapAvailable",
+  "mapNoBlockingOverlayAvailable",
+  "mapBaseAlwaysVisible",
+  "subtleEmptyStateHelperAvailable",
   "version: \"v6_4_1_singapore_tactical_map_ui_polish\"",
   "salesBrainVersion: \"v6.4.1\"",
   "singaporeTacticalMapUiAvailable",
@@ -759,6 +767,7 @@ assert(pkg.scripts?.["test:v6.1.8"], "package.json missing v6.1.8 dashboard comp
 assert(pkg.scripts?.["test:v6.3"], "package.json missing v6.3 sales collection command centre test script.");
 assert(pkg.scripts?.["test:v6.4"], "package.json missing v6.4 Singapore mission map test script.");
 assert(pkg.scripts?.["test:v6.4.1"], "package.json missing v6.4.1 Singapore tactical map UI polish test script.");
+assert(pkg.scripts?.["test:v6.4.2"], "package.json missing v6.4.2 accurate Singapore map no-overlay test script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);
 }

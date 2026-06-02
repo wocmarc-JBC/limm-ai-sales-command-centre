@@ -32,19 +32,19 @@ function SingaporeSilhouette() {
   return (
     <svg
       aria-hidden="true"
-      className="singapore-silhouette-map absolute inset-x-3 top-6 h-[72%] w-[calc(100%-1.5rem)] opacity-95 md:inset-x-8 md:w-[calc(100%-4rem)]"
+      className="accurate-singapore-map singapore-silhouette-map absolute inset-x-3 top-5 h-[76%] w-[calc(100%-1.5rem)] opacity-95 md:inset-x-7 md:w-[calc(100%-3.5rem)]"
       data-testid="singapore-silhouette-map"
-      viewBox="0 0 720 360"
+      viewBox="0 0 760 430"
       preserveAspectRatio="xMidYMid meet"
     >
       <defs>
-        <linearGradient id="sg-land-fill" x1="78" x2="670" y1="130" y2="260" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#132334" />
-          <stop offset="0.55" stopColor="#0d1827" />
-          <stop offset="1" stopColor="#201b10" />
+        <linearGradient id="sg-land-fill" x1="66" x2="704" y1="128" y2="278" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#14283a" />
+          <stop offset="0.52" stopColor="#0b1727" />
+          <stop offset="1" stopColor="#211d12" />
         </linearGradient>
-        <filter id="sg-soft-glow" x="-20%" y="-30%" width="140%" height="160%">
-          <feGaussianBlur stdDeviation="7" result="blur" />
+        <filter id="sg-soft-glow" x="-18%" y="-28%" width="136%" height="156%">
+          <feGaussianBlur stdDeviation="6" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -54,34 +54,35 @@ function SingaporeSilhouette() {
 
       <path
         className="singapore-island-silhouette"
-        d="M76 190 C108 162 150 154 196 164 C235 172 258 148 296 145 C338 141 356 164 391 160 C433 154 460 133 500 142 C543 151 568 179 613 180 C652 180 684 199 694 226 C677 245 635 250 596 244 C553 238 526 256 486 250 C447 244 422 224 383 229 C335 235 312 260 267 258 C218 256 189 236 148 240 C111 243 83 228 64 211 C57 203 59 197 76 190 Z"
+        d="M59 225 L82 203 L119 188 L151 177 L191 171 L233 176 L265 166 L299 150 L335 147 L370 158 L401 151 L431 136 L467 130 L505 137 L539 157 L573 170 L619 176 L657 189 L699 204 L733 226 L715 246 L680 254 L635 251 L593 240 L552 247 L510 264 L463 261 L419 244 L379 249 L336 268 L296 285 L249 283 L206 266 L165 260 L122 267 L84 260 L55 243 Z"
         fill="url(#sg-land-fill)"
-        stroke="rgba(34,211,238,0.48)"
+        stroke="rgba(34,211,238,0.52)"
         strokeWidth="2"
         filter="url(#sg-soft-glow)"
       />
       <path
-        d="M102 205 C160 190 221 197 271 210 M268 160 C286 202 278 232 262 255 M344 150 C357 187 354 221 331 250 M414 159 C419 188 413 218 394 236 M498 145 C493 184 506 216 543 244 M578 181 C557 204 544 222 539 244"
+        d="M82 221 C137 205 187 205 235 213 M246 177 C270 219 269 254 248 281 M330 150 C350 192 350 234 327 271 M415 142 C422 184 415 224 389 250 M501 139 C495 185 514 229 552 248 M596 177 C570 204 556 225 552 247 M652 190 C637 213 625 234 617 250"
         fill="none"
         stroke="rgba(214,168,79,0.22)"
         strokeWidth="1.4"
         strokeLinecap="round"
       />
       <path
-        d="M128 176 C192 182 245 177 300 170 C374 160 442 164 516 176 C574 186 629 192 686 205"
+        d="M96 196 C171 188 236 190 306 174 C386 154 468 159 558 178 C624 191 683 199 724 218"
         fill="none"
         stroke="rgba(34,211,238,0.18)"
         strokeWidth="1"
         strokeDasharray="7 8"
       />
       <path
-        d="M52 228 C42 221 43 213 57 210 C70 207 82 215 82 224 C78 234 62 235 52 228 Z M633 266 C646 258 664 260 676 269 C664 280 642 280 633 266 Z"
-        fill="rgba(34,211,238,0.09)"
-        stroke="rgba(34,211,238,0.26)"
+        className="singapore-visible-islands"
+        d="M284 314 C321 300 359 300 391 313 C366 331 318 334 284 314 Z M39 239 C27 232 27 222 43 218 C58 215 72 224 72 235 C66 246 49 247 39 239 Z M618 306 C638 294 667 297 686 312 C666 329 634 327 618 306 Z M690 149 C717 141 737 150 746 170 C728 181 697 176 690 149 Z M650 116 C667 110 680 115 687 128 C674 137 654 133 650 116 Z"
+        fill="rgba(34,211,238,0.1)"
+        stroke="rgba(34,211,238,0.3)"
         strokeWidth="1"
       />
       <path
-        d="M92 292 H672 M128 314 H604"
+        d="M70 318 H705 M110 344 H648"
         stroke="rgba(214,168,79,0.15)"
         strokeWidth="1"
         strokeDasharray="2 10"
@@ -158,48 +159,45 @@ export function SingaporeMissionMap({
           <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-command-cyan/10 to-transparent" />
           <SingaporeSilhouette />
 
-          {hasMapData ? (
+          {data.areaSummaries.map((area) => {
+            const position = projectPoint(area);
+            const urgent = area.overdueCount > 0 || area.riskCount > 0;
+            const size = Math.round(28 + area.intensity * 36);
+            return (
+              <a
+                key={area.area}
+                href={areaSelectHref(activeFilter, area.area)}
+                className={`tactical-area-halo absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border text-xs font-semibold transition hover:scale-110 hover:bg-command-bg/70 ${heatClass(area.intensity, urgent)}`}
+                style={{ ...position, width: `${size}px`, height: `${size}px` }}
+                title={`${area.area}: ${area.leadCount} leads, ${area.hotLeadCount} hot, ${area.followUpDueCount} follow-up, ${area.riskCount} risk`}
+              >
+                {area.leadCount + area.wonJobCount}
+              </a>
+            );
+          })}
+          {data.pins.map((pin) => {
+            const position = projectPoint(pin);
+            return (
+              <a
+                key={pin.id}
+                href={pin.href || "#"}
+                className={`mission-map-pin absolute z-20 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow-command ring-4 ring-command-bg/55 transition hover:z-30 hover:scale-125 ${missionMapColorClass(pin.colorCategory)}`}
+                style={position}
+                title={`${pin.area} - ${pin.label} - ${pin.type} - ${pin.confidence === "exact" ? "Exact/manual coordinate stored; dashboard still area-level" : "Approx. area"}`}
+              />
+            );
+          })}
+
+          {!hasMapData ? (
             <>
-              {data.areaSummaries.map((area) => {
-                const position = projectPoint(area);
-                const urgent = area.overdueCount > 0 || area.riskCount > 0;
-                const size = Math.round(28 + area.intensity * 36);
-                return (
-                  <a
-                    key={area.area}
-                    href={areaSelectHref(activeFilter, area.area)}
-                    className={`tactical-area-halo absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border text-xs font-semibold transition hover:scale-110 hover:bg-command-bg/70 ${heatClass(area.intensity, urgent)}`}
-                    style={{ ...position, width: `${size}px`, height: `${size}px` }}
-                    title={`${area.area}: ${area.leadCount} leads, ${area.hotLeadCount} hot, ${area.followUpDueCount} follow-up, ${area.riskCount} risk`}
-                  >
-                    {area.leadCount + area.wonJobCount}
-                  </a>
-                );
-              })}
-              {data.pins.map((pin) => {
-                const position = projectPoint(pin);
-                return (
-                  <a
-                    key={pin.id}
-                    href={pin.href || "#"}
-                    className={`mission-map-pin absolute z-20 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow-command ring-4 ring-command-bg/55 transition hover:z-30 hover:scale-125 ${missionMapColorClass(pin.colorCategory)}`}
-                    style={position}
-                    title={`${pin.area} - ${pin.label} - ${pin.type} - ${pin.confidence === "exact" ? "Exact/manual coordinate stored; dashboard still area-level" : "Approx. area"}`}
-                  />
-                );
-              })}
+              <div className="absolute right-3 top-3 z-20 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur">
+                No mapped leads yet
+              </div>
+              <div className="absolute left-3 bottom-16 z-20 max-w-[17rem] rounded-xl border border-command-cyan/20 bg-command-bg/58 px-3 py-2 text-xs leading-5 text-command-muted backdrop-blur">
+                Add property area or postal code to improve location intelligence.
+              </div>
             </>
-          ) : (
-            <div className="absolute left-1/2 top-1/2 z-20 w-[min(24rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-command-cyan/25 bg-command-bg/82 p-4 text-center shadow-command backdrop-blur">
-              <p className="text-lg font-semibold text-command-text">Singapore Mission Map ready</p>
-              <p className="mt-2 text-sm leading-6 text-command-muted">
-                Add property area or postal code to leads to activate location intelligence.
-              </p>
-              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">
-                Unknown areas: {data.unknownLocationCount}
-              </p>
-            </div>
-          )}
+          ) : null}
 
           <div className="absolute inset-x-3 bottom-3 z-30 rounded-2xl border border-command-line bg-command-bg/76 px-3 py-2 shadow-command backdrop-blur">
             <div className="flex flex-wrap gap-2 text-xs font-semibold">

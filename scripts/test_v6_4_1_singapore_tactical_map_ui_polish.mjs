@@ -30,14 +30,14 @@ assert(mapComponent.includes("data-testid=\"singapore-mission-map\""), "Singapor
 assert(mapComponent.includes("singapore-tactical-map"), "Tactical map class must exist.");
 assert(mapComponent.includes("singapore-silhouette-map"), "Singapore silhouette class/test id must exist.");
 assert(mapComponent.includes("singapore-island-silhouette"), "Singapore island silhouette path must exist.");
-assert(mapComponent.includes("viewBox=\"0 0 720 360\""), "Inline tactical Singapore silhouette SVG must be present.");
+assert(mapComponent.includes("viewBox=\"0 0 760 430\""), "Inline tactical Singapore silhouette SVG must be present.");
 assert(!mapComponent.includes("rounded-[48%_52%_45%_55%]"), "Old generic oval/radar placeholder must be removed.");
 assert(!mapComponent.includes("Area intelligence ready"), "Old generic area intelligence heading must be removed.");
 assert(!mapComponent.includes("Hybrid area heatmap + clickable pins"), "Old generic map subtitle must be removed.");
 
-assert(mapComponent.includes("Singapore Mission Map ready"), "Polished compact empty state title missing.");
-assert(mapComponent.includes("Add property area or postal code to leads to activate location intelligence."), "Polished empty state subtitle missing.");
-assert(mapComponent.includes("Unknown areas:"), "Empty state should show unknown area count.");
+assert(mapComponent.includes("No mapped leads yet"), "Subtle empty state status label missing.");
+assert(mapComponent.includes("Add property area or postal code to improve location intelligence."), "Subtle empty state helper missing.");
+assert(!mapComponent.includes("-translate-x-1/2 -translate-y-1/2 rounded-2xl border border-command-cyan/25"), "Large centered blocking empty-state overlay must not return.");
 assert(!/demo pin|sample pin|fake pin|fake map/i.test(mapComponent), "Map component must not include fake/demo map data.");
 
 for (const legend of [

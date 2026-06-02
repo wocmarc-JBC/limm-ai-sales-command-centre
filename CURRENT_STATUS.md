@@ -1,5 +1,25 @@
 # Current Status
 
+## v6.4.2 Accurate Singapore Map No Overlay
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_4_2_accurate_singapore_map_no_overlay`.
+- Singapore Mission Map uses a more accurate inline Singapore map silhouette with visible island massing.
+- The large centered empty-state overlay was removed.
+- The map base remains visible even when no mapped lead data exists.
+- Empty-state guidance is now small and unobtrusive: `No mapped leads yet` and a helper line.
+- Clickable pins, heatmap halos, filters, legend, and area summary panel are preserved.
+- Dashboard map remains privacy-safe and does not show full exact addresses.
+
+Current Go/No-Go:
+
+- GO for controlled v6.4.2 deploy proof after push, Vercel deployment, and health check.
+- GO for visual dashboard retest after health shows `v6_4_2_accurate_singapore_map_no_overlay`.
+- NO-GO for backend rebuilds, Supabase schema changes, WhatsApp webhook changes, external geocoding/API keys, fake map data, price guide automation, Calendar auto-booking, voice transcription, GST calculations, or auth/delete logic changes.
+
 ## v6.4.1 Singapore Tactical Map UI Polish
 
 Status: implemented locally; pending push/deploy health proof.

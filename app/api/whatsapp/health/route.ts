@@ -14,6 +14,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.3"
 // version: "v6_4_singapore_mission_map"
 // salesBrainVersion: "v6.4"
+// version: "v6_4_1_singapore_tactical_map_ui_polish"
+// salesBrainVersion: "v6.4.1"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -35,9 +37,13 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v6_4_1_singapore_tactical_map_ui_polish",
-      salesBrainVersion: "v6.4.1",
+      version: "v6_4_2_accurate_singapore_map_no_overlay",
+      salesBrainVersion: "v6.4.2",
       runtime: "vercel",
+      accurateSingaporeMapAvailable: true,
+      mapNoBlockingOverlayAvailable: true,
+      mapBaseAlwaysVisible: true,
+      subtleEmptyStateHelperAvailable: true,
       singaporeTacticalMapUiAvailable: true,
       singaporeSilhouetteMapAvailable: true,
       mapEmptyStatePolished: true,
@@ -236,9 +242,13 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_1_singapore_tactical_map_ui_polish",
-      salesBrainVersion: "v6.4.1",
+      version: "v6_4_2_accurate_singapore_map_no_overlay",
+      salesBrainVersion: "v6.4.2",
       runtime: "vercel",
+      accurateSingaporeMapAvailable: false,
+      mapNoBlockingOverlayAvailable: false,
+      mapBaseAlwaysVisible: false,
+      subtleEmptyStateHelperAvailable: false,
       singaporeTacticalMapUiAvailable: false,
       singaporeSilhouetteMapAvailable: false,
       mapEmptyStatePolished: false,
