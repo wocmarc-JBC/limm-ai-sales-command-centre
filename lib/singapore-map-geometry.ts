@@ -53,7 +53,7 @@ export type SingaporeGeoPath = {
 export const SINGAPORE_MAP_VIEWBOX = {
   width: 900,
   height: 560,
-  padding: 42
+  padding: 34
 } as const;
 
 export const LIMM_HQ_COORDINATE = {
@@ -77,14 +77,13 @@ export type SingaporeAreaLabel = {
 };
 
 const SINGAPORE_LABEL_FEATURES = [
-  { label: "Orchard", featureNames: ["ORCHARD"] },
+  { label: "Orchard / CBD", featureNames: ["ORCHARD", "DOWNTOWN CORE"] },
   { label: "Bukit Timah", featureNames: ["BUKIT TIMAH"] },
   { label: "Serangoon", featureNames: ["SERANGOON"] },
   { label: "Tampines", featureNames: ["TAMPINES"] },
   { label: "East Coast", featureNames: ["MARINE PARADE", "BEDOK"] },
   { label: "Jurong", featureNames: ["JURONG EAST", "JURONG WEST"] },
-  { label: "Woodlands", featureNames: ["WOODLANDS"] },
-  { label: "CBD", featureNames: ["DOWNTOWN CORE"] }
+  { label: "Woodlands", featureNames: ["WOODLANDS"] }
 ] as const;
 
 const geoJson = singaporeGeoJson as unknown as GeoJsonFeatureCollection;
@@ -234,8 +233,8 @@ function featureCentroid(feature: GeoJsonFeature): Position | null {
   return ring ? ringCentroid(ring) : null;
 }
 
-function findFeatureByAnyName(featureNames: readonly string[]) {
-  return features.find((feature) => {
+function findFeaturesByAnyName(featureNames: readonly string[]) {
+  return features.filter((feature) => {
     const name = featureName(feature).toUpperCase();
     return featureNames.some((candidate) => name === candidate.toUpperCase());
   });
@@ -245,25 +244,25 @@ function buildSingaporeAreaLabels(): SingaporeAreaLabel[] {
   const { width, height, padding } = SINGAPORE_MAP_VIEWBOX;
 
   return SINGAPORE_LABEL_FEATURES.flatMap((labelConfig) => {
-    const feature = findFeatureByAnyName(labelConfig.featureNames);
-    if (!feature) return [];
-    const centroid = featureCentroid(feature);
-    if (!centroid) return [];
+    const matchedFeatures = findFeaturesByAnyName(labelConfig.featureNames);
+    const centroids = matchedFeatures.map((feature) => ({ feature, centroid: featureCentroid(feature) })).filter((item): item is { feature: GeoJsonFeature; centroid: Position } => Boolean(item.centroid));
+    if (centroids.length === 0) return [];
 
-    const [lng, lat] = centroid;
+    const lng = centroids.reduce((sum, item) => sum + item.centroid[0], 0) / centroids.length;
+    const lat = centroids.reduce((sum, item) => sum + item.centroid[1], 0) / centroids.length;
     const projected = projectSingaporeCoordinate({ lat, lng });
     const withinViewBox =
       projected.x >= padding &&
       projected.x <= width - padding &&
       projected.y >= padding &&
       projected.y <= height - padding;
-    const area = featureArea(feature);
+    const area = centroids.reduce((sum, item) => sum + featureArea(item.feature), 0);
     const position = pointStyleFromProject(projected);
 
     return [
       {
         label: labelConfig.label,
-        featureName: featureName(feature),
+        featureName: centroids.map((item) => featureName(item.feature)).join(" / "),
         lat,
         lng,
         x: projected.x,

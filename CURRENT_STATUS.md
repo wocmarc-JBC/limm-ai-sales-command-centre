@@ -1,8 +1,29 @@
 # Current Status
 
+## v6.4.8 Singapore Mission Map Interaction Final Polish
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Official URA/data.gov.sg planning-area geometry is preserved.
+- The map fit is tightened so Singapore fills more of the cockpit canvas without cropping.
+- Reset now restores default zoom, clears pan, clears selected pin/area/HQ state, and returns the zoom display to `100%`.
+- Zoom controls now use explicit min/default/max/step constants with disabled states at limits.
+- Pan/drag remains available when zoomed in and clears on reset.
+- Area bubbles, pin summaries, and HQ tooltip make the map more useful as an operational module.
+- Filters now affect visible pins and area bubbles; empty filter results show only a small note.
+- Major labels are polished to Woodlands, Jurong, Bukit Timah, Orchard / CBD, Serangoon, Tampines, and East Coast.
+
+Current Go/No-Go:
+
+- GO for controlled deploy proof after push, Vercel deployment, and health check.
+- GO for visual retest after health shows `v6_4_8_singapore_map_interaction_final_polish`.
+- NO-GO for external map APIs, fake map data, full exact address display, price guide automation, Calendar auto-booking, voice transcription, Supabase schema changes, auth changes, delete logic changes, or WhatsApp webhook changes.
+
 ## v6.4.6 Official URA / data.gov.sg No-Sea Map Source
 
-Status: downloader added; official download blocked inside Codex sandbox by network restrictions.
+Status: official file downloaded locally by Marcus and committed in v6.4.6.
 
 What changed:
 
@@ -15,8 +36,7 @@ What changed:
 
 Current limitation:
 
-- The official file is not downloaded yet because this runner cannot connect to `api-open.data.gov.sg`.
-- Marcus should run `npm.cmd run map:download-official` from a normal internet-connected PowerShell, then rebuild, test, commit, and push.
+- None for local geometry source. The next proof is Vercel health and visual dashboard retest.
 
 ## v6.4.5 Real Singapore GeoJSON Map
 

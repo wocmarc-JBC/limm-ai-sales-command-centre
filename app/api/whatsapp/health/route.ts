@@ -27,6 +27,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.4.5"
 // version: "v6_4_6_official_singapore_planning_area_map"
 // salesBrainVersion: "v6.4.6"
+// version: "v6_4_8_singapore_map_interaction_final_polish"
+// salesBrainVersion: "v6.4.8"
 // version: "v6_5_smart_lead_intake_meeting_prep"
 // salesBrainVersion: "v6.5"
 // version: "v6_5_1_accurate_singapore_map_refinement"
@@ -53,9 +55,22 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_4_6_official_singapore_planning_area_map",
-      salesBrainVersion: "v6.4.6",
+      version: "v6_4_8_singapore_map_interaction_final_polish",
+      salesBrainVersion: "v6.4.8",
       runtime: "vercel",
+      mapResetButtonFixed: true,
+      mapResetRestoresDefaultFit: true,
+      mapZoomControlsReliable: true,
+      mapZoomBoundsAvailable: true,
+      mapZoomPercentAccurate: true,
+      mapPanDragAvailable: true,
+      mapResetClearsPanAndSelection: true,
+      mapAreaClickSummaryAvailable: true,
+      mapPinClickSummaryAvailable: true,
+      mapHqTooltipAvailable: true,
+      mapAreaCountBubblesAvailable: true,
+      mapFiltersAffectPinsAvailable: true,
+      officialMapGeometryPreserved: true,
       officialSingaporePlanningAreaMapAvailable,
       mapFitToBoundsAvailable: true,
       mapCroppingFixed: true,
@@ -298,9 +313,22 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_6_official_singapore_planning_area_map",
-      salesBrainVersion: "v6.4.6",
+      version: "v6_4_8_singapore_map_interaction_final_polish",
+      salesBrainVersion: "v6.4.8",
       runtime: "vercel",
+      mapResetButtonFixed: false,
+      mapResetRestoresDefaultFit: false,
+      mapZoomControlsReliable: false,
+      mapZoomBoundsAvailable: false,
+      mapZoomPercentAccurate: false,
+      mapPanDragAvailable: false,
+      mapResetClearsPanAndSelection: false,
+      mapAreaClickSummaryAvailable: false,
+      mapPinClickSummaryAvailable: false,
+      mapHqTooltipAvailable: false,
+      mapAreaCountBubblesAvailable: false,
+      mapFiltersAffectPinsAvailable: false,
+      officialMapGeometryPreserved: false,
       officialSingaporePlanningAreaMapAvailable: false,
       mapFitToBoundsAvailable: false,
       mapCroppingFixed: false,

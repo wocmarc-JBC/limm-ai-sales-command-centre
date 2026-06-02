@@ -27,7 +27,7 @@ function collectPositions(value, positions = []) {
   return positions;
 }
 
-function project({ lat, lng }, bounds, viewBox = { width: 900, height: 560, padding: 42 }) {
+function project({ lat, lng }, bounds, viewBox = { width: 900, height: 560, padding: 34 }) {
   const geoWidth = bounds.east - bounds.west;
   const geoHeight = bounds.north - bounds.south;
   const scale = Math.min((viewBox.width - viewBox.padding * 2) / geoWidth, (viewBox.height - viewBox.padding * 2) / geoHeight);
