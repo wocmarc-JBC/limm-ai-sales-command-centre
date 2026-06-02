@@ -33,6 +33,25 @@ function leadHeatTone(lead: Lead) {
   return { label: "Cold", color: "bg-command-subtle", text: "text-command-muted" };
 }
 
+function compactPriorityBadges(lead: Lead, stage: string, leadLevel: string, isWhatsapp: boolean, questionCategory?: string) {
+  const badges = [
+    lead.needsMarcus || lead.bossApprovalNeeded ? "Needs Marcus" : "",
+    lead.bossApprovalNeeded ? "Boss Review Required" : "",
+    lead.botPaused ? "Bot Paused" : "",
+    leadLevel,
+    stage,
+    isWhatsapp ? "WhatsApp" : "",
+    lead.missingInfo.some((item) => /floor_plan|site_photos/i.test(item)) ? "Needs Floor Plan / Photos" : "",
+    questionCategory ?? "",
+    lead.isTest ? "Test Lead" : "",
+    lead.deletedAt ? "Soft Deleted" : ""
+  ].filter(Boolean);
+  return {
+    visibleBadges: badges.slice(0, 3),
+    hiddenBadgeCount: Math.max(0, badges.length - 3)
+  };
+}
+
 function LeadHeatMeter({ lead }: { lead: Lead }) {
   if (!Number.isFinite(lead.leadScore)) return null;
   const score = Math.max(0, Math.min(100, lead.leadScore));
@@ -66,22 +85,22 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const fullPhone = formatFullPhoneForProtectedApp(lead.phone) || "Phone pending";
   const scope = lead.scopeSummary || lead.serviceType || "Renovation scope pending";
   const stage = booking.appointmentIntent ? "Appointment requested" : lead.status;
+  const questionCategory = questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported"
+    ? questionMatch.entry.category
+    : undefined;
+  const { visibleBadges, hiddenBadgeCount } = compactPriorityBadges(lead, stage, leadLevel, isWhatsapp, questionCategory);
 
   return (
     <article className="mission-panel command-hover-lift rounded-2xl p-5 transition hover:border-command-cyan/70 hover:shadow-glow">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge label={leadLevel} />
-            <StatusBadge label={booking.appointmentIntent ? "Appointment Requested" : stage} />
-            {isWhatsapp ? <StatusBadge label="WhatsApp" /> : null}
-            {lead.botPaused ? <StatusBadge label="Bot Paused" /> : null}
-            {lead.needsMarcus || lead.bossApprovalNeeded ? <StatusBadge label="Needs Marcus" /> : null}
-            {lead.bossApprovalNeeded ? <StatusBadge label="Boss Review Required" /> : null}
-            {lead.missingInfo.some((item) => /floor_plan|site_photos/i.test(item)) ? <StatusBadge label="Needs Floor Plan / Photos" /> : null}
-            {lead.isTest ? <StatusBadge label="Test Lead" /> : null}
-            {lead.deletedAt ? <StatusBadge label="Soft Deleted" /> : null}
-            {questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported" ? <StatusBadge label={questionMatch.entry.category} /> : null}
+            {visibleBadges.map((badge) => <StatusBadge key={badge} label={badge} />)}
+            {hiddenBadgeCount > 0 ? (
+              <span className="rounded-full border border-command-line bg-command-bg/55 px-2.5 py-1 text-xs font-semibold text-command-subtle">
+                +{hiddenBadgeCount} more signals
+              </span>
+            ) : null}
           </div>
           <Link href={`/leads/${lead.id}`} className="mt-3 block text-2xl font-semibold leading-8 text-command-text hover:text-command-gold">
             {displayName}

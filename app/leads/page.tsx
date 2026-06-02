@@ -38,11 +38,21 @@ export default async function LeadInboxPage({ searchParams }: { searchParams?: {
           ? "Active view hides soft-deleted, archived, spam, and QA/test-generated leads by default."
           : "Review mode only. Use cleanup from Settings when you are ready to soft-delete old test data."}
       </div>
-      <div className="space-y-5">
-        {leads.map((lead) => (
+      {leads.length ? (
+        <div className="space-y-5">
+          {leads.map((lead) => (
           <LeadCard key={lead.id} lead={lead} />
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <section className="mission-panel rounded-2xl p-6 shadow-premium">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Inbox Clear</p>
+          <h2 className="mt-2 text-2xl font-semibold text-command-text">No leads in this view.</h2>
+          <p className="mt-2 max-w-2xl text-command-muted">
+            Active leads stay clean by hiding test, spam, archived, and soft-deleted records. Use the filter chips above when Marcus wants to review hidden data.
+          </p>
+        </section>
+      )}
     </>
   );
 }

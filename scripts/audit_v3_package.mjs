@@ -220,6 +220,7 @@ for (const required of [
   "scripts/download_official_singapore_map.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
+  "scripts/test_v6_ui_100_command_centre_polish.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
   "docs/V6_1_2_MISSION_CONTROL_UI_LIVE_CLEANUP.md",
   "docs/V6_1_4_MISSION_CONTROL_UX_FINAL_POLISH.md",
@@ -517,6 +518,19 @@ for (const field of [
   "googleMapsEnabled: false",
   "version: \"v6_5_1_accurate_singapore_map_refinement\"",
   "salesBrainVersion: \"v6.5.1\"",
+  "version: \"v6_ui_100_command_centre_polish\"",
+  "ui100CommandCentrePolishAvailable",
+  "dashboardBossActionClarityAvailable",
+  "marcusToday100PolishAvailable",
+  "leadCards100PolishAvailable",
+  "sidebar100PolishAvailable",
+  "followUpQueueUiPreserved",
+  "leadDetail100PolishAvailable",
+  "emptyStates100PolishAvailable",
+  "mobileUiPolishAvailable",
+  "interactionFeedbackPolishAvailable",
+  "performanceSafeUiPolishAvailable",
+  "officialSingaporeMapPreserved",
   "realSingaporeOutlineAvailable",
   "hqMarkerCentralSingaporeCalibrated",
   "sentosaScaledShapeRefined",
@@ -883,6 +897,7 @@ assert(pkg.scripts?.["test:v6.4.5"], "package.json missing v6.4.5 real Singapore
 assert(pkg.scripts?.["test:v6.4.6"], "package.json missing v6.4.6 official URA map source test script.");
 assert(pkg.scripts?.["test:v6.4.9"], "package.json missing v6.4.9 smooth zoom/wheel lock test script.");
 assert(pkg.scripts?.["test:v6.4.10"], "package.json missing v6.4.10 interaction/copy cleanup test script.");
+assert(pkg.scripts?.["test:v6-ui-100"], "package.json missing v6 UI 100 command centre polish test script.");
 assert(pkg.scripts?.["map:download-official"], "package.json missing official URA map download script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);

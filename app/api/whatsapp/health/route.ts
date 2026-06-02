@@ -37,6 +37,7 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.5"
 // version: "v6_5_1_accurate_singapore_map_refinement"
 // salesBrainVersion: "v6.5.1"
+// version: "v6_ui_100_command_centre_polish"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -59,9 +60,21 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_4_10_singapore_map_interaction_copy_cleanup",
-      salesBrainVersion: "v6.4.10",
+      version: "v6_ui_100_command_centre_polish",
+      salesBrainVersion: "v6-ui-100",
       runtime: "vercel",
+      ui100CommandCentrePolishAvailable: true,
+      dashboardBossActionClarityAvailable: true,
+      marcusToday100PolishAvailable: true,
+      leadCards100PolishAvailable: true,
+      sidebar100PolishAvailable: true,
+      followUpQueueUiPreserved: true,
+      leadDetail100PolishAvailable: true,
+      emptyStates100PolishAvailable: true,
+      mobileUiPolishAvailable: true,
+      interactionFeedbackPolishAvailable: true,
+      performanceSafeUiPolishAvailable: true,
+      officialSingaporeMapPreserved: true,
       mapDefaultZoomStartsAt100: true,
       mapSmoothZoomControlsAvailable: true,
       mapResetClearsPanSelectionTooltip: true,
@@ -332,9 +345,21 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_10_singapore_map_interaction_copy_cleanup",
-      salesBrainVersion: "v6.4.10",
+      version: "v6_ui_100_command_centre_polish",
+      salesBrainVersion: "v6-ui-100",
       runtime: "vercel",
+      ui100CommandCentrePolishAvailable: false,
+      dashboardBossActionClarityAvailable: false,
+      marcusToday100PolishAvailable: false,
+      leadCards100PolishAvailable: false,
+      sidebar100PolishAvailable: false,
+      followUpQueueUiPreserved: false,
+      leadDetail100PolishAvailable: false,
+      emptyStates100PolishAvailable: false,
+      mobileUiPolishAvailable: false,
+      interactionFeedbackPolishAvailable: false,
+      performanceSafeUiPolishAvailable: false,
+      officialSingaporeMapPreserved: false,
       mapDefaultZoomStartsAt100: false,
       mapSmoothZoomControlsAvailable: false,
       mapResetClearsPanSelectionTooltip: false,
