@@ -2,11 +2,11 @@
 
 ## Review First
 
-1. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
-2. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
-3. Review `docs/V6_1_8_DASHBOARD_COMPRESSION_ZERO_STATE_POLISH.md`.
-4. Review `docs/V6_1_7_MISSION_CONTROL_UI_REFINEMENT.md`.
-5. Confirm `/api/whatsapp/health` shows `version: v6_4_singapore_mission_map` before judging the deployed UI.
+1. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
+2. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
+3. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
+4. Review `docs/V6_1_8_DASHBOARD_COMPRESSION_ZERO_STATE_POLISH.md`.
+5. Confirm `/api/whatsapp/health` shows `version: v6_4_1_singapore_tactical_map_ui_polish` before judging the deployed UI.
 1. Review `docs/V6_ULTIMATE_BLUEPRINT.md`.
 2. Review `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`.
 3. Review `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`.
@@ -15,7 +15,7 @@
 
 ## Recommended Next Prompt For Marcus PowerShell
 
-Prepare the controlled live v6.4 Singapore Mission Map retest:
+Prepare the controlled live v6.4.1 Singapore Tactical Map UI retest:
 
 - Keep all v4/v5 safety rules unchanged.
 - Confirm health endpoint first; local PASS is not production PASS.
@@ -27,6 +27,7 @@ Prepare the controlled live v6.4 Singapore Mission Map retest:
 - v6.1.8 keeps the grand radar, makes it useful with operational counts/legend/action, makes the sidebar scrollable, and compresses zero-state dashboard clutter.
 - v6.3 adds manual Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual quotation tracking, outstanding/overdue collection tracking, and payment void-not-delete safety.
 - v6.4 adds a privacy-safe Singapore Mission Map with local area/postal parsing, hybrid area heatmap, clickable pins, unknown-area count, and sales/collection map layers where data exists.
+- v6.4.1 replaces the generic oval/radar visual with a stylised Singapore silhouette, compact premium empty state, integrated legend, and area summary panel.
 - v6 Ultimate adds human-like reply planning, Context Truth Gate, Singapore renovation shorthand understanding, Safety Governor, Reply Quality Judge, cleanup controls, human takeover, bot pause/resume, mission queue, lead scoring, gold UI, settings/QA centre, and 200+ case QA.
 - OpenAI WhatsApp reply remains off.
 - Optional AI v6 interpreter/drafter flags remain off by default.
@@ -55,6 +56,7 @@ node scripts/test_v6_1_7_mission_control_ui_refinement.mjs
 node scripts/test_v6_1_8_dashboard_compression_zero_state_polish.mjs
 node scripts/test_v6_3_sales_collection_command_centre.mjs
 node scripts/test_v6_4_singapore_mission_map.mjs
+node scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs
 node scripts/cleanup_old_test_leads_v6_1.mjs
 node scripts/audit_v3_package.mjs
 ```
@@ -62,7 +64,7 @@ node scripts/audit_v3_package.mjs
 ## What Codex Should Build Next
 
 - The next phase should only happen after Marcus confirms v6 deployed health and live retest results.
-- Recommended next scope: confirm v6.4 health, visually verify the Singapore Mission Map area heatmap/pins/privacy behavior plus Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual Quotation Readiness status, and existing Mission Control dashboard, then review Settings cleanup counts only if Marcus is ready to clean test data.
+- Recommended next scope: confirm v6.4.1 health, visually verify the Singapore tactical silhouette map, compact empty state, integrated legend, clickable pins, privacy behavior, Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual Quotation Readiness status, and existing Mission Control dashboard, then review Settings cleanup counts only if Marcus is ready to clean test data.
 - Optional OpenAI/AI WhatsApp reply testing should remain disabled until v6 deterministic local brain is proven live.
 
 ## Avoid

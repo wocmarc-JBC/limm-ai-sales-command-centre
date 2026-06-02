@@ -9,7 +9,7 @@ const status = data?.status ?? "UNKNOWN";
 const authStatus = data?.authTested ? "Authenticated boss browser/write checks ran." : "Authenticated boss checks are MANUAL REQUIRED until test credentials are set.";
 const browserStatus = data?.browserCompleted ? "Playwright browser QA completed." : "Playwright browser QA did not complete.";
 const openIssues = data?.bugsRemaining?.length ? data.bugsRemaining : ["None known from the latest Dev Brain run."];
-const nextAction = data?.nextCodexTask ?? "v6.4 Singapore Mission Map is ready for controlled deploy proof after the health endpoint shows v6_4_singapore_mission_map. Next recommended phase: visually verify the dashboard hybrid area heatmap, clickable pins, privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard.";
+const nextAction = data?.nextCodexTask ?? "v6.4.1 Singapore Tactical Map UI Polish is ready for controlled deploy proof after the health endpoint shows v6_4_1_singapore_tactical_map_ui_polish. Next recommended phase: visually verify the dashboard Singapore silhouette map, compact empty state, integrated legend, clickable pins, privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard.";
 
 const report = [
   "# ChatGPT Handoff Report",

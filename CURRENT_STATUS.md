@@ -1,5 +1,25 @@
 # Current Status
 
+## v6.4.1 Singapore Tactical Map UI Polish
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_4_1_singapore_tactical_map_ui_polish`.
+- Singapore Mission Map keeps the v6.4 data helper/parser but now uses a stylised Singapore tactical silhouette instead of the generic oval/radar visual.
+- Empty state is compact and premium: `Singapore Mission Map ready`.
+- Legend is integrated into the map panel and visually matches pins/halos.
+- Area summary panel now shows active leads, hot leads, follow-up due, and risk for the selected/priority area.
+- Area zones and pins remain clickable.
+- Dashboard map remains privacy-safe and does not show full exact addresses.
+
+Current Go/No-Go:
+
+- GO for controlled v6.4.1 deploy proof after push, Vercel deployment, and health check.
+- GO for visual dashboard retest after health shows `v6_4_1_singapore_tactical_map_ui_polish`.
+- NO-GO for backend rebuilds, Supabase schema changes, WhatsApp webhook changes, external geocoding/API keys, fake map data, price guide automation, Calendar auto-booking, voice transcription, GST calculations, or auth/delete logic changes.
+
 ## v6.4 Singapore Mission Map
 
 Status: implemented locally; pending push/deploy health proof.

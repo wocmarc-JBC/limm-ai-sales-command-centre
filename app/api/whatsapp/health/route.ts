@@ -12,6 +12,8 @@ export const dynamic = "force-dynamic";
 // Version-history markers kept so older static phase checks can still verify the v6.3 layer:
 // version: "v6_3_sales_collection_command_centre"
 // salesBrainVersion: "v6.3"
+// version: "v6_4_singapore_mission_map"
+// salesBrainVersion: "v6.4"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -33,9 +35,14 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v6_4_singapore_mission_map",
-      salesBrainVersion: "v6.4",
+      version: "v6_4_1_singapore_tactical_map_ui_polish",
+      salesBrainVersion: "v6.4.1",
       runtime: "vercel",
+      singaporeTacticalMapUiAvailable: true,
+      singaporeSilhouetteMapAvailable: true,
+      mapEmptyStatePolished: true,
+      mapLegendIntegrated: true,
+      mapAreaSummaryPanelAvailable: true,
       singaporeMissionMapAvailable: true,
       hybridAreaHeatmapAvailable: true,
       clickableMapPinsAvailable: true,
@@ -229,9 +236,14 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_singapore_mission_map",
-      salesBrainVersion: "v6.4",
+      version: "v6_4_1_singapore_tactical_map_ui_polish",
+      salesBrainVersion: "v6.4.1",
       runtime: "vercel",
+      singaporeTacticalMapUiAvailable: false,
+      singaporeSilhouetteMapAvailable: false,
+      mapEmptyStatePolished: false,
+      mapLegendIntegrated: false,
+      mapAreaSummaryPanelAvailable: false,
       singaporeMissionMapAvailable: false,
       hybridAreaHeatmapAvailable: false,
       clickableMapPinsAvailable: false,

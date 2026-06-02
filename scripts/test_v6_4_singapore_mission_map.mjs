@@ -83,17 +83,17 @@ for (const category of ["hot", "active", "follow_up", "risk", "won", "paid", "un
 
 for (const phrase of [
   "SingaporeMissionMap",
-  "Hybrid area heatmap + clickable pins",
+  "Territory view for leads, site visits and collections",
   "Unknown area:",
-  "Singapore Mission Map is ready.",
-  "Gold = won / hot",
+  "Singapore Mission Map ready",
+  "Gold = won / hot lead",
   "Cyan = active lead",
-  "Amber = follow-up / collection",
-  "Red = urgent / overdue",
-  "Green = paid / complete",
+  "Amber = follow-up / appointment",
+  "Red = risk / overdue",
+  "Green = paid / completed",
   "href={`/leads?area=",
   "href={pin.href || \"#\"}",
-  "Main map shows area-level context, not full addresses."
+  "Area-level only, no full addresses on the dashboard."
 ]) {
   assert(mapComponent.includes(phrase), `SingaporeMissionMap component missing ${phrase}`);
 }

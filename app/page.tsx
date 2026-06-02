@@ -259,9 +259,10 @@ function makeLeadItem(label: string, priority: Priority, lead: Lead, actionLabel
 
 const mapFilters: MissionMapFilter[] = ["all", "leads", "hot", "won", "site_visits", "followups", "collections", "overdue"];
 
-export default async function DashboardPage({ searchParams }: { searchParams?: { focus?: string; map?: string } }) {
+export default async function DashboardPage({ searchParams }: { searchParams?: { focus?: string; map?: string; area?: string } }) {
   const focusMode = searchParams?.focus === "true";
   const activeMapFilter = mapFilters.includes(searchParams?.map as MissionMapFilter) ? searchParams?.map as MissionMapFilter : "all";
+  const selectedMapArea = searchParams?.area ?? "";
   const [leads, followUps, settings, projects, payments] = await Promise.all([
     listLeads(),
     listFollowUps({ status: "active", pageSize: 20 }),
@@ -379,7 +380,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
       </section>
 
       <section className="mt-6">
-        <SingaporeMissionMap data={missionMap} activeFilter={activeMapFilter} />
+        <SingaporeMissionMap data={missionMap} activeFilter={activeMapFilter} selectedArea={selectedMapArea} />
       </section>
 
       <section className="mt-6">

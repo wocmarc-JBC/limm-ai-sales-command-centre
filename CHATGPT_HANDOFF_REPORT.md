@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-v6.4 Singapore Mission Map implemented on top of the v6.3 Sales + Collection command centre and v6 Ultimate live WhatsApp CRM pipeline.
+v6.4.1 Singapore Tactical Map UI Polish implemented on top of the v6.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.
 
 ## Latest Report
 
-`docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`.
+`docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`.
 
 ## Tests / Audit Status
 
@@ -30,6 +30,7 @@ Browser QA: Playwright browser QA completed.
 - v6.1 polishes the premium command centre colour palette, increases readability, improves dashboard/lead/settings/report UX, and adds a dry-run-first old test lead cleanup script.
 - v6.3 adds manual Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual quotation tracking, project accounts, and payment/collection tracking.
 - v6.4 adds a privacy-safe Singapore Mission Map with a local static area/postal parser, hybrid area heatmap, clickable pins, unknown-area count, and sales/collection map layers where data exists.
+- v6.4.1 polishes the map UI into a stylised Singapore tactical map with inline silhouette, compact empty state, integrated legend, heat halos, mission pins, and area summary panel.
 - Question bank replies include non-repetition handling, escalation rules, and audit metadata.
 - WhatsApp live inbound and auto-reply are confirmed PASS for Marcus-approved live mode.
 - Public WhatsApp auto-reply is allowed only for Marcus-approved live mode and remains safety-gated.
@@ -50,12 +51,12 @@ Report: V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md
 
 ## Next Recommended Action
 
-After deployment, confirm `/api/whatsapp/health` shows `version: v6_4_singapore_mission_map`, then visually verify the dashboard Singapore Mission Map area heatmap, clickable pins, unknown-area count, privacy-safe display, and Sales + Collection layers.
+After deployment, confirm `/api/whatsapp/health` shows `version: v6_4_1_singapore_tactical_map_ui_polish`, then visually verify the dashboard Singapore silhouette map, compact empty state, integrated legend, clickable pins, unknown-area count, privacy-safe display, and Sales + Collection layers.
 
 ## Marcus Paste Block For ChatGPT
 
 ```text
-We are continuing LIMM AI Sales Command Centre after v6.4 Singapore Mission Map.
+We are continuing LIMM AI Sales Command Centre after v6.4.1 Singapore Tactical Map UI Polish.
 Latest Dev Brain QA status: FAIL.
 Playwright browser QA completed.
 Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
@@ -68,6 +69,7 @@ v6 Ultimate adds soft delete/restore/hard-delete safety, human takeover/bot paus
 v6.1 adds premium UI/readability polish and a safe old test-lead cleanup workflow. Cleanup dry-run is default; apply requires --apply; hard delete remains explicit, boss/admin-only in app logic, and only for already-soft-deleted test data.
 v6.3 adds manual Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual quotation tracking, project account records, payment collection tracking, and non-GST proof.
 v6.4 adds a privacy-safe Singapore Mission Map with local static Singapore area/postal parsing, hybrid area heatmap, clickable pins, unknown-area count, no external geocoding/API key, and no full exact address on the main dashboard map.
+v6.4.1 replaces the generic oval/radar map visual with a stylised Singapore silhouette, compact premium empty state, integrated legend, heat halos, clickable mission pins, and a small area summary panel.
 OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.
-Please review docs/V6_4_SINGAPORE_MISSION_MAP.md and use the health endpoint first before Marcus judges the deployed dashboard.
+Please review docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md and use the health endpoint first before Marcus judges the deployed dashboard.
 ```

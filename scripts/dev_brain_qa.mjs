@@ -111,7 +111,8 @@ const requiredScripts = [
   "scripts/test_v6_1_7_mission_control_ui_refinement.mjs",
   "scripts/test_v6_1_8_dashboard_compression_zero_state_polish.mjs",
   "scripts/test_v6_3_sales_collection_command_centre.mjs",
-  "scripts/test_v6_4_singapore_mission_map.mjs"
+  "scripts/test_v6_4_singapore_mission_map.mjs",
+  "scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs"
 ];
 
 let hardFail = false;
@@ -203,7 +204,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v6.4 Singapore Mission Map is ready for controlled deploy proof after the health endpoint shows v6_4_singapore_mission_map. Next recommended phase: visually verify the dashboard hybrid area heatmap, clickable pins, privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard."
+      : "v6.4.1 Singapore Tactical Map UI Polish is ready for controlled deploy proof after the health endpoint shows v6_4_1_singapore_tactical_map_ui_polish. Next recommended phase: visually verify the dashboard Singapore silhouette map, compact empty state, integrated legend, clickable pins, privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard."
   };
 }
 
