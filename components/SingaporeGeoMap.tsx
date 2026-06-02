@@ -1,7 +1,8 @@
-import { buildSingaporeGeoPaths, SINGAPORE_MAP_VIEWBOX } from "@/lib/singapore-map-geometry";
+import { buildSingaporeGeoPaths, singaporeMapSourceMetadata, SINGAPORE_MAP_VIEWBOX } from "@/lib/singapore-map-geometry";
 
 export function SingaporeGeoMap() {
   const paths = buildSingaporeGeoPaths();
+  const source = singaporeMapSourceMetadata();
   const mainlandPaths = paths.filter((path) => path.kind !== "sentosa");
   const sentosaPaths = paths.filter((path) => path.kind === "sentosa");
 
@@ -12,7 +13,9 @@ export function SingaporeGeoMap() {
       data-testid="singapore-silhouette-map"
       data-outline-source="/maps/singapore.geojson"
       data-map-source="/maps/singapore.geojson"
-      data-geometry-source="Highcharts Map Collection 2.3.1 / Natural Earth"
+      data-official-planning-area-map={source.officialPlanningArea ? "true" : "false"}
+      data-geometry-source={source.source}
+      data-map-fit="geojson-bounds"
       viewBox={`0 0 ${SINGAPORE_MAP_VIEWBOX.width} ${SINGAPORE_MAP_VIEWBOX.height}`}
       preserveAspectRatio="xMidYMid meet"
     >
@@ -44,7 +47,8 @@ export function SingaporeGeoMap() {
             d={path.d}
             fill="url(#sg-geo-mainland-fill)"
             stroke="rgba(34,211,238,0.44)"
-            strokeWidth="1.9"
+            strokeWidth="1.15"
+            fillOpacity={path.kind === "region" ? 0.68 : 0.86}
             filter="url(#sg-geo-soft-glow)"
           />
         ))}
@@ -62,7 +66,7 @@ export function SingaporeGeoMap() {
       </g>
       <path
         className="singapore-map-baseline"
-        d="M60 456 H850"
+        d="M76 506 H824"
         stroke="rgba(255,213,74,0.12)"
         strokeWidth="1"
         strokeDasharray="2 10"

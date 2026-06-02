@@ -87,7 +87,6 @@ for (const phrase of [
   "Territory view for leads, site visits and collections",
   "Unknown area:",
   "No mapped leads yet",
-  "Add property area or postal code to activate location intelligence.",
   "Gold = won / hot lead",
   "Cyan = active lead",
   "Amber = follow-up / appointment",

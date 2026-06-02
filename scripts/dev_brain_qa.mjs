@@ -118,6 +118,7 @@ const requiredScripts = [
   "scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs",
   "scripts/test_v6_4_5_real_singapore_geojson_map.mjs",
   "scripts/test_v6_4_6_official_ura_map_source.mjs",
+  "scripts/test_v6_4_6_official_singapore_planning_area_map.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
   "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs"
 ];
@@ -211,7 +212,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v6.4.5 Real Singapore GeoJSON Map is ready for controlled deploy proof after the health endpoint shows v6_4_5_real_singapore_geojson_map. Next recommended phase: Marcus should visually verify the dashboard map uses the real local GeoJSON outline, LIMM HQ sits around Orchard/Dhoby Ghaut on the mainland, Sentosa is smaller and shaped like Sentosa, labels are subtle, zoom controls and legend remain, and the map stays privacy-safe with no external map API."
+      : "v6.4.6 Official Singapore Planning Area Map is ready for controlled deploy proof after the health endpoint shows v6_4_6_official_singapore_planning_area_map. Next recommended phase: Marcus should visually verify the dashboard map uses the official URA/data.gov.sg planning-area polygons, LIMM HQ sits around Orchard/Dhoby Ghaut on the mainland, labels stay inside/near their planning areas, no fake Sentosa is drawn, zoom controls and legend remain, and the map stays privacy-safe with no external map API."
   };
 }
 

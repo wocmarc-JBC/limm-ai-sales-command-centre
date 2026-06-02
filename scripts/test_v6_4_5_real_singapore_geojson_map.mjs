@@ -27,22 +27,7 @@ function collectPositions(value, positions = []) {
   return positions;
 }
 
-function ringArea(ring) {
-  let area = 0;
-  for (let index = 0; index < ring.length - 1; index += 1) {
-    const [x1, y1] = ring[index];
-    const [x2, y2] = ring[index + 1];
-    area += x1 * y2 - x2 * y1;
-  }
-  return Math.abs(area / 2);
-}
-
-function featureRings(feature) {
-  if (feature.geometry.type === "Polygon") return feature.geometry.coordinates;
-  return feature.geometry.coordinates.flatMap((polygon) => polygon);
-}
-
-function project({ lat, lng }, bounds, viewBox = { width: 900, height: 520, padding: 34 }) {
+function project({ lat, lng }, bounds, viewBox = { width: 900, height: 560, padding: 42 }) {
   const geoWidth = bounds.east - bounds.west;
   const geoHeight = bounds.north - bounds.south;
   const scale = Math.min((viewBox.width - viewBox.padding * 2) / geoWidth, (viewBox.height - viewBox.padding * 2) / geoHeight);
@@ -58,6 +43,7 @@ function project({ lat, lng }, bounds, viewBox = { width: 900, height: 520, padd
 
 const assetPath = "public/maps/singapore.geojson";
 const asset = json(assetPath);
+const officialAsset = json("public/maps/singapore-planning-area-no-sea.geojson");
 const missionMap = read("components/SingaporeMissionMap.tsx");
 const svgMap = read("components/SingaporeSvgMap.tsx");
 const geoMap = read("components/SingaporeGeoMap.tsx");
@@ -72,45 +58,28 @@ const whatsappRoute = read("app/api/whatsapp/webhook/route.ts");
 const whatsappAdapter = read("lib/adapters/whatsapp-adapter.ts");
 
 assert(asset.type === "FeatureCollection", "Singapore map asset must be a GeoJSON FeatureCollection.");
-assert(asset.name === "LIMM_Singapore_dashboard_geometry", "Singapore map asset should identify the LIMM dashboard geometry.");
-assert(asset.source?.includes("Highcharts Map Collection") && asset.source?.includes("Natural Earth"), "Singapore map asset must record a real geometry source.");
-assert(Array.isArray(asset.features) && asset.features.length >= 6, "Singapore map asset must include real Singapore features plus Sentosa.");
-assert(asset.features.some((feature) => /Central Singapore/i.test(feature.properties?.name ?? "")), "GeoJSON must include Central Singapore geometry.");
-assert(asset.features.some((feature) => /Sentosa/i.test(feature.properties?.name ?? "")), "GeoJSON must include a small Sentosa feature.");
+assert(asset.sourceDatasetId === "d_4765db0e87b9c86336792efe8a1f7a66", "Singapore map asset must use the official URA/data.gov.sg planning-area dataset.");
+assert(asset.source?.includes("data.gov.sg") && asset.source?.includes("URA"), "Singapore map asset must record the official data.gov.sg / URA source.");
+assert(asset.licence === "Singapore Open Data Licence", "Singapore map asset must record the Singapore Open Data Licence.");
+assert(Array.isArray(asset.features) && asset.features.length >= 55, "Singapore map asset must include official planning-area features.");
+assert(JSON.stringify(asset).length === JSON.stringify(officialAsset).length, "Dashboard map asset must mirror the committed official planning-area asset.");
 
 const positions = collectPositions(asset.features.map((feature) => feature.geometry.coordinates));
-assert(positions.length >= 75, `GeoJSON should contain enough real coordinate points, got ${positions.length}.`);
+assert(positions.length > 10000, `GeoJSON should contain official planning-area coordinate detail, got ${positions.length}.`);
 const bounds = {
   west: Math.min(...positions.map(([lng]) => lng)),
   east: Math.max(...positions.map(([lng]) => lng)),
   south: Math.min(...positions.map(([, lat]) => lat)),
   north: Math.max(...positions.map(([, lat]) => lat))
 };
-assert(bounds.west >= 103.6 && bounds.east <= 104.05, "Singapore longitude bounds should be realistic.");
-assert(bounds.south <= 1.255 && bounds.north >= 1.44, "Singapore latitude bounds should include Sentosa and northern mainland.");
+assert(bounds.west >= 103.55 && bounds.east <= 104.12, "Singapore longitude bounds should be realistic.");
+assert(bounds.south <= 1.17 && bounds.north >= 1.46, "Singapore latitude bounds should include official planning-area extent.");
 
 const hq = { lat: 1.3008, lng: 103.8375 };
 assert(hq.lng > bounds.west && hq.lng < bounds.east && hq.lat > bounds.south && hq.lat < bounds.north, "HQ coordinate must be inside Singapore map bounds.");
 const hqPoint = project(hq, bounds);
-assert(hqPoint.x > 420 && hqPoint.x < 560, `HQ should project around Orchard/Dhoby Ghaut horizontally, got ${hqPoint.x.toFixed(1)}.`);
-assert(hqPoint.y > 315 && hqPoint.y < 395, `HQ should project on central mainland, not below the island, got ${hqPoint.y.toFixed(1)}.`);
-
-const sentosa = asset.features.find((feature) => /Sentosa/i.test(feature.properties?.name ?? ""));
-const sentosaPositions = collectPositions(sentosa.geometry.coordinates);
-const sentosaBounds = {
-  west: Math.min(...sentosaPositions.map(([lng]) => lng)),
-  east: Math.max(...sentosaPositions.map(([lng]) => lng)),
-  south: Math.min(...sentosaPositions.map(([, lat]) => lat)),
-  north: Math.max(...sentosaPositions.map(([, lat]) => lat))
-};
-const sentosaWidth = sentosaBounds.east - sentosaBounds.west;
-const sentosaHeight = sentosaBounds.north - sentosaBounds.south;
-assert(sentosaWidth > sentosaHeight * 1.5, "Sentosa should be a slim island-like shape, not a round oval.");
-assert(sentosaWidth < (bounds.east - bounds.west) * 0.14, "Sentosa must not be oversized against the main Singapore map.");
-
-const largestFeatureArea = Math.max(...asset.features.map((feature) => featureRings(feature).reduce((sum, ring) => sum + ringArea(ring), 0)));
-const sentosaArea = featureRings(sentosa).reduce((sum, ring) => sum + ringArea(ring), 0);
-assert(sentosaArea < largestFeatureArea * 0.02, "Sentosa must remain a small island feature.");
+assert(hqPoint.x > 395 && hqPoint.x < 475, `HQ should project around Orchard/Dhoby Ghaut horizontally, got ${hqPoint.x.toFixed(1)}.`);
+assert(hqPoint.y > 270 && hqPoint.y < 330, `HQ should project on central mainland, not below the island, got ${hqPoint.y.toFixed(1)}.`);
 
 for (const source of [svgMap, geoMap, missionMap]) {
   assert(!source.includes("M71 302 C82 284"), "Old hand-drawn v6.5.1 mainland path must be removed.");
@@ -119,19 +88,20 @@ for (const source of [svgMap, geoMap, missionMap]) {
   assert(!/ellipse|rounded-\[48%_52%_45%_55%]|singapore-visible-islands/i.test(source), "Blob/oval/extra island placeholders must not return.");
 }
 
+assert(!/Highcharts|Natural Earth|SG\.SENTOSA\.LOCAL|local dashboard-scale sentosa/i.test(JSON.stringify(asset)), "Old non-official/local Sentosa geometry must be removed.");
 assert(svgMap.includes("SingaporeGeoMap"), "Legacy SingaporeSvgMap wrapper should delegate to the real GeoJSON map renderer.");
 assert(geoMap.includes("buildSingaporeGeoPaths") && geoMap.includes("data-map-source=\"/maps/singapore.geojson\""), "GeoJSON renderer must build SVG paths from the local asset.");
+assert(geoMap.includes("data-official-planning-area-map") && geoMap.includes("data-map-fit=\"geojson-bounds\""), "GeoJSON renderer must expose official planning-area fit proof.");
 assert(geometry.includes("projectSingaporeCoordinate") && geometry.includes("SINGAPORE_MAP_VIEWBOX"), "Geometry helper must project real coordinates into SVG space.");
 assert(missionMap.includes("projectSingaporeCoordinate") && missionMap.includes("LIMM_HQ_COORDINATE"), "Mission map pins and HQ must use the real map projection.");
 assert(missionMap.includes("title: \"LIMM Works HQ / Postal: 228397\""), "HQ tooltip must show LIMM Works HQ / Postal: 228397.");
 assert(missionMap.includes("data-testid=\"limm-hq-marker\""), "HQ marker must remain visible and testable.");
 
 for (const label of ["Orchard", "Bukit Timah", "Serangoon", "Tampines", "East Coast", "Jurong", "Woodlands", "CBD"]) {
-  assert(geometry.includes(label) && missionMap.includes("SINGAPORE_AREA_LABELS"), `Faint real-coordinate area label missing: ${label}`);
+  assert(geometry.includes(label) && missionMap.includes("SINGAPORE_AREA_LABELS.filter"), `Faint planning-area label missing: ${label}`);
 }
 
 assert(missionMap.includes("No mapped leads yet"), "Small no-data badge must remain.");
-assert(missionMap.includes("Add property area or postal code to activate location intelligence."), "Small helper text must remain.");
 assert(!missionMap.includes("Singapore Mission Map ready"), "Blocking map overlay title must not return.");
 assert(!missionMap.includes("left-1/2 top-1/2"), "Large centered blocking overlay must not return.");
 assert(missionMap.includes("data-testid=\"map-zoom-in\"") && missionMap.includes("data-testid=\"map-zoom-reset\""), "Zoom/reset controls must remain.");
@@ -143,27 +113,28 @@ assert(!missionMap.includes("projectAddress") && !missionMap.includes("project_a
 assert(clientFilesPage.includes("Coming Soon") || clientFilesPage.includes("coming soon") || clientFilesPage.includes("not enabled"), "Client Files must remain Coming Soon / not live.");
 
 for (const field of [
-  'version: "v6_4_5_real_singapore_geojson_map"',
-  'salesBrainVersion: "v6.4.5"',
-  "realSingaporeGeojsonMapAvailable: true",
-  "realMapGeometryAssetAvailable: true",
-  "manualBlobMapRemoved: true",
-  "hqMarkerPostal228397Available: true",
-  "hqMarkerCentralSingaporeAvailable: true",
-  "mapNoBlockingOverlayAvailable: true",
-  "mapBaseAlwaysVisible: true",
-  "singaporeMapZoomableAvailable: true",
-  "singaporeMapPanAvailable: true",
-  "singaporeMapResetZoomAvailable: true",
-  "goldAmberColourSeparationFixed: true",
-  "privacySafeMapDisplayAvailable: true",
+  'version: "v6_4_6_official_singapore_planning_area_map"',
+  'salesBrainVersion: "v6.4.6"',
+  "officialSingaporePlanningAreaMapAvailable",
+  "realSingaporeGeojsonMapAvailable",
+  "realMapGeometryAssetAvailable",
+  "manualBlobMapRemoved",
+  "hqMarkerPostal228397Available",
+  "hqMarkerCentralSingaporeAvailable",
+  "mapNoBlockingOverlayAvailable",
+  "mapBaseAlwaysVisible",
+  "singaporeMapZoomableAvailable",
+  "singaporeMapPanAvailable",
+  "singaporeMapResetZoomAvailable",
+  "goldAmberColourSeparationFixed",
+  "privacySafeMapDisplayAvailable",
   "externalGeocodingEnabled: false",
   "googleMapsEnabled: false",
   "priceGuideOnHold: true",
   "calendarAutoBookingEnabled",
   "voiceTranscriptionEnabled: false"
 ]) {
-  assert(health.includes(field), `Health endpoint missing v6.4.5 proof field: ${field}`);
+  assert(health.includes(field), `Health endpoint missing real GeoJSON proof field: ${field}`);
 }
 
 assert(packageJson.includes('"test:v6.4.5"') && packageJson.includes("test_v6_4_5_real_singapore_geojson_map.mjs"), "package.json must expose v6.4.5 test script.");

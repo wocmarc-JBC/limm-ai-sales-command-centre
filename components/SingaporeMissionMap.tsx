@@ -183,19 +183,17 @@ export function SingaporeMissionMap({
           >
             <SingaporeSvgMap />
 
-            {SINGAPORE_AREA_LABELS.map((area) => {
-              const position = projectSingaporeCoordinate(area);
-              return (
+            {SINGAPORE_AREA_LABELS.filter((area) => area.visible).map((area) => (
               <span
                 key={area.label}
                 className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-command-muted/45"
                 data-testid={`map-area-label-${area.label.toLowerCase().replace(/\s+/g, "-")}`}
-                style={position}
+                data-planning-area={area.featureName}
+                style={{ left: area.left, top: area.top }}
               >
                 {area.label}
               </span>
-              );
-            })}
+            ))}
 
             <button
               type="button"
@@ -274,14 +272,9 @@ export function SingaporeMissionMap({
           </div>
 
           {!hasMapData ? (
-            <>
-              <div className="absolute left-3 top-3 z-30 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur">
-                No mapped leads yet
-              </div>
-              <p className="absolute left-4 bottom-16 z-30 max-w-[18rem] text-xs leading-5 text-command-muted/70">
-                Add property area or postal code to activate location intelligence.
-              </p>
-            </>
+            <div className="absolute left-3 top-3 z-30 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur">
+              No mapped leads yet
+            </div>
           ) : null}
 
           <div className="absolute inset-x-3 bottom-3 z-40 rounded-2xl border border-command-line bg-command-bg/76 px-3 py-2 shadow-command backdrop-blur">

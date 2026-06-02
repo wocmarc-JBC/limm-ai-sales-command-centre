@@ -4,6 +4,7 @@ import { getHandoffEmailRuntime } from "@/lib/handoff-email";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
 import { getOptionalAiSalesBrainRuntime } from "@/lib/whatsapp-v6/sales-brain";
 import { getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
+import { singaporeOfficialPlanningAreaMapAvailable } from "@/lib/singapore-map-geometry";
 import { questionBankStats } from "@/lib/whatsapp-question-bank";
 
 export const runtime = "nodejs";
@@ -24,6 +25,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.4.4"
 // version: "v6_4_5_real_singapore_geojson_map"
 // salesBrainVersion: "v6.4.5"
+// version: "v6_4_6_official_singapore_planning_area_map"
+// salesBrainVersion: "v6.4.6"
 // version: "v6_5_smart_lead_intake_meeting_prep"
 // salesBrainVersion: "v6.5"
 // version: "v6_5_1_accurate_singapore_map_refinement"
@@ -47,20 +50,26 @@ export async function GET() {
     const handoffEmail = getHandoffEmailRuntime();
     const questionBank = questionBankStats();
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
+    const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_4_5_real_singapore_geojson_map",
-      salesBrainVersion: "v6.4.5",
+      version: "v6_4_6_official_singapore_planning_area_map",
+      salesBrainVersion: "v6.4.6",
       runtime: "vercel",
+      officialSingaporePlanningAreaMapAvailable,
+      mapFitToBoundsAvailable: true,
+      mapCroppingFixed: true,
+      areaLabelsBoundedToPolygons: true,
+      hqMarkerCentralSingaporeAvailable: true,
+      fakeSentosaRemoved: true,
       realSingaporeGeojsonMapAvailable: true,
       realMapGeometryAssetAvailable: true,
       manualBlobMapRemoved: true,
       hqMarkerPostal228397Available: true,
-      hqMarkerCentralSingaporeAvailable: true,
       googleMapsEnabled: false,
       realSingaporeOutlineAvailable: true,
       hqMarkerCentralSingaporeCalibrated: true,
-      sentosaScaledShapeRefined: true,
+      sentosaScaledShapeRefined: false,
       mapAreaLabelsAvailable: true,
       largeMapHelperBoxRemoved: true,
       smartLeadIntakeAvailable: true,
@@ -78,14 +87,14 @@ export async function GET() {
       leadIntakeAuditTraceAvailable: true,
       accurateSingaporeSvgMapAvailable: true,
       singaporeMainlandSvgAvailable: true,
-      sentosaOnlyIslandAvailable: true,
+      sentosaOnlyIslandAvailable: false,
       singaporeMapWideLayoutAvailable: true,
       singaporeMapZoomableAvailable: true,
       singaporeMapPanAvailable: true,
       singaporeMapResetZoomAvailable: true,
       singaporeMapHqMarkerAvailable: true,
       singaporeMapHqPostalCode: "228397",
-      singaporeMapSentosaOnlyAvailable: true,
+      singaporeMapSentosaOnlyAvailable: false,
       goldAmberColourSeparationFixed: true,
       accurateSingaporeMapAvailable: true,
       mapNoBlockingOverlayAvailable: true,
@@ -289,14 +298,19 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_5_real_singapore_geojson_map",
-      salesBrainVersion: "v6.4.5",
+      version: "v6_4_6_official_singapore_planning_area_map",
+      salesBrainVersion: "v6.4.6",
       runtime: "vercel",
+      officialSingaporePlanningAreaMapAvailable: false,
+      mapFitToBoundsAvailable: false,
+      mapCroppingFixed: false,
+      areaLabelsBoundedToPolygons: false,
+      hqMarkerCentralSingaporeAvailable: false,
+      fakeSentosaRemoved: false,
       realSingaporeGeojsonMapAvailable: false,
       realMapGeometryAssetAvailable: false,
       manualBlobMapRemoved: false,
       hqMarkerPostal228397Available: false,
-      hqMarkerCentralSingaporeAvailable: false,
       googleMapsEnabled: false,
       realSingaporeOutlineAvailable: false,
       hqMarkerCentralSingaporeCalibrated: false,

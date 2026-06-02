@@ -17,6 +17,13 @@ type GeoJsonFeature = {
 
 type GeoJsonFeatureCollection = {
   type: "FeatureCollection";
+  name?: string;
+  title?: string;
+  version?: string;
+  source?: string;
+  sourceDatasetId?: string;
+  sourceUrl?: string;
+  licence?: string;
   features: GeoJsonFeature[];
 };
 
@@ -45,8 +52,8 @@ export type SingaporeGeoPath = {
 
 export const SINGAPORE_MAP_VIEWBOX = {
   width: 900,
-  height: 520,
-  padding: 34
+  height: 560,
+  padding: 42
 } as const;
 
 export const LIMM_HQ_COORDINATE = {
@@ -57,17 +64,27 @@ export const LIMM_HQ_COORDINATE = {
   postalCode: "228397"
 } as const;
 
-export const SINGAPORE_AREA_LABELS = [
-  { label: "Woodlands", lat: 1.437, lng: 103.786 },
-  { label: "Punggol / Sengkang", lat: 1.398, lng: 103.904 },
-  { label: "Jurong", lat: 1.333, lng: 103.704 },
-  { label: "Bukit Timah", lat: 1.329, lng: 103.802 },
-  { label: "Orchard", lat: 1.303, lng: 103.835 },
-  { label: "CBD", lat: 1.285, lng: 103.852 },
-  { label: "Serangoon", lat: 1.352, lng: 103.873 },
-  { label: "Tampines", lat: 1.354, lng: 103.944 },
-  { label: "Bedok", lat: 1.324, lng: 103.93 },
-  { label: "East Coast", lat: 1.305, lng: 103.913 }
+export type SingaporeAreaLabel = {
+  label: string;
+  featureName: string;
+  lat: number;
+  lng: number;
+  x: number;
+  y: number;
+  left: string;
+  top: string;
+  visible: boolean;
+};
+
+const SINGAPORE_LABEL_FEATURES = [
+  { label: "Orchard", featureNames: ["ORCHARD"] },
+  { label: "Bukit Timah", featureNames: ["BUKIT TIMAH"] },
+  { label: "Serangoon", featureNames: ["SERANGOON"] },
+  { label: "Tampines", featureNames: ["TAMPINES"] },
+  { label: "East Coast", featureNames: ["MARINE PARADE", "BEDOK"] },
+  { label: "Jurong", featureNames: ["JURONG EAST", "JURONG WEST"] },
+  { label: "Woodlands", featureNames: ["WOODLANDS"] },
+  { label: "CBD", featureNames: ["DOWNTOWN CORE"] }
 ] as const;
 
 const geoJson = singaporeGeoJson as unknown as GeoJsonFeatureCollection;
@@ -105,6 +122,10 @@ function signedRingArea(ring: LinearRing) {
 
 function ringArea(ring: LinearRing) {
   return Math.abs(signedRingArea(ring));
+}
+
+function featureName(feature: GeoJsonFeature, fallback = "Singapore planning area") {
+  return String(feature.properties?.name ?? feature.properties?.PLN_AREA_N ?? feature.id ?? fallback);
 }
 
 function buildBounds(features: GeoJsonFeature[]): SingaporeMapBounds {
@@ -152,6 +173,14 @@ export function projectSingaporeCoordinate({
   };
 }
 
+function pointStyleFromProject(point: Pick<SingaporeProjectedPoint, "x" | "y">) {
+  const { width, height } = SINGAPORE_MAP_VIEWBOX;
+  return {
+    left: `${(point.x / width) * 100}%`,
+    top: `${(point.y / height) * 100}%`
+  };
+}
+
 function ringToPath(ring: LinearRing) {
   return ring
     .map(([lng, lat], index) => {
@@ -166,19 +195,98 @@ function featureArea(feature: GeoJsonFeature) {
   return polygonRings(feature).reduce((sum, ring) => sum + ringArea(ring), 0);
 }
 
-export function buildSingaporeGeoPaths(): SingaporeGeoPath[] {
-  const maxArea = Math.max(...features.map(featureArea));
+function largestExteriorRing(feature: GeoJsonFeature) {
+  const rings = polygonRings(feature);
+  return rings.reduce<LinearRing | null>((largest, ring) => {
+    if (!largest) return ring;
+    return ringArea(ring) > ringArea(largest) ? ring : largest;
+  }, null);
+}
 
+function ringCentroid(ring: LinearRing): Position | null {
+  if (ring.length === 0) return null;
+  let twiceArea = 0;
+  let centroidX = 0;
+  let centroidY = 0;
+
+  for (let index = 0; index < ring.length - 1; index += 1) {
+    const [x1, y1] = ring[index];
+    const [x2, y2] = ring[index + 1];
+    const cross = x1 * y2 - x2 * y1;
+    twiceArea += cross;
+    centroidX += (x1 + x2) * cross;
+    centroidY += (y1 + y2) * cross;
+  }
+
+  if (Math.abs(twiceArea) < 0.0000001) {
+    const positions = ring.filter(isPosition);
+    if (positions.length === 0) return null;
+    const lng = positions.reduce((sum, [x]) => sum + x, 0) / positions.length;
+    const lat = positions.reduce((sum, [, y]) => sum + y, 0) / positions.length;
+    return [lng, lat];
+  }
+
+  return [centroidX / (3 * twiceArea), centroidY / (3 * twiceArea)];
+}
+
+function featureCentroid(feature: GeoJsonFeature): Position | null {
+  const ring = largestExteriorRing(feature);
+  return ring ? ringCentroid(ring) : null;
+}
+
+function findFeatureByAnyName(featureNames: readonly string[]) {
+  return features.find((feature) => {
+    const name = featureName(feature).toUpperCase();
+    return featureNames.some((candidate) => name === candidate.toUpperCase());
+  });
+}
+
+function buildSingaporeAreaLabels(): SingaporeAreaLabel[] {
+  const { width, height, padding } = SINGAPORE_MAP_VIEWBOX;
+
+  return SINGAPORE_LABEL_FEATURES.flatMap((labelConfig) => {
+    const feature = findFeatureByAnyName(labelConfig.featureNames);
+    if (!feature) return [];
+    const centroid = featureCentroid(feature);
+    if (!centroid) return [];
+
+    const [lng, lat] = centroid;
+    const projected = projectSingaporeCoordinate({ lat, lng });
+    const withinViewBox =
+      projected.x >= padding &&
+      projected.x <= width - padding &&
+      projected.y >= padding &&
+      projected.y <= height - padding;
+    const area = featureArea(feature);
+    const position = pointStyleFromProject(projected);
+
+    return [
+      {
+        label: labelConfig.label,
+        featureName: featureName(feature),
+        lat,
+        lng,
+        x: projected.x,
+        y: projected.y,
+        left: position.left,
+        top: position.top,
+        visible: withinViewBox && area > 0.000001
+      }
+    ];
+  });
+}
+
+export const SINGAPORE_AREA_LABELS = buildSingaporeAreaLabels();
+
+export function buildSingaporeGeoPaths(): SingaporeGeoPath[] {
   return features
     .map((feature, featureIndex) => {
-      const name = String(feature.properties?.name ?? feature.id ?? `Singapore region ${featureIndex + 1}`);
+      const name = featureName(feature, `Singapore planning area ${featureIndex + 1}`);
       const rings = polygonRings(feature);
       const area = featureArea(feature);
-      const kind: SingaporeGeoPath["kind"] = /sentosa/i.test(name)
+      const kind: SingaporeGeoPath["kind"] = /^sentosa$/i.test(name)
         ? "sentosa"
-        : area >= maxArea * 0.98
-          ? "mainland"
-          : "region";
+        : "region";
 
       return {
         id: String(feature.id ?? name),
@@ -194,4 +302,29 @@ export function buildSingaporeGeoPaths(): SingaporeGeoPath[] {
 
 export function singaporeGeoJsonAssetAvailable() {
   return geoJson.type === "FeatureCollection" && features.length >= 5 && buildSingaporeGeoPaths().length >= 5;
+}
+
+export function singaporeOfficialPlanningAreaMapAvailable() {
+  return (
+    geoJson.type === "FeatureCollection" &&
+    geoJson.sourceDatasetId === "d_4765db0e87b9c86336792efe8a1f7a66" &&
+    /data\.gov\.sg/i.test(String(geoJson.source ?? "")) &&
+    /URA/i.test(String(geoJson.source ?? "")) &&
+    features.length >= 55
+  );
+}
+
+export function singaporeMapSourceMetadata() {
+  return {
+    name: geoJson.name ?? "",
+    title: geoJson.title ?? "",
+    version: geoJson.version ?? "",
+    source: geoJson.source ?? "",
+    sourceDatasetId: geoJson.sourceDatasetId ?? "",
+    sourceUrl: geoJson.sourceUrl ?? "",
+    licence: geoJson.licence ?? "",
+    featureCount: features.length,
+    officialPlanningArea: singaporeOfficialPlanningAreaMapAvailable(),
+    sentosaFeatureAvailable: features.some((feature) => /^sentosa$/i.test(featureName(feature)))
+  };
 }
