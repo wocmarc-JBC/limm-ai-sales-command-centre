@@ -212,6 +212,7 @@ for (const required of [
   "scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs",
   "scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs",
   "scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
+  "scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
   "docs/V6_1_2_MISSION_CONTROL_UI_LIVE_CLEANUP.md",
   "docs/V6_1_4_MISSION_CONTROL_UX_FINAL_POLISH.md",
@@ -226,6 +227,7 @@ for (const required of [
   "docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md",
   "docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md",
   "docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md",
+  "docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
   "supabase/migrations/019_v6_ultimate_command_centre.sql",
   "supabase/migrations/020_v6_3_sales_collection_command_centre.sql",
@@ -448,6 +450,13 @@ for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessTo
   assert(whatsappHealthRoute.includes(field), `WhatsApp health route missing ${field}`);
 }
 for (const field of [
+  "version: \"v6_5_1_accurate_singapore_map_refinement\"",
+  "salesBrainVersion: \"v6.5.1\"",
+  "realSingaporeOutlineAvailable",
+  "hqMarkerCentralSingaporeCalibrated",
+  "sentosaScaledShapeRefined",
+  "mapAreaLabelsAvailable",
+  "largeMapHelperBoxRemoved",
   "version: \"v6_5_smart_lead_intake_meeting_prep\"",
   "salesBrainVersion: \"v6.5\"",
   "smartLeadIntakeAvailable",

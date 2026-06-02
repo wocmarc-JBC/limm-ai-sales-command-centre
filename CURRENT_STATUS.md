@@ -1,5 +1,25 @@
 # Current Status
 
+## v6.5.1 Accurate Singapore Map Refinement
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_5_1_accurate_singapore_map_refinement`.
+- The Singapore map uses a more accurate local static mainland outline path.
+- HQ marker projection is calibrated so postal `228397` appears around Orchard / Dhoby Ghaut / central Singapore.
+- Sentosa is smaller and more island-shaped.
+- The large helper box inside the map area was removed; only subtle helper text remains.
+- Faint area labels were added for Orchard, Bukit Timah, Serangoon, Tampines, East Coast, Jurong, Woodlands, and CBD.
+- Zoom controls, reset, legend, clickable pins, area halos, and privacy-safe display are preserved.
+
+Current Go/No-Go:
+
+- GO for controlled v6.5.1 deploy proof after push, Vercel deployment, and health check.
+- GO for visual dashboard retest after health shows `v6_5_1_accurate_singapore_map_refinement`.
+- NO-GO for external map APIs, Google Maps, geocoding, exact-address display on the dashboard, WhatsApp webhook changes, Supabase schema changes, auth/delete logic changes, price guide automation, Calendar auto-booking, or voice transcription.
+
 ## v6.5 Smart Lead Intake + Meeting Prep Brain
 
 Status: implemented locally; pending push/deploy health proof.

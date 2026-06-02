@@ -18,6 +18,13 @@ const singaporeBounds = {
   east: 104.04
 };
 
+const mapProjectionFrame = {
+  left: 10,
+  right: 90,
+  top: 18,
+  bottom: 74
+};
+
 const limmHqLocation = {
   lat: 1.315,
   lng: 103.835,
@@ -25,12 +32,25 @@ const limmHqLocation = {
   title: "LIMM Works HQ - Postal: 228397"
 };
 
+const faintAreaLabels = [
+  { label: "Woodlands", left: "35%", top: "28%" },
+  { label: "Jurong", left: "20%", top: "57%" },
+  { label: "Bukit Timah", left: "40%", top: "49%" },
+  { label: "Orchard", left: "52%", top: "55%" },
+  { label: "CBD", left: "55%", top: "64%" },
+  { label: "Serangoon", left: "59%", top: "45%" },
+  { label: "Tampines", left: "77%", top: "52%" },
+  { label: "East Coast", left: "70%", top: "65%" }
+];
+
 function projectPoint(pin: Pick<MissionMapPin, "lat" | "lng">) {
-  const x = ((pin.lng - singaporeBounds.west) / (singaporeBounds.east - singaporeBounds.west)) * 100;
-  const y = ((singaporeBounds.north - pin.lat) / (singaporeBounds.north - singaporeBounds.south)) * 100;
+  const xRatio = (pin.lng - singaporeBounds.west) / (singaporeBounds.east - singaporeBounds.west);
+  const yRatio = (singaporeBounds.north - pin.lat) / (singaporeBounds.north - singaporeBounds.south);
+  const x = mapProjectionFrame.left + xRatio * (mapProjectionFrame.right - mapProjectionFrame.left);
+  const y = mapProjectionFrame.top + yRatio * (mapProjectionFrame.bottom - mapProjectionFrame.top);
   return {
-    left: `${Math.min(94, Math.max(6, x))}%`,
-    top: `${Math.min(88, Math.max(10, y))}%`
+    left: `${Math.min(92, Math.max(8, x))}%`,
+    top: `${Math.min(80, Math.max(12, y))}%`
   };
 }
 
@@ -192,6 +212,17 @@ export function SingaporeMissionMap({
           >
             <SingaporeSvgMap />
 
+            {faintAreaLabels.map((area) => (
+              <span
+                key={area.label}
+                className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-command-muted/45"
+                data-testid={`map-area-label-${area.label.toLowerCase().replace(/\s+/g, "-")}`}
+                style={{ left: area.left, top: area.top }}
+              >
+                {area.label}
+              </span>
+            ))}
+
             <button
               type="button"
               className="singapore-hq-marker limm-hq-marker absolute z-30 -translate-x-1/2 -translate-y-1/2"
@@ -273,9 +304,9 @@ export function SingaporeMissionMap({
               <div className="absolute left-3 top-3 z-30 rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-command-muted backdrop-blur">
                 No mapped leads yet
               </div>
-              <div className="absolute left-3 bottom-16 z-30 max-w-[17rem] rounded-xl border border-command-cyan/20 bg-command-bg/58 px-3 py-2 text-xs leading-5 text-command-muted backdrop-blur">
+              <p className="absolute left-4 bottom-16 z-30 max-w-[18rem] text-xs leading-5 text-command-muted/70">
                 Add property area or postal code to activate location intelligence.
-              </div>
+              </p>
             </>
           ) : null}
 

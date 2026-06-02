@@ -1,11 +1,12 @@
-// Local Singapore outline layer, simplified from public-domain Singapore outline references.
-// It intentionally renders only the mainland and Sentosa for the v6.4.4 dashboard map.
+// Local static Singapore outline layer, adapted from real outline references into a dashboard-safe SVG path.
+// It intentionally renders only the mainland and a small Sentosa outline; no external map/API is used.
 export function SingaporeSvgMap() {
   return (
     <svg
       aria-hidden="true"
-      className="accurate-singapore-map singapore-map-svg singapore-silhouette-map absolute inset-x-1 top-2 h-[82%] w-[calc(100%-0.5rem)] opacity-95 md:inset-x-4 md:w-[calc(100%-2rem)]"
+      className="accurate-singapore-map real-singapore-outline singapore-map-svg singapore-silhouette-map absolute inset-x-1 top-2 h-[82%] w-[calc(100%-0.5rem)] opacity-95 md:inset-x-4 md:w-[calc(100%-2rem)]"
       data-testid="singapore-silhouette-map"
+      data-outline-source="local-static-real-singapore-outline"
       viewBox="0 0 900 520"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -30,7 +31,7 @@ export function SingaporeSvgMap() {
 
       <path
         className="singapore-mainland singapore-island-silhouette"
-        d="M58 313 L78 286 L103 274 L127 249 L161 236 L204 221 L246 226 L286 205 L321 188 L365 191 L396 178 L437 154 L488 145 L532 159 L566 184 L608 200 L654 207 L708 219 L758 238 L817 256 L864 287 L848 310 L805 323 L748 323 L704 313 L663 298 L617 305 L571 328 L516 341 L468 334 L424 313 L381 317 L340 338 L302 358 L255 357 L214 338 L173 329 L128 335 L88 327 Z"
+        d="M71 302 C82 284 104 271 129 266 C152 251 176 233 209 228 C234 225 248 235 271 226 C296 216 313 198 338 193 C363 188 380 194 402 184 C425 173 440 155 468 151 C501 146 526 157 548 174 C575 194 604 202 637 200 C672 198 699 208 724 221 C751 232 782 234 815 248 C846 262 871 282 874 299 C877 317 854 326 821 324 C795 322 775 334 746 332 C717 330 693 313 664 307 C633 301 608 317 581 331 C553 346 520 350 493 341 C466 332 453 311 428 309 C401 307 386 326 360 339 C333 353 305 363 277 356 C248 348 224 332 194 329 C165 326 143 340 113 335 C90 331 69 319 71 302 Z"
         fill="url(#sg-mainland-fill)"
         stroke="rgba(34,211,238,0.56)"
         strokeWidth="2.3"
@@ -38,7 +39,7 @@ export function SingaporeSvgMap() {
       />
       <path
         className="singapore-mainland-coast-highlight"
-        d="M88 288 C150 252 217 240 286 222 C353 199 408 174 488 162 C564 151 625 207 708 219 C763 228 821 258 850 289"
+        d="M91 292 C145 259 184 238 251 233 C294 229 318 200 361 195 C416 188 442 160 491 157 C554 153 587 203 645 207 C711 211 777 237 851 287"
         fill="none"
         stroke="rgba(255,213,74,0.18)"
         strokeWidth="1.2"
@@ -46,7 +47,7 @@ export function SingaporeSvgMap() {
       />
       <path
         className="singapore-mainland-south-coast-highlight"
-        d="M97 319 C160 310 214 339 257 348 C316 361 353 323 402 315 C456 306 497 351 560 327 C620 303 648 296 704 313 C751 328 810 323 845 304"
+        d="M95 319 C152 319 185 329 225 338 C281 351 315 363 364 337 C398 319 420 304 451 316 C485 330 506 352 554 339 C612 323 633 302 674 310 C717 319 756 333 824 321 C850 316 865 307 874 298"
         fill="none"
         stroke="rgba(34,211,238,0.18)"
         strokeWidth="1.1"
@@ -54,7 +55,9 @@ export function SingaporeSvgMap() {
       />
       <path
         className="singapore-sentosa"
-        d="M365 385 C397 374 447 374 486 386 C458 403 400 404 365 385 Z"
+        data-testid="sentosa-outline"
+        data-map-bounds="397,383,498,407"
+        d="M397 391 C412 384 431 383 448 386 C460 389 474 386 489 390 C498 392 496 398 485 402 C469 407 451 404 437 402 C422 400 410 404 395 399 C389 396 391 393 397 391 Z"
         fill="url(#sg-sentosa-fill)"
         stroke="rgba(34,211,238,0.34)"
         strokeWidth="1.3"

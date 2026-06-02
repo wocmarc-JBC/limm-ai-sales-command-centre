@@ -31,15 +31,17 @@ assert(svgMapComponent.includes("singapore-sentosa"), "Sentosa must render with 
 assert((svgMapComponent.match(/singapore-sentosa/g) ?? []).length === 1, "Only one Sentosa island class should be rendered.");
 assert(!svgMapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
 assert(!svgMapComponent.includes("sentosa-island singapore-sentosa-only"), "Oversized old Sentosa path must be removed.");
-assert(svgMapComponent.includes("M58 313 L78 286"), "Singapore mainland should use the new recognisable local SVG path.");
-assert(svgMapComponent.includes("L864 287"), "Mainland outline should include the eastern Changi-side reach.");
-assert(svgMapComponent.includes("M58 313") && svgMapComponent.includes("L88 327"), "Mainland outline should include the western/Jurong-side reach.");
+assert(svgMapComponent.includes("data-outline-source=\"local-static-real-singapore-outline\""), "Singapore mainland should use the local static real-outline source marker.");
+assert(svgMapComponent.includes("M71 302 C82 284"), "Singapore mainland should use the refined local SVG path.");
+assert(svgMapComponent.includes("C846 262 871 282 874 299"), "Mainland outline should include the eastern Changi-side reach.");
+assert(svgMapComponent.includes("C90 331 69 319 71 302"), "Mainland outline should include the western/Jurong-side return.");
 assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"|rounded-\[48%_52%_45%_55%]/i.test(svgMapComponent + missionMapComponent), "Generic blob/oval/ellipse placeholder must be gone.");
 
 assert(missionMapComponent.includes("singapore-hq-marker") && missionMapComponent.includes("limm-hq-marker"), "HQ marker class must exist.");
 assert(missionMapComponent.includes("LIMM HQ"), "HQ marker label must include LIMM HQ.");
 assert(missionMapComponent.includes("Postal: 228397"), "HQ tooltip must include postal 228397.");
 assert(missionMapComponent.includes("lat: 1.315") && missionMapComponent.includes("lng: 103.835"), "HQ marker must be positioned on the central main island area.");
+assert(missionMapComponent.includes("mapProjectionFrame"), "Map projection frame must keep pins aligned to the island body.");
 assert(missionMapComponent.includes("<button") && missionMapComponent.includes("data-testid=\"limm-hq-marker\""), "HQ marker should be a clickable marker/control.");
 
 for (const phrase of [
@@ -60,6 +62,7 @@ for (const phrase of [
 
 assert(missionMapComponent.includes("No mapped leads yet"), "Small no-data badge must exist.");
 assert(missionMapComponent.includes("Add property area or postal code to activate location intelligence."), "Small helper must exist.");
+assert(!missionMapComponent.includes("max-w-[17rem] rounded-xl border border-command-cyan/20"), "Large helper box must not return.");
 assert(missionMapComponent.indexOf("<SingaporeSvgMap />") < missionMapComponent.indexOf("{!hasMapData ?"), "Map base must render before no-data helper labels.");
 assert(!missionMapComponent.includes("Singapore Mission Map ready"), "Blocking empty-state title must not return.");
 assert(!missionMapComponent.includes("left-1/2 top-1/2"), "Large centered blocking overlay must not return.");
