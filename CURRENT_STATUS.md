@@ -1,5 +1,28 @@
 # Current Status
 
+## v6.4.3 Singapore Map Zoom + HQ Redesign
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_4_3_singapore_map_zoom_hq_redesign`.
+- Singapore Mission Map is wider and taller while preserving the grand dashboard visual.
+- Map supports wheel zoom, zoom in, zoom out, reset, and panning while zoomed.
+- The map base now shows the main Singapore island plus one Sentosa island only.
+- Extra tiny island clutter was removed.
+- Gold and amber are separated more clearly: bright gold for hot/won priority and deeper orange for follow-up/appointment warning.
+- `LIMM HQ` marker was added near central Singapore using postal code `228397`.
+- HQ marker is not a lead pin and does not show a street address.
+- Empty state still shows the full map, HQ marker, zoom controls, legend, and a small helper instead of a blocking overlay.
+- Dashboard map remains privacy-safe and does not show full exact addresses.
+
+Current Go/No-Go:
+
+- GO for controlled v6.4.3 deploy proof after push, Vercel deployment, and health check.
+- GO for visual dashboard retest after health shows `v6_4_3_singapore_map_zoom_hq_redesign`.
+- NO-GO for backend rebuilds, Supabase schema changes, WhatsApp webhook changes, external geocoding/map keys, fake map data, price guide automation, Calendar auto-booking, voice transcription, GST calculations, or auth/delete logic changes.
+
 ## v6.4.2 Accurate Singapore Map No Overlay
 
 Status: implemented locally; pending push/deploy health proof.

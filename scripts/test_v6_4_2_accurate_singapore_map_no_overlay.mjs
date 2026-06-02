@@ -24,7 +24,8 @@ const clientFilesPage = read("app/client-files/page.tsx");
 
 assert(mapComponent.includes("accurate-singapore-map"), "Accurate Singapore map class must exist.");
 assert(mapComponent.includes("singapore-island-silhouette"), "Main Singapore island silhouette must exist.");
-assert(mapComponent.includes("singapore-visible-islands"), "Major visible island massing must exist.");
+assert(mapComponent.includes("sentosa-island") && mapComponent.includes("singapore-sentosa-only"), "Sentosa-only lower island massing must exist.");
+assert(!mapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
 assert(mapComponent.includes("viewBox=\"0 0 760 430\""), "Updated wider Singapore map viewBox must exist.");
 assert(mapComponent.includes("M59 225 L82 203"), "Singapore outline should use the updated detailed local vector path.");
 assert(!mapComponent.includes("rounded-[48%_52%_45%_55%]"), "Generic oval placeholder shape must be gone.");

@@ -16,6 +16,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.4"
 // version: "v6_4_1_singapore_tactical_map_ui_polish"
 // salesBrainVersion: "v6.4.1"
+// version: "v6_4_2_accurate_singapore_map_no_overlay"
+// salesBrainVersion: "v6.4.2"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -37,9 +39,16 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v6_4_2_accurate_singapore_map_no_overlay",
-      salesBrainVersion: "v6.4.2",
+      version: "v6_4_3_singapore_map_zoom_hq_redesign",
+      salesBrainVersion: "v6.4.3",
       runtime: "vercel",
+      singaporeMapWideLayoutAvailable: true,
+      singaporeMapZoomableAvailable: true,
+      singaporeMapPanAvailable: true,
+      singaporeMapResetZoomAvailable: true,
+      singaporeMapHqMarkerAvailable: true,
+      singaporeMapSentosaOnlyAvailable: true,
+      goldAmberColourSeparationFixed: true,
       accurateSingaporeMapAvailable: true,
       mapNoBlockingOverlayAvailable: true,
       mapBaseAlwaysVisible: true,
@@ -242,9 +251,16 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_2_accurate_singapore_map_no_overlay",
-      salesBrainVersion: "v6.4.2",
+      version: "v6_4_3_singapore_map_zoom_hq_redesign",
+      salesBrainVersion: "v6.4.3",
       runtime: "vercel",
+      singaporeMapWideLayoutAvailable: false,
+      singaporeMapZoomableAvailable: false,
+      singaporeMapPanAvailable: false,
+      singaporeMapResetZoomAvailable: false,
+      singaporeMapHqMarkerAvailable: false,
+      singaporeMapSentosaOnlyAvailable: false,
+      goldAmberColourSeparationFixed: false,
       accurateSingaporeMapAvailable: false,
       mapNoBlockingOverlayAvailable: false,
       mapBaseAlwaysVisible: false,

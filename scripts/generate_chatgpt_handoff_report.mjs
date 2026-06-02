@@ -9,18 +9,18 @@ const status = data?.status ?? "UNKNOWN";
 const authStatus = data?.authTested ? "Authenticated boss browser/write checks ran." : "Authenticated boss checks are MANUAL REQUIRED until test credentials are set.";
 const browserStatus = data?.browserCompleted ? "Playwright browser QA completed." : "Playwright browser QA did not complete.";
 const openIssues = data?.bugsRemaining?.length ? data.bugsRemaining : ["None known from the latest Dev Brain run."];
-const nextAction = data?.nextCodexTask ?? "v6.4.2 Accurate Singapore Map No Overlay is ready for controlled deploy proof after the health endpoint shows v6_4_2_accurate_singapore_map_no_overlay. Next recommended phase: visually verify the dashboard accurate Singapore map base, no blocking empty overlay, subtle helper labels, clickable pins, privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard.";
+const nextAction = data?.nextCodexTask ?? "v6.4.3 Singapore Map Zoom + HQ Redesign is ready for controlled deploy proof after the health endpoint shows v6_4_3_singapore_map_zoom_hq_redesign. Next recommended phase: visually verify the wider zoomable dashboard map, pan/reset controls, LIMM HQ marker, Sentosa-only base, brighter gold/amber separation, no blocking empty overlay, privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard.";
 
 const report = [
   "# ChatGPT Handoff Report",
   "",
   "## Current Phase",
   "",
-  "v6.1 UI Polish + Test Lead Cleanup implemented on top of the v6 Ultimate live WhatsApp CRM pipeline.",
+  "v6.4.3 Singapore Map Zoom + HQ Redesign implemented on top of the v6.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.",
   "",
   "## Latest Report",
   "",
-  data?.browserReport ? "`DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`." : "`DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.",
+  data?.browserReport ? "`docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`." : "`docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.",
   "",
   "## Tests / Audit Status",
   "",
@@ -42,6 +42,11 @@ const report = [
   "- v6.0 adds a Context Truth Gate, Singapore renovation meaning parser, natural reply composer, Safety Governor, Reply Quality Judge, and 150+ case deep QA.",
   "- v6 Ultimate adds safe cleanup, soft delete/restore, boss/admin hard-delete gating, human takeover, bot pause/resume, mission queue, lead scoring, follow-up reminders, role permissions, settings proof, gold command centre UI, QA centre, sales learning foundation, and quotation readiness foundation.",
   "- v6.1 polishes the premium command centre colour palette, increases readability, improves dashboard/lead/settings/report UX, and adds a dry-run-first old test lead cleanup script.",
+  "- v6.3 adds manual Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual quotation tracking, project accounts, and payment/collection tracking.",
+  "- v6.4 adds a privacy-safe Singapore Mission Map with a local static area/postal parser, hybrid area heatmap, clickable pins, unknown-area count, and sales/collection map layers where data exists.",
+  "- v6.4.1 polishes the map UI into a stylised Singapore tactical map with inline silhouette, compact empty state, integrated legend, heat halos, mission pins, and area summary panel.",
+  "- v6.4.2 improves the map base to a more accurate Singapore outline and removes the blocking empty-state overlay so the map remains visible even without mapped lead data.",
+  "- v6.4.3 widens the map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal `228397`, and fixes gold/amber visual separation.",
   "- Question bank replies include non-repetition handling, escalation rules, and audit metadata.",
   "- WhatsApp live inbound and auto-reply are confirmed PASS for Marcus-approved live mode.",
   "- Public WhatsApp auto-reply is allowed only for Marcus-approved live mode and remains safety-gated.",
@@ -67,7 +72,7 @@ const report = [
   "## Marcus Paste Block For ChatGPT",
   "",
   "```text",
-  "We are continuing LIMM AI Sales Command Centre after v6.1 UI Polish + Test Lead Cleanup.",
+  "We are continuing LIMM AI Sales Command Centre after v6.4.3 Singapore Map Zoom + HQ Redesign.",
   `Latest Dev Brain QA status: ${status}.`,
   browserStatus,
   authStatus,
@@ -78,8 +83,13 @@ const report = [
   "v6.0 improves reply quality with a Context Truth Gate, Singapore renovation shorthand understanding, natural replies, a strict Safety Governor, and a Reply Quality Judge. It specifically blocks over-claimed context and generic route-style replies for normal renovation questions.",
   "v6 Ultimate adds soft delete/restore/hard-delete safety, human takeover/bot pause, lead scoring, mission queue, settings/QA centre, gold command centre UI, sales learning foundation, weekly boss report draft foundation, and quotation/site visit readiness foundation.",
   "v6.1 adds premium UI/readability polish and a safe old test-lead cleanup workflow. Cleanup dry-run is default; apply requires --apply; hard delete remains explicit, boss/admin-only in app logic, and only for already-soft-deleted test data.",
+  "v6.3 adds manual Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual quotation tracking, project account records, payment collection tracking, and non-GST proof.",
+  "v6.4 adds a privacy-safe Singapore Mission Map with local static Singapore area/postal parsing, hybrid area heatmap, clickable pins, unknown-area count, no external geocoding/map key, and no full exact address on the main dashboard map.",
+  "v6.4.1 replaces the generic oval/radar map visual with a stylised Singapore silhouette, compact premium empty state, integrated legend, heat halos, clickable mission pins, and a small area summary panel.",
+  "v6.4.2 upgrades that visual to a more accurate Singapore outline and removes the large blocking empty-state overlay so the map base stays visible even with no data.",
+  "v6.4.3 widens the Singapore map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal 228397, and fixes gold/amber colour separation.",
   "OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.",
-  "Please review docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md and use the health endpoint first before Marcus performs the controlled WhatsApp live retest.",
+  "Please review docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md and use the health endpoint first before Marcus judges the deployed dashboard.",
   "```",
   ""
 ].join("\n");

@@ -2,11 +2,12 @@
 
 ## Review First
 
-1. Review `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`.
-2. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
-3. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
-4. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
-5. Confirm `/api/whatsapp/health` shows `version: v6_4_2_accurate_singapore_map_no_overlay` before judging the deployed UI.
+1. Review `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`.
+2. Review `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`.
+3. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
+4. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
+5. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
+6. Confirm `/api/whatsapp/health` shows `version: v6_4_3_singapore_map_zoom_hq_redesign` before judging the deployed UI.
 1. Review `docs/V6_ULTIMATE_BLUEPRINT.md`.
 2. Review `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`.
 3. Review `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`.
@@ -15,7 +16,7 @@
 
 ## Recommended Next Prompt For Marcus PowerShell
 
-Prepare the controlled live v6.4.2 Accurate Singapore Map retest:
+Prepare the controlled live v6.4.3 Singapore Map Zoom + HQ retest:
 
 - Keep all v4/v5 safety rules unchanged.
 - Confirm health endpoint first; local PASS is not production PASS.
@@ -29,6 +30,7 @@ Prepare the controlled live v6.4.2 Accurate Singapore Map retest:
 - v6.4 adds a privacy-safe Singapore Mission Map with local area/postal parsing, hybrid area heatmap, clickable pins, unknown-area count, and sales/collection map layers where data exists.
 - v6.4.1 replaces the generic oval/radar visual with a stylised Singapore silhouette, compact premium empty state, integrated legend, and area summary panel.
 - v6.4.2 upgrades the map base to a more accurate Singapore outline and removes the blocking empty-state overlay so the map remains visible even with no data.
+- v6.4.3 widens the map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal `228397`, and fixes gold/amber visual separation.
 - v6 Ultimate adds human-like reply planning, Context Truth Gate, Singapore renovation shorthand understanding, Safety Governor, Reply Quality Judge, cleanup controls, human takeover, bot pause/resume, mission queue, lead scoring, gold UI, settings/QA centre, and 200+ case QA.
 - OpenAI WhatsApp reply remains off.
 - Optional AI v6 interpreter/drafter flags remain off by default.
@@ -59,6 +61,7 @@ node scripts/test_v6_3_sales_collection_command_centre.mjs
 node scripts/test_v6_4_singapore_mission_map.mjs
 node scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs
 node scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs
+node scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs
 node scripts/cleanup_old_test_leads_v6_1.mjs
 node scripts/audit_v3_package.mjs
 ```
@@ -66,7 +69,7 @@ node scripts/audit_v3_package.mjs
 ## What Codex Should Build Next
 
 - The next phase should only happen after Marcus confirms v6 deployed health and live retest results.
-- Recommended next scope: confirm v6.4.2 health, visually verify the accurate Singapore map base, no blocking overlay, subtle no-data helper, clickable pins, privacy behavior, Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual Quotation Readiness status, and existing Mission Control dashboard, then review Settings cleanup counts only if Marcus is ready to clean test data.
+- Recommended next scope: confirm v6.4.3 health, visually verify the wider zoomable Singapore map, pan/reset controls, LIMM HQ marker, Sentosa-only base, brighter gold/amber separation, no blocking overlay, privacy behavior, Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual Quotation Readiness status, and existing Mission Control dashboard, then review Settings cleanup counts only if Marcus is ready to clean test data.
 - Optional OpenAI/AI WhatsApp reply testing should remain disabled until v6 deterministic local brain is proven live.
 
 ## Avoid
