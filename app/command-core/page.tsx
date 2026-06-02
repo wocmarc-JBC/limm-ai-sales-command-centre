@@ -270,8 +270,12 @@ export default async function CommandCorePage() {
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(17rem,0.82fr)_minmax(0,1.7fr)_minmax(18rem,0.95fr)]">
-        <aside className="order-1 mission-panel rounded-3xl p-5 xl:order-none" data-testid="marcus-decisions-panel">
+      <section
+        className="command-core-wide-map-layout grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17.5rem,20rem)] 2xl:grid-cols-[minmax(16.25rem,18.75rem)_minmax(42rem,1fr)_minmax(17.5rem,21.25rem)]"
+        data-testid="command-core-shell-grid"
+        data-wide-map-layout="true"
+      >
+        <aside className="order-1 mission-panel rounded-3xl p-4 xl:order-2 xl:col-span-1 2xl:order-1 2xl:col-span-1" data-testid="marcus-decisions-panel" data-command-core-side-panel="decisions">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Marcus Decisions</p>
           <h2 className="mt-1 text-2xl font-semibold text-command-text">What needs a call?</h2>
           <div className="mt-5 space-y-3">
@@ -294,8 +298,8 @@ export default async function CommandCorePage() {
           </div>
         </aside>
 
-        <main className="order-2 space-y-5" data-testid="command-core-centre-panel">
-          <section className="mission-panel relative overflow-hidden rounded-3xl p-5">
+        <main className="order-2 min-w-0 space-y-4 xl:order-1 xl:col-span-2 2xl:order-2 2xl:col-span-1" data-testid="command-core-centre-panel" data-command-core-map-dominant="true">
+          <section className="mission-panel relative overflow-hidden rounded-3xl p-4">
             <div className="cockpit-grid absolute inset-0 opacity-35" />
             <div className="relative">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Command Core</p>
@@ -314,10 +318,16 @@ export default async function CommandCorePage() {
               </div>
             </div>
           </section>
-          <SingaporeMissionMap data={missionMap} />
+          <div
+            className="command-core-map-module w-full min-w-0 [&_.singapore-map-wide-layout]:w-full [&_.singapore-map-wide-layout]:p-3 [&_.singapore-map-wide-layout]:md:p-4 [&_.singapore-map-wide-layout]:lg:p-5"
+            data-testid="command-core-map-module"
+            data-map-uses-full-panel-width="true"
+          >
+            <SingaporeMissionMap data={missionMap} />
+          </div>
         </main>
 
-        <aside className="order-3 mission-panel rounded-3xl p-5" data-testid="command-core-inspector-panel">
+        <aside className="order-3 mission-panel rounded-3xl p-4 xl:col-span-1 2xl:col-span-1" data-testid="command-core-inspector-panel" data-command-core-side-panel="inspector">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Inspector</p>
           {topLead && topLeadAction ? (
             <div className="mt-4">

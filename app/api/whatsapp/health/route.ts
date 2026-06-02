@@ -39,6 +39,7 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.5.1"
 // version: "v6_ui_100_command_centre_polish"
 // version: "v6_6_strategic_command_core_layout"
+// version: "v6_6_1_strategic_command_core_ui_fit_polish"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -61,12 +62,15 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_6_strategic_command_core_layout",
-      salesBrainVersion: "v6.6",
+      version: "v6_6_1_strategic_command_core_ui_fit_polish",
+      salesBrainVersion: "v6.6.1",
       runtime: "vercel",
       strategicCommandCoreAvailable: true,
       commandCoreBetaRouteAvailable: true,
       frostpunkInspiredLayoutAvailable: true,
+      commandCoreWideMapLayoutAvailable: true,
+      commandCoreMapDominantLayoutAvailable: true,
+      commandCoreMapUsesFullPanelWidth: true,
       topResourceBarAvailable: true,
       marcusDecisionsPanelAvailable: true,
       rightInspectorPanelAvailable: true,
@@ -355,12 +359,15 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_6_strategic_command_core_layout",
-      salesBrainVersion: "v6.6",
+      version: "v6_6_1_strategic_command_core_ui_fit_polish",
+      salesBrainVersion: "v6.6.1",
       runtime: "vercel",
       strategicCommandCoreAvailable: false,
       commandCoreBetaRouteAvailable: false,
       frostpunkInspiredLayoutAvailable: false,
+      commandCoreWideMapLayoutAvailable: false,
+      commandCoreMapDominantLayoutAvailable: false,
+      commandCoreMapUsesFullPanelWidth: false,
       topResourceBarAvailable: false,
       marcusDecisionsPanelAvailable: false,
       rightInspectorPanelAvailable: false,
