@@ -9,18 +9,18 @@ const status = data?.status ?? "UNKNOWN";
 const authStatus = data?.authTested ? "Authenticated boss browser/write checks ran." : "Authenticated boss checks are MANUAL REQUIRED until test credentials are set.";
 const browserStatus = data?.browserCompleted ? "Playwright browser QA completed." : "Playwright browser QA did not complete.";
 const openIssues = data?.bugsRemaining?.length ? data.bugsRemaining : ["None known from the latest Dev Brain run."];
-const nextAction = data?.nextCodexTask ?? "v6.4.3 Singapore Map Zoom + HQ Redesign is ready for controlled deploy proof after the health endpoint shows v6_4_3_singapore_map_zoom_hq_redesign. Next recommended phase: visually verify the wider zoomable dashboard map, pan/reset controls, LIMM HQ marker, Sentosa-only base, brighter gold/amber separation, no blocking empty overlay, privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard.";
+const nextAction = data?.nextCodexTask ?? "v6.4.4 Accurate Singapore SVG Mission Map Fix is ready for controlled deploy proof after the health endpoint shows v6_4_4_accurate_singapore_svg_map_fix. Next recommended phase: visually verify the dashboard map clearly reads as Singapore, only one small Sentosa appears below the main island, LIMM HQ sits on central Singapore, zoom/pan/reset controls work, gold and amber are distinct, no blocking empty overlay appears, and privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard remain intact.";
 
 const report = [
   "# ChatGPT Handoff Report",
   "",
   "## Current Phase",
   "",
-  "v6.4.3 Singapore Map Zoom + HQ Redesign implemented on top of the v6.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.",
+  "v6.4.4 Accurate Singapore SVG Mission Map Fix implemented on top of the v6.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.",
   "",
   "## Latest Report",
   "",
-  data?.browserReport ? "`docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`." : "`docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.",
+  data?.browserReport ? "`docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`, `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`." : "`docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`, `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.",
   "",
   "## Tests / Audit Status",
   "",
@@ -47,6 +47,7 @@ const report = [
   "- v6.4.1 polishes the map UI into a stylised Singapore tactical map with inline silhouette, compact empty state, integrated legend, heat halos, mission pins, and area summary panel.",
   "- v6.4.2 improves the map base to a more accurate Singapore outline and removes the blocking empty-state overlay so the map remains visible even without mapped lead data.",
   "- v6.4.3 widens the map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal `228397`, and fixes gold/amber visual separation.",
+  "- v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG layer, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on the central main island.",
   "- Question bank replies include non-repetition handling, escalation rules, and audit metadata.",
   "- WhatsApp live inbound and auto-reply are confirmed PASS for Marcus-approved live mode.",
   "- Public WhatsApp auto-reply is allowed only for Marcus-approved live mode and remains safety-gated.",
@@ -72,7 +73,7 @@ const report = [
   "## Marcus Paste Block For ChatGPT",
   "",
   "```text",
-  "We are continuing LIMM AI Sales Command Centre after v6.4.3 Singapore Map Zoom + HQ Redesign.",
+  "We are continuing LIMM AI Sales Command Centre after v6.4.4 Accurate Singapore SVG Mission Map Fix.",
   `Latest Dev Brain QA status: ${status}.`,
   browserStatus,
   authStatus,
@@ -88,8 +89,9 @@ const report = [
   "v6.4.1 replaces the generic oval/radar map visual with a stylised Singapore silhouette, compact premium empty state, integrated legend, heat halos, clickable mission pins, and a small area summary panel.",
   "v6.4.2 upgrades that visual to a more accurate Singapore outline and removes the large blocking empty-state overlay so the map base stays visible even with no data.",
   "v6.4.3 widens the Singapore map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal 228397, and fixes gold/amber colour separation.",
+  "v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG layer, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on central Singapore instead of below the island.",
   "OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.",
-  "Please review docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md and use the health endpoint first before Marcus judges the deployed dashboard.",
+  "Please review docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md and use the health endpoint first before Marcus judges the deployed dashboard.",
   "```",
   ""
 ].join("\n");

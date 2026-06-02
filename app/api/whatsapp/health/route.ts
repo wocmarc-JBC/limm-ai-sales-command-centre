@@ -18,6 +18,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.4.1"
 // version: "v6_4_2_accurate_singapore_map_no_overlay"
 // salesBrainVersion: "v6.4.2"
+// version: "v6_4_3_singapore_map_zoom_hq_redesign"
+// salesBrainVersion: "v6.4.3"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -39,14 +41,18 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v6_4_3_singapore_map_zoom_hq_redesign",
-      salesBrainVersion: "v6.4.3",
+      version: "v6_4_4_accurate_singapore_svg_map_fix",
+      salesBrainVersion: "v6.4.4",
       runtime: "vercel",
+      accurateSingaporeSvgMapAvailable: true,
+      singaporeMainlandSvgAvailable: true,
+      sentosaOnlyIslandAvailable: true,
       singaporeMapWideLayoutAvailable: true,
       singaporeMapZoomableAvailable: true,
       singaporeMapPanAvailable: true,
       singaporeMapResetZoomAvailable: true,
       singaporeMapHqMarkerAvailable: true,
+      singaporeMapHqPostalCode: "228397",
       singaporeMapSentosaOnlyAvailable: true,
       goldAmberColourSeparationFixed: true,
       accurateSingaporeMapAvailable: true,
@@ -251,14 +257,18 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_3_singapore_map_zoom_hq_redesign",
-      salesBrainVersion: "v6.4.3",
+      version: "v6_4_4_accurate_singapore_svg_map_fix",
+      salesBrainVersion: "v6.4.4",
       runtime: "vercel",
+      accurateSingaporeSvgMapAvailable: false,
+      singaporeMainlandSvgAvailable: false,
+      sentosaOnlyIslandAvailable: false,
       singaporeMapWideLayoutAvailable: false,
       singaporeMapZoomableAvailable: false,
       singaporeMapPanAvailable: false,
       singaporeMapResetZoomAvailable: false,
       singaporeMapHqMarkerAvailable: false,
+      singaporeMapHqPostalCode: "228397",
       singaporeMapSentosaOnlyAvailable: false,
       goldAmberColourSeparationFixed: false,
       accurateSingaporeMapAvailable: false,

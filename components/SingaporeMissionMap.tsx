@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent
 } from "react";
+import { SingaporeSvgMap } from "@/components/SingaporeSvgMap";
 import type { MissionMapColorCategory, MissionMapData, MissionMapFilter, MissionMapPin } from "@/lib/mission-map";
 
 const singaporeBounds = {
@@ -18,7 +19,7 @@ const singaporeBounds = {
 };
 
 const limmHqLocation = {
-  lat: 1.306,
+  lat: 1.315,
   lng: 103.835,
   label: "LIMM HQ",
   title: "LIMM Works HQ - Postal: 228397"
@@ -64,69 +65,6 @@ function heatClass(intensity: number, urgent: boolean) {
 
 function areaSelectHref(activeFilter: MissionMapFilter, area: string) {
   return `/?map=${encodeURIComponent(activeFilter)}&area=${encodeURIComponent(area)}#singapore-mission-map`;
-}
-
-function SingaporeSilhouette() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="accurate-singapore-map singapore-silhouette-map absolute inset-x-1 top-4 h-[78%] w-[calc(100%-0.5rem)] opacity-95 md:inset-x-4 md:w-[calc(100%-2rem)]"
-      data-testid="singapore-silhouette-map"
-      viewBox="0 0 760 430"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <defs>
-        <linearGradient id="sg-land-fill" x1="66" x2="704" y1="128" y2="278" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#14283a" />
-          <stop offset="0.52" stopColor="#0b1727" />
-          <stop offset="1" stopColor="#211d12" />
-        </linearGradient>
-        <filter id="sg-soft-glow" x="-18%" y="-28%" width="136%" height="156%">
-          <feGaussianBlur stdDeviation="6" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
-      <path
-        className="singapore-island-silhouette"
-        d="M59 225 L82 203 L119 188 L151 177 L191 171 L233 176 L265 166 L299 150 L335 147 L370 158 L401 151 L431 136 L467 130 L505 137 L539 157 L573 170 L619 176 L657 189 L699 204 L733 226 L715 246 L680 254 L635 251 L593 240 L552 247 L510 264 L463 261 L419 244 L379 249 L336 268 L296 285 L249 283 L206 266 L165 260 L122 267 L84 260 L55 243 Z"
-        fill="url(#sg-land-fill)"
-        stroke="rgba(34,211,238,0.52)"
-        strokeWidth="2"
-        filter="url(#sg-soft-glow)"
-      />
-      <path
-        d="M82 221 C137 205 187 205 235 213 M246 177 C270 219 269 254 248 281 M330 150 C350 192 350 234 327 271 M415 142 C422 184 415 224 389 250 M501 139 C495 185 514 229 552 248 M596 177 C570 204 556 225 552 247 M652 190 C637 213 625 234 617 250"
-        fill="none"
-        stroke="rgba(255,213,74,0.24)"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-      <path
-        d="M96 196 C171 188 236 190 306 174 C386 154 468 159 558 178 C624 191 683 199 724 218"
-        fill="none"
-        stroke="rgba(34,211,238,0.18)"
-        strokeWidth="1"
-        strokeDasharray="7 8"
-      />
-      <path
-        className="sentosa-island singapore-sentosa-only"
-        d="M282 320 C318 304 372 304 407 322 C378 341 318 341 282 320 Z"
-        fill="rgba(34,211,238,0.1)"
-        stroke="rgba(34,211,238,0.3)"
-        strokeWidth="1"
-      />
-      <path
-        d="M70 318 H705 M110 344 H648"
-        stroke="rgba(255,213,74,0.16)"
-        strokeWidth="1"
-        strokeDasharray="2 10"
-      />
-    </svg>
-  );
 }
 
 export function SingaporeMissionMap({
@@ -201,9 +139,7 @@ export function SingaporeMissionMap({
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Singapore Tactical Map</p>
             <h2 className="mt-1 text-3xl font-semibold text-command-text">Singapore Mission Map</h2>
-            <p className="mt-2 text-sm text-command-muted">
-              Territory view for leads, site visits and collections. Area-level only, no full addresses on the dashboard.
-            </p>
+            <p className="mt-2 text-sm text-command-muted">Territory view for leads, site visits and collections. Area-level only.</p>
           </div>
           <span className="w-fit rounded-full border border-command-line bg-command-bg/60 px-3 py-1 text-sm font-semibold text-command-muted">
             Unknown area: {data.unknownLocationCount}
@@ -254,10 +190,11 @@ export function SingaporeMissionMap({
               transition: dragStart ? "none" : "transform 180ms ease"
             }}
           >
-            <SingaporeSilhouette />
+            <SingaporeSvgMap />
 
-            <div
-              className="limm-hq-marker absolute z-30 -translate-x-1/2 -translate-y-1/2"
+            <button
+              type="button"
+              className="singapore-hq-marker limm-hq-marker absolute z-30 -translate-x-1/2 -translate-y-1/2"
               data-testid="limm-hq-marker"
               style={hqPosition}
               title={limmHqLocation.title}
@@ -269,7 +206,7 @@ export function SingaporeMissionMap({
                   {limmHqLocation.label}
                 </span>
               </div>
-            </div>
+            </button>
 
             {data.areaSummaries.map((area) => {
               const position = projectPoint(area);
@@ -337,7 +274,7 @@ export function SingaporeMissionMap({
                 No mapped leads yet
               </div>
               <div className="absolute left-3 bottom-16 z-30 max-w-[17rem] rounded-xl border border-command-cyan/20 bg-command-bg/58 px-3 py-2 text-xs leading-5 text-command-muted backdrop-blur">
-                Add property area or postal code to improve location intelligence.
+                Add property area or postal code to activate location intelligence.
               </div>
             </>
           ) : null}

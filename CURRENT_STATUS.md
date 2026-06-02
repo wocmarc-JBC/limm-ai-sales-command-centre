@@ -1,5 +1,28 @@
 # Current Status
 
+## v6.4.4 Accurate Singapore SVG Mission Map Fix
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_4_4_accurate_singapore_svg_map_fix`.
+- The weak hand-drawn map blob was replaced with a dedicated local `SingaporeSvgMap` component.
+- Main island now uses a recognisable Singapore mainland SVG path.
+- Only one small Sentosa island appears below the south-central area.
+- Extra decorative islands remain removed.
+- `LIMM HQ` marker stays on the central main island around the Orchard / Dhoby Ghaut / River Valley area, using postal code `228397`.
+- Zoom, pan, and reset controls are preserved.
+- Gold/amber separation remains fixed.
+- No-data state still shows the map, HQ marker, zoom controls, legend, and small helper without a blocking overlay.
+- Dashboard map remains privacy-safe and does not show full exact addresses.
+
+Current Go/No-Go:
+
+- GO for controlled v6.4.4 deploy proof after push, Vercel deployment, and health check.
+- GO for visual dashboard retest after health shows `v6_4_4_accurate_singapore_svg_map_fix`.
+- NO-GO for backend rebuilds, Supabase schema changes, WhatsApp webhook changes, external geocoding/map keys, fake map data, price guide automation, Calendar auto-booking, voice transcription, GST calculations, or auth/delete logic changes.
+
 ## v6.4.3 Singapore Map Zoom + HQ Redesign
 
 Status: implemented locally; pending push/deploy health proof.

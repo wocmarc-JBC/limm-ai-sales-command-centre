@@ -114,7 +114,8 @@ const requiredScripts = [
   "scripts/test_v6_4_singapore_mission_map.mjs",
   "scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs",
   "scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs",
-  "scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs"
+  "scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs",
+  "scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs"
 ];
 
 let hardFail = false;
@@ -206,7 +207,7 @@ function buildReportPayload() {
       : browserPayload?.goNoGo ?? "GO for internal launch-candidate testing; MANUAL REQUIRED for authenticated boss writes when credentials are absent.",
     nextCodexTask: hardFail
       ? "Fix Playwright browser QA and rerun npm.cmd run qa:browser before moving forward."
-      : "v6.4.3 Singapore Map Zoom + HQ Redesign is ready for controlled deploy proof after the health endpoint shows v6_4_3_singapore_map_zoom_hq_redesign. Next recommended phase: visually verify the wider zoomable dashboard map, pan/reset controls, LIMM HQ marker, Sentosa-only base, brighter gold/amber separation, no blocking empty overlay, privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard."
+      : "v6.4.4 Accurate Singapore SVG Mission Map Fix is ready for controlled deploy proof after the health endpoint shows v6_4_4_accurate_singapore_svg_map_fix. Next recommended phase: visually verify the dashboard map clearly reads as Singapore, only one small Sentosa appears below the main island, LIMM HQ sits on central Singapore, zoom/pan/reset controls work, gold and amber are distinct, no blocking empty overlay appears, and privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, and existing Mission Control dashboard remain intact."
   };
 }
 

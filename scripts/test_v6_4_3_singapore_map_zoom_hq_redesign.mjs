@@ -13,6 +13,7 @@ function assert(condition, message) {
 }
 
 const mapComponent = read("components/SingaporeMissionMap.tsx");
+const svgMapComponent = read("components/SingaporeSvgMap.tsx");
 const dashboard = read("app/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const audit = read("scripts/audit_v3_package.mjs");
@@ -52,10 +53,10 @@ for (const phrase of [
   assert(mapComponent.includes(phrase), `Zoom/pan map control missing ${phrase}`);
 }
 
-assert(mapComponent.includes("sentosa-island") && mapComponent.includes("singapore-sentosa-only"), "Map must render only the Sentosa lower island marker.");
-assert(!mapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
-assert(mapComponent.includes("M59 225 L82 203"), "Main Singapore island outline must remain the accurate local vector path.");
-assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"/i.test(mapComponent), "Map base must not regress to a generic ellipse/circle.");
+assert(svgMapComponent.includes("singapore-sentosa"), "Map must render only the Sentosa lower island marker.");
+assert(!svgMapComponent.includes("singapore-visible-islands"), "Old extra-island cluster must not return.");
+assert(svgMapComponent.includes("M58 313 L78 286"), "Main Singapore island outline must remain the accurate local vector path.");
+assert(!/ellipse|<circle[^>]+className=\"singapore-island-silhouette\"/i.test(mapComponent + svgMapComponent), "Map base must not regress to a generic ellipse/circle.");
 
 for (const phrase of [
   "limmHqLocation",
@@ -79,8 +80,8 @@ assert(mapComponent.indexOf("#FFD54A") !== mapComponent.indexOf("#FF8A00"), "Gol
 assert(mapComponent.includes("Gold = won / hot lead") && mapComponent.includes("Amber = follow-up / appointment"), "Legend must preserve useful gold/amber meanings.");
 
 assert(mapComponent.includes("No mapped leads yet"), "Empty state must keep small no-data badge.");
-assert(mapComponent.includes("Add property area or postal code to improve location intelligence."), "Empty state must keep small helper.");
-assert(mapComponent.indexOf("<SingaporeSilhouette />") < mapComponent.indexOf("{!hasMapData ?"), "Map base and HQ must render before no-data helper labels.");
+assert(mapComponent.includes("Add property area or postal code to activate location intelligence."), "Empty state must keep small helper.");
+assert(mapComponent.indexOf("<SingaporeSvgMap />") < mapComponent.indexOf("{!hasMapData ?"), "Map base and HQ must render before no-data helper labels.");
 assert(!mapComponent.includes("Singapore Mission Map ready"), "Blocking empty-state title must not return.");
 assert(!mapComponent.includes("left-1/2 top-1/2"), "Centered blocking overlay positioning must not return.");
 assert(!/demo pin|sample pin|fake pin|fake map/i.test(mapComponent), "Map component must not include fake/demo map data.");
@@ -107,7 +108,7 @@ for (const field of [
 
 assert(dashboard.includes("SingaporeMissionMap") && dashboard.includes("selectedArea={selectedMapArea}"), "Dashboard must still render the map with selected area support.");
 assert(!mapComponent.includes("projectAddress") && !mapComponent.includes("project_address"), "Dashboard map must not render exact/full addresses.");
-assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(mapComponent), "No external geocoding or map API key should be added.");
+assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(mapComponent + svgMapComponent), "No external geocoding or map API key should be added.");
 
 assert(audit.includes("docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md"), "Package audit must require v6.4.3 docs.");
 assert(audit.includes("scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs"), "Package audit must require v6.4.3 test.");
@@ -122,7 +123,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
   assert(whatsappAdapter.includes(phrase), `Known-good WhatsApp payload shape missing ${phrase}`);
 }
 
-const checkedSources = [mapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [mapComponent, svgMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",

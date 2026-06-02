@@ -19,6 +19,7 @@ function assert(condition, message) {
 const location = read("lib/singapore-location.ts");
 const missionMap = read("lib/mission-map.ts");
 const mapComponent = read("components/SingaporeMissionMap.tsx");
+const svgMapComponent = read("components/SingaporeSvgMap.tsx");
 const dashboard = read("app/page.tsx");
 const leadDetail = read("app/leads/[id]/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
@@ -86,7 +87,7 @@ for (const phrase of [
   "Territory view for leads, site visits and collections",
   "Unknown area:",
   "No mapped leads yet",
-  "Add property area or postal code to improve location intelligence.",
+  "Add property area or postal code to activate location intelligence.",
   "Gold = won / hot lead",
   "Cyan = active lead",
   "Amber = follow-up / appointment",
@@ -94,7 +95,7 @@ for (const phrase of [
   "Green = paid / completed",
   "href={`/leads?area=",
   "href={pin.href || \"#\"}",
-  "Area-level only, no full addresses on the dashboard."
+  "Area-level only."
 ]) {
   assert(mapComponent.includes(phrase), `SingaporeMissionMap component missing ${phrase}`);
 }
@@ -167,7 +168,8 @@ const scannedSources = [
   health,
   migration,
   whatsappAdapter,
-  whatsappRoute
+  whatsappRoute,
+  svgMapComponent
 ].join("\n");
 
 for (const forbidden of [
