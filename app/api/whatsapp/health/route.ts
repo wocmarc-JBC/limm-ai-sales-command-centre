@@ -20,6 +20,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v6.4.2"
 // version: "v6_4_3_singapore_map_zoom_hq_redesign"
 // salesBrainVersion: "v6.4.3"
+// version: "v6_4_4_accurate_singapore_svg_map_fix"
+// salesBrainVersion: "v6.4.4"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -41,9 +43,22 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     return NextResponse.json({
       ok: true,
-      version: "v6_4_4_accurate_singapore_svg_map_fix",
-      salesBrainVersion: "v6.4.4",
+      version: "v6_5_smart_lead_intake_meeting_prep",
+      salesBrainVersion: "v6.5",
       runtime: "vercel",
+      smartLeadIntakeAvailable: true,
+      intakeChecklistAvailable: true,
+      missingInfoDetectorAvailable: true,
+      intakeQuestionLimitAvailable: true,
+      intakeQuestionLimitMin: 3,
+      intakeQuestionLimitMax: 5,
+      lifestyleOccupantsPetsSafetyAvailable: true,
+      budgetExpectationCollectionNoPriceReply: true,
+      timelineKeyMoveInCollectionAvailable: true,
+      meetingReadinessScoreAvailable: true,
+      proposalReadinessScoreAvailable: true,
+      leadIntakeProfileStorageAvailable: true,
+      leadIntakeAuditTraceAvailable: true,
       accurateSingaporeSvgMapAvailable: true,
       singaporeMainlandSvgAvailable: true,
       sentosaOnlyIslandAvailable: true,
@@ -257,9 +272,22 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_4_4_accurate_singapore_svg_map_fix",
-      salesBrainVersion: "v6.4.4",
+      version: "v6_5_smart_lead_intake_meeting_prep",
+      salesBrainVersion: "v6.5",
       runtime: "vercel",
+      smartLeadIntakeAvailable: false,
+      intakeChecklistAvailable: false,
+      missingInfoDetectorAvailable: false,
+      intakeQuestionLimitAvailable: false,
+      intakeQuestionLimitMin: 0,
+      intakeQuestionLimitMax: 0,
+      lifestyleOccupantsPetsSafetyAvailable: false,
+      budgetExpectationCollectionNoPriceReply: false,
+      timelineKeyMoveInCollectionAvailable: false,
+      meetingReadinessScoreAvailable: false,
+      proposalReadinessScoreAvailable: false,
+      leadIntakeProfileStorageAvailable: false,
+      leadIntakeAuditTraceAvailable: false,
       accurateSingaporeSvgMapAvailable: false,
       singaporeMainlandSvgAvailable: false,
       sentosaOnlyIslandAvailable: false,

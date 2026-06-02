@@ -90,7 +90,8 @@ export function mapLeadRow(row: any): Lead {
     mapLng: row.map_lng ?? null,
     locationConfidence: row.location_confidence ?? "unknown",
     locationSource: row.location_source ?? "unknown",
-    locationNotes: row.location_notes ?? ""
+    locationNotes: row.location_notes ?? "",
+    intakeProfile: row.intake_profile ?? row.intakeProfile ?? undefined
   };
 }
 

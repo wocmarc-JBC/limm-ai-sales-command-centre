@@ -1,5 +1,26 @@
 # Current Status
 
+## v6.5 Smart Lead Intake + Meeting Prep Brain
+
+Status: implemented locally; pending push/deploy health proof.
+
+What changed:
+
+- Health endpoint target is now `v6_5_smart_lead_intake_meeting_prep`.
+- Lead detail now includes a Smart Lead Intake panel.
+- Intake checklist tracks property type, scope, floor plan, site photos, address/area, lifestyle, occupants, helper, pets, safety needs, budget expectation, timeline, key collection, move-in date, and preferred meeting timing.
+- Missing-info detector suggests only the next 3-5 useful questions.
+- Meeting Readiness and Proposal Readiness scores are calculated from collected intake details.
+- Intake answers are saved into `lead.intakeProfile` and live Supabase column `leads.intake_profile`.
+- Additive migration `022_v6_5_smart_lead_intake.sql` stores the profile as JSONB.
+- Saving intake fields writes audit action `lead_intake_fields_updated` with readiness scores, missing fields, suggested questions, and trace metadata.
+
+Current Go/No-Go:
+
+- GO for controlled v6.5 deploy proof after push, migration, Vercel deployment, and health check.
+- GO for Marcus to save lead intake details internally and use the readiness scores for meeting prep.
+- NO-GO for auto pricing, quote ranges, rough estimates, Calendar auto-booking, appointment confirmation without an event, OpenAI auto-reply enablement, or schema-destructive changes.
+
 ## v6.4.4 Accurate Singapore SVG Mission Map Fix
 
 Status: implemented locally; pending push/deploy health proof.

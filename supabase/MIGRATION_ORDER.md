@@ -272,6 +272,20 @@ where table_name = 'project_accounts'
 and column_name in ('property_area','postal_code','project_address','planning_region','planning_area','map_lat','map_lng','location_confidence','location_source');
 ```
 
+## 022_v6_5_smart_lead_intake.sql
+
+Purpose: Add a structured JSONB intake profile for lifestyle, occupants, helper, pets, safety needs, budget expectation, timeline, key collection, move-in date, missing-info questions, meeting readiness, proposal readiness, and audit trace support.
+Dependencies: migrations 002, 016, 019, 020, and 021.
+Safe to re-run: Yes. Uses `add column if not exists` and `create index if not exists`.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_name = 'leads'
+and column_name = 'intake_profile';
+```
+
 ## After All Migrations
 
 Run:

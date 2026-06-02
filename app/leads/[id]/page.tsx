@@ -21,6 +21,7 @@ import {
   restoreLeadAction,
   resumeBotForLeadAction,
   reviewAiDraftAction,
+  saveLeadIntakeProfileAction,
   softDeleteLeadAction,
   takeOverLeadAction,
   updateLeadStatusAction
@@ -34,6 +35,7 @@ import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
 import { getQuotationReadinessForLead } from "@/lib/data/quotation-repository";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
+import { buildLeadIntakePlan, MAX_INTAKE_QUESTIONS } from "@/lib/lead-intake";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
@@ -121,6 +123,8 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
   const latestInbound = leadMessages.find((message) => message.direction === "inbound" && message.channel === "whatsapp");
   const latestOutbound = leadMessages.find((message) => message.direction === "outbound" && message.channel === "whatsapp");
   const brainMetadata = latestOutbound?.metadata ?? {};
+  const intakePlan = buildLeadIntakePlan(lead, leadMessages);
+  const intakeProfile = intakePlan.profile;
   const bookingReadiness = evaluateBookingReadiness({
     lead,
     latestText: latestInbound?.body ?? lead.lastClientMessage,
@@ -223,6 +227,135 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
               ) : null}
             </dl>
           </div>
+          <section className="mt-5 rounded-lg border border-command-gold/35 bg-command-elevated p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Smart Lead Intake</p>
+                <h2 className="mt-1 text-xl font-semibold text-command-text">Meeting prep checklist</h2>
+                <p className="mt-2 max-w-3xl text-sm text-command-muted">
+                  Collect lifestyle, occupants, helper, pets, safety needs, budget expectation, timeline, key collection, and move-in details
+                  without giving prices or confirming bookings.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <div className="rounded-lg border border-command-line bg-command-bg/70 px-4 py-3 text-center">
+                  <p className="text-xs uppercase tracking-[0.14em] text-command-muted">Meeting</p>
+                  <p className="text-2xl font-semibold text-command-cyan">{intakePlan.meetingReadinessScore}%</p>
+                </div>
+                <div className="rounded-lg border border-command-line bg-command-bg/70 px-4 py-3 text-center">
+                  <p className="text-xs uppercase tracking-[0.14em] text-command-muted">Proposal</p>
+                  <p className="text-2xl font-semibold text-command-gold">{intakePlan.proposalReadinessScore}%</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_1fr]">
+              <div className="rounded-lg border border-command-line bg-command-bg/55 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold text-command-text">Collected intake</p>
+                  <StatusBadge label={`${intakePlan.completedFields.length} fields ready`} />
+                </div>
+                <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                  {intakePlan.checklist.map((item) => (
+                    <div key={item.key} className="rounded-md border border-command-line bg-command-panel2 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-command-text">{item.label}</p>
+                        <span className={item.status === "missing" ? "text-command-amber" : "text-command-green"}>
+                          {humanizeLabel(item.status)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-command-muted">{item.value || "Not collected"}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-lg border border-command-line bg-command-bg/55 p-4">
+                <p className="font-semibold text-command-text">Ask only the next useful questions</p>
+                <p className="mt-1 text-sm text-command-muted">
+                  The intake brain caps the next ask to {MAX_INTAKE_QUESTIONS} questions, so Marcus does not overwhelm the client.
+                </p>
+                <ol className="mt-3 space-y-2 text-sm">
+                  {intakePlan.suggestedQuestions.length ? intakePlan.suggestedQuestions.map((question) => (
+                    <li key={question} className="rounded-md border border-command-line bg-command-panel2 p-3">
+                      {question}
+                    </li>
+                  )) : (
+                    <li className="rounded-md border border-command-green/50 bg-command-green/10 p-3 text-command-green">
+                      Intake looks ready for Marcus to review before the initial project review.
+                    </li>
+                  )}
+                </ol>
+                <p className="mt-3 rounded-md border border-command-amber/45 bg-command-amber/10 p-3 text-sm text-command-muted">
+                  Budget expectation is collected only as planning context. The CRM must not generate amounts, ranges, bundled cost claims, or early cost guesses.
+                </p>
+              </div>
+            </div>
+            <form action={saveLeadIntakeProfileAction} className="mt-5 grid gap-4 rounded-lg border border-command-line bg-command-bg/55 p-4 lg:grid-cols-3">
+              <input type="hidden" name="lead_id" value={lead.id} />
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Property type</span>
+                <input name="property_type" defaultValue={intakeProfile.propertyType ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm lg:col-span-2">
+                <span className="text-command-muted">Scope of work</span>
+                <input name="scope_of_work" defaultValue={intakeProfile.scopeOfWork ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Floor plan status</span>
+                <input name="floor_plan_status" defaultValue={intakeProfile.floorPlanStatus ?? ""} placeholder="Received / Not yet / Partial" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Site photos status</span>
+                <input name="site_photos_status" defaultValue={intakeProfile.sitePhotosStatus ?? ""} placeholder="Received / Not yet / Partial" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Address or area</span>
+                <input name="property_area_or_address" defaultValue={intakeProfile.propertyAreaOrAddress ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Lifestyle needs</span>
+                <input name="lifestyle_notes" defaultValue={intakeProfile.lifestyleNotes ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Occupants</span>
+                <input name="occupants" defaultValue={intakeProfile.occupants ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Helper</span>
+                <input name="helper" defaultValue={intakeProfile.helper ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Pets</span>
+                <input name="pets" defaultValue={intakeProfile.pets ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Safety needs</span>
+                <input name="safety_needs" defaultValue={intakeProfile.safetyNeeds ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Budget expectation</span>
+                <input name="budget_expectation" defaultValue={intakeProfile.budgetExpectation ?? ""} placeholder="Planning context only" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Timeline</span>
+                <input name="timeline" defaultValue={intakeProfile.timeline ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Key collection</span>
+                <input name="key_collection_date" defaultValue={intakeProfile.keyCollectionDate ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Move-in date</span>
+                <input name="move_in_date" defaultValue={intakeProfile.moveInDate ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-command-muted">Preferred meeting timing</span>
+                <input name="preferred_meeting_timing" defaultValue={intakeProfile.preferredMeetingTiming ?? ""} className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+              </label>
+              <div className="flex items-end">
+                <ActionButton type="submit">Save Intake Profile</ActionButton>
+              </div>
+            </form>
+          </section>
           <form action={updateLeadStatusAction} className="mt-5 flex flex-wrap items-end gap-3 rounded-lg border border-command-line bg-command-elevated p-4">
             <input type="hidden" name="lead_id" value={lead.id} />
             <label className="grid gap-1 text-sm">

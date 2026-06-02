@@ -166,6 +166,44 @@ export interface AiDryRunRecommendation {
   createdAt: string;
 }
 
+export type IntakeChecklistStatus = "collected" | "missing" | "partial";
+
+export interface LeadIntakeChecklistItem {
+  key: string;
+  label: string;
+  status: IntakeChecklistStatus;
+  value?: string;
+  question: string;
+  meetingWeight: number;
+  proposalWeight: number;
+}
+
+export interface LeadIntakeProfile {
+  lifestyleNotes?: string;
+  occupants?: string;
+  helper?: string;
+  pets?: string;
+  safetyNeeds?: string;
+  budgetExpectation?: string;
+  timeline?: string;
+  keyCollectionDate?: string;
+  moveInDate?: string;
+  preferredMeetingTiming?: string;
+  propertyType?: string;
+  propertyAreaOrAddress?: string;
+  scopeOfWork?: string;
+  floorPlanStatus?: string;
+  sitePhotosStatus?: string;
+  meetingReadinessScore?: number;
+  proposalReadinessScore?: number;
+  missingInfo?: string[];
+  suggestedQuestions?: string[];
+  checklist?: LeadIntakeChecklistItem[];
+  updatedAt?: string;
+  updatedBy?: string;
+  trace?: Record<string, unknown>;
+}
+
 export interface Lead {
   id: string;
   clientName: string;
@@ -245,6 +283,7 @@ export interface Lead {
   locationConfidence?: LocationConfidence;
   locationSource?: LocationSource;
   locationNotes?: string;
+  intakeProfile?: LeadIntakeProfile;
 }
 
 export interface ProjectAccount {

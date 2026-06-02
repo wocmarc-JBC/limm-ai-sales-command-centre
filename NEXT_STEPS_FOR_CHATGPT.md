@@ -2,13 +2,14 @@
 
 ## Review First
 
-1. Review `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`.
-2. Review `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`.
-3. Review `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`.
-4. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
-5. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
-6. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
-7. Confirm `/api/whatsapp/health` shows `version: v6_4_4_accurate_singapore_svg_map_fix` before judging the deployed UI.
+1. Review `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`.
+2. Review `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`.
+3. Review `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`.
+4. Review `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`.
+5. Review `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`.
+6. Review `docs/V6_4_SINGAPORE_MISSION_MAP.md`.
+7. Review `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`.
+8. Confirm `/api/whatsapp/health` shows `version: v6_5_smart_lead_intake_meeting_prep` before judging the deployed UI.
 1. Review `docs/V6_ULTIMATE_BLUEPRINT.md`.
 2. Review `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`.
 3. Review `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`.
@@ -17,7 +18,7 @@
 
 ## Recommended Next Prompt For Marcus PowerShell
 
-Prepare the controlled live v6.4.4 Accurate Singapore SVG Mission Map retest:
+Prepare the controlled live v6.5 Smart Lead Intake + Meeting Prep retest:
 
 - Keep all v4/v5 safety rules unchanged.
 - Confirm health endpoint first; local PASS is not production PASS.
@@ -33,6 +34,7 @@ Prepare the controlled live v6.4.4 Accurate Singapore SVG Mission Map retest:
 - v6.4.2 upgrades the map base to a more accurate Singapore outline and removes the blocking empty-state overlay so the map remains visible even with no data.
 - v6.4.3 widens the map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal `228397`, and fixes gold/amber visual separation.
 - v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG component, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on the central main island.
+- v6.5 adds a Smart Lead Intake profile, missing-info detector, 3-5 question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness score, Proposal Readiness score, and lead intake audit trace.
 - v6 Ultimate adds human-like reply planning, Context Truth Gate, Singapore renovation shorthand understanding, Safety Governor, Reply Quality Judge, cleanup controls, human takeover, bot pause/resume, mission queue, lead scoring, gold UI, settings/QA centre, and 200+ case QA.
 - OpenAI WhatsApp reply remains off.
 - Optional AI v6 interpreter/drafter flags remain off by default.
@@ -65,6 +67,7 @@ node scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs
 node scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs
 node scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs
 node scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs
+node scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs
 node scripts/cleanup_old_test_leads_v6_1.mjs
 node scripts/audit_v3_package.mjs
 ```
@@ -72,7 +75,7 @@ node scripts/audit_v3_package.mjs
 ## What Codex Should Build Next
 
 - The next phase should only happen after Marcus confirms v6 deployed health and live retest results.
-- Recommended next scope: confirm v6.4.4 health, visually verify the dashboard map clearly reads as Singapore, only one small Sentosa appears below the main island, LIMM HQ sits on central Singapore, zoom/pan/reset controls work, gold and amber are distinct, no blocking overlay appears, and privacy-safe area summaries, Sales Pipeline, Sales & Collection, Targets, Boss Monthly Report, manual Quotation Readiness status, and existing Mission Control dashboard remain intact.
+- Recommended next scope: confirm v6.5 health, apply migration `022_v6_5_smart_lead_intake.sql`, open a lead detail page, save intake fields, verify Meeting Readiness and Proposal Readiness update, confirm only 3-5 missing questions are suggested, and confirm audit action `lead_intake_fields_updated`.
 - Optional OpenAI/AI WhatsApp reply testing should remain disabled until v6 deterministic local brain is proven live.
 
 ## Avoid

@@ -10,6 +10,7 @@ import { hideTestFollowUp, listFollowUps, updateFollowUpStatus } from "@/lib/dat
 import {
   archiveLead,
   approveAppointmentBooking,
+  getLeadById,
   hardDeleteLead,
   listLeads,
   markBossApprovalNeeded,
@@ -28,12 +29,14 @@ import {
   resumeBotForLead,
   softDeleteLead,
   takeOverLead,
+  updateLeadIntakeProfile,
   updateLeadStatus
 } from "@/lib/data/leads-repository";
 import { updateQuotationReadinessStatus } from "@/lib/data/quotation-repository";
 import { saveMonthlySalesTarget } from "@/lib/data/sales-collection-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
+import { buildLeadIntakePlan } from "@/lib/lead-intake";
 import { currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
 import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import type { Permission } from "@/lib/auth/roles";
@@ -98,6 +101,77 @@ export async function updateLeadStatusAction(formData: FormData) {
   await updateLeadStatus(text(formData, "lead_id"), text(formData, "status") as LeadStatus);
   revalidatePath("/leads");
   revalidatePath(`/leads/${text(formData, "lead_id")}`);
+  revalidatePath("/audit-log");
+}
+
+export async function saveLeadIntakeProfileAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  const lead = await getLeadById(leadId);
+  if (!lead) return;
+
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const rawProfile = {
+    ...(lead.intakeProfile ?? {}),
+    lifestyleNotes: text(formData, "lifestyle_notes").trim(),
+    occupants: text(formData, "occupants").trim(),
+    helper: text(formData, "helper").trim(),
+    pets: text(formData, "pets").trim(),
+    safetyNeeds: text(formData, "safety_needs").trim(),
+    budgetExpectation: text(formData, "budget_expectation").trim(),
+    timeline: text(formData, "timeline").trim(),
+    keyCollectionDate: text(formData, "key_collection_date").trim(),
+    moveInDate: text(formData, "move_in_date").trim(),
+    preferredMeetingTiming: text(formData, "preferred_meeting_timing").trim(),
+    propertyType: text(formData, "property_type", lead.propertyType).trim(),
+    propertyAreaOrAddress: text(formData, "property_area_or_address", lead.projectAddress || lead.propertyArea).trim(),
+    scopeOfWork: text(formData, "scope_of_work", lead.scopeSummary).trim(),
+    floorPlanStatus: text(formData, "floor_plan_status").trim(),
+    sitePhotosStatus: text(formData, "site_photos_status").trim(),
+    updatedAt: new Date().toISOString(),
+    updatedBy: actor
+  };
+
+  const leadMessages = await listLeadMessages(leadId);
+  const plan = buildLeadIntakePlan({ ...lead, intakeProfile: rawProfile }, leadMessages);
+  const profile = {
+    ...plan.profile,
+    updatedAt: rawProfile.updatedAt,
+    updatedBy: actor
+  };
+
+  await updateLeadIntakeProfile(leadId, profile, {
+    actor,
+    changedFields: [
+      "lifestyleNotes",
+      "occupants",
+      "helper",
+      "pets",
+      "safetyNeeds",
+      "budgetExpectation",
+      "timeline",
+      "keyCollectionDate",
+      "moveInDate",
+      "preferredMeetingTiming",
+      "propertyType",
+      "propertyAreaOrAddress",
+      "scopeOfWork",
+      "floorPlanStatus",
+      "sitePhotosStatus"
+    ],
+    completedFields: plan.completedFields,
+    missingFields: plan.missingInfo,
+    suggestedQuestions: plan.suggestedQuestions,
+    suggestedQuestionCount: plan.suggestedQuestions.length,
+    meetingReadinessScore: plan.meetingReadinessScore,
+    proposalReadinessScore: plan.proposalReadinessScore,
+    intakeTrace: profile.trace
+  });
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
   revalidatePath("/audit-log");
 }
 

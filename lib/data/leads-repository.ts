@@ -4,7 +4,7 @@ import { mapLeadRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseServerClient } from "./supabase-server";
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
-import type { Lead, LeadStatus } from "@/lib/types";
+import type { Lead, LeadIntakeProfile, LeadStatus } from "@/lib/types";
 
 type ListLeadsOptions = { includeInactive?: boolean; includeTest?: boolean };
 
@@ -20,6 +20,8 @@ function leadPatchToRow(patch: Partial<Lead>, now: string) {
     status: patch.status,
     boss_approval_needed: patch.bossApprovalNeeded,
     quotation_readiness_score: patch.quotationReadiness,
+    appointment_readiness: patch.appointmentReadiness,
+    missing_info: patch.missingInfo,
     next_action: patch.aiRecommendedNextAction,
     updated_at: now
   };
@@ -76,7 +78,8 @@ function leadPatchToRow(patch: Partial<Lead>, now: string) {
     ["mapLng", "map_lng"],
     ["locationConfidence", "location_confidence"],
     ["locationSource", "location_source"],
-    ["locationNotes", "location_notes"]
+    ["locationNotes", "location_notes"],
+    ["intakeProfile", "intake_profile"]
   ];
   for (const [key, column] of optional) {
     if (key in patch) row[column] = patch[key];
@@ -177,6 +180,40 @@ export async function updateLeadSalesTracking(id: string, patch: Partial<Lead>, 
       manualOnly: true,
       noPriceGuideAutomation: true,
       changedFields: Object.keys(patch)
+    }
+  );
+}
+
+export async function updateLeadIntakeProfile(
+  id: string,
+  intakeProfile: LeadIntakeProfile,
+  metadata: Record<string, unknown> = {}
+) {
+  const missingInfo = intakeProfile.missingInfo ?? [];
+  const suggestedQuestions = intakeProfile.suggestedQuestions ?? [];
+  return updateLead(
+    id,
+    {
+      intakeProfile,
+      missingInfo,
+      appointmentReadiness: intakeProfile.meetingReadinessScore ?? 0,
+      quotationReadiness: intakeProfile.proposalReadinessScore ?? 0,
+      aiRecommendedNextAction: suggestedQuestions.length
+        ? `Collect intake: ${suggestedQuestions.slice(0, 3).join(" ")}`
+        : "Review completed intake profile before the initial project review."
+    },
+    "lead_intake_fields_updated",
+    "Smart intake profile updated for meeting and proposal preparation.",
+    {
+      smartLeadIntakeVersion: "v6.5",
+      intakeFieldsUpdated: true,
+      meetingReadinessScore: intakeProfile.meetingReadinessScore ?? 0,
+      proposalReadinessScore: intakeProfile.proposalReadinessScore ?? 0,
+      missingInfo,
+      suggestedQuestionCount: suggestedQuestions.length,
+      noPriceReplyRule: true,
+      noCalendarBookingRule: true,
+      ...metadata
     }
   );
 }
