@@ -31,7 +31,7 @@ for (const phrase of [
   "command-core-resource-bar",
   "data-resource-bar-readable-dark=\"true\"",
   "data-readable-resource-card=\"true\"",
-  "bg-[#04101d]/95",
+  "bg-[#030914]/95",
   "text-command-text",
   "dotClass(tone)"
 ]) {

@@ -224,6 +224,7 @@ for (const required of [
   "scripts/test_v6_ui_100_command_centre_polish.mjs",
   "scripts/test_v6_6_strategic_command_core_layout.mjs",
   "scripts/test_v6_6_2_command_core_map_first_layout.mjs",
+  "scripts/test_v6_6_3_strategic_command_core_final_touchup.mjs",
   "scripts/cleanup_old_test_leads_v6_1.mjs",
   "docs/V6_1_2_MISSION_CONTROL_UI_LIVE_CLEANUP.md",
   "docs/V6_1_4_MISSION_CONTROL_UX_FINAL_POLISH.md",
@@ -527,9 +528,15 @@ for (const field of [
   "version: \"v6_6_1_strategic_command_core_ui_fit_polish\"",
   "version: \"v6_6_strategic_command_core_layout\"",
   "version: \"v6_6_2_command_core_map_first_layout\"",
+  "version: \"v6_6_3_strategic_command_core_final_touchup\"",
   "strategicCommandCoreAvailable",
   "commandCoreBetaRouteAvailable",
   "frostpunkInspiredLayoutAvailable",
+  "commandCoreFinalTouchupAvailable",
+  "commandCoreResourceBarContrastFixed",
+  "commandCoreOperatingPictureCompressed",
+  "commandCoreMapHeroPreserved",
+  "commandCoreBottomPanelsAligned",
   "commandCoreMapFirstLayoutAvailable",
   "commandCoreMapFullWidthHeroAvailable",
   "commandCoreMapSameSizeAsDashboardAvailable",
@@ -926,6 +933,7 @@ assert(pkg.scripts?.["test:v6.4.10"], "package.json missing v6.4.10 interaction/
 assert(pkg.scripts?.["test:v6-ui-100"], "package.json missing v6 UI 100 command centre polish test script.");
 assert(pkg.scripts?.["test:v6.6"], "package.json missing v6.6 strategic command core layout test script.");
 assert(pkg.scripts?.["test:v6.6.2"], "package.json missing v6.6.2 command core map-first layout test script.");
+assert(pkg.scripts?.["test:v6.6.3"], "package.json missing v6.6.3 command core final touchup test script.");
 assert(pkg.scripts?.["map:download-official"], "package.json missing official URA map download script.");
 for (const dependency of ["next", "react", "react-dom"]) {
   assert(pkg.dependencies?.[dependency], `package.json missing ${dependency}`);

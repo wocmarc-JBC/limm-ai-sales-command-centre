@@ -41,6 +41,7 @@ export const dynamic = "force-dynamic";
 // version: "v6_6_strategic_command_core_layout"
 // version: "v6_6_1_strategic_command_core_ui_fit_polish"
 // version: "v6_6_2_command_core_map_first_layout"
+// version: "v6_6_3_strategic_command_core_final_touchup"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -63,12 +64,17 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_6_2_command_core_map_first_layout",
-      salesBrainVersion: "v6.6.2",
+      version: "v6_6_3_strategic_command_core_final_touchup",
+      salesBrainVersion: "v6.6.3",
       runtime: "vercel",
       strategicCommandCoreAvailable: true,
       commandCoreBetaRouteAvailable: true,
       frostpunkInspiredLayoutAvailable: true,
+      commandCoreFinalTouchupAvailable: true,
+      commandCoreResourceBarContrastFixed: true,
+      commandCoreOperatingPictureCompressed: true,
+      commandCoreMapHeroPreserved: true,
+      commandCoreBottomPanelsAligned: true,
       commandCoreMapFirstLayoutAvailable: true,
       commandCoreMapFullWidthHeroAvailable: true,
       commandCoreMapSameSizeAsDashboardAvailable: true,
@@ -366,12 +372,17 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_6_2_command_core_map_first_layout",
-      salesBrainVersion: "v6.6.2",
+      version: "v6_6_3_strategic_command_core_final_touchup",
+      salesBrainVersion: "v6.6.3",
       runtime: "vercel",
       strategicCommandCoreAvailable: false,
       commandCoreBetaRouteAvailable: false,
       frostpunkInspiredLayoutAvailable: false,
+      commandCoreFinalTouchupAvailable: false,
+      commandCoreResourceBarContrastFixed: false,
+      commandCoreOperatingPictureCompressed: false,
+      commandCoreMapHeroPreserved: false,
+      commandCoreBottomPanelsAligned: false,
       commandCoreMapFirstLayoutAvailable: false,
       commandCoreMapFullWidthHeroAvailable: false,
       commandCoreMapSameSizeAsDashboardAvailable: false,

@@ -46,6 +46,17 @@ function toneClasses(tone: Tone) {
   }[tone];
 }
 
+function resourceCounterToneClasses(tone: Tone) {
+  return {
+    gold: "border-command-gold/60 text-command-yellow",
+    cyan: "border-command-cyan/60 text-command-cyan",
+    amber: "border-command-amber/60 text-command-amber",
+    red: "border-command-red/60 text-command-red",
+    green: "border-command-green/60 text-command-green",
+    slate: "border-command-line text-command-muted"
+  }[tone];
+}
+
 function priorityClasses(priority: DecisionPriority) {
   return {
     critical: "border-command-red/65 bg-command-red/12 text-command-red",
@@ -70,14 +81,15 @@ function ResourcePill({ label, value, href, tone }: { label: string; value: numb
   return (
     <a
       href={href}
-      className={`command-press flex min-w-[10rem] shrink-0 items-center justify-between gap-3 rounded-2xl border bg-[#04101d]/95 px-4 py-3 shadow-[inset_0_0_24px_rgba(34,211,238,0.05)] transition hover:border-command-cyan/70 hover:bg-[#071827] ${toneClasses(tone)}`}
+      className={`command-press flex min-w-[9.25rem] shrink-0 items-center justify-between gap-3 rounded-xl border bg-[#030914]/95 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03),0_10px_24px_rgba(0,0,0,0.28)] transition hover:border-command-cyan/70 hover:bg-[#061524] ${resourceCounterToneClasses(tone)}`}
       data-readable-resource-card="true"
+      data-resource-card-dark-counter="true"
     >
-      <span className="inline-flex items-center gap-2 text-sm font-semibold text-command-text">
-        <span className={`h-2.5 w-2.5 rounded-full ${dotClass(tone)}`} />
+      <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-command-muted">
+        <span className={`h-2 w-2 rounded-full ${dotClass(tone)}`} />
         {label}
       </span>
-      <span className="text-2xl font-semibold text-command-text">{value}</span>
+      <span className="text-2xl font-semibold tabular-nums text-command-text">{value}</span>
     </a>
   );
 }
@@ -255,13 +267,13 @@ export default async function CommandCorePage() {
   return (
     <>
       <PageHeader title="Strategic Command Core" eyebrow="Command Core Beta">
-        <a href="/" className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-cyan/70">
+        <a href="/" className="inline-flex min-h-10 items-center rounded-xl border border-command-cyan/35 bg-[#04101d]/90 px-3 py-2 text-sm font-semibold text-command-cyan transition hover:border-command-cyan/70 hover:bg-[#071827]">
           Back to Dashboard
         </a>
       </PageHeader>
 
-      <section className="mission-panel mb-6 rounded-3xl border-command-cyan/20 bg-[#020b16]/88 p-3 shadow-command" data-testid="command-core-resource-bar" data-resource-bar-readable-dark="true">
-        <div className="thin-scrollbar flex gap-3 overflow-x-auto pb-1">
+      <section className="mission-panel mb-6 rounded-3xl border-command-cyan/25 bg-[#010712]/95 p-2 shadow-command" data-testid="command-core-resource-bar" data-resource-bar-readable-dark="true" data-command-core-final-touchup="true">
+        <div className="thin-scrollbar flex gap-2 overflow-x-auto pb-1">
           <ResourcePill label="New Leads" value={leads.filter((lead) => salesStageForLead(lead) === "New Lead").length} href="/leads" tone="cyan" />
           <ResourcePill label="Hot Leads" value={hotLeads.length} href="/leads" tone="gold" />
           <ResourcePill label="Appointments" value={appointments.length} href="/appointments" tone="gold" />
@@ -281,22 +293,22 @@ export default async function CommandCorePage() {
         data-command-core-map-full-width-hero="true"
         data-command-core-map-dominant="true"
       >
-        <section className="mission-panel relative mb-4 overflow-hidden rounded-3xl p-4 md:p-5">
+        <section className="mission-panel command-core-operating-picture-compact relative mb-4 overflow-hidden rounded-3xl px-4 py-3" data-operating-picture-compact="true">
           <div className="cockpit-grid absolute inset-0 opacity-35" />
-          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Command Core</p>
-              <h2 className="mt-1 text-3xl font-semibold text-command-text">Singapore operating picture</h2>
-              <p className="mt-2 text-sm leading-6 text-command-muted">Map-first beta layout. Real CRM signals only, with no fake client files, project values, or external map API.</p>
+              <h2 className="mt-1 text-2xl font-semibold text-command-text">Singapore operating picture</h2>
+              <p className="mt-1 text-sm leading-6 text-command-muted">Real CRM signals only. No fake client files, project values, or external map API.</p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[30rem]">
+            <div className="flex flex-wrap gap-2 lg:max-w-[42rem] lg:justify-end">
               {radarItems.map((item) => (
-                <div key={item.label} className="rounded-2xl border border-command-line bg-command-bg/70 px-4 py-3">
-                  <p className="flex items-center gap-2 text-sm text-command-muted">
-                    <span className={`h-2.5 w-2.5 rounded-full ${dotClass(item.tone)}`} />
+                <div key={item.label} className="inline-flex min-w-[8.5rem] items-center justify-between gap-3 rounded-xl border border-command-line bg-command-bg/75 px-3 py-2">
+                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-command-muted">
+                    <span className={`h-2 w-2 rounded-full ${dotClass(item.tone)}`} />
                     {item.label}
                   </p>
-                  <p className="mt-1 text-2xl font-semibold text-command-text">{item.count}</p>
+                  <p className="text-lg font-semibold tabular-nums text-command-text">{item.count}</p>
                 </div>
               ))}
             </div>
@@ -312,13 +324,13 @@ export default async function CommandCorePage() {
         </div>
       </section>
 
-      <section className="command-core-panels-below-map grid gap-5 lg:grid-cols-2 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,0.95fr)_minmax(0,1.1fr)]" data-testid="command-core-panels-below-map" data-side-panels-no-longer-squeeze-map="true">
-        <aside className="mission-panel rounded-3xl p-5" data-testid="marcus-decisions-panel" data-command-core-side-panel="decisions-below-map">
+      <section className="command-core-panels-below-map grid items-stretch gap-5 lg:grid-cols-2 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,0.95fr)_minmax(0,1.1fr)]" data-testid="command-core-panels-below-map" data-side-panels-no-longer-squeeze-map="true" data-bottom-panels-aligned="true">
+        <aside className="mission-panel h-full rounded-3xl p-4" data-testid="marcus-decisions-panel" data-command-core-side-panel="decisions-below-map">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Marcus Decisions</p>
           <h2 className="mt-1 text-2xl font-semibold text-command-text">What needs a call?</h2>
           <div className="mt-5 space-y-3">
             {decisions.length ? decisions.map((decision) => (
-              <a key={`${decision.title}-${decision.href}`} href={decision.href} className="block rounded-2xl border border-command-line bg-command-bg/55 p-4 transition hover:border-command-gold/70 hover:bg-command-gold/10">
+              <a key={`${decision.title}-${decision.href}`} href={decision.href} className="block rounded-2xl border border-command-line bg-command-bg/55 p-3 transition hover:border-command-gold/70 hover:bg-command-gold/10">
                 <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${priorityClasses(decision.priority)}`}>
                   {decision.priority}
                 </span>
@@ -336,7 +348,7 @@ export default async function CommandCorePage() {
           </div>
         </aside>
 
-        <aside className="mission-panel rounded-3xl p-5" data-testid="command-core-inspector-panel" data-command-core-side-panel="inspector-below-map">
+        <aside className="mission-panel h-full rounded-3xl p-4" data-testid="command-core-inspector-panel" data-command-core-side-panel="inspector-below-map">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Inspector</p>
           {topLead && topLeadAction ? (
             <div className="mt-4">
@@ -370,7 +382,7 @@ export default async function CommandCorePage() {
           )}
         </aside>
 
-        <section className="mission-panel rounded-3xl p-5" data-testid="command-core-timeline-strip" data-timeline-compact="true">
+        <section className="mission-panel h-full rounded-3xl p-4" data-testid="command-core-timeline-strip" data-timeline-compact="true">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-amber">Bottom Timeline</p>
@@ -399,7 +411,7 @@ export default async function CommandCorePage() {
               ))}
             </div>
           ) : (
-            <div className="mt-5 rounded-2xl border border-command-line bg-command-bg/55 p-4 text-command-muted">
+            <div className="mt-5 rounded-2xl border border-command-line bg-command-bg/55 p-3 text-command-muted">
               No timeline pressure right now.
             </div>
           )}
