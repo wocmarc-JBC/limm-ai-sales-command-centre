@@ -41,7 +41,7 @@ const appNavGroups = [
   {
     title: "Operations",
     items: [
-      { href: "/client-files", label: "Client Files", disabled: true, note: "soon" },
+      { href: "/client-files", label: "Client Files" },
       { href: "/settings#test-lead-cleanup", label: "Cleanup" },
       { href: "/audit-log", label: "Audit Log" }
     ]

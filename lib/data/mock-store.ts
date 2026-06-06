@@ -8,6 +8,8 @@ import type {
   FollowUp,
   AiDryRunRecommendation,
   LeadMessage,
+  LeadFile,
+  LeadUploadLink,
   Lead,
   MonthlySalesTarget,
   PaymentRecord,
@@ -22,6 +24,8 @@ type MockStore = {
   auditLogs: AuditLog[];
   aiRecommendations: AiDryRunRecommendation[];
   leadMessages: LeadMessage[];
+  leadFiles: LeadFile[];
+  leadUploadLinks: LeadUploadLink[];
   projectAccounts: ProjectAccount[];
   paymentRecords: PaymentRecord[];
   monthlyTargets: MonthlySalesTarget[];
@@ -46,6 +50,8 @@ function createStore(): MockStore {
     auditLogs: clone(auditLogs),
     aiRecommendations: [],
     leadMessages: [],
+    leadFiles: [],
+    leadUploadLinks: [],
     projectAccounts: [],
     paymentRecords: [],
     monthlyTargets: [],

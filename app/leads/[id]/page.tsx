@@ -4,8 +4,10 @@ import { StatusBadge } from "@/components/StatusBadge";
 import {
   approveAppointmentBookingAction,
   archiveLeadAction,
+  createLeadUploadLinkAction,
   generateAiDryRunRecommendationAction,
   hardDeleteLeadAction,
+  markLeadFileReviewedAction,
   markFollowedUpAction,
   markBossApprovalNeededAction,
   markLeadDuplicateAction,
@@ -24,13 +26,20 @@ import {
   saveLeadIntakeProfileAction,
   softDeleteLeadAction,
   takeOverLeadAction,
-  updateLeadStatusAction
+  updateLeadStatusAction,
+  voidLeadFileAction
 } from "@/lib/actions";
 import { evaluateBookingReadiness } from "@/lib/calendar-booking";
 import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getLatestAiRecommendationForLead } from "@/lib/data/ai-decisions-repository";
 import { listAuditLogs } from "@/lib/data/audit-repository";
+import {
+  LEAD_FILE_CATEGORIES,
+  getSignedLeadFileUrl,
+  listLeadFiles,
+  listLeadUploadLinks
+} from "@/lib/data/lead-files-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
 import { getQuotationReadinessForLead } from "@/lib/data/quotation-repository";
@@ -42,7 +51,7 @@ import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
 import { inferLeadLocation } from "@/lib/singapore-location";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
-import type { AiDraftReviewStatus, AiDryRunRecommendation, LeadStatus } from "@/lib/types";
+import type { AiDraftReviewStatus, AiDryRunRecommendation, LeadFileCategory, LeadStatus } from "@/lib/types";
 
 const statuses: LeadStatus[] = [
   "New Enquiry",
@@ -54,6 +63,15 @@ const statuses: LeadStatus[] = [
   "Follow Up Due",
   "Not Suitable"
 ];
+
+const fileCategoryLabels: Record<LeadFileCategory, string> = {
+  floor_plan: "Floor Plan",
+  site_photos: "Site Photos",
+  reference_images: "Reference Images",
+  existing_quotation: "Existing Quotation",
+  building_rules: "Building Rules",
+  other_documents: "Other Documents"
+};
 
 const aiReviewActions: Array<{
   status: Exclude<AiDraftReviewStatus, "pending">;
@@ -100,7 +118,13 @@ function getValidationDisplay(recommendation: AiDryRunRecommendation) {
   };
 }
 
-export default async function LeadDetailPage({ params }: { params: { id: string } }) {
+export default async function LeadDetailPage({
+  params,
+  searchParams
+}: {
+  params: { id: string };
+  searchParams?: { uploadLink?: string };
+}) {
   const auth = await getCurrentProfile();
   if (!auth.authenticated) return null;
 
@@ -109,6 +133,15 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
   const readiness = await getQuotationReadinessForLead(lead.id);
   const aiRecommendation = await getLatestAiRecommendationForLead(lead.id);
   const leadMessages = await listLeadMessages(lead.id);
+  const leadFiles = await listLeadFiles(lead.id);
+  const leadUploadLinks = await listLeadUploadLinks(lead.id);
+  const signedFileUrls = new Map<string, string>(
+    await Promise.all(
+      leadFiles
+        .filter((file) => file.fileStatus !== "voided")
+        .map(async (file) => [file.id, await getSignedLeadFileUrl(file.id)] as const)
+    )
+  );
   const whatsappAuditTrail = (await listAuditLogs({ entityType: "lead", entityId: lead.id }))
     .filter((entry) => entry.action.startsWith("whatsapp_"))
     .slice(0, 8);
@@ -133,6 +166,11 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
   const brainStatus = latestOutbound?.whatsappStatus || "No auto-reply yet";
   const displayName = formatLeadDisplayName(lead);
   const leadLocation = inferLeadLocation(lead);
+  const visibleLeadFiles = leadFiles.filter((file) => file.fileStatus !== "voided");
+  const nowIso = new Date().toISOString();
+  const activeUploadLinks = leadUploadLinks.filter((link) => link.isActive && link.expiresAt >= nowIso);
+  const hasFloorPlanFile = visibleLeadFiles.some((file) => file.fileCategory === "floor_plan");
+  const hasSitePhotosFile = visibleLeadFiles.some((file) => file.fileCategory === "site_photos");
   const metadataText = (key: string, fallback = "Not available") => {
     const value = brainMetadata[key];
     if (Array.isArray(value)) return value.length ? value.map(String).map(humanizeLabel).join(", ") : "None";
@@ -355,6 +393,115 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                 <ActionButton type="submit">Save Intake Profile</ActionButton>
               </div>
             </form>
+          </section>
+          <section className="mt-5 rounded-lg border border-command-cyan/35 bg-command-elevated p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Files / Meeting Prep Documents</p>
+                <h2 className="mt-1 text-xl font-semibold text-command-text">Client file storage</h2>
+                <p className="mt-2 max-w-3xl text-sm text-command-muted">
+                  Floor plans, site photos, references, existing quotations, building rules, and other client documents are stored in the private client-files bucket.
+                  View/download uses short-lived signed URLs only.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge label={hasFloorPlanFile ? "Floor Plan Received" : "Floor Plan Missing"} />
+                <StatusBadge label={hasSitePhotosFile ? "Site Photos Received" : "Site Photos Missing"} />
+                {activeUploadLinks.length ? <StatusBadge label="Upload Link Active" /> : <StatusBadge label="Upload Link Not Created Yet" />}
+              </div>
+            </div>
+            <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_18rem]">
+              <div className="rounded-lg border border-command-line bg-command-bg/55 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="font-semibold text-command-text">Received files</p>
+                  <StatusBadge label={`${visibleLeadFiles.length} active file${visibleLeadFiles.length === 1 ? "" : "s"}`} />
+                </div>
+                {visibleLeadFiles.length ? (
+                  <div className="mt-4 space-y-3">
+                    {visibleLeadFiles.map((file) => {
+                      const signedUrl = signedFileUrls.get(file.id) ?? "";
+                      return (
+                        <div key={file.id} className="rounded-lg border border-command-line bg-command-panel2 p-4">
+                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-command-text">{file.originalFileName || "Client file"}</p>
+                                <StatusBadge label={fileCategoryLabels[file.fileCategory] ?? humanizeLabel(file.fileCategory)} />
+                                <StatusBadge label={humanizeLabel(file.fileStatus)} />
+                              </div>
+                              <p className="mt-2 text-sm text-command-muted">
+                                Source: {humanizeLabel(file.source)} | Uploaded: {file.uploadedAt} | Size: {Math.round(file.fileSizeBytes / 1024)}KB
+                              </p>
+                              {file.notes ? <p className="mt-2 text-sm text-command-muted">Notes: {file.notes}</p> : null}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {signedUrl ? (
+                                <a
+                                  href={signedUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm font-semibold text-command-muted hover:text-command-text"
+                                >
+                                  View / Download
+                                </a>
+                              ) : (
+                                <span className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-muted">
+                                  Signed URL unavailable
+                                </span>
+                              )}
+                              <form action={markLeadFileReviewedAction}>
+                                <input type="hidden" name="lead_id" value={lead.id} />
+                                <input type="hidden" name="file_id" value={file.id} />
+                                <ActionButton type="submit" tone="muted" disabled={file.fileStatus === "reviewed"}>Mark Reviewed</ActionButton>
+                              </form>
+                            </div>
+                          </div>
+                          <form action={voidLeadFileAction} className="mt-3 flex flex-wrap gap-2">
+                            <input type="hidden" name="lead_id" value={lead.id} />
+                            <input type="hidden" name="file_id" value={file.id} />
+                            <input
+                              name="void_reason"
+                              placeholder="Void reason"
+                              className="min-w-0 flex-1 rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text"
+                            />
+                            <ActionButton type="submit" tone="danger">Void File Record</ActionButton>
+                          </form>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-4 rounded-lg border border-command-line bg-command-panel2 p-4 text-sm text-command-muted">
+                    No files received yet. Floor plan missing. Site photos missing.
+                  </p>
+                )}
+              </div>
+              <aside className="rounded-lg border border-command-line bg-command-bg/55 p-4">
+                <p className="font-semibold text-command-text">Secure upload link</p>
+                <p className="mt-2 text-sm text-command-muted">
+                  Create a token link for this lead. The raw token is shown only after creation; the database stores only a hash.
+                </p>
+                <form action={createLeadUploadLinkAction} className="mt-4">
+                  <input type="hidden" name="lead_id" value={lead.id} />
+                  <ActionButton type="submit">Create Upload Link</ActionButton>
+                </form>
+                {searchParams?.uploadLink ? (
+                  <div className="mt-4 rounded-lg border border-command-gold/45 bg-command-gold/10 p-3 text-sm">
+                    <p className="font-semibold text-command-gold">New upload link</p>
+                    <p className="mt-2 break-all text-command-text">{`/upload/${searchParams.uploadLink}`}</p>
+                  </div>
+                ) : null}
+                <div className="mt-4 space-y-2 text-sm text-command-muted">
+                  <p>Active links: {activeUploadLinks.length}</p>
+                  <p>Allowed categories:</p>
+                  <ul className="list-disc space-y-1 pl-5">
+                    {LEAD_FILE_CATEGORIES.map((category) => (
+                      <li key={category}>{fileCategoryLabels[category]}</li>
+                    ))}
+                  </ul>
+                </div>
+              </aside>
+            </div>
           </section>
           <form action={updateLeadStatusAction} className="mt-5 flex flex-wrap items-end gap-3 rounded-lg border border-command-line bg-command-elevated p-4">
             <input type="hidden" name="lead_id" value={lead.id} />

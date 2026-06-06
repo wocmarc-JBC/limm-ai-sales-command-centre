@@ -4,6 +4,8 @@ import type {
   AuditLog,
   FollowUp,
   Lead,
+  LeadFile,
+  LeadUploadLink,
   LeadMessage,
   MonthlySalesTarget,
   PaymentRecord,
@@ -92,6 +94,49 @@ export function mapLeadRow(row: any): Lead {
     locationSource: row.location_source ?? "unknown",
     locationNotes: row.location_notes ?? "",
     intakeProfile: row.intake_profile ?? row.intakeProfile ?? undefined
+  };
+}
+
+export function mapLeadFileRow(row: any): LeadFile {
+  return {
+    id: row.id,
+    leadId: row.lead_id ?? "",
+    projectId: row.project_id ?? null,
+    fileCategory: row.file_category ?? "other_documents",
+    fileStatus: row.file_status ?? "received",
+    originalFileName: row.original_file_name ?? "",
+    storageBucket: row.storage_bucket ?? "client-files",
+    storagePath: row.storage_path ?? "",
+    mimeType: row.mime_type ?? "",
+    fileSizeBytes: Number(row.file_size_bytes ?? 0),
+    source: row.source ?? "unknown",
+    whatsappMessageId: row.whatsapp_message_id ?? null,
+    whatsappMediaId: row.whatsapp_media_id ?? null,
+    uploadedBy: row.uploaded_by ?? null,
+    uploadedAt: row.uploaded_at ?? row.created_at,
+    reviewedAt: row.reviewed_at ?? null,
+    reviewedBy: row.reviewed_by ?? null,
+    notes: row.notes ?? null,
+    voidedAt: row.voided_at ?? null,
+    voidedBy: row.voided_by ?? null,
+    voidReason: row.void_reason ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export function mapLeadUploadLinkRow(row: any): LeadUploadLink {
+  return {
+    id: row.id,
+    leadId: row.lead_id ?? "",
+    tokenHash: row.token_hash ?? "",
+    expiresAt: row.expires_at,
+    isActive: row.is_active ?? false,
+    createdBy: row.created_by ?? null,
+    createdAt: row.created_at,
+    usedAt: row.used_at ?? null,
+    maxUploads: row.max_uploads ?? 20,
+    notes: row.notes ?? null
   };
 }
 

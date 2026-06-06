@@ -2,11 +2,13 @@
 
 ## Current Phase
 
-v6.4.10 Singapore Mission Map Interaction + Copy Cleanup added on top of the official URA/data.gov.sg planning-area map, v6.4.9 smooth zoom / wheel lock, v6.4.8 interaction polish, v6.5 Smart Lead Intake, v6.4.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.
+v6.7 Real Client File Upload + WhatsApp Media Storage is implemented locally on top of the v6.6 Command Core, v6.5 Smart Lead Intake, official Singapore map stack, v6 Ultimate CRM controls, and the live WhatsApp CRM pipeline.
+
+v6.7 adds a private `client-files` Supabase Storage workflow, `lead_files`, `lead_upload_links`, token upload page, real Client Files page, lead detail file panel, signed view/download links, review/void actions, WhatsApp image/document media storage, and file readiness/audit integration.
 
 ## Latest Report
 
-`docs/V6_4_10_SINGAPORE_MAP_INTERACTION_COPY_CLEANUP.md`, `docs/V6_4_9_SINGAPORE_MAP_SMOOTH_ZOOM_WHEEL_LOCK.md`, `docs/V6_4_8_SINGAPORE_MAP_INTERACTION_FINAL_POLISH.md`, `docs/V6_4_6_OFFICIAL_URA_NO_SEA_MAP_SOURCE.md`, `docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md`, `docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`, `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`, `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`, `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, and `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`.
+`docs/V6_7_REAL_CLIENT_FILE_UPLOAD_WHATSAPP_MEDIA_STORAGE.md`, plus the previous v6 map/UI/intake/WhatsApp reports.
 
 ## Tests / Audit Status
 
@@ -61,7 +63,7 @@ Report: not generated.
 
 ## Next Recommended Action
 
-Push the v6.4.10 interaction/copy cleanup patch, wait for Vercel, confirm health shows `v6_4_10_singapore_map_interaction_copy_cleanup`, then visually retest 100% default zoom, no stacked top-left copy, subtle helper text, wheel zoom without page scroll, reset, zoom plus/minus, pan, HQ/pin inspector, filters, privacy-safe display, and WhatsApp continuity.
+Push the v6.7 storage patch, apply migration `023_v6_7_real_client_file_upload.sql`, confirm the `client-files` bucket is private, wait for Vercel, confirm health shows `v6_7_real_client_file_upload_whatsapp_media_storage`, then test upload link PDF/image upload, signed view/download, review/void actions, WhatsApp image/document storage, and WhatsApp text auto-reply continuity.
 
 ## Marcus Paste Block For ChatGPT
 

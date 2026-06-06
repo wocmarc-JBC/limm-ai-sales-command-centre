@@ -359,6 +359,63 @@ export interface LeadMessage {
   createdAt: string;
 }
 
+export type LeadFileCategory =
+  | "floor_plan"
+  | "site_photos"
+  | "reference_images"
+  | "existing_quotation"
+  | "building_rules"
+  | "other_documents";
+
+export type LeadFileStatus =
+  | "missing"
+  | "received"
+  | "reviewed"
+  | "needs_clarification"
+  | "archived"
+  | "voided";
+
+export type LeadFileSource = "whatsapp" | "upload_link" | "manual" | "unknown";
+
+export interface LeadFile {
+  id: string;
+  leadId: string;
+  projectId?: string | null;
+  fileCategory: LeadFileCategory;
+  fileStatus: LeadFileStatus;
+  originalFileName: string;
+  storageBucket: string;
+  storagePath: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  source: LeadFileSource;
+  whatsappMessageId?: string | null;
+  whatsappMediaId?: string | null;
+  uploadedBy?: string | null;
+  uploadedAt: string;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  notes?: string | null;
+  voidedAt?: string | null;
+  voidedBy?: string | null;
+  voidReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadUploadLink {
+  id: string;
+  leadId: string;
+  tokenHash: string;
+  expiresAt: string;
+  isActive: boolean;
+  createdBy?: string | null;
+  createdAt: string;
+  usedAt?: string | null;
+  maxUploads: number;
+  notes?: string | null;
+}
+
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "more_info";
 
 export interface ApprovalRequest {

@@ -47,6 +47,7 @@
     "test:v6.4.10": "node scripts/test_v6_4_10_singapore_map_interaction_copy_cleanup.mjs",
     "test:v6.5": "node scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs",
     "test:v6.5.1": "node scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
+    "test:v6.7": "node scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs",
     "test:v6-ui-100": "node scripts/test_v6_ui_100_command_centre_polish.mjs",
     "test:v6.6": "node scripts/test_v6_6_strategic_command_core_layout.mjs",
     "test:v6.6.2": "node scripts/test_v6_6_2_command_core_map_first_layout.mjs",
@@ -68,7 +69,7 @@
     "verify:live-actions": "node scripts/verify_live_authenticated_actions.mjs",
     "test:live-setup": "node scripts/test_v3_live_setup_static.mjs",
     "verify": "npm run test && npm run test:supabase && npm run test:auth && npm run test:live-setup && npm run test:review-route && npm run test:v4 && npm run audit",
-    "verify:all": "npm run verify && npm run test:v4.6 && npm run test:v4.7 && npm run test:v4.8 && npm run test:v4.8-live && npm run test:whatsapp-payload && npm run test:v4.9 && npm run test:v5 && npm run test:v5.2 && npm run test:v5.3 && npm run test:v5.3.1 && npm run test:v5.3.2 && npm run test:v6 && npm run test:v6:ultimate && npm run test:v6.1 && npm run test:v6.1.2 && npm run test:v6.1.4 && npm run test:v6.1.5 && npm run test:v6.1.6 && npm run test:v6.1.7 && npm run test:v6.1.8 && npm run test:v6.3 && npm run test:v6.4 && npm run test:v6.4.1 && npm run test:v6.4.2 && npm run test:v6.4.3 && npm run test:v6.4.4 && npm run test:v6.4.5 && npm run test:v6.4.6 && npm run test:v6.4.8 && npm run test:v6.4.9 && npm run test:v6.4.10 && npm run test:v6.5 && npm run test:v6.5.1 && npm run test:v6-ui-100 && npm run test:v6.6 && npm run test:v6.6.2 && npm run test:v6.6.3 && npm run qa:dev-brain"
+    "verify:all": "npm run verify && npm run test:v4.6 && npm run test:v4.7 && npm run test:v4.8 && npm run test:v4.8-live && npm run test:whatsapp-payload && npm run test:v4.9 && npm run test:v5 && npm run test:v5.2 && npm run test:v5.3 && npm run test:v5.3.1 && npm run test:v5.3.2 && npm run test:v6 && npm run test:v6:ultimate && npm run test:v6.1 && npm run test:v6.1.2 && npm run test:v6.1.4 && npm run test:v6.1.5 && npm run test:v6.1.6 && npm run test:v6.1.7 && npm run test:v6.1.8 && npm run test:v6.3 && npm run test:v6.4 && npm run test:v6.4.1 && npm run test:v6.4.2 && npm run test:v6.4.3 && npm run test:v6.4.4 && npm run test:v6.4.5 && npm run test:v6.4.6 && npm run test:v6.4.8 && npm run test:v6.4.9 && npm run test:v6.4.10 && npm run test:v6.5 && npm run test:v6.5.1 && npm run test:v6.7 && npm run test:v6-ui-100 && npm run test:v6.6 && npm run test:v6.6.2 && npm run test:v6.6.3 && npm run qa:dev-brain"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.0",

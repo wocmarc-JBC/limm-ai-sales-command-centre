@@ -16,6 +16,7 @@ import {
 } from "@/lib/data/lead-messages-repository";
 import { getWhatsAppRuntime, normalizeWhatsAppPhone } from "@/lib/whatsapp-config";
 import { processWhatsAppHandoffEmail } from "@/lib/handoff-email";
+import { storeWhatsAppMediaForLead } from "@/lib/whatsapp-media-storage";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
 import { buildWhatsAppReplyDecision, type WhatsAppReplyDecision } from "@/lib/whatsapp-reply-decision";
 import { validateWhatsAppAutoReply } from "@/lib/whatsapp-safety";
@@ -275,6 +276,34 @@ export async function handleWhatsAppInboundMessage(
     summary: "WhatsApp inbound message received and saved for review.",
     metadata: { providerMessageId, messageType: message.type }
   });
+
+  if (["image", "document"].includes(message.type.toLowerCase())) {
+    try {
+      const mediaStorage = await storeWhatsAppMediaForLead({ leadId: lead.id, message });
+      logWhatsApp(mediaStorage.stored ? "whatsapp_media_stored" : "whatsapp_media_received_but_not_stored", {
+        providerMessageId,
+        leadId: lead.id,
+        attempted: mediaStorage.attempted,
+        stored: mediaStorage.stored,
+        category: mediaStorage.category ?? "",
+        reason: mediaStorage.reason
+      });
+    } catch (error) {
+      logWhatsAppError("whatsapp_media_storage", { providerMessageId, leadId: lead.id, reason: safeError(error) });
+      await auditWhatsApp({
+        action: "whatsapp_media_storage_failed",
+        leadId: lead.id,
+        summary: "WhatsApp media was received but storage failed; inbound message remains saved for review.",
+        metadata: {
+          providerMessageId,
+          mediaId: message.mediaId,
+          messageType: message.type,
+          reason: safeError(error),
+          noTokenLogged: true
+        }
+      });
+    }
+  }
 
   if (lead.botPaused) {
     logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "bot_paused_for_lead" });

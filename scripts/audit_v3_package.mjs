@@ -247,13 +247,17 @@ for (const required of [
   "docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md",
   "docs/V6_6_STRATEGIC_COMMAND_CORE_LAYOUT.md",
   "docs/V6_6_2_COMMAND_CORE_MAP_FIRST_LAYOUT.md",
+  "docs/V6_7_REAL_CLIENT_FILE_UPLOAD_WHATSAPP_MEDIA_STORAGE.md",
   "supabase/migrations/018_v4_8_whatsapp_closed_test.sql",
   "supabase/migrations/019_v6_ultimate_command_centre.sql",
   "supabase/migrations/020_v6_3_sales_collection_command_centre.sql",
   "supabase/migrations/021_v6_4_singapore_mission_map.sql",
   "supabase/migrations/022_v6_5_smart_lead_intake.sql",
+  "supabase/migrations/023_v6_7_real_client_file_upload.sql",
   "lib/sales-collection.ts",
   "lib/data/sales-collection-repository.ts",
+  "lib/data/lead-files-repository.ts",
+  "lib/whatsapp-media-storage.ts",
   "lib/singapore-location.ts",
   "lib/singapore-map-data.json",
   "lib/singapore-map-geometry.ts",
@@ -266,7 +270,10 @@ for (const required of [
   "public/maps/singapore.geojson",
   "app/sales-pipeline/page.tsx",
   "app/sales-collection/page.tsx",
-  "app/targets/page.tsx"
+  "app/targets/page.tsx",
+  "app/client-files/page.tsx",
+  "app/upload/[token]/page.tsx",
+  "scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs"
 ]) {
   assert(exists(required), `Missing required file: ${required}`);
 }
@@ -589,6 +596,26 @@ for (const field of [
   "proposalReadinessScoreAvailable",
   "leadIntakeProfileStorageAvailable",
   "leadIntakeAuditTraceAvailable",
+  "version: \"v6_7_real_client_file_upload_whatsapp_media_storage\"",
+  "salesBrainVersion: \"v6.7\"",
+  "clientFileStorageAvailable",
+  "supabaseClientFilesBucketConfigured",
+  "leadFilesTableAvailable",
+  "whatsappMediaStorageAvailable",
+  "whatsappImageStorageAvailable",
+  "whatsappDocumentStorageAvailable",
+  "clientUploadLinkAvailable",
+  "secureUploadTokenAvailable",
+  "leadDetailFilePanelAvailable",
+  "clientFilesPageRealDataAvailable",
+  "signedFileUrlAvailable",
+  "fileCategoryDetectionAvailable",
+  "fileStatusTrackingAvailable",
+  "fileReviewWorkflowAvailable",
+  "fileVoidInsteadOfDeleteAvailable",
+  "fileUploadAuditAvailable",
+  "meetingReadinessFileConnectionAvailable",
+  "quotationReadinessFileConnectionAvailable",
   "version: \"v6_4_4_accurate_singapore_svg_map_fix\"",
   "salesBrainVersion: \"v6.4.4\"",
   "accurateSingaporeSvgMapAvailable",
@@ -939,6 +966,7 @@ assert(pkg.scripts?.["test:v6.4.5"], "package.json missing v6.4.5 real Singapore
 assert(pkg.scripts?.["test:v6.4.6"], "package.json missing v6.4.6 official URA map source test script.");
 assert(pkg.scripts?.["test:v6.4.9"], "package.json missing v6.4.9 smooth zoom/wheel lock test script.");
 assert(pkg.scripts?.["test:v6.4.10"], "package.json missing v6.4.10 interaction/copy cleanup test script.");
+assert(pkg.scripts?.["test:v6.7"], "package.json missing v6.7 real client file upload test script.");
 assert(pkg.scripts?.["test:v6-ui-100"], "package.json missing v6 UI 100 command centre polish test script.");
 assert(pkg.scripts?.["test:v6.6"], "package.json missing v6.6 strategic command core layout test script.");
 assert(pkg.scripts?.["test:v6.6.2"], "package.json missing v6.6.2 command core map-first layout test script.");

@@ -1,11 +1,23 @@
 "use server";
 
+import { Buffer } from "node:buffer";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { defaultAppointmentSettings } from "@/lib/appointment-engine";
 import { requirePermission } from "@/lib/auth/session";
 import { decideApprovalRequest } from "@/lib/data/approvals-repository";
 import { saveAppointmentSettings } from "@/lib/data/appointment-settings-repository";
 import { generateAndSaveAiDryRunRecommendation, recordAiDraftReviewAction } from "@/lib/data/ai-decisions-repository";
+import {
+  LEAD_FILE_CATEGORIES,
+  createLeadUploadLink,
+  getUploadLinkByToken,
+  listLeadFiles,
+  markLeadFileReviewed,
+  markUploadLinkUsed,
+  uploadLeadFile,
+  voidLeadFile
+} from "@/lib/data/lead-files-repository";
 import { hideTestFollowUp, listFollowUps, updateFollowUpStatus } from "@/lib/data/followups-repository";
 import {
   archiveLead,
@@ -40,7 +52,7 @@ import { buildLeadIntakePlan } from "@/lib/lead-intake";
 import { currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
 import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import type { Permission } from "@/lib/auth/roles";
-import type { AiDraftReviewStatus, ApprovalStatus, FollowUpStatus, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
+import type { AiDraftReviewStatus, ApprovalStatus, FollowUpStatus, LeadFileCategory, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
 
 const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 
@@ -173,6 +185,83 @@ export async function saveLeadIntakeProfileAction(formData: FormData) {
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/audit-log");
+}
+
+export async function createLeadUploadLinkAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const { token } = await createLeadUploadLink({ leadId, createdBy: actor, expiresInDays: 14, maxUploads: 20 });
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/client-files");
+  revalidatePath("/audit-log");
+  redirect(`/leads/${leadId}?uploadLink=${encodeURIComponent(token)}`);
+}
+
+export async function markLeadFileReviewedAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  await markLeadFileReviewed({
+    fileId: text(formData, "file_id"),
+    reviewedBy: permission.auth.profile?.fullName ?? "Marcus"
+  });
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/client-files");
+  revalidatePath("/audit-log");
+}
+
+export async function voidLeadFileAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  await voidLeadFile({
+    fileId: text(formData, "file_id"),
+    voidedBy: permission.auth.profile?.fullName ?? "Marcus",
+    reason: text(formData, "void_reason", "Voided from lead detail.")
+  });
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/client-files");
+  revalidatePath("/audit-log");
+}
+
+export async function uploadClientFileByTokenAction(formData: FormData) {
+  const token = text(formData, "token");
+  const category = text(formData, "file_category") as LeadFileCategory;
+  const uploadLink = await getUploadLinkByToken(token).catch(() => null);
+  if (!uploadLink) redirect(`/upload/${encodeURIComponent(token)}?error=invalid_or_expired`);
+  if (!LEAD_FILE_CATEGORIES.includes(category)) redirect(`/upload/${encodeURIComponent(token)}?error=invalid_category`);
+  const existingFiles = await listLeadFiles(uploadLink.leadId);
+  const uploadLinkCount = existingFiles.filter((file) => file.source === "upload_link" && file.fileStatus !== "voided").length;
+  if (uploadLinkCount >= uploadLink.maxUploads) redirect(`/upload/${encodeURIComponent(token)}?error=max_uploads`);
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || !file.name) redirect(`/upload/${encodeURIComponent(token)}?error=no_file`);
+
+  try {
+    await uploadLeadFile({
+      leadId: uploadLink.leadId,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      bytes: Buffer.from(await file.arrayBuffer()),
+      fileCategory: category,
+      source: "upload_link",
+      uploadedBy: "Client upload link",
+      notes: text(formData, "notes")
+    });
+    await markUploadLinkUsed(uploadLink.id);
+  } catch {
+    redirect(`/upload/${encodeURIComponent(token)}?error=upload_failed`);
+  }
+
+  revalidatePath(`/leads/${uploadLink.leadId}`);
+  revalidatePath("/client-files");
+  redirect(`/upload/${encodeURIComponent(token)}?uploaded=1`);
 }
 
 export async function markBossApprovalNeededAction(formData: FormData) {

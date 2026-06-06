@@ -286,6 +286,27 @@ where table_name = 'leads'
 and column_name = 'intake_profile';
 ```
 
+## 023_v6_7_real_client_file_upload.sql
+
+Purpose: Add private lead file records, secure upload-link token hashes, and private `client-files` storage bucket setup for real Client Files.
+Dependencies: migrations 002, 016, 019, 020, 021, 022, and Supabase Storage.
+Safe to re-run: Yes. Uses `create table if not exists`, `create index if not exists`, and private bucket upsert when the `storage` schema is available.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_name = 'lead_files';
+
+select column_name
+from information_schema.columns
+where table_name = 'lead_upload_links';
+
+select id, public
+from storage.buckets
+where id = 'client-files';
+```
+
 ## After All Migrations
 
 Run:

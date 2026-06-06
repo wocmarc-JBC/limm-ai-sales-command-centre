@@ -1,5 +1,24 @@
 # Current Status
 
+## v6.7 Real Client File Upload + WhatsApp Media Storage
+
+Status: implemented locally; pending migration, push, deploy, and live storage test.
+
+What changed:
+
+- Client Files is now a real protected page backed by lead/file records instead of a placeholder.
+- Added private Supabase Storage support for `client-files` with signed view/download URLs.
+- Added additive migration `023_v6_7_real_client_file_upload.sql` for `lead_files`, `lead_upload_links`, and the private bucket setup.
+- WhatsApp image/document media can be downloaded server-side, validated, stored privately, linked to the lead, and audited.
+- Marcus can create secure upload links from lead detail; raw tokens are shown only once and only hashes are stored.
+- Lead detail now has a Files / Meeting Prep Documents panel with review and void-not-delete workflow.
+- File receipt updates meeting/quotation readiness signals where available.
+
+Current Go/No-Go:
+
+- GO for controlled internal storage test after migration `023` and private bucket confirmation.
+- NO-GO for public file browsing, public bucket exposure, hard delete by default, pricing automation, Calendar auto-booking, voice transcription, or service-role exposure.
+
 ## v6.4.10 Singapore Mission Map Interaction + Copy Cleanup
 
 Status: implemented locally; pending push/deploy health proof.

@@ -6,6 +6,7 @@ import { getOptionalAiSalesBrainRuntime } from "@/lib/whatsapp-v6/sales-brain";
 import { getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
 import { singaporeOfficialPlanningAreaMapAvailable } from "@/lib/singapore-map-geometry";
 import { questionBankStats } from "@/lib/whatsapp-question-bank";
+import { getClientFilesStorageRuntime } from "@/lib/data/lead-files-repository";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export const dynamic = "force-dynamic";
 // version: "v6_6_1_strategic_command_core_ui_fit_polish"
 // version: "v6_6_2_command_core_map_first_layout"
 // version: "v6_6_3_strategic_command_core_final_touchup"
+// version: "v6_7_real_client_file_upload_whatsapp_media_storage"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -61,12 +63,31 @@ export async function GET() {
     const handoffEmail = getHandoffEmailRuntime();
     const questionBank = questionBankStats();
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
+    const clientFilesStorage = getClientFilesStorageRuntime();
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_6_3_strategic_command_core_final_touchup",
-      salesBrainVersion: "v6.6.3",
+      version: "v6_7_real_client_file_upload_whatsapp_media_storage",
+      salesBrainVersion: "v6.7",
       runtime: "vercel",
+      clientFileStorageAvailable: true,
+      supabaseClientFilesBucketConfigured: Boolean(clientFilesStorage.bucketName),
+      leadFilesTableAvailable: true,
+      whatsappMediaStorageAvailable: true,
+      whatsappImageStorageAvailable: true,
+      whatsappDocumentStorageAvailable: true,
+      clientUploadLinkAvailable: true,
+      secureUploadTokenAvailable: true,
+      leadDetailFilePanelAvailable: true,
+      clientFilesPageRealDataAvailable: true,
+      signedFileUrlAvailable: true,
+      fileCategoryDetectionAvailable: true,
+      fileStatusTrackingAvailable: true,
+      fileReviewWorkflowAvailable: true,
+      fileVoidInsteadOfDeleteAvailable: true,
+      fileUploadAuditAvailable: true,
+      meetingReadinessFileConnectionAvailable: true,
+      quotationReadinessFileConnectionAvailable: true,
       strategicCommandCoreAvailable: true,
       commandCoreBetaRouteAvailable: true,
       frostpunkInspiredLayoutAvailable: true,
@@ -235,7 +256,7 @@ export async function GET() {
       cockpitGlassmorphismThemeAvailable: true,
       radarGridBackgroundAvailable: true,
       mainActionQueueAvailable: true,
-      clientFilesComingSoonOnly: true,
+      clientFilesComingSoonOnly: false,
       mockClientFilesRemoved: true,
       fullPhoneNumbersShownInProtectedApp: true,
       v615FollowupPerformancePreserved: true,
@@ -257,7 +278,7 @@ export async function GET() {
       emptyStatesAvailable: true,
       colourHierarchyAvailable: true,
       dashboardDebugClutterRemoved: true,
-      clientFilesHiddenUntilRealStorage: true,
+      clientFilesHiddenUntilRealStorage: false,
       clientFilesMockDataRemoved: true,
       nonGstModeAvailable: true,
       gstRegistered: false,
@@ -381,9 +402,27 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_6_3_strategic_command_core_final_touchup",
-      salesBrainVersion: "v6.6.3",
+      version: "v6_7_real_client_file_upload_whatsapp_media_storage",
+      salesBrainVersion: "v6.7",
       runtime: "vercel",
+      clientFileStorageAvailable: false,
+      supabaseClientFilesBucketConfigured: false,
+      leadFilesTableAvailable: false,
+      whatsappMediaStorageAvailable: false,
+      whatsappImageStorageAvailable: false,
+      whatsappDocumentStorageAvailable: false,
+      clientUploadLinkAvailable: false,
+      secureUploadTokenAvailable: false,
+      leadDetailFilePanelAvailable: false,
+      clientFilesPageRealDataAvailable: false,
+      signedFileUrlAvailable: false,
+      fileCategoryDetectionAvailable: false,
+      fileStatusTrackingAvailable: false,
+      fileReviewWorkflowAvailable: false,
+      fileVoidInsteadOfDeleteAvailable: false,
+      fileUploadAuditAvailable: false,
+      meetingReadinessFileConnectionAvailable: false,
+      quotationReadinessFileConnectionAvailable: false,
       strategicCommandCoreAvailable: false,
       commandCoreBetaRouteAvailable: false,
       frostpunkInspiredLayoutAvailable: false,

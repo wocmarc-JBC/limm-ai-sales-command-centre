@@ -104,3 +104,22 @@ node scripts/audit_v3_package.mjs
 - Do not auto-generate pricing or amount ranges.
 - Do not add WhatsApp blasting or broadcast.
 - Do not live test before deployed health proves v6 Ultimate.
+# v6.7 Next Step
+
+Review `docs/V6_7_REAL_CLIENT_FILE_UPLOAD_WHATSAPP_MEDIA_STORAGE.md`.
+
+After push/deploy:
+
+1. Apply `supabase/migrations/023_v6_7_real_client_file_upload.sql`.
+2. Confirm Supabase Storage bucket `client-files` exists and is private.
+3. Confirm `/api/whatsapp/health` shows `v6_7_real_client_file_upload_whatsapp_media_storage`.
+4. Open a protected lead and create an upload link.
+5. Upload a PDF floor plan and site photos through `/upload/{token}`.
+6. Confirm lead detail and `/client-files` show real file status.
+7. Confirm signed view/download works.
+8. Mark one test file reviewed.
+9. Void one test file with a reason.
+10. Send a WhatsApp image/document as the client and confirm it stores privately and links to the lead.
+11. Confirm WhatsApp text auto-reply still sends.
+
+Do not enable pricing automation, Calendar auto-booking, voice transcription, public file buckets, or hard-delete file actions.
