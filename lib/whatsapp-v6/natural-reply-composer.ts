@@ -1,4 +1,5 @@
 import { getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
+import { BUDGET_EXPECTATION_WORDING, SHORT_EARLY_STAGE_INTAKE_MESSAGE, composeSmartLeadIntakeMessage } from "@/lib/lead-intake";
 import { normaliseV6Text } from "@/lib/whatsapp-v6/singapore-renovation-language";
 import { receivedAcknowledgement } from "@/lib/whatsapp-v6/context-truth-gate";
 import type { V6ReplyPlan, V6Understanding, V6VerifiedContext } from "@/lib/whatsapp-v6/types";
@@ -73,15 +74,35 @@ function composePortfolio(context: V6VerifiedContext) {
   return "Yes, we can share relevant references. Could you let us know what type of project you want to see, such as landed A&A, kitchen, bathroom, carpentry, hacking works, design works or commercial renovation for your initial project review?";
 }
 
+function intakeSnapshot(context: V6VerifiedContext) {
+  return {
+    hasPropertyType: context.hasPropertyType,
+    hasAddressOrArea: context.hasAddressOrArea,
+    hasScopeOfWork: context.hasScopeOfWork,
+    hasFloorPlan: context.hasFloorPlan,
+    hasSitePhotos: context.hasSitePhotos,
+    hasDesignReferences: context.hasDesignReferences,
+    hasPreferredAppointmentTime: context.hasPreferredAppointmentTime
+  };
+}
+
+function composeSmartV6Intake(context: V6VerifiedContext, intro = "Sure, we can help review this.") {
+  return composeSmartLeadIntakeMessage(intakeSnapshot(context), "first_enquiry", intro);
+}
+
+function composeSmartV6MeetingPrep(context: V6VerifiedContext, intro = "To prepare the meeting and proposal better") {
+  return composeSmartLeadIntakeMessage(intakeSnapshot(context), "serious_lead", intro);
+}
+
 function composePrice(input: { text: string; understanding: V6Understanding; context: V6VerifiedContext }) {
   const ack = receivedAcknowledgement(input.context);
   if (input.context.hasFloorPlan && input.context.hasScopeOfWork) {
-    return `I understand you'd like a rough idea. ${ack || "Thanks, we've received the project details."} We'll need to review the drawings, site condition and material direction first, because giving a rough figure too early can be misleading. The team can go through this properly during the initial project review.`;
+    return `I understand you'd like a rough idea. ${ack || "Thanks, we've received the project details."} We'll need to review the drawings, site condition and material direction first, because giving a rough figure too early can be misleading. ${BUDGET_EXPECTATION_WORDING} The team can go through this properly during the initial project review.`;
   }
   if (hasIntent(input.understanding, "kitchen_renovation")) {
-    return "I understand you'd like a rough idea. To advise properly, could you share the kitchen scope first, such as whether it involves hacking, carpentry, plumbing, electrical works, tiles or appliances? Pricing depends on the site condition, materials and exact scope, so we should review the details first for an initial project review.";
+    return `I understand you'd like a rough idea. To advise properly, could you share the kitchen scope first, such as whether it involves carpentry, wet works or appliance changes? Pricing depends on the site condition, materials and exact scope, so we should review the details first for an initial project review. ${BUDGET_EXPECTATION_WORDING}`;
   }
-  return "I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed. Once we understand the scope, we can review the next step more accurately for an initial project review.";
+  return `I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed. ${BUDGET_EXPECTATION_WORDING} Once we understand the scope, we can review the next step more accurately for an initial project review.`;
 }
 
 function specificWorkLabel(text: string) {
@@ -116,7 +137,8 @@ function composeAppointment(text: string, context: V6VerifiedContext) {
   const requested = appointmentTimeText(text);
   const ack = receivedAcknowledgement(context);
   const ask = askForMissing(context, ["property_type", "address_or_area", "scope"], "appointment");
-  return `${requested} noted. We can help check availability, but the appointment is not confirmed yet. ${ack ? `${ack} ` : ""}${ask || "The team will review the current details and confirm whether that slot works for an initial project review."}`;
+  const prep = composeSmartV6MeetingPrep(context);
+  return `${requested} noted. We can help check availability, but the appointment is not confirmed yet. ${ack ? `${ack} ` : ""}${ask || "The team will review the current details and confirm whether that slot works for an initial project review."} ${prep}`;
 }
 
 export function composeNaturalV6Reply(input: {
@@ -168,12 +190,13 @@ export function composeNaturalV6Reply(input: {
       ].filter(Boolean);
       if (scopes.length) parts.push(`Yes, we can help with the ${scopes.join(", ").replace(/, ([^,]*)$/, " and $1")}.`);
     }
-    if (hasDesign) parts.push("For the design theme, we can propose a suitable direction after reviewing your layout, lighting, storage needs and preferred style.");
+    if (hasDesign) parts.push(`For the design theme, we can propose a suitable direction after reviewing your layout, lighting, storage needs and preferred style. ${composeSmartV6MeetingPrep(context, "For design preparation")}`);
     if (hasAppointment) parts.push(composeAppointment(input.inboundText, context));
     if (hasWallRisk || hasApproval) parts.push("For wall hacking or approval matters, we'll need to review the drawings and site condition first because it depends on the wall type, structure, services, scope and whether submission is required.");
     const ack = receivedAcknowledgement(context);
     const missing = askForMissing(context, ["floor_plan", "site_photos", "address_or_area", "scope"], "general");
     if (!hasAppointment && (ack || missing)) parts.push(`${ack ? `${ack} ` : ""}${missing || "The team can review the details for an initial project review."}`.trim());
+    if (!hasAppointment && !missing) parts.push(composeSmartV6MeetingPrep(context));
     return parts.join("\n\n").trim();
   }
 
@@ -184,12 +207,12 @@ export function composeNaturalV6Reply(input: {
   }
 
   if (understanding.chineseDetected) {
-    return "Hi, yes we can help review your renovation enquiry. Could you type the property type, basic scope, and any floor plan or photos if available for an initial project review?";
+    return `Hi, yes we can help review your renovation enquiry. ${SHORT_EARLY_STAGE_INTAKE_MESSAGE}`;
   }
 
   if (hasIntent(understanding, "greeting_ping")) {
-    return "Hi, yes we're here. How can we help with your renovation? You can share your property type, basic scope, and any floor plan or photos if available for an initial project review.";
+    return `Hi, yes we're here. ${SHORT_EARLY_STAGE_INTAKE_MESSAGE}`;
   }
 
-  return "Thanks for reaching out. We can help review your renovation enquiry. Could you share your property type, basic scope, and any floor plan or photos if available for an initial project review?";
+  return composeSmartV6Intake(context, "Thanks for reaching out. We can help review your renovation enquiry.");
 }

@@ -13,6 +13,11 @@ function assert(condition, message) {
 }
 
 const leadIntake = read("lib/lead-intake.ts");
+const replyCoach = read("lib/whatsapp-reply-coach.ts");
+const naturalComposer = read("lib/whatsapp-v6/natural-reply-composer.ts");
+const qualityJudge = read("lib/whatsapp-v6/reply-quality-judge.ts");
+const safetyGovernor = read("lib/whatsapp-v6/safety-governor.ts");
+const leadContext = read("lib/whatsapp-lead-context.ts");
 const types = read("lib/types.ts");
 const leadsRepo = read("lib/data/leads-repository.ts");
 const mapper = read("lib/data/mappers.ts");
@@ -25,6 +30,14 @@ const packageJson = read("package.json");
 
 for (const phrase of [
   "buildLeadIntakePlan",
+  "APPROVED_GENERAL_INTAKE_MESSAGE",
+  "SHORT_EARLY_STAGE_INTAKE_MESSAGE",
+  "LIFESTYLE_HOUSEHOLD_INTAKE_MESSAGE",
+  "BUDGET_EXPECTATION_WORDING",
+  "TIMELINE_KEY_MOVE_IN_QUESTION",
+  "PROPOSAL_PREP_QUESTION",
+  "composeSmartLeadIntakeMessage",
+  "buildSmartLeadIntakeQuestionTopics",
   "MIN_INTAKE_QUESTIONS = 3",
   "MAX_INTAKE_QUESTIONS = 5",
   "lifestyleNotes",
@@ -42,6 +55,54 @@ for (const phrase of [
   "noCalendarConfirmationRule: true"
 ]) {
   assert(leadIntake.includes(phrase), `Lead intake brain missing ${phrase}`);
+}
+
+for (const phrase of [
+  "children, elderly family members, helper or pets",
+  "safety, accessibility, storage, work-from-home, hobby, helper or pet-related needs",
+  "budget expectation",
+  "Final pricing still depends on drawings, site condition and confirmed works.",
+  "key collection date, move-in date",
+  "must-have items, nice-to-have items",
+  "topics.length < MAX_INTAKE_QUESTIONS"
+]) {
+  assert(leadIntake.includes(phrase), `Lead intake approved wording/rule missing ${phrase}`);
+}
+
+for (const phrase of [
+  "hasTimeline",
+  "hasBudgetExpectation",
+  "hasHouseholdInfo",
+  "hasSafetyAccessibilityNeeds",
+  "hasMustHaveNiceToHave",
+  "key collection",
+  "move-in",
+  "children",
+  "helper",
+  "pets"
+]) {
+  assert(leadContext.includes(phrase), `WhatsApp context memory missing ${phrase}`);
+}
+
+for (const source of [replyCoach, naturalComposer, qualityJudge, safetyGovernor]) {
+  assert(source.includes("SHORT_EARLY_STAGE_INTAKE_MESSAGE") || source.includes("composeSmartLeadIntakeMessage"), "WhatsApp reply path must use smart intake wording.");
+}
+assert(replyCoach.includes("BUDGET_EXPECTATION_WORDING") && naturalComposer.includes("BUDGET_EXPECTATION_WORDING"), "Price replies must capture budget expectation as planning info only.");
+assert(replyCoach.includes("composeSmartIntakeReply(context, \"design_question\"") || replyCoach.includes("composeDesignReply"), "Design replies must ask design/lifestyle prep questions.");
+assert(replyCoach.includes("composeSmartIntakeReply(context, \"serious_lead\"") && naturalComposer.includes("composeSmartV6MeetingPrep"), "Serious lead / appointment replies must collect meeting prep context.");
+
+const clientFacingReplySources = [replyCoach, naturalComposer, qualityJudge, safetyGovernor].join("\n");
+for (const overlyTechnical of [
+  "inter-terrace/corner terrace/semi-D/detached",
+  "roofline/drainage/waterproofing/neighbour boundary/access issues",
+  "new launch/resale/currently occupied",
+  "condo management rules",
+  "changing sink/hob position",
+  "overlay/waterproofing/fittings replacement",
+  "which wall exactly are you hacking",
+  "PE/submission/authority issue"
+]) {
+  assert(!clientFacingReplySources.includes(overlyTechnical), `Overly technical first-contact wording leaked into client-facing reply path: ${overlyTechnical}`);
 }
 
 assert(types.includes("export interface LeadIntakeProfile"), "LeadIntakeProfile type must exist.");
@@ -70,9 +131,18 @@ for (const field of [
   'version: "v6_5_smart_lead_intake_meeting_prep"',
   'salesBrainVersion: "v6.5"',
   "smartLeadIntakeAvailable: true",
+  "meetingPrepBrainAvailable: true",
+  "lifestyleIntakeAvailable: true",
+  "householdOccupantsIntakeAvailable: true",
+  "helperPetsIntakeAvailable: true",
+  "safetyAccessibilityIntakeAvailable: true",
+  "budgetExpectationCaptureAvailable: true",
+  "timelineKeyMoveInCaptureAvailable: true",
   "intakeChecklistAvailable: true",
   "missingInfoDetectorAvailable: true",
   "intakeQuestionLimitAvailable: true",
+  "maxFiveQuestionsRuleAvailable: true",
+  "noOverlyTechnicalFirstContactQuestions: true",
   "lifestyleOccupantsPetsSafetyAvailable: true",
   "budgetExpectationCollectionNoPriceReply: true",
   "timelineKeyMoveInCollectionAvailable: true",
@@ -102,7 +172,7 @@ const forbiddenPatterns = [
   /booked for you/i,
   /calendar auto booking enabled/i
 ];
-const checked = [leadIntake, leadDetail, actions, leadsRepo, health].join("\n");
+const checked = [leadIntake, leadDetail, actions, leadsRepo, health, replyCoach, naturalComposer, qualityJudge].join("\n");
 for (const pattern of forbiddenPatterns) {
   assert(!pattern.test(checked), `Forbidden safety regression found: ${pattern}`);
 }

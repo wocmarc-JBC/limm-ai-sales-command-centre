@@ -4,6 +4,117 @@ export const SMART_LEAD_INTAKE_VERSION = "v6.5";
 export const MIN_INTAKE_QUESTIONS = 3;
 export const MAX_INTAKE_QUESTIONS = 5;
 
+export const APPROVED_GENERAL_INTAKE_MESSAGE =
+  "Sure, we can help review this. To prepare a proposal that fits your lifestyle, design preference and budget, could you share a few details?\n\n1. Is this for landed, condo, HDB or commercial, and which area/postal code?\n2. Which areas are you planning to renovate?\n3. Who will be staying there, such as children, elderly family members, helper or pets?\n4. Do you have a floor plan, site photos or reference images?\n5. When are you hoping to start, and is there a key collection or move-in date?\n\nIf you have a preferred design direction or budget expectation, you can share it too. This helps us advise the right scope and material direction for the initial project review.";
+
+export const SHORT_EARLY_STAGE_INTAKE_MESSAGE =
+  "To help us review properly, could you share the property type, area/postal code, main renovation scope, and floor plan/site photos if available?\n\nIf you already know your timeline, move-in/key collection date, design direction or budget expectation, you can share that too.";
+
+export const LIFESTYLE_HOUSEHOLD_INTAKE_MESSAGE =
+  "To help us plan something that fits your household better, could you share who will be staying there? For example, couple, family with children, elderly parents, helper or pets.\n\nIf there are any safety, accessibility, storage, work-from-home, hobby, helper or pet-related needs, you can let us know too. This helps us plan the layout, material direction and budget priorities more properly.";
+
+export const BUDGET_EXPECTATION_WORDING =
+  "If you have a budget expectation, you can share it too. It helps us propose the right scope, material direction and priorities. Final pricing still depends on drawings, site condition and confirmed works.";
+
+export const TIMELINE_KEY_MOVE_IN_QUESTION =
+  "When are you hoping to start, and is there a key collection date, move-in date or other deadline we should be aware of?";
+
+export const PROPOSAL_PREP_QUESTION =
+  "For proposal preparation, you can also share must-have items, nice-to-have items and any existing items you want to keep.";
+
+export const OVERLY_TECHNICAL_FIRST_CONTACT_QUESTIONS = [
+  "inter-terrace/corner terrace/semi-D/detached",
+  "roofline/drainage/waterproofing/neighbour boundary/access issues",
+  "new launch/resale/currently occupied",
+  "condo management rules",
+  "changing sink/hob position",
+  "overlay/waterproofing/fittings replacement",
+  "which wall exactly are you hacking",
+  "PE/submission/authority issue"
+];
+
+export type SmartLeadIntakeStage = "first_enquiry" | "serious_lead" | "proposal_prep" | "price_question" | "design_question" | "appointment_question";
+
+export type SmartLeadIntakeContext = {
+  hasPropertyType?: boolean;
+  hasAddressOrArea?: boolean;
+  hasScopeOfWork?: boolean;
+  hasFloorPlan?: boolean;
+  hasSitePhotos?: boolean;
+  hasDesignReferences?: boolean;
+  hasTimeline?: boolean;
+  hasBudgetExpectation?: boolean;
+  hasHouseholdInfo?: boolean;
+  hasSafetyAccessibilityNeeds?: boolean;
+  hasPreferredAppointmentTime?: boolean;
+  hasMustHaveNiceToHave?: boolean;
+};
+
+function list(items: string[]) {
+  if (items.length <= 1) return items.join("");
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+export function buildSmartLeadIntakeQuestionTopics(
+  context: SmartLeadIntakeContext,
+  stage: SmartLeadIntakeStage = "first_enquiry"
+) {
+  const topics: string[] = [];
+  const add = (condition: boolean, topic: string) => {
+    if (condition && !topics.includes(topic) && topics.length < MAX_INTAKE_QUESTIONS) topics.push(topic);
+  };
+
+  if (stage === "proposal_prep") {
+    add(!context.hasMustHaveNiceToHave, "must-have and nice-to-have items");
+    add(!context.hasSafetyAccessibilityNeeds, "safety, accessibility, storage or lifestyle needs");
+    add(!context.hasBudgetExpectation, "budget expectation for planning");
+    add(!context.hasTimeline, "timeline, key collection or move-in date");
+    add(!context.hasDesignReferences, "design direction or reference images");
+    return topics;
+  }
+
+  if (stage === "serious_lead" || stage === "appointment_question" || stage === "design_question") {
+    add(!context.hasHouseholdInfo, "who will be staying there, such as children, elderly family members, helper or pets");
+    add(!context.hasDesignReferences, "design direction or reference images");
+    add(!context.hasBudgetExpectation, "budget expectation for planning");
+    add(!context.hasTimeline, "timeline, key collection or move-in date");
+    add(stage === "appointment_question" && !context.hasPreferredAppointmentTime, "preferred meeting timing");
+    return topics;
+  }
+
+  add(!context.hasPropertyType || !context.hasAddressOrArea, "property type and area/postal code");
+  add(!context.hasScopeOfWork, "main renovation scope or areas involved");
+  add(!context.hasFloorPlan || !context.hasSitePhotos, "floor plan/site photos if available");
+  add(!context.hasTimeline, "timeline, key collection or move-in date");
+  add(stage === "price_question" && !context.hasBudgetExpectation, "budget expectation for planning");
+
+  return topics;
+}
+
+export function composeSmartLeadIntakeMessage(
+  context: SmartLeadIntakeContext,
+  stage: SmartLeadIntakeStage = "first_enquiry",
+  intro = "Sure, we can help review this."
+) {
+  const topics = buildSmartLeadIntakeQuestionTopics(context, stage);
+  if (!topics.length) {
+    return `${intro} Thanks, we have the main details for now. The team can review the layout, scope, lifestyle needs, design direction and budget expectation before advising the next step for the initial project review.`;
+  }
+
+  const optional = [
+    !context.hasHouseholdInfo ? "household needs" : "",
+    !context.hasDesignReferences ? "design direction or reference images" : "",
+    !context.hasBudgetExpectation ? "budget expectation" : ""
+  ].filter(Boolean);
+
+  const optionalSentence = optional.length
+    ? ` If you already know your ${list(optional)}, you can share that too.`
+    : "";
+
+  return `${intro} To help us review properly, could you share ${list(topics)}?${optionalSentence} This helps us advise the right scope and material direction for the initial project review.`;
+}
+
 type IntakeFieldDefinition = {
   key: keyof LeadIntakeProfile;
   label: string;

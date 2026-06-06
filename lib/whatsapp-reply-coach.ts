@@ -1,5 +1,11 @@
 import type { Lead, LeadMessage } from "@/lib/types";
 import {
+  BUDGET_EXPECTATION_WORDING,
+  SHORT_EARLY_STAGE_INTAKE_MESSAGE,
+  composeSmartLeadIntakeMessage,
+  type SmartLeadIntakeStage
+} from "@/lib/lead-intake";
+import {
   buildMissingInfoAsk,
   describeReceivedInfo,
   getLimmInstagramUrl,
@@ -89,7 +95,7 @@ export interface WhatsAppReplyCoachResult {
 }
 
 export const NO_SILENCE_FALLBACK_REPLY =
-  "Thanks for your message. I'll help route this properly. Could you send your property type, basic renovation scope, and any floor plan or site photos if available? The team can then review the next step for an initial project review.";
+  `Thanks for your message. ${SHORT_EARLY_STAGE_INTAKE_MESSAGE}`;
 
 function normalise(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
@@ -198,7 +204,28 @@ function appointmentTimeText(text: string) {
 }
 
 function repeatedInfoAvoided(context: WhatsAppLeadContextMemory) {
-  return context.receivedFields.filter((field) => ["floor plan", "floor plan/image", "scope", "site photos", "property type", "address/area"].includes(field));
+  return context.receivedFields.filter((field) => ["floor plan", "floor plan/image", "scope", "site photos", "property type", "address/area", "timeline", "budget expectation", "household/lifestyle", "design references"].includes(field));
+}
+
+function intakeContext(context: WhatsAppLeadContextMemory) {
+  return {
+    hasPropertyType: context.hasPropertyType,
+    hasAddressOrArea: context.hasAddressOrArea,
+    hasScopeOfWork: context.hasScopeOfWork,
+    hasFloorPlan: context.hasFloorPlan,
+    hasSitePhotos: context.hasSitePhotos,
+    hasDesignReferences: context.hasDesignReferences,
+    hasTimeline: context.hasTimeline,
+    hasBudgetExpectation: context.hasBudgetExpectation,
+    hasHouseholdInfo: context.hasHouseholdInfo,
+    hasSafetyAccessibilityNeeds: context.hasSafetyAccessibilityNeeds,
+    hasPreferredAppointmentTime: context.hasPreferredAppointmentTime,
+    hasMustHaveNiceToHave: context.hasMustHaveNiceToHave
+  };
+}
+
+function composeSmartIntakeReply(context: WhatsAppLeadContextMemory, stage: SmartLeadIntakeStage = "first_enquiry", intro = "Sure, we can help review this.") {
+  return composeSmartLeadIntakeMessage(intakeContext(context), stage, intro);
 }
 
 function missingAsked(context: WhatsAppLeadContextMemory, reply: string) {
@@ -223,22 +250,27 @@ function contextAwareInfoAsk(context: WhatsAppLeadContextMemory, focus: "appoint
 function composePriceReply(context: WhatsAppLeadContextMemory) {
   if (context.hasFloorPlan && context.hasScopeOfWork) {
     const photoAsk = context.hasSitePhotos ? "" : " If possible, you can also send site photos so the team can review the condition more accurately.";
-    return `I understand you'd like a rough idea. Thanks, we've received the floor plan and scope. We'll need to review the details, drawings, site condition and material direction first, because giving a rough figure too early can be misleading.${photoAsk} The team can go through this properly during the initial project review.`;
+    const budgetAsk = context.hasBudgetExpectation ? "" : ` ${BUDGET_EXPECTATION_WORDING}`;
+    return `I understand you'd like a rough idea. Thanks, we've received the floor plan and scope. We'll need to review the details, drawings, site condition and material direction first, because giving a rough figure too early can be misleading.${photoAsk}${budgetAsk} The team can go through this properly during the initial project review.`;
   }
   if (context.hasScopeOfWork) {
     const ask = context.hasFloorPlan
       ? context.hasSitePhotos ? "" : " If possible, you can also send site photos so the team can review the condition more accurately."
       : " Could you send the floor plan and site photos if available?";
-    return `I understand you'd like a rough idea. Thanks, we've received the scope. We'll need to review the layout, site condition and material direction first, because giving a rough figure too early can be misleading.${ask} The team can go through this properly during the initial project review.`;
+    const budgetAsk = context.hasBudgetExpectation ? "" : ` ${BUDGET_EXPECTATION_WORDING}`;
+    return `I understand you'd like a rough idea. Thanks, we've received the scope. We'll need to review the layout, site condition and material direction first, because giving a rough figure too early can be misleading.${ask}${budgetAsk} The team can go through this properly during the initial project review.`;
   }
-  return "I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed. Once we understand the scope, we can review the next step more accurately for an initial project review.";
+  return `I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed. ${BUDGET_EXPECTATION_WORDING} Once we understand the scope, we can review the next step more accurately for an initial project review.`;
 }
 
 function composeAppointmentReply(input: WhatsAppReplyCoachInput, context: WhatsAppLeadContextMemory, followUp = false) {
   const requestedTime = appointmentTimeText(input.inboundText);
   if (context.hasPropertyType && context.hasScopeOfWork && context.hasAddressOrArea) {
     const received = describeReceivedInfo(context);
-    return `${requestedTime} noted. We can help check availability, but the appointment is not confirmed yet. ${received || "Since we've received the main details,"} the team will review and confirm whether that slot works for an initial project review.`;
+    const prep = context.hasHouseholdInfo && context.hasDesignReferences && context.hasBudgetExpectation
+      ? ""
+      : ` ${composeSmartIntakeReply(context, "serious_lead", "Before the meeting, it would also help to prepare a few lifestyle and design details.")}`;
+    return `${requestedTime} noted. We can help check availability, but the appointment is not confirmed yet. ${received || "Since we've received the main details,"} the team will review and confirm whether that slot works for an initial project review.${prep}`;
   }
   const received = describeReceivedInfo(context);
   if (followUp) {
@@ -282,7 +314,7 @@ function composeVoiceMessageReply() {
 function composeWhatNextReply(context: WhatsAppLeadContextMemory) {
   const received = describeReceivedInfo(context);
   if (received) {
-    return `${received} The next step is for the team to review the layout, site condition and requirements before advising what should be checked or arranged for an initial project review.`;
+    return `${received} The next step is for the team to review the layout, site condition and requirements before advising what should be checked or arranged for an initial project review. ${composeSmartIntakeReply(context, "serious_lead", "To prepare better")}`;
   }
   return NO_SILENCE_FALLBACK_REPLY;
 }
@@ -330,8 +362,17 @@ function composeMultiIntentReply(input: WhatsAppReplyCoachInput, intents: WhatsA
   if (!hasPrice && !hasAppointment && !parts.join(" ").includes(info) && info) {
     parts.push(info);
   }
+  if (!hasPrice && !hasAppointment && !context.hasHouseholdInfo) {
+    parts.push(composeSmartIntakeReply(context, "serious_lead", "To prepare the meeting and proposal better"));
+  }
 
   return parts.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function composeDesignReply(context: WhatsAppLeadContextMemory) {
+  const received = describeReceivedInfo(context);
+  const intake = composeSmartIntakeReply(context, "design_question", "To make the design direction practical");
+  return `Yes, we can help propose a suitable design direction. The right theme should match your layout, lighting, lifestyle, storage needs and renovation scope, for example modern warm luxury, Japandi, minimalist or contemporary landed style. ${received ? `${received} ` : ""}${intake}`;
 }
 
 function replyFor(input: WhatsAppReplyCoachInput, intent: QuestionBankIntentKey, stage: WhatsAppConversationStage) {
@@ -345,7 +386,7 @@ function replyFor(input: WhatsAppReplyCoachInput, intent: QuestionBankIntentKey,
   if (normalise(input.inboundText).includes("what next")) return composeWhatNextReply(context);
   switch (intent) {
     case "design_theme":
-      return "Yes, we can help propose a suitable design direction. The right theme should match your layout, lighting, lifestyle, storage needs and renovation scope, for example modern warm luxury, Japandi, minimalist or contemporary landed style. If you can send your floor plan, photos or reference images, we can review what direction fits best for an initial project review.";
+      return composeDesignReply(context);
     case "price_question":
       return composePriceReply(context);
     case "appointment_request":
@@ -354,7 +395,7 @@ function replyFor(input: WhatsAppReplyCoachInput, intent: QuestionBankIntentKey,
       }
       return composeAppointmentReply(input, context);
     case "site_visit_request":
-      return "No worries, we can look into arranging an initial project review. Before confirming a slot, could you send the floor plan or site photos and the property area/address? That helps us understand the scope first.";
+      return composeAppointmentReply(input, context);
     case "follow_up_ping":
       return composePingReply(input, context);
     case "structural_wall":
@@ -369,17 +410,17 @@ function replyFor(input: WhatsAppReplyCoachInput, intent: QuestionBankIntentKey,
     case "aa_works":
       return "Thanks for sharing. For landed A&A works, items like roofline, drainage, waterproofing, access and submission requirements can affect the scope. If you have the floor plan or site photos, send them over and we will review it more properly for an initial project review.";
     case "landed_renovation":
-      return "Thanks for reaching out. For landed renovation, it is best not to advise blindly because layout, access and site conditions can affect the scope. Could you send the floor plan or site photos if available? We can take a look properly for an initial project review.";
+      return composeSmartIntakeReply(context, "first_enquiry", "Thanks for reaching out. For landed renovation, layout, site condition and lifestyle needs can affect the right scope.");
     case "floorplan_or_photos_sent":
       return "Thanks, received. We will take a look at the layout/details and check what else is needed before advising the next step for an initial project review.";
     case "commercial_renovation":
-      return "Thanks for reaching out. For commercial renovation, the use of space, services, landlord requirements and site access can affect planning. Could you send the layout, site photos and a short scope so we can review it for an initial project review?";
+      return composeSmartIntakeReply(context, "first_enquiry", "Thanks for reaching out. For commercial renovation, use of space, services and site access can affect planning.");
     case "carpentry":
       return "Thanks for reaching out. For carpentry, it helps to know the item, location and rough measurements or photos. Could you send photos of the area and what you would like built for an initial project review?";
     case "waterproofing_drainage_roof":
       return "Thanks for sharing. Water leakage or drainage issues should be reviewed carefully because the source may not be obvious from the message alone. Could you send photos or a short video of the affected area for an initial project review?";
     default:
-      return NO_SILENCE_FALLBACK_REPLY;
+      return composeSmartIntakeReply(context, "first_enquiry");
   }
 }
 

@@ -1,4 +1,5 @@
 import type { V6QualityResult, V6Understanding, V6VerifiedContext } from "@/lib/whatsapp-v6/types";
+import { SHORT_EARLY_STAGE_INTAKE_MESSAGE } from "@/lib/lead-intake";
 
 const bannedGenericReply = "I'll help route this properly";
 const bannedOverClaim =
@@ -64,7 +65,7 @@ export function judgeV6ReplyQuality(input: {
 
 export function v6QualityFallback(understanding: V6Understanding) {
   if (understanding.detectedIntents.includes("kitchen_renovation")) {
-    return "Hi, yes we can help with kitchen renovation. Could you share whether this is for a landed house, condo or commercial unit, and what you're planning to change in the kitchen? If you have a floor plan or photos, you can send them over for an initial project review.";
+    return "Hi, yes we can help with kitchen renovation. Could you share whether this is for a landed house, condo or commercial unit, the main kitchen scope, and any floor plan/site photos if available for an initial project review?";
   }
-  return "Thanks for reaching out. We can help review your renovation enquiry. Could you share your property type, basic scope, and any floor plan or photos if available for an initial project review?";
+  return `Thanks for reaching out. We can help review your renovation enquiry. ${SHORT_EARLY_STAGE_INTAKE_MESSAGE}`;
 }

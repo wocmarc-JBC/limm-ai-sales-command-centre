@@ -1,4 +1,5 @@
 import type { V6SafetyResult, V6Understanding } from "@/lib/whatsapp-v6/types";
+import { SHORT_EARLY_STAGE_INTAKE_MESSAGE } from "@/lib/lead-intake";
 
 const unsafeRules: Array<{ key: keyof Omit<V6SafetyResult, "bannedPhrasesRemoved" | "ok">; phrase: string; pattern: RegExp }> = [
   { key: "priceSafe", phrase: "from $", pattern: /\bfrom\s+\$?\d+/i },
@@ -36,7 +37,7 @@ function safeRewrite(understanding: V6Understanding) {
   if (understanding.detectedIntents.includes("demolition_hacking") || understanding.detectedIntents.includes("structural_wall")) {
     return "We can help review the wall demolition or hacking request, but it should not be advised blindly. The team needs to check the floor plan, wall type, services and site condition before advising the next step for an initial project review.";
   }
-  return "Thanks for reaching out. We can help review your renovation enquiry. Could you share your property type, basic scope, and any floor plan or photos if available for an initial project review?";
+  return `Thanks for reaching out. We can help review your renovation enquiry. ${SHORT_EARLY_STAGE_INTAKE_MESSAGE}`;
 }
 
 export function governV6Safety(reply: string, understanding: V6Understanding, calendarEventId?: string | null) {

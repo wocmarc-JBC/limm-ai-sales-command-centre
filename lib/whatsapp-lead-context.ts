@@ -14,6 +14,11 @@ export interface WhatsAppLeadContextMemory {
   hasPreferredAppointmentTime: boolean;
   hasDesignReferences: boolean;
   likelyDesignReference: boolean;
+  hasTimeline: boolean;
+  hasBudgetExpectation: boolean;
+  hasHouseholdInfo: boolean;
+  hasSafetyAccessibilityNeeds: boolean;
+  hasMustHaveNiceToHave: boolean;
   hasPortfolioRequest: boolean;
   contextFromCurrentMessage: boolean;
   contextFromPreviousMessages: boolean;
@@ -179,6 +184,58 @@ export function inferWhatsAppLeadContext(input: {
     /\bmeeting\b/i,
     /\bslot\b/i
   ]);
+  const hasTimeline = hasAny(normalized, [
+    /\btimeline\b/i,
+    /\bstart\b/i,
+    /\bmove-in\b/i,
+    /\bmove[\s-]?in\b/i,
+    /\bkey collection\b/i,
+    /\bdeadline\b/i,
+    /\bbefore cny\b/i,
+    /\bby (?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i
+  ]);
+  const hasBudgetExpectation = hasAny(normalized, [
+    /\bbudget\b/i,
+    /\bcomfort level\b/i,
+    /\bspend\b/i,
+    /\bplanning amount\b/i,
+    /\bexpectation\b/i
+  ]);
+  const hasHouseholdInfo = hasAny(normalized, [
+    /\bfamily\b/i,
+    /\bcouple\b/i,
+    /\bchildren\b/i,
+    /\bkids?\b/i,
+    /\belderly\b/i,
+    /\bparents?\b/i,
+    /\bhelper\b/i,
+    /\bmaid\b/i,
+    /\bpets?\b/i,
+    /\bdog\b/i,
+    /\bcat\b/i,
+    /\boccupants?\b/i,
+    /\bstaying\b/i
+  ]);
+  const hasSafetyAccessibilityNeeds = hasAny(normalized, [
+    /\bsafety\b/i,
+    /\baccessibility\b/i,
+    /\belderly[-\s]?friendly\b/i,
+    /\bchild safety\b/i,
+    /\bwheelchair\b/i,
+    /\bgrab bar\b/i,
+    /\bslip\b/i,
+    /\bstorage\b/i,
+    /\bwork from home\b/i,
+    /\bwfh\b/i,
+    /\bhobby\b/i
+  ]);
+  const hasMustHaveNiceToHave = hasAny(normalized, [
+    /\bmust[-\s]?have\b/i,
+    /\bnice[-\s]?to[-\s]?have\b/i,
+    /\bkeep existing\b/i,
+    /\bretain\b/i,
+    /\bpriority\b/i
+  ]);
   const explicitDesignReferences = hasAny(normalized, [
     /\breference images?\b/i,
     /\bdesign refs?\b/i,
@@ -222,7 +279,11 @@ export function inferWhatsAppLeadContext(input: {
     hasSitePhotos ? "site photos" : "",
     hasAddressOrArea ? "address/area" : "",
     hasPreferredAppointmentTime ? "preferred appointment time" : "",
-    hasDesignReferences ? "design references" : ""
+    hasDesignReferences ? "design references" : "",
+    hasTimeline ? "timeline" : "",
+    hasBudgetExpectation ? "budget expectation" : "",
+    hasHouseholdInfo ? "household/lifestyle" : "",
+    hasSafetyAccessibilityNeeds ? "safety/accessibility needs" : ""
   ].filter(Boolean);
 
   const knownContextSummary = receivedFields.length
@@ -243,6 +304,11 @@ export function inferWhatsAppLeadContext(input: {
     hasPreferredAppointmentTime,
     hasDesignReferences,
     likelyDesignReference,
+    hasTimeline,
+    hasBudgetExpectation,
+    hasHouseholdInfo,
+    hasSafetyAccessibilityNeeds,
+    hasMustHaveNiceToHave,
     hasPortfolioRequest,
     contextFromCurrentMessage: hasAny(normalizedCurrent, [
       /\bfloor plan\b/i,
