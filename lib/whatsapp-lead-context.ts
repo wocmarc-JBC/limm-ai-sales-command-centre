@@ -35,6 +35,39 @@ export interface WhatsAppLeadContextMemory {
   knownContextSummary: string;
 }
 
+export interface NormalizedWhatsAppLeadContext {
+  property_type: string;
+  storeys: string;
+  property_area: string;
+  postal_code: string;
+  property_address: string;
+  renovation_type: string;
+  scope_summary: string;
+  areas_involved: string[];
+  floor_plan_received: boolean;
+  site_photos_received: boolean;
+  reference_images_received: boolean;
+  budget_expectation: string;
+  timeline: string;
+  key_collection_date: string;
+  move_in_date: string;
+  design_direction: string;
+  occupants_summary: string;
+  children_present: boolean;
+  elderly_present: boolean;
+  helper_present: boolean;
+  pets_present: boolean;
+  lifestyle_needs: string[];
+  safety_accessibility_needs: string[];
+  preferred_meeting_time: string;
+  appointment_requested: boolean;
+  known_facts_summary: string;
+  missing_fields: string[];
+  last_bot_asked_fields: string[];
+  repeated_question_risk: boolean;
+  memory: WhatsAppLeadContextMemory;
+}
+
 export const OFFICIAL_LIMM_INSTAGRAM_URL = "https://www.instagram.com/limmworks/";
 
 function normalise(text: string) {
@@ -487,4 +520,212 @@ export function getLimmInstagramUrl() {
   const trimmed = value.trim();
   if (!/^https:\/\/(?:www\.)?instagram\.com\/[A-Za-z0-9_.-]+\/?$/i.test(trimmed)) return "";
   return trimmed;
+}
+
+function postalCodeFromText(text: string, lead: Lead) {
+  if (lead.postalCode) return lead.postalCode;
+  const match = text.match(/\bS?(\d{6})\b/i);
+  return match?.[1] ?? "";
+}
+
+function areasInvolvedFromText(text: string) {
+  const areas = [
+    /\bkitchen\b/i.test(text) ? "kitchen" : "",
+    /\bbathroom|toilet|wc\b/i.test(text) ? "bathroom" : "",
+    /\bcarpentry|wardrobe|cabinet\b/i.test(text) ? "carpentry" : "",
+    /\bhacking|wall\b/i.test(text) ? "hacking/wall review" : "",
+    /\bwhole house|full house|full renovation\b/i.test(text) ? "full house" : "",
+    /\broof|waterproofing|drainage\b/i.test(text) ? "roof/waterproofing/drainage" : "",
+    /\bextension|extend\b/i.test(text) ? "extension" : ""
+  ].filter(Boolean);
+  return [...new Set(areas)];
+}
+
+function designDirectionFromText(text: string) {
+  const matches = [
+    /\bmodern luxury\b/i.test(text) ? "modern luxury" : "",
+    /\bjapandi\b/i.test(text) ? "Japandi" : "",
+    /\bminimalist\b/i.test(text) ? "minimalist" : "",
+    /\bcontemporary\b/i.test(text) ? "contemporary" : "",
+    /\bdesign theme|design concept|design direction\b/i.test(text) ? "design direction requested" : ""
+  ].filter(Boolean);
+  return matches[0] ?? "";
+}
+
+function occupantsSummaryFromText(text: string) {
+  const items = [
+    /\bcouple\b/i.test(text) ? "couple" : "",
+    /\bfamily\b/i.test(text) ? "family" : "",
+    /\bchildren|kids?\b/i.test(text) ? "children" : "",
+    /\belderly|parents?\b/i.test(text) ? "elderly family members" : "",
+    /\bhelper|maid\b/i.test(text) ? "helper" : "",
+    /\bpets?|dog|cat\b/i.test(text) ? "pets" : ""
+  ].filter(Boolean);
+  return readableList([...new Set(items)]);
+}
+
+function lifestyleNeedsFromText(text: string) {
+  return [
+    /\bcook(?:ing)? often|heavy cooking\b/i.test(text) ? "cooking often" : "",
+    /\bhosting|entertain(?:ing)? guests\b/i.test(text) ? "hosting" : "",
+    /\bwork from home|wfh\b/i.test(text) ? "work from home" : "",
+    /\bstorage\b/i.test(text) ? "storage" : "",
+    /\bhobby room|hobby\b/i.test(text) ? "hobby room" : "",
+    /\beasy maintenance|low maintenance\b/i.test(text) ? "easy maintenance" : ""
+  ].filter(Boolean);
+}
+
+function safetyNeedsFromText(text: string) {
+  return [
+    /\bchild friendly|child[-\s]?safe|children safety\b/i.test(text) ? "child friendly" : "",
+    /\belderly friendly|elderly[-\s]?safe\b/i.test(text) ? "elderly friendly" : "",
+    /\bwheelchair|accessibility\b/i.test(text) ? "accessibility" : "",
+    /\bgrab bar|slip\b/i.test(text) ? "fall-prevention/safety" : ""
+  ].filter(Boolean);
+}
+
+function preferredMeetingTimeFromText(text: string) {
+  const lower = text.toLowerCase();
+  const day = lower.match(/\b(mon|monday|tue|tuesday|wed|wednesday|thu|thursday|fri|friday|sat|saturday|sun|sunday)\b/i)?.[0];
+  const time = lower.match(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i)?.[0];
+  if (day && time) return `${day.replace(/^\w/, (char) => char.toUpperCase())} ${time.toUpperCase().replace(/\s+/g, "")}`;
+  if (day) return day.replace(/^\w/, (char) => char.toUpperCase());
+  if (/\btomorrow\b/i.test(text)) return time ? `tomorrow ${time.toUpperCase().replace(/\s+/g, "")}` : "tomorrow";
+  return time ? time.toUpperCase().replace(/\s+/g, "") : "";
+}
+
+function lastBotAskedFields(messages: LeadMessage[]) {
+  const recent = messages
+    .filter((message) => message.direction === "outbound" && message.channel === "whatsapp")
+    .slice(0, 3)
+    .map((message) => normalise(message.body))
+    .join(" ");
+  return [
+    /\bfloor plan|drawings?|layout\b/i.test(recent) ? "floor_plan" : "",
+    /\bsite photos?|photos?|images?\b/i.test(recent) ? "site_photos" : "",
+    /\bscope|areas involved|main areas\b/i.test(recent) ? "scope" : "",
+    /\bproperty type|landed|condo|commercial|hdb\b/i.test(recent) ? "property_type" : "",
+    /\baddress|area|postal\b/i.test(recent) ? "address_or_area" : "",
+    /\btimeline|move in|key collection|start date\b/i.test(recent) ? "timeline" : "",
+    /\bdesign references?|design direction|style\b/i.test(recent) ? "design_references" : "",
+    /\bbudget expectation|budget\b/i.test(recent) ? "budget_expectation" : ""
+  ].filter(Boolean);
+}
+
+export function isShortPingText(text: string) {
+  return /^\s*(ok\??|okay\??|hello\??|hi\??|yes\??|noted\??|\?)\s*$/i.test(text) ||
+    /\b(are you there|you there|can reply|any update)\b/i.test(text.trim()) && text.trim().length <= 40;
+}
+
+export function isConfusionPingText(text: string) {
+  return /^\s*(\?{1,4}|ok\?|huh\??|what do you mean\??|unclear\??)\s*$/i.test(text);
+}
+
+function normalizeMissingFields(memory: WhatsAppLeadContextMemory) {
+  return [
+    !memory.hasPropertyType ? "property_type" : "",
+    !memory.hasScopeOfWork ? "scope" : "",
+    !memory.hasFloorPlan ? "floor_plan" : "",
+    !memory.hasSitePhotos ? "site_photos" : "",
+    !memory.hasAddressOrArea ? "address_or_area" : "",
+    !memory.hasDesignReferences ? "design_references" : "",
+    !memory.hasTimeline ? "timeline" : ""
+  ].filter(Boolean);
+}
+
+function knownFactsSummary(context: Omit<NormalizedWhatsAppLeadContext, "known_facts_summary" | "memory">) {
+  const property = context.property_type
+    ? `${context.storeys ? `${context.storeys} ` : ""}${context.property_type} property`
+    : "";
+  const location = context.property_address || context.property_area || context.postal_code;
+  const core = [property, location ? `at ${location}` : ""].filter(Boolean).join(" ");
+  const leadLine = core ? `a ${core}` : "";
+  const facts = [
+    context.scope_summary ? `with ${context.scope_summary}` : "",
+    context.timeline || context.key_collection_date || context.move_in_date,
+    context.budget_expectation ? `budget expectation ${context.budget_expectation}` : "",
+    context.design_direction ? `design direction: ${context.design_direction}` : "",
+    context.occupants_summary ? `household: ${context.occupants_summary}` : ""
+  ].filter(Boolean);
+  if (!leadLine) return readableList(facts);
+  if (!facts.length) return leadLine;
+  return `${leadLine}, ${readableList(facts)}`;
+}
+
+export function buildNormalizedWhatsAppLeadContext(input: {
+  lead: Lead;
+  previousMessages: LeadMessage[];
+  inboundText: string;
+}): NormalizedWhatsAppLeadContext {
+  const memory = inferWhatsAppLeadContext(input);
+  const previousText = inboundTexts(input.previousMessages).join(" ");
+  const allText = [
+    input.lead.propertyType,
+    input.lead.scopeSummary,
+    input.lead.projectAddress,
+    input.lead.propertyArea,
+    input.lead.postalCode,
+    input.lead.intakeProfile?.lifestyleNotes,
+    input.lead.intakeProfile?.occupants,
+    input.lead.intakeProfile?.helper,
+    input.lead.intakeProfile?.pets,
+    input.lead.intakeProfile?.safetyNeeds,
+    input.lead.intakeProfile?.budgetExpectation,
+    input.lead.intakeProfile?.timeline,
+    input.lead.intakeProfile?.keyCollectionDate,
+    input.lead.intakeProfile?.moveInDate,
+    input.lead.intakeProfile?.preferredMeetingTiming,
+    input.inboundText,
+    previousText
+  ].filter(Boolean).join(" ");
+  const normalized = normalise(allText);
+  const propertyAddress = input.lead.projectAddress || (memory.knownAddressOrArea && /\b(?:road|street|avenue|drive|lane|terrace|crescent|close|way|place|walk)\b/i.test(memory.knownAddressOrArea) ? memory.knownAddressOrArea : "");
+  const propertyArea = input.lead.propertyArea || (!propertyAddress ? memory.knownAddressOrArea : "");
+  const postalCode = postalCodeFromText(allText, input.lead);
+  const preferredMeetingTime = input.lead.intakeProfile?.preferredMeetingTiming || preferredMeetingTimeFromText(allText);
+  const appointmentRequested = Boolean(preferredMeetingTime) || /\b(appt|appointment|meeting|meet|site visit|slot|come down|available)\b/i.test(normalized);
+  const timeline = input.lead.intakeProfile?.timeline || memory.knownTimeline;
+  const keyCollectionDate = input.lead.intakeProfile?.keyCollectionDate || (/\bkey collection|take key\b/i.test(timeline) ? timeline : "");
+  const moveInDate = input.lead.intakeProfile?.moveInDate || (/\bmove[\s-]?in\b/i.test(timeline) ? timeline : "");
+  const contextWithoutSummary = {
+    property_type: memory.knownPropertyType || input.lead.intakeProfile?.propertyType || "",
+    storeys: memory.knownStoreys,
+    property_area: propertyArea,
+    postal_code: postalCode,
+    property_address: propertyAddress,
+    renovation_type: memory.knownScopeSummary || input.lead.intakeProfile?.scopeOfWork || "",
+    scope_summary: memory.knownScopeSummary || input.lead.intakeProfile?.scopeOfWork || "",
+    areas_involved: areasInvolvedFromText(allText),
+    floor_plan_received: memory.hasFloorPlan || /\bfloor plan status received\b/i.test(normalized),
+    site_photos_received: memory.hasSitePhotos || /\bsite photos status received\b/i.test(normalized),
+    reference_images_received: memory.hasDesignReferences,
+    budget_expectation: input.lead.intakeProfile?.budgetExpectation || memory.knownBudgetExpectation,
+    timeline,
+    key_collection_date: keyCollectionDate,
+    move_in_date: moveInDate,
+    design_direction: designDirectionFromText(allText),
+    occupants_summary: input.lead.intakeProfile?.occupants || occupantsSummaryFromText(allText),
+    children_present: /\bchildren|kids?\b/i.test(normalized),
+    elderly_present: /\belderly|parents?\b/i.test(normalized),
+    helper_present: /\bhelper|maid\b/i.test(normalized),
+    pets_present: /\bpets?|dog|cat\b/i.test(normalized),
+    lifestyle_needs: lifestyleNeedsFromText(allText),
+    safety_accessibility_needs: safetyNeedsFromText(allText),
+    preferred_meeting_time: preferredMeetingTime,
+    appointment_requested: appointmentRequested,
+    missing_fields: normalizeMissingFields(memory),
+    last_bot_asked_fields: lastBotAskedFields(input.previousMessages),
+    repeated_question_risk: false
+  };
+  const repeatedQuestionRisk = isShortPingText(input.inboundText) && contextWithoutSummary.last_bot_asked_fields.length > 0;
+  const context = {
+    ...contextWithoutSummary,
+    repeated_question_risk: repeatedQuestionRisk,
+    known_facts_summary: "",
+    memory
+  };
+  return {
+    ...context,
+    known_facts_summary: knownFactsSummary(context)
+  };
 }

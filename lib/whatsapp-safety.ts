@@ -21,12 +21,24 @@ const blockedPatterns = [
 ];
 
 const calendarConfirmationPattern = /\bcalendar booking confirmed\b|\bwe have booked\b|\bappointment confirmed\b|\byour appointment has been arranged\b|\bbooked\b|\bsee you tomorrow\b/i;
+const pricingAmountPattern = /\bS\$\s*\d{2,}|\bSGD\s*\d{2,}|\$\s*\d{2,}|\b\d{2,}\s*k\b|\b\d{5,}\b/i;
 
 export type WhatsAppAutoReplyValidationIssue = {
   code: string;
   label: string;
   blocking: boolean;
 };
+
+function pricingAmountOnlyAppearsAsClientBudgetExpectation(reply: string) {
+  const amountSentences = reply
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => pricingAmountPattern.test(sentence));
+  if (!amountSentences.length) return false;
+  return amountSentences.every((sentence) =>
+    /\bbudget expectation\b|\bbudget you shared\b|\bclient[-\s]?provided budget\b|\byour budget\b/i.test(sentence)
+  );
+}
 
 export function validateWhatsAppAutoReply(reply: string, options: { calendarEventId?: string } = {}) {
   const trimmedReply = reply.trim();
@@ -37,6 +49,9 @@ export function validateWhatsAppAutoReply(reply: string, options: { calendarEven
   }
 
   for (const item of blockedPatterns) {
+    if (item.code === "pricing_amount" && pricingAmountOnlyAppearsAsClientBudgetExpectation(reply)) {
+      continue;
+    }
     if (item.pattern.test(reply)) {
       issues.push({ code: item.code, label: item.reason, blocking: true });
     }

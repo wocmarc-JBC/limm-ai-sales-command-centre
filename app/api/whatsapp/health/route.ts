@@ -48,6 +48,8 @@ export const dynamic = "force-dynamic";
 // version: "v6_7_1_whatsapp_final_safety_false_positive_fix"
 // salesBrainVersion: "v6.7.1"
 // version: "v6_5_1_intake_memory_budget_statement_fix"
+// version: "v7_world_class_whatsapp_sales_brain"
+// salesBrainVersion: "v7"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -71,13 +73,23 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_5_1_intake_memory_budget_statement_fix",
-      salesBrainVersion: "v6.5.1",
+      version: "v7_world_class_whatsapp_sales_brain",
+      salesBrainVersion: "v7",
       runtime: "vercel",
+      worldClassSalesConversationBrainAvailable: true,
+      memoryFirstReplyComposerAvailable: true,
+      knownInfoAcknowledgementBeforeQuestions: true,
+      shortPingSmartReplyAvailable: true,
+      confusionPingSmartReplyAvailable: true,
+      alreadyToldYouRecoveryAvailable: true,
+      budgetStatementNotPriceQuestionAvailable: true,
+      contextAwareMissingInfoQuestionsAvailable: true,
+      maxThreeQuestionsDefaultAvailable: true,
+      genericFallbackReducedAvailable: true,
+      conversationReplayTestAvailable: true,
       intakeKnownInfoAcknowledgementAvailable: true,
       budgetStatementClassificationAvailable: true,
       budgetExpectationNotPriceQuestionAvailable: true,
-      alreadyToldYouRecoveryAvailable: true,
       intakeMissingInfoDeduplicationAvailable: true,
       addressExtractionAvailable: true,
       timelineExtractionAvailable: true,
@@ -418,13 +430,23 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_5_1_intake_memory_budget_statement_fix",
-      salesBrainVersion: "v6.5.1",
+      version: "v7_world_class_whatsapp_sales_brain",
+      salesBrainVersion: "v7",
       runtime: "vercel",
+      worldClassSalesConversationBrainAvailable: false,
+      memoryFirstReplyComposerAvailable: false,
+      knownInfoAcknowledgementBeforeQuestions: false,
+      shortPingSmartReplyAvailable: false,
+      confusionPingSmartReplyAvailable: false,
+      alreadyToldYouRecoveryAvailable: false,
+      budgetStatementNotPriceQuestionAvailable: false,
+      contextAwareMissingInfoQuestionsAvailable: false,
+      maxThreeQuestionsDefaultAvailable: false,
+      genericFallbackReducedAvailable: false,
+      conversationReplayTestAvailable: false,
       intakeKnownInfoAcknowledgementAvailable: false,
       budgetStatementClassificationAvailable: false,
       budgetExpectationNotPriceQuestionAvailable: false,
-      alreadyToldYouRecoveryAvailable: false,
       intakeMissingInfoDeduplicationAvailable: false,
       addressExtractionAvailable: false,
       timelineExtractionAvailable: false,

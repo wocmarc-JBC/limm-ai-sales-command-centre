@@ -8,8 +8,10 @@ import {
 } from "@/lib/whatsapp-reply-coach";
 import { validateWhatsAppAutoReply } from "@/lib/whatsapp-safety";
 import { buildV6WhatsAppSalesBrainDecision } from "@/lib/whatsapp-v6/sales-brain";
+import { buildV7WorldClassWhatsAppSalesBrainDecision } from "@/lib/whatsapp-v7-sales-brain";
 
 export type WhatsAppReplySource =
+  | "world_class_sales_brain"
   | "reply_coach"
   | "question_bank"
   | "safe_fallback"
@@ -262,6 +264,14 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     calendarEventId: input.calendarEventId,
     providerMessageId: input.providerMessageId
   });
+  const v7Decision = buildV7WorldClassWhatsAppSalesBrainDecision({
+    inboundMessageText: input.inboundMessageText,
+    inboundMessageType: input.inboundMessageType,
+    lead: input.lead,
+    previousMessages: input.previousMessages,
+    autoReplyEnabled: input.autoReplyEnabled,
+    calendarEventId: input.calendarEventId
+  });
 
   if (isSpamIntent(coach.intent)) {
     return {
@@ -295,8 +305,11 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     };
   }
 
-  let replyText = v6Decision.replyText || coach.replyText;
-  let replySource: WhatsAppReplySource = v6Decision.replyText ? "reply_coach" : coach.handoffRequired && coach.intent === "complaint_or_risk" ? "handoff_holding" : "reply_coach";
+  let usingV7Reply = Boolean(v7Decision.replyText);
+  let replyText = v7Decision.replyText || v6Decision.replyText || coach.replyText;
+  let replySource: WhatsAppReplySource = usingV7Reply
+    ? "world_class_sales_brain"
+    : v6Decision.replyText ? "reply_coach" : coach.handoffRequired && coach.intent === "complaint_or_risk" ? "handoff_holding" : "reply_coach";
   let safetyResult: WhatsAppReplyDecision["safetyResult"] = "pass";
   let repetitionResult: WhatsAppReplyDecision["repetitionResult"] = "pass";
   let qualityResult: WhatsAppReplyDecision["qualityResult"] = "pass";
@@ -306,13 +319,14 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
   let safety = validateWhatsAppAutoReply(replyText, { calendarEventId: input.calendarEventId ?? "" });
   if (!safety.ok) {
     replyText = safeRewriteFor(coach.intent);
+    usingV7Reply = false;
     replySource = "safe_fallback";
     safetyResult = "rewritten";
     safety = validateWhatsAppAutoReply(replyText, { calendarEventId: input.calendarEventId ?? "" });
   }
 
   const repeated = priorOutbound.some((previous) => normalise(previous) === normalise(replyText) || similarity(previous, replyText) > 0.9);
-  if (repeated && coach.intent !== "follow_up_ping") {
+  if (repeated && !usingV7Reply && coach.intent !== "follow_up_ping") {
     replyText = safeRewriteFor(coach.intent);
     replySource = "repetition_rewrite";
     repetitionResult = "rewritten";
@@ -325,7 +339,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     previousReplies: priorOutbound,
     calendarEventId: input.calendarEventId
   });
-  if (quality.rewriteRequired) {
+  if (quality.rewriteRequired && !usingV7Reply) {
     const qualityReply = safeRewriteFor(coach.intent);
     const rewrittenQuality = evaluateReplyQuality({
       reply: qualityReply,
@@ -342,6 +356,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
 
   if (!replyText.trim()) {
     replyText = NO_SILENCE_FALLBACK_REPLY;
+    usingV7Reply = false;
     replySource = "safe_fallback";
     safetyResult = "fallback_used";
     noSilenceGuardResult = "used";
@@ -350,6 +365,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
   safety = validateWhatsAppAutoReply(replyText, { calendarEventId: input.calendarEventId ?? "" });
   if (!safety.ok) {
     replyText = NO_SILENCE_FALLBACK_REPLY;
+    usingV7Reply = false;
     replySource = "safe_fallback";
     safetyResult = "fallback_used";
     noSilenceGuardResult = "used";
@@ -403,12 +419,14 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     confidence: coach.confidence,
     replySource,
     salesMove: coach.salesMove,
-    answeredClientQuestion: finalQuality.answeredActualQuestion,
-    askedNextBestQuestion: /\?/.test(replyText),
+    answeredClientQuestion: usingV7Reply ? v7Decision.answeredClientQuestion : finalQuality.answeredActualQuestion,
+    askedNextBestQuestion: usingV7Reply ? v7Decision.askedFields.length > 0 || /\?/.test(replyText) : /\?/.test(replyText),
     handoffRequired: needsHuman,
     riskFlags: [...new Set([...coach.riskFlags, ...riskFlagsFromIntents(coach.detectedIntents), ...v6Decision.understanding.detectedRisks])],
-    missingInfo: v6Decision.verifiedContext.missingFields.length ? v6Decision.verifiedContext.missingFields : coach.missingInfo,
-    nextAction: v6Decision.replyPlan.askOnlyMissingInfo.length
+    missingInfo: v7Decision.missingInfo.length ? v7Decision.missingInfo : v6Decision.verifiedContext.missingFields.length ? v6Decision.verifiedContext.missingFields : coach.missingInfo,
+    nextAction: usingV7Reply
+      ? `Sales move: ${v7Decision.salesMove}. Ask only for missing info: ${v7Decision.askedFields.join(", ") || "none"}.`
+      : v6Decision.replyPlan.askOnlyMissingInfo.length
       ? `Ask only for missing info: ${v6Decision.replyPlan.askOnlyMissingInfo.join(", ")}.`
       : coach.nextAction,
     safetyResult,
@@ -423,6 +441,26 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       detected_intent: coach.intent,
       detectedIntents: coach.detectedIntents,
       v6_version: v6Decision.version,
+      v7_version: v7Decision.version,
+      v7_detectedIntents: v7Decision.intents,
+      v7_primaryIntent: v7Decision.primaryIntent,
+      v7_stage: v7Decision.stage,
+      v7_salesMove: v7Decision.salesMove,
+      v7_normalizedContext: v7Decision.context,
+      v7_askedFields: v7Decision.askedFields,
+      v7_missingInfo: v7Decision.missingInfo,
+      v7_repeatedQuestionRisk: v7Decision.repeatedQuestionRisk,
+      v7_trace: v7Decision.trace,
+      worldClassSalesConversationBrainAvailable: true,
+      memoryFirstReplyComposerAvailable: true,
+      knownInfoAcknowledgementBeforeQuestions: true,
+      shortPingSmartReplyAvailable: true,
+      confusionPingSmartReplyAvailable: true,
+      alreadyToldYouRecoveryAvailable: true,
+      budgetStatementNotPriceQuestionAvailable: true,
+      contextAwareMissingInfoQuestionsAvailable: true,
+      maxThreeQuestionsDefaultAvailable: true,
+      genericFallbackReducedAvailable: true,
       v6_detectedIntents: v6Decision.understanding.detectedIntents,
       v6_detectedScopes: v6Decision.understanding.detectedScopes,
       v6_detectedRisks: v6Decision.understanding.detectedRisks,
