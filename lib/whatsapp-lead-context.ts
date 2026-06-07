@@ -69,9 +69,29 @@ export interface NormalizedWhatsAppLeadContext {
 }
 
 export const OFFICIAL_LIMM_INSTAGRAM_URL = "https://www.instagram.com/limmworks/";
+const INTERNAL_PLACEHOLDER_PATTERNS = [
+  /\bwhatsapp renovation enquiry pending review\b/i,
+  /\brenovation enquiry pending review\b/i,
+  /\bpending review\b/i,
+  /\bnew whatsapp enquiry\b/i,
+  /\bunknown\b/i,
+  /\bnot provided\b/i
+];
 
 function normalise(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+export function isInternalClientFacingPlaceholder(value: string | null | undefined) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return true;
+  return INTERNAL_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+export function cleanClientFacingText(value: string | null | undefined) {
+  const trimmed = String(value ?? "").trim();
+  if (isInternalClientFacingPlaceholder(trimmed)) return "";
+  return trimmed;
 }
 
 function inboundTexts(messages: LeadMessage[]) {
@@ -101,18 +121,19 @@ function readableList(items: string[]) {
 }
 
 function propertyTypeFromText(text: string, lead: Lead) {
-  const leadProperty = lead.propertyType && lead.propertyType !== "Unknown" ? lead.propertyType : "";
+  const leadProperty = cleanClientFacingText(lead.propertyType);
   if (/\blanded|terrace|semi d|semi detached|semi-detached|detached|bungalow|corner terrace|inter terrace\b/i.test(text)) return "landed";
   if (/\bcondo|apartment|mcst|condominium\b/i.test(text)) return "condo";
+  if (/\bhdb\b/i.test(text)) return "HDB";
   if (/\bcommercial|office|shop|clinic|restaurant|retail\b/i.test(text)) return "commercial";
   return leadProperty;
 }
 
 function scopeFromText(text: string, lead: Lead) {
-  if (lead.scopeSummary && lead.scopeSummary !== "New WhatsApp enquiry") return lead.scopeSummary;
   const scopeMatch = text.match(/\b(?:kitchen extension|full renovation|landed renovation|bathroom renovation|toilet renovation|carpentry|wardrobe|hacking works|commercial renovation|clinic renovation|a&a works?|a a works?|aa works?|addition and alteration|renovation|reno)\b/i);
   if (scopeMatch && /\ba\s*a works?|aa works?|a&a works?|addition and alteration/i.test(scopeMatch[0])) return "A&A works";
-  return scopeMatch?.[0] ?? "";
+  if (scopeMatch) return scopeMatch[0];
+  return cleanClientFacingText(lead.scopeSummary);
 }
 
 function storeysFromText(text: string) {
@@ -180,7 +201,7 @@ export function inferWhatsAppLeadContext(input: {
 }): WhatsAppLeadContextMemory {
   const currentText = [
     input.lead.propertyType,
-    input.lead.scopeSummary,
+    cleanClientFacingText(input.lead.scopeSummary),
     input.lead.lastClientMessage,
     input.inboundText
   ].join(" ");
@@ -618,7 +639,7 @@ export function isShortPingText(text: string) {
 }
 
 export function isConfusionPingText(text: string) {
-  return /^\s*(\?{1,4}|ok\?|huh\??|what do you mean\??|unclear\??)\s*$/i.test(text);
+  return /^\s*(\?{1,4}|huh\??|what do you mean\??|unclear\??)\s*$/i.test(text);
 }
 
 function normalizeMissingFields(memory: WhatsAppLeadContextMemory) {
@@ -638,10 +659,9 @@ function knownFactsSummary(context: Omit<NormalizedWhatsAppLeadContext, "known_f
     ? `${context.storeys ? `${context.storeys} ` : ""}${context.property_type} property`
     : "";
   const location = context.property_address || context.property_area || context.postal_code;
-  const core = [property, location ? `at ${location}` : ""].filter(Boolean).join(" ");
-  const leadLine = core ? `a ${core}` : "";
+  const leadLine = property && location ? `${property} at ${location}` : property ? property : location;
   const facts = [
-    context.scope_summary ? `with ${context.scope_summary}` : "",
+    cleanClientFacingText(context.scope_summary) ? `with ${cleanClientFacingText(context.scope_summary)}` : "",
     context.timeline || context.key_collection_date || context.move_in_date,
     context.budget_expectation ? `budget expectation ${context.budget_expectation}` : "",
     context.design_direction ? `design direction: ${context.design_direction}` : "",
@@ -661,7 +681,7 @@ export function buildNormalizedWhatsAppLeadContext(input: {
   const previousText = inboundTexts(input.previousMessages).join(" ");
   const allText = [
     input.lead.propertyType,
-    input.lead.scopeSummary,
+    cleanClientFacingText(input.lead.scopeSummary),
     input.lead.projectAddress,
     input.lead.propertyArea,
     input.lead.postalCode,
@@ -693,8 +713,8 @@ export function buildNormalizedWhatsAppLeadContext(input: {
     property_area: propertyArea,
     postal_code: postalCode,
     property_address: propertyAddress,
-    renovation_type: memory.knownScopeSummary || input.lead.intakeProfile?.scopeOfWork || "",
-    scope_summary: memory.knownScopeSummary || input.lead.intakeProfile?.scopeOfWork || "",
+    renovation_type: cleanClientFacingText(memory.knownScopeSummary) || cleanClientFacingText(input.lead.intakeProfile?.scopeOfWork) || "",
+    scope_summary: cleanClientFacingText(memory.knownScopeSummary) || cleanClientFacingText(input.lead.intakeProfile?.scopeOfWork) || "",
     areas_involved: areasInvolvedFromText(allText),
     floor_plan_received: memory.hasFloorPlan || /\bfloor plan status received\b/i.test(normalized),
     site_photos_received: memory.hasSitePhotos || /\bsite photos status received\b/i.test(normalized),
@@ -728,4 +748,12 @@ export function buildNormalizedWhatsAppLeadContext(input: {
     ...context,
     known_facts_summary: knownFactsSummary(context)
   };
+}
+
+export function buildClientFacingKnownSummary(context: NormalizedWhatsAppLeadContext) {
+  return knownFactsSummary({
+    ...context,
+    renovation_type: cleanClientFacingText(context.renovation_type),
+    scope_summary: cleanClientFacingText(context.scope_summary)
+  });
 }

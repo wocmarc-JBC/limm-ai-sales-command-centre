@@ -1,5 +1,6 @@
 import type { Lead, LeadMessage } from "@/lib/types";
 import {
+  buildClientFacingKnownSummary,
   buildNormalizedWhatsAppLeadContext,
   getLimmInstagramUrl,
   isBudgetStatementText,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/whatsapp-lead-context";
 
 export const V7_WORLD_CLASS_SALES_BRAIN_VERSION = "v7_world_class_whatsapp_sales_brain";
+export const V7_1_MEMORY_CONTRACT_VERSION = "v7_1_whatsapp_conversation_memory_contract_fix";
 
 export type V7WhatsAppIntent =
   | "greeting"
@@ -20,6 +22,9 @@ export type V7WhatsAppIntent =
   | "design_question"
   | "portfolio_request"
   | "file_or_media_sent"
+  | "file_status_question"
+  | "floorplan_status_question"
+  | "media_status_question"
   | "short_ping"
   | "confusion_ping"
   | "already_told_you"
@@ -50,7 +55,7 @@ export interface V7WhatsAppSalesBrainInput {
 }
 
 export interface V7WhatsAppSalesBrainDecision {
-  version: typeof V7_WORLD_CLASS_SALES_BRAIN_VERSION;
+  version: typeof V7_1_MEMORY_CONTRACT_VERSION;
   shouldReply: boolean;
   replyText: string;
   intents: V7WhatsAppIntent[];
@@ -102,6 +107,11 @@ export function detectV7WhatsAppIntents(text: string, type: string, context: Nor
   if (["image", "document", "video"].includes(type.toLowerCase()) || context.floor_plan_received || context.site_photos_received || context.reference_images_received) {
     add("file_or_media_sent");
   }
+  if (has(normalized, /\b(can you see|did you receive|did you get|you received|i sent already|i uploaded already|sent already|uploaded already).{0,40}\b(floor\s*plan|floorplan|file|photo|image|document|drawing|layout)\b/i)) {
+    add("file_status_question");
+    if (has(normalized, /\bfloor\s*plan|floorplan|drawing|layout\b/i)) add("floorplan_status_question");
+    if (has(normalized, /\bphoto|image|file|document\b/i)) add("media_status_question");
+  }
   if (has(text, /\b(i already told you|i said already|i told you already|already told you|already sent|already mentioned)\b/i)) add("already_told_you");
   if (isConfusionPingText(text)) add("confusion_ping");
   if (isShortPingText(text)) add("short_ping");
@@ -131,6 +141,9 @@ function primaryIntent(intents: V7WhatsAppIntent[]) {
     "human_takeover_request",
     "price_question",
     "appointment_request",
+    "floorplan_status_question",
+    "file_status_question",
+    "media_status_question",
     "confusion_ping",
     "short_ping",
     "provide_budget_expectation",
@@ -150,6 +163,7 @@ function determineStage(intent: V7WhatsAppIntent, context: NormalizedWhatsAppLea
   if (intent === "already_told_you" || intent === "short_ping" || intent === "confusion_ping" || intent === "follow_up_ping") return "short_recovery";
   if (intent === "complaint_or_frustration" || intent === "human_takeover_request") return "human_review_needed";
   if (intent === "price_question") return "price_safety";
+  if (intent === "file_status_question" || intent === "floorplan_status_question" || intent === "media_status_question") return "context_confirmed";
   if (intent === "appointment_request") return "appointment_preference_collection";
   if (intent === "design_question") return "design_discussion";
   if (intent === "portfolio_request") return "portfolio_routing";
@@ -191,16 +205,25 @@ function askForFields(fields: string[], suffix = "for an initial project review"
 }
 
 function knownAcknowledgement(context: NormalizedWhatsAppLeadContext, prefix = "Thanks, noted.") {
-  if (!context.known_facts_summary) return "";
-  return `${prefix} This is ${context.known_facts_summary}.`;
+  const summary = buildClientFacingKnownSummary(context);
+  if (!summary) return "";
+  if (context.property_type) return `${prefix} This is a ${summary}.`;
+  if (context.property_address || context.property_area || context.postal_code) return `${prefix} - ${summary}.`;
+  return `${prefix} ${summary}.`;
 }
 
 function shortKnownAcknowledgement(context: NormalizedWhatsAppLeadContext) {
-  if (!context.known_facts_summary) return "";
-  return `We've noted: ${context.known_facts_summary}.`;
+  const summary = buildClientFacingKnownSummary(context);
+  if (!summary) return "";
+  return `We've noted: ${summary}.`;
 }
 
 function composeProjectDetailsReply(context: NormalizedWhatsAppLeadContext) {
+  const hasOnlyAddress = Boolean(!context.property_type && !context.scope_summary && !context.timeline && !context.budget_expectation && (context.property_address || context.property_area || context.postal_code));
+  if (hasOnlyAddress) {
+    const summary = buildClientFacingKnownSummary(context);
+    return `Thanks, noted - ${summary}. Could you share what type of property this is and what renovation works you're planning? If you have a floor plan or site photos, you can send them here too.`;
+  }
   const intro = knownAcknowledgement(context) || "Thanks, noted. We can help review this.";
   const fields = selectMissingFields(context, context.known_facts_summary ? "normal" : "first");
   const ask = askForFields(fields);
@@ -240,12 +263,25 @@ function composeShortPingReply(text: string, context: NormalizedWhatsAppLeadCont
   }
   const fields = selectMissingFields(context, "normal").slice(0, 2);
   if (context.known_facts_summary) {
+    const summary = buildClientFacingKnownSummary(context);
+    const nextFields = selectMissingFields(context, "normal").slice(0, 3);
+    if (/^\s*ok\?\s*$/i.test(text) && summary) {
+      const next = nextFields.length
+        ? `The next helpful items are the ${readableList(nextFields.map(fieldLabel))}.`
+        : "The team can review the next step for an initial project review.";
+      return `Yes, noted. We have the main details so far: ${summary}. ${next}`;
+    }
     const next = fields.length
       ? `You can send the ${readableList(fields.map(fieldLabel))} when available, and the team can review the next step for an initial project review.`
       : "The team can review the next step for an initial project review.";
     return `Yes, noted. We have the main details so far. ${next}`;
   }
   return "Hi, yes we're here. You can share your property type, basic renovation scope, and any floor plan or site photos if available for an initial project review.";
+}
+
+function composeGreetingReply(context: NormalizedWhatsAppLeadContext) {
+  if (buildClientFacingKnownSummary(context)) return composeShortPingReply("hello", context);
+  return "Hi, yes we're here. Could you share what type of renovation you're planning and which areas are involved? If you have a floor plan or site photos, you can send them here too.";
 }
 
 function composePriceQuestionReply(context: NormalizedWhatsAppLeadContext) {
@@ -283,6 +319,16 @@ function composePortfolioReply(context: NormalizedWhatsAppLeadContext) {
     return `Yes, we can share relevant references.${tailored} Final design and scope still depend on your site condition, drawings and requirements for an initial project review.`;
   }
   return `Yes, you can view some of our renovation works, design references and project-related content on our Instagram here:\n\n${instagram}\n\n${tailored} Final design and scope still depend on your site condition, drawings and requirements for an initial project review.`;
+}
+
+function composeFileStatusReply(context: NormalizedWhatsAppLeadContext) {
+  if (context.floor_plan_received) {
+    return "Yes, we've received the floor plan. The team can review it together with the site photos and any design references if available for an initial project review.";
+  }
+  if (context.site_photos_received || context.reference_images_received || context.memory.hasImageOrDocument || context.memory.hasMedia) {
+    return "Yes, we've received the file/photo. The team will review it and match it to your renovation enquiry for an initial project review.";
+  }
+  return "I don't see the floor plan confirmed on our side yet. Could you resend it here, or use the upload link if provided?";
 }
 
 function composeRiskOrHandoffReply(context: NormalizedWhatsAppLeadContext, kind: "complaint" | "hacking" | "approval") {
@@ -341,6 +387,7 @@ function composeFallbackReply(context: NormalizedWhatsAppLeadContext) {
 function composeReply(input: V7WhatsAppSalesBrainInput, intents: V7WhatsAppIntent[], primary: V7WhatsAppIntent, context: NormalizedWhatsAppLeadContext) {
   if (intents.length >= 3 && !intents.includes("short_ping") && !intents.includes("confusion_ping")) return composeCombinedReply(input.inboundMessageText, intents, context);
   if (primary === "already_told_you") return composeAlreadyToldYouReply(context);
+  if (primary === "file_status_question" || primary === "floorplan_status_question" || primary === "media_status_question") return composeFileStatusReply(context);
   if (primary === "short_ping" || primary === "confusion_ping" || primary === "follow_up_ping" || primary === "thanks_or_acknowledgement") return composeShortPingReply(input.inboundMessageText, context);
   if (primary === "provide_budget_expectation") return composeBudgetStatementReply(context);
   if (primary === "price_question") return composePriceQuestionReply(context);
@@ -350,7 +397,8 @@ function composeReply(input: V7WhatsAppSalesBrainInput, intents: V7WhatsAppInten
   if (primary === "complaint_or_frustration" || primary === "human_takeover_request") return composeRiskOrHandoffReply(context, "complaint");
   if (has(normalise(input.inboundMessageText), /\bhack|hacking|wall\b/i)) return composeRiskOrHandoffReply(context, "hacking");
   if (has(normalise(input.inboundMessageText), /\bapproval|permit|submission|ura|bca\b/i)) return composeRiskOrHandoffReply(context, "approval");
-  if (primary === "provide_project_details" || primary === "renovation_enquiry" || primary === "file_or_media_sent" || primary === "greeting") return composeProjectDetailsReply(context);
+  if (primary === "greeting") return composeGreetingReply(context);
+  if (primary === "provide_project_details" || primary === "renovation_enquiry" || primary === "file_or_media_sent") return composeProjectDetailsReply(context);
   return composeFallbackReply(context);
 }
 
@@ -365,6 +413,9 @@ function salesMoveFor(primary: V7WhatsAppIntent) {
     design_question: "answer_design_direction_and_request_references",
     portfolio_request: "route_to_instagram_portfolio",
     file_or_media_sent: "acknowledge_file_context",
+    file_status_question: "answer_file_status_question",
+    floorplan_status_question: "answer_floorplan_status_question",
+    media_status_question: "answer_media_status_question",
     short_ping: "short_context_reassurance",
     confusion_ping: "clarify_without_full_intake",
     already_told_you: "apologise_and_summarise_known_info",
@@ -401,7 +452,7 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
   const stage = determineStage(primary, context);
 
   return {
-    version: V7_WORLD_CLASS_SALES_BRAIN_VERSION,
+    version: V7_1_MEMORY_CONTRACT_VERSION,
     shouldReply: input.autoReplyEnabled && Boolean(replyText),
     replyText,
     intents,
@@ -415,8 +466,17 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
     repeatedQuestionRisk: context.repeated_question_risk,
     context,
     trace: {
-      v7_version: V7_WORLD_CLASS_SALES_BRAIN_VERSION,
+      v7_version: V7_1_MEMORY_CONTRACT_VERSION,
+      v7PreviousVersion: V7_WORLD_CLASS_SALES_BRAIN_VERSION,
       worldClassSalesConversationBrainAvailable: true,
+      clientFacingPlaceholderSuppressionAvailable: true,
+      mergedLeadContextContractAvailable: true,
+      clientFacingKnownSummaryBuilderAvailable: true,
+      fileStatusQuestionIntentAvailable: true,
+      floorplanStatusReplyAvailable: true,
+      knownContextPersistenceAcrossReplies: true,
+      shortPingUsesKnownContextAvailable: true,
+      internalPlaceholderNeverClientFacing: true,
       memoryFirstReplyComposerAvailable: true,
       knownInfoAcknowledgementBeforeQuestions: true,
       detectedIntents: intents,

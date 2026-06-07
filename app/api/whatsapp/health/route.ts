@@ -50,6 +50,8 @@ export const dynamic = "force-dynamic";
 // version: "v6_5_1_intake_memory_budget_statement_fix"
 // version: "v7_world_class_whatsapp_sales_brain"
 // salesBrainVersion: "v7"
+// version: "v7_1_whatsapp_conversation_memory_contract_fix"
+// salesBrainVersion: "v7.1"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -73,9 +75,17 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v7_world_class_whatsapp_sales_brain",
-      salesBrainVersion: "v7",
+      version: "v7_1_whatsapp_conversation_memory_contract_fix",
+      salesBrainVersion: "v7.1",
       runtime: "vercel",
+      clientFacingPlaceholderSuppressionAvailable: true,
+      mergedLeadContextContractAvailable: true,
+      clientFacingKnownSummaryBuilderAvailable: true,
+      fileStatusQuestionIntentAvailable: true,
+      floorplanStatusReplyAvailable: true,
+      knownContextPersistenceAcrossReplies: true,
+      shortPingUsesKnownContextAvailable: true,
+      internalPlaceholderNeverClientFacing: true,
       worldClassSalesConversationBrainAvailable: true,
       memoryFirstReplyComposerAvailable: true,
       knownInfoAcknowledgementBeforeQuestions: true,
@@ -430,9 +440,17 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v7_world_class_whatsapp_sales_brain",
-      salesBrainVersion: "v7",
+      version: "v7_1_whatsapp_conversation_memory_contract_fix",
+      salesBrainVersion: "v7.1",
       runtime: "vercel",
+      clientFacingPlaceholderSuppressionAvailable: false,
+      mergedLeadContextContractAvailable: false,
+      clientFacingKnownSummaryBuilderAvailable: false,
+      fileStatusQuestionIntentAvailable: false,
+      floorplanStatusReplyAvailable: false,
+      knownContextPersistenceAcrossReplies: false,
+      shortPingUsesKnownContextAvailable: false,
+      internalPlaceholderNeverClientFacing: false,
       worldClassSalesConversationBrainAvailable: false,
       memoryFirstReplyComposerAvailable: false,
       knownInfoAcknowledgementBeforeQuestions: false,
