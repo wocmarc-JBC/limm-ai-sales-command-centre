@@ -1,5 +1,20 @@
 # AGENTS.md
 
+## LIMM WhatsApp Sales Agent Playbook
+
+For any WhatsApp reply-brain, sales-agent, lead-intake, conversation memory, client messaging, or CRM conversation logic work, read and follow:
+
+docs/LIMM_WHATSAPP_SALES_AGENT_PLAYBOOK_V5.md
+
+This playbook is the source of truth for LIMM WhatsApp agent behaviour.
+
+Hard rules:
+- Do not create competing reply composers.
+- Do not patch isolated reply symptoms without diagnosing root cause.
+- Use one sales-move planner.
+- Build replay tests from the playbook before changing live reply behaviour.
+- Do not implement behaviour that conflicts with the playbook.
+
 ## Project
 
 LIMM AI Sales Command Centre v3 lives at:
