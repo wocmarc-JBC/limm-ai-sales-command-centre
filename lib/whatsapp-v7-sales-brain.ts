@@ -13,6 +13,7 @@ export const V7_WORLD_CLASS_SALES_BRAIN_VERSION = "v7_world_class_whatsapp_sales
 export const V7_1_MEMORY_CONTRACT_VERSION = "v7_1_whatsapp_conversation_memory_contract_fix";
 export const V7_2_SINGLE_REPLY_PLANNER_VERSION = "v7_2_single_reply_planner_playbook_v5";
 export const V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION = "v7_2_1_context_aware_next_item_client_name_rule";
+export const V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION = "v7_2_2_price_reply_uses_known_context";
 
 export type V7WhatsAppIntent =
   | "greeting"
@@ -127,7 +128,7 @@ export interface V7WhatsAppSalesBrainInput {
 }
 
 export interface V7WhatsAppSalesBrainDecision {
-  version: typeof V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION;
+  version: typeof V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION;
   shouldReply: boolean;
   replyText: string;
   intents: V7WhatsAppIntent[];
@@ -549,6 +550,28 @@ function isSeriousLandedAa(context: NormalizedWhatsAppLeadContext) {
   );
 }
 
+function isKnownLandedAa(context: NormalizedWhatsAppLeadContext) {
+  return Boolean(/landed/i.test(context.property_type) && isAAndA(context));
+}
+
+function shouldUseKnownLandedAaPriceContext(context: NormalizedWhatsAppLeadContext) {
+  return Boolean(
+    isKnownLandedAa(context) &&
+      (
+        context.floor_plan_received ||
+        context.site_photos_received ||
+        context.reference_images_received ||
+        context.property_address ||
+        context.property_area ||
+        context.postal_code ||
+        context.timeline ||
+        context.key_collection_date ||
+        context.move_in_date ||
+        context.budget_expectation
+      )
+  );
+}
+
 function isReviewReadySeriousLandedAa(context: NormalizedWhatsAppLeadContext) {
   return isSeriousLandedAa(context) && context.floor_plan_received;
 }
@@ -665,7 +688,7 @@ function playbookMissingFields(context: NormalizedWhatsAppLeadContext, planSeed:
 
   if (["confirm_file_status", "safe_price_reply", "route_to_portfolio", "clarify_confusion", "recover_from_mistake", "simple_acknowledgement", "handoff_to_team", "escalate_to_manager"].includes(planSeed.primaryMove)) {
     if (planSeed.primaryMove === "safe_price_reply") {
-      if (isSeriousLandedAa(context)) return seriousLandedAaNextItems();
+      if (shouldUseKnownLandedAaPriceContext(context)) return seriousLandedAaNextItems();
       return ["scope", "floor_plan", "site_photos", "design_references"].filter((field) => !fieldAlreadyKnown(context, field)).slice(0, planSeed.questionBudget);
     }
     if (planSeed.primaryMove === "route_to_portfolio" && isSeriousLandedAa(context)) {
@@ -694,7 +717,7 @@ function playbookMissingFields(context: NormalizedWhatsAppLeadContext, planSeed:
 
   return priority
     .filter((field) => !fieldAlreadyKnown(context, field))
-    .filter((field) => !(isSeriousLandedAa(context) && field === "scope"))
+    .filter((field) => !(isKnownLandedAa(context) && field === "scope"))
     .slice(0, planSeed.questionBudget);
 }
 
@@ -725,8 +748,8 @@ function fileStatusAnswerFor(context: NormalizedWhatsAppLeadContext) {
 
 function directAnswerFor(input: V7WhatsAppSalesBrainInput, intents: V7WhatsAppIntent[], primaryMove: V7PrimaryMove, context: NormalizedWhatsAppLeadContext) {
   if (primaryMove === "confirm_file_status") return fileStatusAnswerFor(context);
-  if (primaryMove === "safe_price_reply" && isSeriousLandedAa(context)) {
-    return "I understand you'd like a rough idea. For landed A&A works, the final amount depends heavily on the drawings, site condition, scope and material direction, so the team should review the floor plan and site photos first.";
+  if (primaryMove === "safe_price_reply" && shouldUseKnownLandedAaPriceContext(context)) {
+    return "I understand you'd like a rough idea. For landed A&A works, the team should review the floor plan, site photos, site condition and material direction first before advising.";
   }
   if (primaryMove === "safe_price_reply") return "I understand you'd like a rough idea. To avoid giving the wrong figure, the team needs to review the floor plan, site photos, scope and material direction first.";
   if (primaryMove === "collect_meeting_preference") {
@@ -795,7 +818,7 @@ export function planWhatsAppSalesReply(input: V7WhatsAppSalesBrainInput): {
     fieldAlreadyKnown(context, "floor_plan") ? "floor_plan" : "",
     fieldAlreadyKnown(context, "site_photos") ? "site_photos" : "",
     fieldAlreadyKnown(context, "design_references") ? "design_references" : "",
-    isSeriousLandedAa(context) ? "main_areas" : ""
+    isKnownLandedAa(context) ? "main_areas" : ""
   ].filter(Boolean);
   const directAnswer = directAnswerFor(input, intents, primaryMove, context);
   const plan: V7WhatsAppSalesReplyPlan = {
@@ -859,10 +882,14 @@ function nextUsefulFileLine(context: NormalizedWhatsAppLeadContext, tone: "portf
     return "We've received the floor plan, site photos and design references, so the team has enough key details to start reviewing.";
   }
   if (context.floor_plan_received && context.site_photos_received) {
-    return "We've received the floor plan and site photos, so any design references would be useful if available.";
+    return tone === "price"
+      ? "We've received the floor plan and site photos, so any design references would be useful next."
+      : "We've received the floor plan and site photos, so any design references would be useful if available.";
   }
   if (context.floor_plan_received) {
-    return "We've received your floor plan, so site photos or design references would be useful if available.";
+    return tone === "price"
+      ? "We've received the floor plan, so site photos and any design references would be useful next."
+      : "We've received your floor plan, so site photos or design references would be useful if available.";
   }
   if (context.site_photos_received) {
     return "We've received your site photos, so the floor plan or design references would be useful if available.";
@@ -925,7 +952,7 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
   }
 
   if (plan.primaryMove === "safe_price_reply") {
-    if (isSeriousLandedAa(context)) {
+    if (shouldUseKnownLandedAaPriceContext(context)) {
       const next = context.floor_plan_received
         ? nextUsefulFileLine(context, "price")
         : "Could you send the floor plan and site photos if available?";
@@ -1040,8 +1067,12 @@ export function judgeHumanFeel(reply: string, plan: V7WhatsAppSalesReplyPlan, co
     failReasons.push("absolute_fail_phrase");
     score = Math.min(score, 60);
   }
-  if (isSeriousLandedAa(context) && /\bmain areas|which areas\b/i.test(reply)) {
+  if (isKnownLandedAa(context) && /\bmain areas|which areas\b/i.test(reply)) {
     failReasons.push("serious_landed_aa_asked_main_areas");
+    score = Math.min(score, 60);
+  }
+  if (intents.includes("price_question") && shouldUseKnownLandedAaPriceContext(context) && /\bscope of work|main areas|areas involved\b/i.test(reply)) {
+    failReasons.push("known_landed_aa_price_asked_broad_scope");
     score = Math.min(score, 60);
   }
   if (intents.includes("provide_budget_expectation") && !intents.includes("price_question") && /^I understand you'd like a rough idea/i.test(reply)) {
@@ -1075,7 +1106,7 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
   const stage = determineStage(primary, context);
 
   return {
-    version: V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION,
+    version: V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION,
     shouldReply: input.autoReplyEnabled && Boolean(replyText),
     replyText,
     intents,
@@ -1089,13 +1120,16 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
     repeatedQuestionRisk: context.repeated_question_risk,
     context,
     trace: {
-      v7_version: V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION,
+      v7_version: V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION,
       v7PreviousVersion: V7_WORLD_CLASS_SALES_BRAIN_VERSION,
       v7MemoryContractVersion: V7_1_MEMORY_CONTRACT_VERSION,
       v7SingleReplyPlannerVersion: V7_2_SINGLE_REPLY_PLANNER_VERSION,
       worldClassSalesConversationBrainAvailable: true,
       playbookV5SingleReplyPlannerAvailable: true,
       contextAwareNextUsefulItemAvailable: true,
+      priceReplyUsesKnownContext: true,
+      priceReplyNoBroadScopeAskForSeriousLandedAa: true,
+      priceReplyDoesNotAskReceivedFiles: true,
       portfolioReplyUsesFileContext: true,
       priceReplyUsesKnownProjectContext: true,
       greetingKnownContextNatural: true,

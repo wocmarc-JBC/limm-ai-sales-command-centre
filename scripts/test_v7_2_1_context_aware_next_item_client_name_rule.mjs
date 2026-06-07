@@ -28,11 +28,12 @@ const activePlannerComposer = v7.slice(
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
 
 check(
-  "1. v7.2.1 version marker exists",
+  "1. v7.2.1 successor version marker exists",
   v7.includes('V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION = "v7_2_1_context_aware_next_item_client_name_rule"') &&
-    health.includes('version: "v7_2_1_context_aware_next_item_client_name_rule"') &&
-    health.includes('salesBrainVersion: "v7.2.1"'),
-  "Health must prove v7.2.1 after deploy."
+    v7.includes('V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION = "v7_2_2_price_reply_uses_known_context"') &&
+    health.includes('version: "v7_2_2_price_reply_uses_known_context"') &&
+    health.includes('salesBrainVersion: "v7.2.2"'),
+  "Health must prove the current v7.2.x refinement after deploy."
 );
 
 check(
@@ -52,9 +53,9 @@ check(
 
 check(
   "4. price after serious landed A&A + floor plan received does not ask broad scope",
-  v7.includes("if (primaryMove === \"safe_price_reply\" && isSeriousLandedAa(context))") &&
+  v7.includes("if (primaryMove === \"safe_price_reply\" && shouldUseKnownLandedAaPriceContext(context))") &&
     v7.includes("context.floor_plan_received") &&
-    /if \(isSeriousLandedAa\(context\)\) \{[\s\S]{0,260}nextUsefulFileLine\(context, "price"\)[\s\S]{0,180}return `\$\{plan\.directAnswer\}\\n\\n\$\{next\}`;/.test(activePlannerComposer),
+    /if \(shouldUseKnownLandedAaPriceContext\(context\)\) \{[\s\S]{0,260}nextUsefulFileLine\(context, "price"\)[\s\S]{0,180}return `\$\{plan\.directAnswer\}\\n\\n\$\{next\}`;/.test(activePlannerComposer),
   "Serious landed A&A already has scope context."
 );
 
@@ -114,7 +115,7 @@ check(
 
 check(
   "13. serious landed A&A does not ask broad scope/main areas by default",
-  v7.includes("!(isSeriousLandedAa(context) && field === \"scope\")") &&
+  v7.includes("!(isKnownLandedAa(context) && field === \"scope\")") &&
     v7.includes("serious_landed_aa_asked_main_areas") &&
     !/isSeriousLandedAa[\s\S]{0,1200}main areas involved/i.test(v7),
   "No broad scope/main areas for serious landed A&A."

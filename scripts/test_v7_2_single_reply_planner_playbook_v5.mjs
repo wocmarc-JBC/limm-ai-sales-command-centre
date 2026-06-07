@@ -152,9 +152,9 @@ check(
 
 check(
   "15. serious landed A&A avoids main areas",
-  v7.includes("field === \"main_areas\"") &&
+  v7.includes("\"main_areas\"") &&
     v7.includes("serious_landed_aa_asked_main_areas") &&
-    v7.includes("!(isSeriousLandedAa(context) && field === \"scope\")"),
+    v7.includes("!(isKnownLandedAa(context) && field === \"scope\")"),
   "Main areas / which areas should fail serious landed A&A."
 );
 

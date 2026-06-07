@@ -56,6 +56,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v7.2"
 // version: "v7_2_1_context_aware_next_item_client_name_rule"
 // salesBrainVersion: "v7.2.1"
+// version: "v7_2_2_price_reply_uses_known_context"
+// salesBrainVersion: "v7.2.2"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -79,10 +81,13 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v7_2_1_context_aware_next_item_client_name_rule",
-      salesBrainVersion: "v7.2.1",
+      version: "v7_2_2_price_reply_uses_known_context",
+      salesBrainVersion: "v7.2.2",
       runtime: "vercel",
       contextAwareNextUsefulItemAvailable: true,
+      priceReplyUsesKnownContext: true,
+      priceReplyNoBroadScopeAskForSeriousLandedAa: true,
+      priceReplyDoesNotAskReceivedFiles: true,
       portfolioReplyUsesFileContext: true,
       priceReplyUsesKnownProjectContext: true,
       greetingKnownContextNatural: true,
@@ -463,10 +468,13 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v7_2_1_context_aware_next_item_client_name_rule",
-      salesBrainVersion: "v7.2.1",
+      version: "v7_2_2_price_reply_uses_known_context",
+      salesBrainVersion: "v7.2.2",
       runtime: "vercel",
       contextAwareNextUsefulItemAvailable: false,
+      priceReplyUsesKnownContext: false,
+      priceReplyNoBroadScopeAskForSeriousLandedAa: false,
+      priceReplyDoesNotAskReceivedFiles: false,
       portfolioReplyUsesFileContext: false,
       priceReplyUsesKnownProjectContext: false,
       greetingKnownContextNatural: false,
