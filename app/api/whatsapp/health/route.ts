@@ -44,6 +44,9 @@ export const dynamic = "force-dynamic";
 // version: "v6_6_2_command_core_map_first_layout"
 // version: "v6_6_3_strategic_command_core_final_touchup"
 // version: "v6_7_real_client_file_upload_whatsapp_media_storage"
+// salesBrainVersion: "v6.7"
+// version: "v6_7_1_whatsapp_final_safety_false_positive_fix"
+// salesBrainVersion: "v6.7.1"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -67,9 +70,13 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v6_7_real_client_file_upload_whatsapp_media_storage",
-      salesBrainVersion: "v6.7",
+      version: "v6_7_1_whatsapp_final_safety_false_positive_fix",
+      salesBrainVersion: "v6.7.1",
       runtime: "vercel",
+      finalSafetyFalsePositiveFixAvailable: true,
+      safeFallbackFinalValidationAllowed: true,
+      ultraSafeFallbackRewriteAvailable: true,
+      finalValidationReasonLoggingAvailable: true,
       clientFileStorageAvailable: true,
       supabaseClientFilesBucketConfigured: Boolean(clientFilesStorage.bucketName),
       leadFilesTableAvailable: true,
@@ -402,9 +409,13 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v6_7_real_client_file_upload_whatsapp_media_storage",
-      salesBrainVersion: "v6.7",
+      version: "v6_7_1_whatsapp_final_safety_false_positive_fix",
+      salesBrainVersion: "v6.7.1",
       runtime: "vercel",
+      finalSafetyFalsePositiveFixAvailable: false,
+      safeFallbackFinalValidationAllowed: false,
+      ultraSafeFallbackRewriteAvailable: false,
+      finalValidationReasonLoggingAvailable: false,
       clientFileStorageAvailable: false,
       supabaseClientFilesBucketConfigured: false,
       leadFilesTableAvailable: false,

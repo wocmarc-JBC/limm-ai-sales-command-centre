@@ -19,7 +19,7 @@ import { processWhatsAppHandoffEmail } from "@/lib/handoff-email";
 import { storeWhatsAppMediaForLead } from "@/lib/whatsapp-media-storage";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
 import { buildWhatsAppReplyDecision, type WhatsAppReplyDecision } from "@/lib/whatsapp-reply-decision";
-import { validateWhatsAppAutoReply } from "@/lib/whatsapp-safety";
+import { validateWhatsAppAutoReply, WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY } from "@/lib/whatsapp-safety";
 
 export type WhatsAppInboundHandleResult = {
   providerMessageId: string;
@@ -436,7 +436,12 @@ export async function handleWhatsAppInboundMessage(
     providerMessageId
   });
   await auditReplyDecisionTrace({ leadId: lead.id, providerMessageId, decision });
-  const reply = decision.replyText;
+  let reply = decision.replyText;
+  const finalValidationFallbackEligible =
+    decision.shouldReply &&
+    (decision.replySource === "safe_fallback" ||
+      decision.noSilenceGuardResult === "used" ||
+      (decision.replySource as string) === "no_silence_fallback");
   const traceId = `${providerMessageId}:${lead.id}`;
   const handoffEmail = await processWhatsAppHandoffEmail({
     lead,
@@ -448,7 +453,7 @@ export async function handleWhatsAppInboundMessage(
     traceId
   });
   Object.assign(decision.blackBoxTrace, handoffEmail.trace);
-  const brainMetadata = {
+  let brainMetadata = {
     providerMessageId,
     ...decision.blackBoxTrace
   };
@@ -517,24 +522,79 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
-  logWhatsApp("whatsapp_auto_reply_validation_started", { providerMessageId, leadId: lead.id });
+  logWhatsApp("whatsapp_auto_reply_validation_started", {
+    providerMessageId,
+    leadId: lead.id,
+    replySource: decision.replySource,
+    intent: decision.intent,
+    characterCount: reply.length
+  });
   const calendarEventId = decision.calendarEventId ?? "";
-  const safety = validateWhatsAppAutoReply(reply, { calendarEventId });
+  let safety = validateWhatsAppAutoReply(reply, { calendarEventId });
+  if (!safety.ok && finalValidationFallbackEligible) {
+    logWhatsApp("whatsapp_auto_reply_fallback_rewrite_attempted", {
+      providerMessageId,
+      leadId: lead.id,
+      validationErrorCodes: safety.errorCodes,
+      validationErrorLabels: safety.errorLabels,
+      replySource: decision.replySource,
+      intent: decision.intent,
+      characterCount: reply.length
+    });
+    Object.assign(decision.blackBoxTrace, {
+      finalSafetyFallbackRewriteAttempted: true,
+      finalSafetyOriginalErrorCodes: safety.errorCodes,
+      finalSafetyOriginalErrorLabels: safety.errorLabels,
+      finalSafetyOriginalCharacterCount: reply.length
+    });
+    reply = WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY;
+    safety = validateWhatsAppAutoReply(reply, { calendarEventId });
+    Object.assign(decision.blackBoxTrace, {
+      finalSafetyFallbackRewriteUsed: safety.ok,
+      finalSafetyFallbackRewriteErrorCodes: safety.errorCodes,
+      finalSafetyFallbackRewriteErrorLabels: safety.errorLabels,
+      finalSafetyFallbackRewriteCharacterCount: reply.length
+    });
+    brainMetadata = {
+      providerMessageId,
+      ...decision.blackBoxTrace
+    };
+  }
   if (!safety.ok) {
-    logWhatsApp("whatsapp_auto_reply_blocked_unsafe", { providerMessageId, leadId: lead.id, errorCount: safety.errors.length });
+    logWhatsApp("whatsapp_auto_reply_blocked_unsafe", {
+      providerMessageId,
+      leadId: lead.id,
+      errorCount: safety.errors.length,
+      validationErrorCodes: safety.errorCodes,
+      validationErrorLabels: safety.errorLabels,
+      replySource: decision.replySource,
+      intent: decision.intent,
+      characterCount: reply.length
+    });
     await saveLeadMessage({
       leadId: lead.id,
       direction: "outbound",
       body: reply,
       safeToSend: false,
       whatsappStatus: "blocked",
-      metadata: { providerMessageId, safety, ...decision.blackBoxTrace }
+      metadata: {
+        providerMessageId,
+        validationErrorCodes: safety.errorCodes,
+        validationErrorLabels: safety.errorLabels,
+        safety,
+        ...decision.blackBoxTrace
+      }
     });
     await auditWhatsApp({
       action: "whatsapp_auto_reply_blocked_unsafe",
       leadId: lead.id,
       summary: "WhatsApp auto-reply blocked by safety validator.",
-      metadata: { ...brainMetadata, safety }
+      metadata: {
+        ...brainMetadata,
+        validationErrorCodes: safety.errorCodes,
+        validationErrorLabels: safety.errorLabels,
+        safety
+      }
     });
     return {
       providerMessageId,
@@ -544,7 +604,14 @@ export async function handleWhatsAppInboundMessage(
       reply
     };
   }
-  logWhatsApp("whatsapp_auto_reply_validation_passed", { providerMessageId, leadId: lead.id });
+  logWhatsApp("whatsapp_auto_reply_validation_passed", {
+    providerMessageId,
+    leadId: lead.id,
+    validationWarnings: safety.warningCodes,
+    replySource: decision.replySource,
+    intent: decision.intent,
+    characterCount: reply.length
+  });
 
   try {
     logWhatsApp("whatsapp_auto_reply_send_payload_summary", getWhatsAppSendPayloadSummary(senderPhone, reply));
