@@ -12,6 +12,7 @@ import {
 export const V7_WORLD_CLASS_SALES_BRAIN_VERSION = "v7_world_class_whatsapp_sales_brain";
 export const V7_1_MEMORY_CONTRACT_VERSION = "v7_1_whatsapp_conversation_memory_contract_fix";
 export const V7_2_SINGLE_REPLY_PLANNER_VERSION = "v7_2_single_reply_planner_playbook_v5";
+export const V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION = "v7_2_1_context_aware_next_item_client_name_rule";
 
 export type V7WhatsAppIntent =
   | "greeting"
@@ -104,6 +105,9 @@ export interface V7WhatsAppSalesReplyPlan {
   handoffRecommended: boolean;
   replyLengthTier: "tier_1" | "tier_2" | "tier_3" | "tier_4";
   safetyNotes: string[];
+  clientNameKnown: boolean;
+  shouldAskClientName: boolean;
+  clientNamePrompt: string;
 }
 
 export interface V7HumanFeelJudgement {
@@ -123,7 +127,7 @@ export interface V7WhatsAppSalesBrainInput {
 }
 
 export interface V7WhatsAppSalesBrainDecision {
-  version: typeof V7_2_SINGLE_REPLY_PLANNER_VERSION;
+  version: typeof V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION;
   shouldReply: boolean;
   replyText: string;
   intents: V7WhatsAppIntent[];
@@ -183,7 +187,7 @@ export function detectV7WhatsAppIntents(text: string, type: string, context: Nor
   if (has(text, /\b(i already told you|i said already|i told you already|already told you|already sent|already mentioned)\b/i)) add("already_told_you");
   if (isConfusionPingText(text)) add("confusion_ping");
   if (isShortPingText(text)) add("short_ping");
-  if (has(normalized, /\b(hello|hi|good morning|good afternoon)\b/i) && normalized.length <= 80) add("greeting");
+  if (has(normalized, /\b(hello|hi|hey|good morning|good afternoon)\b/i) && normalized.length <= 80) add("greeting");
   if (isBudgetStatementText(text) || has(normalized, /\b(set aside|budget expectation|budget around|my budget|budget 500k|budget 80k|budget 120k)\b/i)) add("provide_budget_expectation");
   if (!intents.includes("provide_budget_expectation") && has(normalized, /\b(how much|roughly how much|price|cost|estimate|quote|quotation|package)\b/i)) add("price_question");
   if (has(normalized, /\b(appt|appointment|meeting|meet|site visit|come down|slot|available|wed|wednesday|tomorrow|next available)\b/i)) add("appointment_request");
@@ -545,6 +549,39 @@ function isSeriousLandedAa(context: NormalizedWhatsAppLeadContext) {
   );
 }
 
+function isReviewReadySeriousLandedAa(context: NormalizedWhatsAppLeadContext) {
+  return isSeriousLandedAa(context) && context.floor_plan_received;
+}
+
+function hasUsableClientName(name: string | null | undefined) {
+  const trimmed = String(name ?? "").trim();
+  if (!trimmed) return false;
+  if (/^\+?\d[\d\s-]{5,}$/.test(trimmed)) return false;
+  if (/\b(unknown|test|demo|sample|whatsapp|lead|client|customer|no name|n\/a)\b/i.test(trimmed)) return false;
+  return /[a-z]/i.test(trimmed);
+}
+
+function whatsappProfileNameFromHistory(messages: LeadMessage[]) {
+  for (const message of messages) {
+    const metadata = message.metadata ?? {};
+    const candidates = [
+      metadata.profile_name,
+      metadata.profileName,
+      metadata.whatsappProfileName,
+      metadata.contactName,
+      metadata.senderName,
+      metadata.fromName
+    ];
+    const usable = candidates.find((candidate) => typeof candidate === "string" && hasUsableClientName(candidate));
+    if (typeof usable === "string") return usable;
+  }
+  return "";
+}
+
+function clientNameKnown(input: V7WhatsAppSalesBrainInput) {
+  return hasUsableClientName(input.lead.clientName) || hasUsableClientName(whatsappProfileNameFromHistory(input.previousMessages));
+}
+
 function classifyClientState(intents: V7WhatsAppIntent[]): V7ClientState {
   if (intents.includes("already_told_you") || intents.includes("complaint_or_frustration")) return "annoyed";
   if (intents.includes("confusion_ping")) return "confused";
@@ -615,9 +652,24 @@ function playbookMissingFields(context: NormalizedWhatsAppLeadContext, planSeed:
   leadSeriousness: V7LeadSeriousness;
   questionBudget: number;
 }) {
+  const seriousLandedAaNextItems = () => {
+    const priority = !context.floor_plan_received
+      ? ["floor_plan", "site_photos", "design_references"]
+      : !context.site_photos_received
+        ? ["site_photos", "design_references"]
+        : !context.reference_images_received
+          ? ["design_references", "lifestyle"]
+          : ["meeting_timing"];
+    return priority.filter((field) => !fieldAlreadyKnown(context, field)).slice(0, planSeed.questionBudget);
+  };
+
   if (["confirm_file_status", "safe_price_reply", "route_to_portfolio", "clarify_confusion", "recover_from_mistake", "simple_acknowledgement", "handoff_to_team", "escalate_to_manager"].includes(planSeed.primaryMove)) {
     if (planSeed.primaryMove === "safe_price_reply") {
+      if (isSeriousLandedAa(context)) return seriousLandedAaNextItems();
       return ["scope", "floor_plan", "site_photos", "design_references"].filter((field) => !fieldAlreadyKnown(context, field)).slice(0, planSeed.questionBudget);
+    }
+    if (planSeed.primaryMove === "route_to_portfolio" && isSeriousLandedAa(context)) {
+      return seriousLandedAaNextItems();
     }
     if (planSeed.primaryMove === "clarify_confusion" || planSeed.primaryMove === "recover_from_mistake") {
       return ["floor_plan", "site_photos", "design_references"].filter((field) => !fieldAlreadyKnown(context, field)).slice(0, planSeed.questionBudget);
@@ -627,7 +679,7 @@ function playbookMissingFields(context: NormalizedWhatsAppLeadContext, planSeed:
 
   let priority: string[] = [];
   if (isSeriousLandedAa(context)) {
-    priority = ["floor_plan", "site_photos", "design_references", "lifestyle", "meeting_timing"];
+    priority = seriousLandedAaNextItems();
   } else if (planSeed.primaryMove === "collect_meeting_preference") {
     priority = ["property_type", "scope", "address_or_area", "floor_plan", "site_photos"];
   } else if (planSeed.primaryMove === "collect_design_lifestyle_info") {
@@ -673,6 +725,9 @@ function fileStatusAnswerFor(context: NormalizedWhatsAppLeadContext) {
 
 function directAnswerFor(input: V7WhatsAppSalesBrainInput, intents: V7WhatsAppIntent[], primaryMove: V7PrimaryMove, context: NormalizedWhatsAppLeadContext) {
   if (primaryMove === "confirm_file_status") return fileStatusAnswerFor(context);
+  if (primaryMove === "safe_price_reply" && isSeriousLandedAa(context)) {
+    return "I understand you'd like a rough idea. For landed A&A works, the final amount depends heavily on the drawings, site condition, scope and material direction, so the team should review the floor plan and site photos first.";
+  }
   if (primaryMove === "safe_price_reply") return "I understand you'd like a rough idea. To avoid giving the wrong figure, the team needs to review the floor plan, site photos, scope and material direction first.";
   if (primaryMove === "collect_meeting_preference") {
     const timing = extractPreferredTiming(input.inboundMessageText, context);
@@ -718,6 +773,19 @@ export function planWhatsAppSalesReply(input: V7WhatsAppSalesBrainInput): {
   const patience = detectClientPatience(input.inboundMessageText, intents);
   const questionBudget = patience !== "normal" ? 1 : selectQuestionBudget(clientState, leadStage, leadSeriousness);
   const missingInfoToAsk = playbookMissingFields(context, { primaryMove, leadStage, leadSeriousness, questionBudget });
+  const hasClientName = clientNameKnown(input);
+  const shouldAskClientName =
+    !hasClientName &&
+    patience === "normal" &&
+    !["clarify_confusion", "recover_from_mistake", "greet", "simple_acknowledgement"].includes(primaryMove) &&
+    (
+      leadStage === "serious_project" ||
+      leadStage === "files_received" ||
+      leadStage === "meeting_ready" ||
+      leadStage === "handoff_needed" ||
+      leadSeriousness === "premium" ||
+      primaryMove === "collect_meeting_preference"
+    );
   const forbiddenFieldsToAskAgain = [
     fieldAlreadyKnown(context, "property_type") ? "property_type" : "",
     fieldAlreadyKnown(context, "address_or_area") ? "address_or_area" : "",
@@ -758,7 +826,10 @@ export function planWhatsAppSalesReply(input: V7WhatsAppSalesBrainInput): {
       "No pricing, ranges or package amounts.",
       "No appointment confirmation without a calendar event.",
       "No approval, hacking, structural or timeline guarantees."
-    ]
+    ],
+    clientNameKnown: hasClientName,
+    shouldAskClientName,
+    clientNamePrompt: shouldAskClientName ? "May I also have your name so the team can record the enquiry properly?" : ""
   };
   return { plan, intents, primaryIntent: primary, context };
 }
@@ -779,7 +850,57 @@ function askSentence(fields: string[], context: NormalizedWhatsAppLeadContext) {
     return `It would also help to know ${lifestyle}, so the team can consider layout, safety, storage and material direction.`;
   }
   const prefix = isSeriousLandedAa(context) ? "Could you send" : "Could you share";
-  return `${prefix} the ${readableList(labels)} if available for an initial project review?`;
+  const suffix = isSeriousLandedAa(context) ? "so the team can review from there" : "for an initial project review";
+  return `${prefix} the ${readableList(labels)} if available ${suffix}?`;
+}
+
+function nextUsefulFileLine(context: NormalizedWhatsAppLeadContext, tone: "portfolio" | "price" | "general" = "general") {
+  if (context.floor_plan_received && context.site_photos_received && context.reference_images_received) {
+    return "We've received the floor plan, site photos and design references, so the team has enough key details to start reviewing.";
+  }
+  if (context.floor_plan_received && context.site_photos_received) {
+    return "We've received the floor plan and site photos, so any design references would be useful if available.";
+  }
+  if (context.floor_plan_received) {
+    return "We've received your floor plan, so site photos or design references would be useful if available.";
+  }
+  if (context.site_photos_received) {
+    return "We've received your site photos, so the floor plan or design references would be useful if available.";
+  }
+  if (tone === "portfolio") {
+    return "You can also send your floor plan or site photos when available, and the team can review from there.";
+  }
+  return "Could you send the floor plan and site photos if available?";
+}
+
+function reviewReadyLine(context: NormalizedWhatsAppLeadContext) {
+  if (!isReviewReadySeriousLandedAa(context)) return "";
+  if (context.site_photos_received && context.reference_images_received) {
+    return "We have enough key details for the team to start reviewing. The team can already review the floor plan, site photos, references and project details.";
+  }
+  return `We have enough key details for the team to start reviewing. ${nextUsefulFileLine(context, "general")}`;
+}
+
+function withClientNamePrompt(reply: string, plan: V7WhatsAppSalesReplyPlan) {
+  const trimmed = reply.trim();
+  if (!plan.shouldAskClientName || !plan.clientNamePrompt) return trimmed;
+  if (trimmed.includes(plan.clientNamePrompt)) return trimmed;
+  return `${trimmed}\n\n${plan.clientNamePrompt}`;
+}
+
+function dedupeInitialProjectReview(reply: string) {
+  let seen = false;
+  return reply.replace(/\binitial project review\b/gi, (match) => {
+    if (!seen) {
+      seen = true;
+      return match;
+    }
+    return "project review";
+  });
+}
+
+function finalisePlannerReply(reply: string, plan: V7WhatsAppSalesReplyPlan) {
+  return dedupeInitialProjectReview(withClientNamePrompt(reply, plan));
 }
 
 export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7WhatsAppSalesBrainInput, context: NormalizedWhatsAppLeadContext, intents: V7WhatsAppIntent[]) {
@@ -804,6 +925,12 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
   }
 
   if (plan.primaryMove === "safe_price_reply") {
+    if (isSeriousLandedAa(context)) {
+      const next = context.floor_plan_received
+        ? nextUsefulFileLine(context, "price")
+        : "Could you send the floor plan and site photos if available?";
+      return `${plan.directAnswer}\n\n${next}`;
+    }
     if (context.scope_summary || context.floor_plan_received || context.budget_expectation) {
       const known = knownFull ? ` Thanks, we've noted your ${knownFull}.` : "";
       const followUp = ask ? ` ${ask}` : " The team can go through this properly during the initial project review.";
@@ -820,9 +947,7 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
   }
 
   if (plan.primaryMove === "route_to_portfolio") {
-    const tailored = knownShort
-      ? `\n\nSince you're looking at ${knownShort}, the team can also point you to more relevant examples based on your scope. Final design and scope still depend on your site condition, drawings and requirements.`
-      : "\n\nYou can also send your floor plan or site photos, and the team can review the next step for your project.";
+    const tailored = `\n\n${nextUsefulFileLine(context, "portfolio")}`;
     return `${plan.directAnswer}${tailored}`;
   }
 
@@ -846,6 +971,10 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
   }
 
   if (plan.primaryMove === "simple_acknowledgement") {
+    if (/^\s*(hello|hi|hey)\??\s*$/i.test(input.inboundMessageText) && knownShort) {
+      const next = ask ? ` ${ask}` : "";
+      return `Hi, yes we're here. We have your ${knownShort} noted.${next}`;
+    }
     if (/^\s*ok\?\s*$/i.test(input.inboundMessageText) && knownShort) {
       const next = ask || "You can send the floor plan, site photos or design references when available.";
       return `Yes, noted. We have your ${knownShort} recorded. ${next}`;
@@ -858,7 +987,7 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
   }
 
   if (plan.primaryMove === "greet") {
-    if (knownShort) return `Hi, yes we're here. We have your ${knownShort} noted. ${ask || "The team can review the next step for an initial project review."}`;
+    if (knownShort) return `Hi, yes we're here. We have your ${knownShort} noted.${ask ? ` ${ask}` : ""}`;
     return "Hi, yes we're here. Could you share the property type, what kind of renovation you're planning, and whether you have a floor plan or site photos available?";
   }
 
@@ -868,7 +997,7 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
 
   if (isSeriousLandedAa(context)) {
     const summary = knownFull || "landed A&A enquiry";
-    const next = ask || "The team can review the details shared so far and advise the next step for an initial project review.";
+    const next = reviewReadyLine(context) || ask || "The team can review the details shared so far and advise the next step.";
     return `Thanks, noted. This is a ${summary}.\n\n${next}`;
   }
 
@@ -925,27 +1054,28 @@ export function judgeHumanFeel(reply: string, plan: V7WhatsAppSalesReplyPlan, co
 
 export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSalesBrainInput): V7WhatsAppSalesBrainDecision {
   const { plan, intents, primaryIntent: primary, context } = planWhatsAppSalesReply(input);
-  let replyText = composeReplyFromPlan(plan, input, context, intents).trim();
+  let replyText = finalisePlannerReply(composeReplyFromPlan(plan, input, context, intents), plan).trim();
   let humanFeel = judgeHumanFeel(replyText, plan, context, intents);
   if (!humanFeel.passed) {
-    replyText = composeReplyFromPlan(
-      {
+    const rewritePlan: V7WhatsAppSalesReplyPlan = {
         ...plan,
         questionBudget: Math.min(plan.questionBudget, plan.leadSeriousness === "premium" ? 2 : 1),
         missingInfoToAsk: plan.missingInfoToAsk.slice(0, Math.min(plan.missingInfoToAsk.length, plan.leadSeriousness === "premium" ? 2 : 1)),
         replyLengthTier: "tier_2"
-      },
+      };
+    replyText = finalisePlannerReply(composeReplyFromPlan(
+      rewritePlan,
       input,
       context,
       intents
-    ).trim();
+    ), rewritePlan).trim();
     humanFeel = judgeHumanFeel(replyText, plan, context, intents);
   }
   const askedFields = fieldsAskedInReply(replyText);
   const stage = determineStage(primary, context);
 
   return {
-    version: V7_2_SINGLE_REPLY_PLANNER_VERSION,
+    version: V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION,
     shouldReply: input.autoReplyEnabled && Boolean(replyText),
     replyText,
     intents,
@@ -959,11 +1089,20 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
     repeatedQuestionRisk: context.repeated_question_risk,
     context,
     trace: {
-      v7_version: V7_2_SINGLE_REPLY_PLANNER_VERSION,
+      v7_version: V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION,
       v7PreviousVersion: V7_WORLD_CLASS_SALES_BRAIN_VERSION,
       v7MemoryContractVersion: V7_1_MEMORY_CONTRACT_VERSION,
+      v7SingleReplyPlannerVersion: V7_2_SINGLE_REPLY_PLANNER_VERSION,
       worldClassSalesConversationBrainAvailable: true,
       playbookV5SingleReplyPlannerAvailable: true,
+      contextAwareNextUsefulItemAvailable: true,
+      portfolioReplyUsesFileContext: true,
+      priceReplyUsesKnownProjectContext: true,
+      greetingKnownContextNatural: true,
+      clientNameRuleAvailable: true,
+      reviewReadyStopAskingRefinementAvailable: true,
+      receivedFilesNotAskedAgain: true,
+      seriousLandedAaNoBroadScopeAsk: true,
       salesMomentClassifierAvailable: true,
       clientPatienceDetectorAvailable: true,
       leadSeriousnessScorerAvailable: true,
@@ -999,6 +1138,9 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
       questionBudget: plan.questionBudget,
       missingInfoToAsk: plan.missingInfoToAsk,
       forbiddenFieldsToAskAgain: plan.forbiddenFieldsToAskAgain,
+      clientNameKnown: plan.clientNameKnown,
+      shouldAskClientName: plan.shouldAskClientName,
+      clientNamePromptAdded: Boolean(plan.clientNamePrompt && replyText.includes(plan.clientNamePrompt)),
       fileStatusAnswer: plan.fileStatusAnswer,
       handoffRecommended: plan.handoffRecommended,
       replyLengthTier: plan.replyLengthTier,

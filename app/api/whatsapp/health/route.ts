@@ -54,6 +54,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v7.1"
 // version: "v7_2_single_reply_planner_playbook_v5"
 // salesBrainVersion: "v7.2"
+// version: "v7_2_1_context_aware_next_item_client_name_rule"
+// salesBrainVersion: "v7.2.1"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -77,9 +79,17 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v7_2_single_reply_planner_playbook_v5",
-      salesBrainVersion: "v7.2",
+      version: "v7_2_1_context_aware_next_item_client_name_rule",
+      salesBrainVersion: "v7.2.1",
       runtime: "vercel",
+      contextAwareNextUsefulItemAvailable: true,
+      portfolioReplyUsesFileContext: true,
+      priceReplyUsesKnownProjectContext: true,
+      greetingKnownContextNatural: true,
+      clientNameRuleAvailable: true,
+      reviewReadyStopAskingRefinementAvailable: true,
+      receivedFilesNotAskedAgain: true,
+      seriousLandedAaNoBroadScopeAsk: true,
       playbookV5SingleReplyPlannerAvailable: true,
       salesMomentClassifierAvailable: true,
       clientPatienceDetectorAvailable: true,
@@ -453,9 +463,17 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v7_2_single_reply_planner_playbook_v5",
-      salesBrainVersion: "v7.2",
+      version: "v7_2_1_context_aware_next_item_client_name_rule",
+      salesBrainVersion: "v7.2.1",
       runtime: "vercel",
+      contextAwareNextUsefulItemAvailable: false,
+      portfolioReplyUsesFileContext: false,
+      priceReplyUsesKnownProjectContext: false,
+      greetingKnownContextNatural: false,
+      clientNameRuleAvailable: false,
+      reviewReadyStopAskingRefinementAvailable: false,
+      receivedFilesNotAskedAgain: false,
+      seriousLandedAaNoBroadScopeAsk: false,
       playbookV5SingleReplyPlannerAvailable: false,
       salesMomentClassifierAvailable: false,
       clientPatienceDetectorAvailable: false,

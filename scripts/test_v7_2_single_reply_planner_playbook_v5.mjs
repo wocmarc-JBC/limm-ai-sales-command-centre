@@ -141,7 +141,10 @@ check(
 check(
   "14. serious landed A&A rule available",
   v7.includes("function isSeriousLandedAa") &&
-    v7.includes("floor_plan\", \"site_photos\", \"design_references\", \"lifestyle\", \"meeting_timing") &&
+    v7.includes("seriousLandedAaNextItems") &&
+    v7.includes("floor_plan\", \"site_photos\", \"design_references") &&
+    v7.includes("design_references\", \"lifestyle") &&
+    v7.includes("meeting_timing") &&
     v7.includes("seriousLandedAaRuleAvailable: true") &&
     health.includes("seriousLandedAaRuleAvailable: true"),
   "Serious landed A&A should move to files/references/lifestyle/meeting."
