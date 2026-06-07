@@ -11,6 +11,7 @@ import {
 
 export const V7_WORLD_CLASS_SALES_BRAIN_VERSION = "v7_world_class_whatsapp_sales_brain";
 export const V7_1_MEMORY_CONTRACT_VERSION = "v7_1_whatsapp_conversation_memory_contract_fix";
+export const V7_2_SINGLE_REPLY_PLANNER_VERSION = "v7_2_single_reply_planner_playbook_v5";
 
 export type V7WhatsAppIntent =
   | "greeting"
@@ -21,6 +22,8 @@ export type V7WhatsAppIntent =
   | "appointment_request"
   | "design_question"
   | "portfolio_request"
+  | "hacking_question"
+  | "approval_question"
   | "file_or_media_sent"
   | "file_status_question"
   | "floorplan_status_question"
@@ -45,6 +48,71 @@ export type V7ConversationStage =
   | "human_review_needed"
   | "short_recovery";
 
+export type V7PlaybookLeadStage =
+  | "new_unknown"
+  | "project_identified"
+  | "serious_project"
+  | "files_requested"
+  | "files_received"
+  | "meeting_ready"
+  | "handoff_needed"
+  | "nurture_follow_up";
+
+export type V7ClientState =
+  | "curious"
+  | "serious"
+  | "price_checking"
+  | "file_checking"
+  | "ready_to_meet"
+  | "confused"
+  | "annoyed"
+  | "high_risk_of_dropoff";
+
+export type V7ClientPatience = "normal" | "slightly_confused" | "annoyed" | "high_risk_of_dropoff";
+
+export type V7LeadSeriousness = "low" | "medium" | "serious" | "premium";
+
+export type V7PrimaryMove =
+  | "greet"
+  | "acknowledge_details"
+  | "answer_direct_question"
+  | "confirm_file_status"
+  | "safe_price_reply"
+  | "request_files"
+  | "collect_meeting_preference"
+  | "collect_design_lifestyle_info"
+  | "route_to_portfolio"
+  | "clarify_confusion"
+  | "recover_from_mistake"
+  | "handoff_to_team"
+  | "escalate_to_manager"
+  | "simple_acknowledgement";
+
+export interface V7WhatsAppSalesReplyPlan {
+  salesMoment: string;
+  clientState: V7ClientState;
+  leadStage: V7PlaybookLeadStage;
+  leadSeriousness: V7LeadSeriousness;
+  primaryMove: V7PrimaryMove;
+  knownFactsSummary: string;
+  directAnswer: string;
+  shouldAskQuestions: boolean;
+  questionBudget: number;
+  missingInfoToAsk: string[];
+  forbiddenFieldsToAskAgain: string[];
+  fileStatusAnswer: string;
+  handoffRecommended: boolean;
+  replyLengthTier: "tier_1" | "tier_2" | "tier_3" | "tier_4";
+  safetyNotes: string[];
+}
+
+export interface V7HumanFeelJudgement {
+  score: number;
+  passed: boolean;
+  minimumScore: number;
+  failReasons: string[];
+}
+
 export interface V7WhatsAppSalesBrainInput {
   inboundMessageText: string;
   inboundMessageType: string;
@@ -55,7 +123,7 @@ export interface V7WhatsAppSalesBrainInput {
 }
 
 export interface V7WhatsAppSalesBrainDecision {
-  version: typeof V7_1_MEMORY_CONTRACT_VERSION;
+  version: typeof V7_2_SINGLE_REPLY_PLANNER_VERSION;
   shouldReply: boolean;
   replyText: string;
   intents: V7WhatsAppIntent[];
@@ -121,6 +189,8 @@ export function detectV7WhatsAppIntents(text: string, type: string, context: Nor
   if (has(normalized, /\b(appt|appointment|meeting|meet|site visit|come down|slot|available|wed|wednesday|tomorrow|next available)\b/i)) add("appointment_request");
   if (has(normalized, /\b(design theme|design concept|design direction|design ideas?|style|moodboard|japandi|modern luxury|minimalist)\b/i)) add("design_question");
   if (has(normalized, /\b(past works?|past projects?|project photos?|portfolio|before after|before and after|show me your work|can see your work|got landed photo|completed project)\b/i)) add("portfolio_request");
+  if (has(normalized, /\b(hack|hacking|wall hacking|demolish|demolition|remove wall|wall)\b/i)) add("hacking_question");
+  if (has(normalized, /\b(approval|permit|submission|ura|bca|approve|pass)\b/i)) add("approval_question");
   if (has(normalized, /\b(landed|condo|hdb|commercial|office|clinic|shop|renovation|reno|a a|aa works|a&a|addition and alteration|kitchen|bathroom|carpentry|hacking|full house|whole house)\b/i)) add("provide_project_details");
   if (has(normalized, /\b(i want to renovate|want to do|can help with house|reno landed can)\b/i)) add("renovation_enquiry");
   if (has(normalized, /\b(refund|lawyer|complaint|unhappy|cancel project|paid deposit|urgent|call me|start project)\b/i)) {
@@ -149,6 +219,8 @@ function primaryIntent(intents: V7WhatsAppIntent[]) {
     "provide_budget_expectation",
     "design_question",
     "portfolio_request",
+    "hacking_question",
+    "approval_question",
     "provide_project_details",
     "file_or_media_sent",
     "follow_up_ping",
@@ -167,6 +239,7 @@ function determineStage(intent: V7WhatsAppIntent, context: NormalizedWhatsAppLea
   if (intent === "appointment_request") return "appointment_preference_collection";
   if (intent === "design_question") return "design_discussion";
   if (intent === "portfolio_request") return "portfolio_routing";
+  if (intent === "hacking_question" || intent === "approval_question") return "human_review_needed";
   if (intent === "provide_budget_expectation") return "budget_expectation_given";
   if (context.known_facts_summary) return "context_confirmed";
   return "context_collection";
@@ -412,6 +485,8 @@ function salesMoveFor(primary: V7WhatsAppIntent) {
     appointment_request: "collect_preferred_timing_without_confirmation",
     design_question: "answer_design_direction_and_request_references",
     portfolio_request: "route_to_instagram_portfolio",
+    hacking_question: "technical_caution_and_collect_drawings",
+    approval_question: "authority_caution_and_collect_scope",
     file_or_media_sent: "acknowledge_file_context",
     file_status_question: "answer_file_status_question",
     floorplan_status_question: "answer_floorplan_status_question",
@@ -439,7 +514,196 @@ function fieldsAskedInReply(reply: string) {
   ].filter(Boolean);
 }
 
-export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSalesBrainInput): V7WhatsAppSalesBrainDecision {
+function playbookKnownSummary(context: NormalizedWhatsAppLeadContext, mode: "short" | "full" = "full") {
+  const summary = buildClientFacingKnownSummary(context)
+    .replace(/,\s+with A&A works/i, " for A&A works")
+    .replace(/,\s+with aa works/i, " for A&A works")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!summary || /pending review|unknown|not provided|This is a at|This is with/i.test(summary)) return "";
+  if (mode === "short") {
+    const location = context.property_address || context.property_area || context.postal_code;
+    if (context.property_type && /a&a|aa works|addition and alteration/i.test(context.scope_summary) && location) {
+      return `${context.property_type} A&A enquiry at ${location}`;
+    }
+    if (context.property_type && location) return `${context.property_type} enquiry at ${location}`;
+    return summary;
+  }
+  return summary;
+}
+
+function isAAndA(context: NormalizedWhatsAppLeadContext) {
+  return /a&a|aa works|a a works|addition and alteration/i.test(context.scope_summary || context.renovation_type);
+}
+
+function isSeriousLandedAa(context: NormalizedWhatsAppLeadContext) {
+  return Boolean(
+    /landed/i.test(context.property_type) &&
+      isAAndA(context) &&
+      (context.property_address || context.property_area || context.postal_code) &&
+      (context.timeline || context.key_collection_date || context.move_in_date || context.budget_expectation)
+  );
+}
+
+function classifyClientState(intents: V7WhatsAppIntent[]): V7ClientState {
+  if (intents.includes("already_told_you") || intents.includes("complaint_or_frustration")) return "annoyed";
+  if (intents.includes("confusion_ping")) return "confused";
+  if (intents.includes("price_question")) return "price_checking";
+  if (intents.includes("file_status_question") || intents.includes("floorplan_status_question") || intents.includes("media_status_question")) return "file_checking";
+  if (intents.includes("appointment_request")) return "ready_to_meet";
+  if (intents.includes("provide_budget_expectation") || intents.includes("provide_project_details") || intents.includes("file_or_media_sent")) return "serious";
+  return "curious";
+}
+
+function detectClientPatience(text: string, intents: V7WhatsAppIntent[]): V7ClientPatience {
+  if (has(text, /\b(i already told you|you asked already|why you ask again|i said already|already told you)\b/i)) return "annoyed";
+  if (has(text, /\?\?\??|huh|unclear/i) || intents.includes("confusion_ping")) return "slightly_confused";
+  if (has(text, /\b(can reply|any update|are you there)\b/i)) return "slightly_confused";
+  return "normal";
+}
+
+function scoreLeadSeriousness(context: NormalizedWhatsAppLeadContext, intents: V7WhatsAppIntent[]): V7LeadSeriousness {
+  if (isSeriousLandedAa(context)) return "premium";
+  const score = [
+    /landed|commercial/i.test(context.property_type) ? 1 : 0,
+    isAAndA(context) ? 1 : 0,
+    context.property_address || context.property_area || context.postal_code ? 1 : 0,
+    context.budget_expectation ? 1 : 0,
+    context.timeline || context.key_collection_date || context.move_in_date ? 1 : 0,
+    context.floor_plan_received || context.site_photos_received || context.reference_images_received ? 1 : 0,
+    intents.includes("appointment_request") ? 1 : 0
+  ].reduce((total, item) => total + item, 0);
+  if (score >= 4) return "serious";
+  if (score >= 2) return "medium";
+  return "low";
+}
+
+function classifyLeadStage(context: NormalizedWhatsAppLeadContext, intents: V7WhatsAppIntent[], seriousness: V7LeadSeriousness): V7PlaybookLeadStage {
+  if (intents.includes("complaint_or_frustration") || intents.includes("human_takeover_request")) return "handoff_needed";
+  if (context.floor_plan_received || context.site_photos_received || context.reference_images_received) return "files_received";
+  if (intents.includes("appointment_request") && (context.property_type || context.scope_summary || context.property_address)) return "meeting_ready";
+  if (seriousness === "premium" || seriousness === "serious") return "serious_project";
+  if (context.last_bot_asked_fields.includes("floor_plan") || context.last_bot_asked_fields.includes("site_photos")) return "files_requested";
+  if (context.known_facts_summary) return "project_identified";
+  return "new_unknown";
+}
+
+function fieldAlreadyKnown(context: NormalizedWhatsAppLeadContext, field: string) {
+  if (field === "property_type") return Boolean(context.property_type);
+  if (field === "scope") return Boolean(context.scope_summary);
+  if (field === "floor_plan") return context.floor_plan_received;
+  if (field === "site_photos") return context.site_photos_received;
+  if (field === "address_or_area") return Boolean(context.property_address || context.property_area || context.postal_code);
+  if (field === "design_references") return context.reference_images_received;
+  if (field === "timeline") return Boolean(context.timeline || context.key_collection_date || context.move_in_date);
+  if (field === "budget_expectation") return Boolean(context.budget_expectation);
+  if (field === "lifestyle") return Boolean(context.occupants_summary || context.lifestyle_needs.length || context.children_present || context.elderly_present || context.helper_present || context.pets_present);
+  if (field === "meeting_timing") return Boolean(context.preferred_meeting_time);
+  return false;
+}
+
+function selectQuestionBudget(state: V7ClientState, stage: V7PlaybookLeadStage, seriousness: V7LeadSeriousness) {
+  if (state === "annoyed" || state === "confused" || state === "file_checking" || state === "ready_to_meet") return 1;
+  if (seriousness === "premium" || seriousness === "serious" || stage === "serious_project" || stage === "files_received") return 2;
+  if (stage === "new_unknown") return 4;
+  return 3;
+}
+
+function playbookMissingFields(context: NormalizedWhatsAppLeadContext, planSeed: {
+  primaryMove: V7PrimaryMove;
+  leadStage: V7PlaybookLeadStage;
+  leadSeriousness: V7LeadSeriousness;
+  questionBudget: number;
+}) {
+  if (["confirm_file_status", "safe_price_reply", "route_to_portfolio", "clarify_confusion", "recover_from_mistake", "simple_acknowledgement", "handoff_to_team", "escalate_to_manager"].includes(planSeed.primaryMove)) {
+    if (planSeed.primaryMove === "safe_price_reply") {
+      return ["scope", "floor_plan", "site_photos", "design_references"].filter((field) => !fieldAlreadyKnown(context, field)).slice(0, planSeed.questionBudget);
+    }
+    if (planSeed.primaryMove === "clarify_confusion" || planSeed.primaryMove === "recover_from_mistake") {
+      return ["floor_plan", "site_photos", "design_references"].filter((field) => !fieldAlreadyKnown(context, field)).slice(0, planSeed.questionBudget);
+    }
+    return [];
+  }
+
+  let priority: string[] = [];
+  if (isSeriousLandedAa(context)) {
+    priority = ["floor_plan", "site_photos", "design_references", "lifestyle", "meeting_timing"];
+  } else if (planSeed.primaryMove === "collect_meeting_preference") {
+    priority = ["property_type", "scope", "address_or_area", "floor_plan", "site_photos"];
+  } else if (planSeed.primaryMove === "collect_design_lifestyle_info") {
+    priority = ["design_references", "floor_plan", "site_photos", "lifestyle"];
+  } else if (planSeed.leadStage === "new_unknown") {
+    priority = ["property_type", "scope", "floor_plan", "site_photos"];
+  } else if (planSeed.leadStage === "files_received") {
+    priority = ["design_references", "lifestyle", "meeting_timing"];
+  } else {
+    priority = ["floor_plan", "site_photos", "design_references", "timeline", "meeting_timing", "lifestyle", "scope", "address_or_area", "property_type"];
+  }
+
+  return priority
+    .filter((field) => !fieldAlreadyKnown(context, field))
+    .filter((field) => !(isSeriousLandedAa(context) && field === "scope"))
+    .slice(0, planSeed.questionBudget);
+}
+
+function selectPrimaryMove(intents: V7WhatsAppIntent[], clientState: V7ClientState, context: NormalizedWhatsAppLeadContext): V7PrimaryMove {
+  if (clientState === "annoyed" || intents.includes("already_told_you")) return "recover_from_mistake";
+  if (intents.includes("complaint_or_frustration") || intents.includes("human_takeover_request")) return "escalate_to_manager";
+  if (intents.includes("floorplan_status_question") || intents.includes("file_status_question") || intents.includes("media_status_question")) return "confirm_file_status";
+  if (intents.includes("price_question")) return "safe_price_reply";
+  if (intents.includes("appointment_request")) return "collect_meeting_preference";
+  if (intents.includes("portfolio_request")) return "route_to_portfolio";
+  if (intents.includes("design_question")) return "collect_design_lifestyle_info";
+  if (intents.includes("hacking_question") || intents.includes("approval_question")) return "answer_direct_question";
+  if (intents.includes("confusion_ping")) return "clarify_confusion";
+  if (intents.includes("short_ping") || intents.includes("follow_up_ping") || intents.includes("thanks_or_acknowledgement")) return "simple_acknowledgement";
+  if (isSeriousLandedAa(context)) return "request_files";
+  if (intents.includes("provide_budget_expectation") || intents.includes("provide_project_details") || intents.includes("file_or_media_sent")) return "acknowledge_details";
+  if (intents.includes("greeting")) return "greet";
+  return context.known_facts_summary ? "acknowledge_details" : "greet";
+}
+
+function fileStatusAnswerFor(context: NormalizedWhatsAppLeadContext) {
+  if (context.floor_plan_received) return "Yes, we've received the floor plan. That will help the team review the layout and A&A scope more properly.";
+  if (context.site_photos_received || context.reference_images_received || context.memory.hasImageOrDocument || context.memory.hasMedia) {
+    return "Yes, we've received the file/photo. The team can verify it against your enquiry and review the next step.";
+  }
+  return "I don't see the floor plan confirmed on our side yet. Could you resend it here?";
+}
+
+function directAnswerFor(input: V7WhatsAppSalesBrainInput, intents: V7WhatsAppIntent[], primaryMove: V7PrimaryMove, context: NormalizedWhatsAppLeadContext) {
+  if (primaryMove === "confirm_file_status") return fileStatusAnswerFor(context);
+  if (primaryMove === "safe_price_reply") return "I understand you'd like a rough idea. To avoid giving the wrong figure, the team needs to review the floor plan, site photos, scope and material direction first.";
+  if (primaryMove === "collect_meeting_preference") {
+    const timing = extractPreferredTiming(input.inboundMessageText, context);
+    return `${timing} noted as your preferred timing. The team will check availability before confirming.`;
+  }
+  if (primaryMove === "route_to_portfolio") return `You can view some of our past works here: ${getLimmInstagramUrl()}`;
+  if (primaryMove === "collect_design_lifestyle_info") return "Yes, we can help with design direction and renovation planning.";
+  if (intents.includes("hacking_question") && intents.includes("approval_question")) {
+    return "For wall hacking and approval/submission matters, the team will need to review the drawings, site condition, scope and applicable requirements before advising what is suitable.";
+  }
+  if (intents.includes("hacking_question")) {
+    return "The team can review wall hacking works, but they need to check the floor plan and site condition before advising what is suitable.";
+  }
+  if (intents.includes("approval_question")) {
+    return "It depends on the exact scope and property type. Some works may require proper checking or submission before the team can advise.";
+  }
+  if (primaryMove === "recover_from_mistake") return "You're right, sorry about that.";
+  if (primaryMove === "clarify_confusion") return "Sorry if that was unclear.";
+  if (primaryMove === "escalate_to_manager") return "Thanks for raising this. I'll get the team to follow up directly and review the matter properly.";
+  if (primaryMove === "greet") return "Hi, yes we're here.";
+  if (primaryMove === "simple_acknowledgement") return "Yes, noted.";
+  if (intents.includes("provide_budget_expectation")) return "Thanks, that budget expectation helps. The team can use it to consider the right scope and material direction, while final pricing still depends on confirmed drawings, site condition and works.";
+  return "Thanks, noted.";
+}
+
+export function planWhatsAppSalesReply(input: V7WhatsAppSalesBrainInput): {
+  plan: V7WhatsAppSalesReplyPlan;
+  intents: V7WhatsAppIntent[];
+  primaryIntent: V7WhatsAppIntent;
+  context: NormalizedWhatsAppLeadContext;
+} {
   const context = buildNormalizedWhatsAppLeadContext({
     lead: input.lead,
     previousMessages: input.previousMessages,
@@ -447,28 +711,269 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
   });
   const intents = detectV7WhatsAppIntents(input.inboundMessageText, input.inboundMessageType, context);
   const primary = primaryIntent(intents);
-  const replyText = composeReply(input, intents, primary, context).trim();
+  const clientState = classifyClientState(intents);
+  const leadSeriousness = scoreLeadSeriousness(context, intents);
+  const leadStage = classifyLeadStage(context, intents, leadSeriousness);
+  const primaryMove = selectPrimaryMove(intents, clientState, context);
+  const patience = detectClientPatience(input.inboundMessageText, intents);
+  const questionBudget = patience !== "normal" ? 1 : selectQuestionBudget(clientState, leadStage, leadSeriousness);
+  const missingInfoToAsk = playbookMissingFields(context, { primaryMove, leadStage, leadSeriousness, questionBudget });
+  const forbiddenFieldsToAskAgain = [
+    fieldAlreadyKnown(context, "property_type") ? "property_type" : "",
+    fieldAlreadyKnown(context, "address_or_area") ? "address_or_area" : "",
+    fieldAlreadyKnown(context, "budget_expectation") ? "budget_expectation" : "",
+    fieldAlreadyKnown(context, "timeline") ? "timeline" : "",
+    fieldAlreadyKnown(context, "scope") ? "scope" : "",
+    fieldAlreadyKnown(context, "floor_plan") ? "floor_plan" : "",
+    fieldAlreadyKnown(context, "site_photos") ? "site_photos" : "",
+    fieldAlreadyKnown(context, "design_references") ? "design_references" : "",
+    isSeriousLandedAa(context) ? "main_areas" : ""
+  ].filter(Boolean);
+  const directAnswer = directAnswerFor(input, intents, primaryMove, context);
+  const plan: V7WhatsAppSalesReplyPlan = {
+    salesMoment: primary,
+    clientState,
+    leadStage,
+    leadSeriousness,
+    primaryMove,
+    knownFactsSummary: playbookKnownSummary(context),
+    directAnswer,
+    shouldAskQuestions: missingInfoToAsk.length > 0,
+    questionBudget,
+    missingInfoToAsk,
+    forbiddenFieldsToAskAgain,
+    fileStatusAnswer: fileStatusAnswerFor(context),
+    handoffRecommended:
+      leadStage === "handoff_needed" ||
+      leadSeriousness === "premium" ||
+      intents.includes("appointment_request") ||
+      intents.includes("price_question") ||
+      intents.includes("provide_budget_expectation") ||
+      intents.includes("hacking_question") ||
+      intents.includes("approval_question") ||
+      context.floor_plan_received ||
+      context.site_photos_received,
+    replyLengthTier: leadStage === "new_unknown" ? "tier_2" : leadSeriousness === "premium" ? "tier_2" : "tier_1",
+    safetyNotes: [
+      "No pricing, ranges or package amounts.",
+      "No appointment confirmation without a calendar event.",
+      "No approval, hacking, structural or timeline guarantees."
+    ]
+  };
+  return { plan, intents, primaryIntent: primary, context };
+}
+
+function askSentence(fields: string[], context: NormalizedWhatsAppLeadContext) {
+  if (!fields.length) return "";
+  const labels = fields.map((field) => field === "lifestyle"
+    ? "who will be staying there, such as children, elderly family members, helper or pets"
+    : field === "meeting_timing"
+      ? "preferred meeting timing"
+      : fieldLabel(field));
+  if (fields.includes("lifestyle")) {
+    const nonLifestyle = labels.filter((label) => !label.startsWith("who will be staying"));
+    const lifestyle = labels.find((label) => label.startsWith("who will be staying"));
+    if (nonLifestyle.length) {
+      return `Could you send the ${readableList(nonLifestyle)} if available? It would also help to know ${lifestyle}, so the team can plan the proposal direction more properly.`;
+    }
+    return `It would also help to know ${lifestyle}, so the team can consider layout, safety, storage and material direction.`;
+  }
+  const prefix = isSeriousLandedAa(context) ? "Could you send" : "Could you share";
+  return `${prefix} the ${readableList(labels)} if available for an initial project review?`;
+}
+
+export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7WhatsAppSalesBrainInput, context: NormalizedWhatsAppLeadContext, intents: V7WhatsAppIntent[]) {
+  const knownFull = plan.knownFactsSummary;
+  const knownShort = playbookKnownSummary(context, "short");
+  const ask = askSentence(plan.missingInfoToAsk, context);
+
+  if (plan.primaryMove === "recover_from_mistake") {
+    const known = knownFull ? ` We have your ${knownFull} noted.` : " We have the details you shared noted.";
+    const remaining = ask ? `\n\n${ask.replace(/^Could you share/i, "The remaining useful items are").replace(/^Could you send/i, "The remaining useful items are")}` : "\n\nThe team can review the details shared so far and advise the next step.";
+    return `${plan.directAnswer}${known}${remaining}`;
+  }
+
+  if (plan.primaryMove === "clarify_confusion") {
+    const contextLine = knownShort ? ` We have your ${knownShort} noted.` : "";
+    const next = ask ? ` ${ask}` : " The team can review the next step for an initial project review.";
+    return `${plan.directAnswer}${contextLine}${next}`;
+  }
+
+  if (plan.primaryMove === "confirm_file_status") {
+    return plan.fileStatusAnswer;
+  }
+
+  if (plan.primaryMove === "safe_price_reply") {
+    if (context.scope_summary || context.floor_plan_received || context.budget_expectation) {
+      const known = knownFull ? ` Thanks, we've noted your ${knownFull}.` : "";
+      const followUp = ask ? ` ${ask}` : " The team can go through this properly during the initial project review.";
+      return `${plan.directAnswer}${known} Giving a rough figure too early can be misleading.${followUp}`;
+    }
+    const followUp = ask || "Could you share the scope of work first for an initial project review?";
+    return `${plan.directAnswer} ${followUp}`;
+  }
+
+  if (plan.primaryMove === "collect_meeting_preference") {
+    const known = knownShort ? ` We have your ${knownShort} recorded.` : "";
+    const followUp = ask ? ` ${ask.replace("if available for an initial project review", "first so the team can review before confirming")}` : " The team will review and check whether that slot works for an initial project review.";
+    return `${plan.directAnswer}${known}${followUp}`;
+  }
+
+  if (plan.primaryMove === "route_to_portfolio") {
+    const tailored = knownShort
+      ? `\n\nSince you're looking at ${knownShort}, the team can also point you to more relevant examples based on your scope. Final design and scope still depend on your site condition, drawings and requirements.`
+      : "\n\nYou can also send your floor plan or site photos, and the team can review the next step for your project.";
+    return `${plan.directAnswer}${tailored}`;
+  }
+
+  if (plan.primaryMove === "collect_design_lifestyle_info") {
+    const known = knownShort ? ` We have your ${knownShort} noted.` : "";
+    const next = ask || "If you have reference images, you can send them here for an initial project review.";
+    return `${plan.directAnswer}${known} The right direction should match the layout, lighting, lifestyle, storage needs and renovation scope. ${next}`;
+  }
+
+  if (plan.primaryMove === "answer_direct_question") {
+    const parts = [plan.directAnswer];
+    if (intents.includes("design_question")) parts.push("For the design direction, the team can propose a suitable direction after reviewing your layout, lighting, storage needs and preferred style.");
+    if (intents.includes("appointment_request")) parts.push(directAnswerFor(input, ["appointment_request"], "collect_meeting_preference", context));
+    if (knownFull) parts.push(`We have your ${knownFull} noted.`);
+    if (ask) parts.push(ask);
+    return parts.join("\n\n");
+  }
+
+  if (plan.primaryMove === "escalate_to_manager") {
+    return "Thanks for raising this. I'll get the team to follow up directly and review the matter properly before advising the next step.";
+  }
+
+  if (plan.primaryMove === "simple_acknowledgement") {
+    if (/^\s*ok\?\s*$/i.test(input.inboundMessageText) && knownShort) {
+      const next = ask || "You can send the floor plan, site photos or design references when available.";
+      return `Yes, noted. We have your ${knownShort} recorded. ${next}`;
+    }
+    if (knownShort) {
+      const next = ask || "The team can review the next step for an initial project review.";
+      return `Yes, noted. We have your ${knownShort} recorded. ${next}`;
+    }
+    return "Hi, yes we're here. Could you share the property type, what kind of renovation you're planning, and whether you have a floor plan or site photos available?";
+  }
+
+  if (plan.primaryMove === "greet") {
+    if (knownShort) return `Hi, yes we're here. We have your ${knownShort} noted. ${ask || "The team can review the next step for an initial project review."}`;
+    return "Hi, yes we're here. Could you share the property type, what kind of renovation you're planning, and whether you have a floor plan or site photos available?";
+  }
+
+  if (plan.primaryMove === "acknowledge_details" && intents.includes("provide_budget_expectation") && !intents.includes("price_question")) {
+    return plan.directAnswer;
+  }
+
+  if (isSeriousLandedAa(context)) {
+    const summary = knownFull || "landed A&A enquiry";
+    const next = ask || "The team can review the details shared so far and advise the next step for an initial project review.";
+    return `Thanks, noted. This is a ${summary}.\n\n${next}`;
+  }
+
+  if (knownFull) {
+    const next = ask || "The team can review the details shared so far and advise the next step for an initial project review.";
+    return `Thanks, noted. This is a ${knownFull}.\n\n${next}`;
+  }
+
+  return `Thanks, noted. ${ask || "The team can review the next step for an initial project review."}`;
+}
+
+export function judgeHumanFeel(reply: string, plan: V7WhatsAppSalesReplyPlan, context: NormalizedWhatsAppLeadContext, intents: V7WhatsAppIntent[]): V7HumanFeelJudgement {
+  const failReasons: string[] = [];
+  let score = 0;
+  if (plan.directAnswer && reply.toLowerCase().startsWith(plan.directAnswer.slice(0, Math.min(18, plan.directAnswer.length)).toLowerCase())) score += 20;
+  else if (!["confirm_file_status", "safe_price_reply", "collect_meeting_preference", "route_to_portfolio"].includes(plan.primaryMove)) score += 20;
+  else failReasons.push("direct_question_not_answered_first");
+
+  if (!context.known_facts_summary || reply.includes(playbookKnownSummary(context, "short")) || reply.includes(playbookKnownSummary(context)) || plan.primaryMove === "greet") score += 20;
+  else failReasons.push("remembered_context_not_used");
+
+  const repeatedKnownAsk = plan.forbiddenFieldsToAskAgain.some((field) => {
+    if (field === "floor_plan") return /\bsend (?:the )?floor plan\b/i.test(reply);
+    if (field === "site_photos") return /\bsend (?:the )?site photos?\b/i.test(reply);
+    if (field === "property_type") return /\bshare (?:the |your )?property type\b/i.test(reply);
+    if (field === "address_or_area") return /\bshare (?:the |your )?(?:property )?(?:area|address)\b/i.test(reply);
+    if (field === "main_areas") return /\bmain areas|which areas\b/i.test(reply);
+    return false;
+  });
+  if (!repeatedKnownAsk) score += 20;
+  else failReasons.push("known_info_asked_again");
+
+  if (plan.missingInfoToAsk.length || plan.handoffRecommended || /\bteam can review|team will check|initial project review\b/i.test(reply)) score += 20;
+  else failReasons.push("no_useful_next_step");
+
+  if (!/Thanks for your message\. Could you share your property type, basic renovation scope/i.test(reply) && !/1\.|2\.|3\./.test(reply)) score += 20;
+  else failReasons.push("generic_or_form_like_tone");
+
+  if (/pending review|unknown|not provided|free consultation|from \$|rough estimate|price range|quote range|appointment confirmed|guaranteed|guarantee|sure can|no problem|can hack/i.test(reply)) {
+    failReasons.push("absolute_fail_phrase");
+    score = Math.min(score, 60);
+  }
+  if (isSeriousLandedAa(context) && /\bmain areas|which areas\b/i.test(reply)) {
+    failReasons.push("serious_landed_aa_asked_main_areas");
+    score = Math.min(score, 60);
+  }
+  if (intents.includes("provide_budget_expectation") && !intents.includes("price_question") && /^I understand you'd like a rough idea/i.test(reply)) {
+    failReasons.push("budget_statement_treated_as_price_question");
+    score = Math.min(score, 60);
+  }
+  const minimumScore = plan.leadSeriousness === "premium" || plan.leadSeriousness === "serious" ? 90 : 85;
+  return { score, passed: score >= minimumScore && failReasons.length === 0, minimumScore, failReasons };
+}
+
+export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSalesBrainInput): V7WhatsAppSalesBrainDecision {
+  const { plan, intents, primaryIntent: primary, context } = planWhatsAppSalesReply(input);
+  let replyText = composeReplyFromPlan(plan, input, context, intents).trim();
+  let humanFeel = judgeHumanFeel(replyText, plan, context, intents);
+  if (!humanFeel.passed) {
+    replyText = composeReplyFromPlan(
+      {
+        ...plan,
+        questionBudget: Math.min(plan.questionBudget, plan.leadSeriousness === "premium" ? 2 : 1),
+        missingInfoToAsk: plan.missingInfoToAsk.slice(0, Math.min(plan.missingInfoToAsk.length, plan.leadSeriousness === "premium" ? 2 : 1)),
+        replyLengthTier: "tier_2"
+      },
+      input,
+      context,
+      intents
+    ).trim();
+    humanFeel = judgeHumanFeel(replyText, plan, context, intents);
+  }
   const askedFields = fieldsAskedInReply(replyText);
   const stage = determineStage(primary, context);
 
   return {
-    version: V7_1_MEMORY_CONTRACT_VERSION,
+    version: V7_2_SINGLE_REPLY_PLANNER_VERSION,
     shouldReply: input.autoReplyEnabled && Boolean(replyText),
     replyText,
     intents,
     primaryIntent: primary,
     stage,
-    confidence: context.known_facts_summary || intents.length > 1 ? 92 : 84,
-    salesMove: salesMoveFor(primary),
-    answeredClientQuestion: true,
+    confidence: plan.leadSeriousness === "premium" ? 96 : context.known_facts_summary || intents.length > 1 ? 92 : 86,
+    salesMove: plan.primaryMove,
+    answeredClientQuestion: Boolean(plan.directAnswer),
     askedFields,
     missingInfo: context.missing_fields,
     repeatedQuestionRisk: context.repeated_question_risk,
     context,
     trace: {
-      v7_version: V7_1_MEMORY_CONTRACT_VERSION,
+      v7_version: V7_2_SINGLE_REPLY_PLANNER_VERSION,
       v7PreviousVersion: V7_WORLD_CLASS_SALES_BRAIN_VERSION,
+      v7MemoryContractVersion: V7_1_MEMORY_CONTRACT_VERSION,
       worldClassSalesConversationBrainAvailable: true,
+      playbookV5SingleReplyPlannerAvailable: true,
+      salesMomentClassifierAvailable: true,
+      clientPatienceDetectorAvailable: true,
+      leadSeriousnessScorerAvailable: true,
+      nextBestMoveSelectorAvailable: true,
+      humanFeelJudgeAvailable: true,
+      stopAskingRuleAvailable: true,
+      seriousLandedAaRuleAvailable: true,
+      questionBudgetByClientStateAvailable: true,
+      directQuestionFirstEnforced: true,
+      fileConfidenceStatusAvailable: true,
       clientFacingPlaceholderSuppressionAvailable: true,
       mergedLeadContextContractAvailable: true,
       clientFacingKnownSummaryBuilderAvailable: true,
@@ -482,6 +987,25 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
       detectedIntents: intents,
       primaryIntent: primary,
       conversationStage: stage,
+      salesReplyPlan: plan,
+      salesMoment: plan.salesMoment,
+      clientState: plan.clientState,
+      leadStage: plan.leadStage,
+      leadSeriousness: plan.leadSeriousness,
+      primaryMove: plan.primaryMove,
+      knownFactsSummary: plan.knownFactsSummary,
+      directAnswer: plan.directAnswer,
+      shouldAskQuestions: plan.shouldAskQuestions,
+      questionBudget: plan.questionBudget,
+      missingInfoToAsk: plan.missingInfoToAsk,
+      forbiddenFieldsToAskAgain: plan.forbiddenFieldsToAskAgain,
+      fileStatusAnswer: plan.fileStatusAnswer,
+      handoffRecommended: plan.handoffRecommended,
+      replyLengthTier: plan.replyLengthTier,
+      humanFeelJudge: humanFeel,
+      humanFeelScore: humanFeel.score,
+      humanFeelPassed: humanFeel.passed,
+      humanFeelFailReasons: humanFeel.failReasons,
       knownInfoBeforeQuestions: Boolean(context.known_facts_summary),
       knownContextSummary: context.known_facts_summary,
       missingFields: context.missing_fields,

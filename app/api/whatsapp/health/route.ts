@@ -52,6 +52,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v7"
 // version: "v7_1_whatsapp_conversation_memory_contract_fix"
 // salesBrainVersion: "v7.1"
+// version: "v7_2_single_reply_planner_playbook_v5"
+// salesBrainVersion: "v7.2"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -75,9 +77,20 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v7_1_whatsapp_conversation_memory_contract_fix",
-      salesBrainVersion: "v7.1",
+      version: "v7_2_single_reply_planner_playbook_v5",
+      salesBrainVersion: "v7.2",
       runtime: "vercel",
+      playbookV5SingleReplyPlannerAvailable: true,
+      salesMomentClassifierAvailable: true,
+      clientPatienceDetectorAvailable: true,
+      leadSeriousnessScorerAvailable: true,
+      nextBestMoveSelectorAvailable: true,
+      humanFeelJudgeAvailable: true,
+      stopAskingRuleAvailable: true,
+      seriousLandedAaRuleAvailable: true,
+      questionBudgetByClientStateAvailable: true,
+      directQuestionFirstEnforced: true,
+      fileConfidenceStatusAvailable: true,
       clientFacingPlaceholderSuppressionAvailable: true,
       mergedLeadContextContractAvailable: true,
       clientFacingKnownSummaryBuilderAvailable: true,
@@ -440,9 +453,20 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v7_1_whatsapp_conversation_memory_contract_fix",
-      salesBrainVersion: "v7.1",
+      version: "v7_2_single_reply_planner_playbook_v5",
+      salesBrainVersion: "v7.2",
       runtime: "vercel",
+      playbookV5SingleReplyPlannerAvailable: false,
+      salesMomentClassifierAvailable: false,
+      clientPatienceDetectorAvailable: false,
+      leadSeriousnessScorerAvailable: false,
+      nextBestMoveSelectorAvailable: false,
+      humanFeelJudgeAvailable: false,
+      stopAskingRuleAvailable: false,
+      seriousLandedAaRuleAvailable: false,
+      questionBudgetByClientStateAvailable: false,
+      directQuestionFirstEnforced: false,
+      fileConfidenceStatusAvailable: false,
       clientFacingPlaceholderSuppressionAvailable: false,
       mergedLeadContextContractAvailable: false,
       clientFacingKnownSummaryBuilderAvailable: false,

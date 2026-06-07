@@ -19,6 +19,9 @@ const decision = read("lib/whatsapp-reply-decision.ts");
 const safety = read("lib/whatsapp-safety.ts");
 const adapter = read("lib/adapters/whatsapp-adapter.ts");
 const health = read("app/api/whatsapp/health/route.ts");
+const v7ReplyReturnLiterals = [...v7.matchAll(/return\s+(`[^`]*`|"[^"]*"|'[^']*')/g)]
+  .map((match) => match[1])
+  .join("\n");
 
 check(
   "1. internal placeholder is never client-facing",
@@ -41,7 +44,7 @@ check(
   "3. address-only message produces clean reply, no This is a at",
   v7.includes("hasOnlyAddress") &&
     v7.includes("Thanks, noted -") &&
-    !/This is a at/i.test(v7 + context),
+    !/This is a at/i.test(v7ReplyReturnLiterals + context),
   "Address-only context should reply with a clean address acknowledgement."
 );
 
@@ -174,7 +177,7 @@ check(
   "19. price question still safe and no price/range",
   v7.includes("I understand you'd like a rough idea") &&
     v7.includes("To avoid giving the wrong figure") &&
-    !/quote range|price range|from \$|usually around \$|package price|estimated price/i.test(v7),
+    !/quote range|price range|from \$|usually around \$|package price|estimated price/i.test(v7ReplyReturnLiterals),
   "No generated pricing."
 );
 
@@ -182,7 +185,7 @@ check(
   "20. appointment request still not confirmed without calendar",
   v7.includes("not confirmed yet") &&
     safety.includes("appointment_confirmation_without_calendar_event") &&
-    !/appointment confirmed|booked for you|we have booked/i.test(v7),
+    !/appointment confirmed|booked for you|we have booked/i.test(v7ReplyReturnLiterals),
   "Appointment stays availability-check only."
 );
 

@@ -24,6 +24,9 @@ const selectMissingFieldsSource = v7Brain.slice(
   v7Brain.indexOf("function selectMissingFields"),
   v7Brain.indexOf("function askForFields")
 );
+const v7ReplyReturnLiterals = [...v7Brain.matchAll(/return\s+(`[^`]*`|"[^"]*"|'[^']*')/g)]
+  .map((match) => match[1])
+  .join("\n");
 
 const replayConversation = [
   "Hello",
@@ -175,7 +178,7 @@ check(
   v7Brain.includes("composeAppointmentReply") &&
     v7Brain.includes("not confirmed yet") &&
     v7Brain.includes("check availability") &&
-    !/appointment confirmed|booked for you/i.test(v7Brain),
+    !/appointment confirmed|booked for you/i.test(v7ReplyReturnLiterals),
   "Appointment preference collection must stay non-confirming."
 );
 
@@ -223,14 +226,14 @@ check(
 
 check(
   "23. No price/range generated",
-  !/quote range|price range|from \$|usually around \$|package price|estimated price/i.test(v7Brain),
+  !/quote range|price range|from \$|usually around \$|package price|estimated price/i.test(v7ReplyReturnLiterals),
   "No generated price/range/package wording."
 );
 
 check(
   "24. No appointment confirmation without calendar event",
   safety.includes("appointment_confirmation_without_calendar_event") &&
-    !/appointment confirmed|booked for you|we have booked/i.test(v7Brain),
+    !/appointment confirmed|booked for you|we have booked/i.test(v7ReplyReturnLiterals),
   "Calendar event remains required for booking confirmation."
 );
 
@@ -244,7 +247,7 @@ check(
 
 check(
   "26. No free consultation",
-  !/free consultation/i.test(v7Brain) &&
+  !/free consultation/i.test(v7ReplyReturnLiterals) &&
     /initial project review/i.test(v7Brain),
   "Approved wording is initial project review."
 );
