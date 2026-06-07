@@ -26,6 +26,16 @@ function normalise(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function isBudgetStatement(text: string) {
+  return /\b(?:my\s+)?budget(?:\s+expectation)?(?:\s+is)?(?:\s+around|\s+about)?\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)?\b/i.test(text) ||
+    /\b(?:around|about)\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)?\s+budget\b/i.test(text) ||
+    /\bi have (?:around|about)?\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)\b/i.test(text);
+}
+
+function isActualPriceQuestion(text: string) {
+  return /\b(how much|roughly how much|how much roughly|what price|how much.*cost|estimate\?|rough estimate|quotation\?|quote\?|budget how|price\?)\b/i.test(text);
+}
+
 const intentPatterns: Array<{ intent: WhatsAppDetectedIntent; pattern: RegExp; priority: number }> = [
   { intent: "complaint_or_risk", pattern: /\b(refund|lawyer|complaint|unhappy|defect|your work.*problem|call me|urgent|paid deposit|cancel project|cancel)\b/i, priority: 1 },
   { intent: "price_question", pattern: /\b(how much|how much ah|roughly|price|price ah|cost|budget|budget how|estimate|quotation|quote|package)\b|多少钱|报价|价格/i, priority: 2 },
@@ -62,7 +72,10 @@ export function detectWhatsAppMessageIntents(text: string): WhatsAppMultiIntentR
     if (left.index !== right.index) return left.index - right.index;
     return left.priority - right.priority;
   });
-  const detectedIntents = ordered.map((item) => item.intent);
+  let detectedIntents = ordered.map((item) => item.intent);
+  if (isBudgetStatement(text) && !isActualPriceQuestion(text)) {
+    detectedIntents = detectedIntents.filter((intent) => intent !== "price_question");
+  }
   const primaryIntent = selectPrimaryDetectedIntent(detectedIntents);
 
   return {

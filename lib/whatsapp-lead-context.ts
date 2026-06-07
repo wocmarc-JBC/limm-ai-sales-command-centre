@@ -24,6 +24,12 @@ export interface WhatsAppLeadContextMemory {
   contextFromPreviousMessages: boolean;
   knownScopeSummary: string;
   knownPropertyType: string;
+  knownStoreys: string;
+  knownAddressOrArea: string;
+  knownTimeline: string;
+  knownBudgetExpectation: string;
+  alreadyToldYouDetected: boolean;
+  budgetStatementDetected: boolean;
   missingFields: string[];
   receivedFields: string[];
   knownContextSummary: string;
@@ -63,7 +69,7 @@ function readableList(items: string[]) {
 
 function propertyTypeFromText(text: string, lead: Lead) {
   const leadProperty = lead.propertyType && lead.propertyType !== "Unknown" ? lead.propertyType : "";
-  if (/\blanded|terrace|semi d|bungalow|corner terrace|inter terrace\b/i.test(text)) return "landed";
+  if (/\blanded|terrace|semi d|semi detached|semi-detached|detached|bungalow|corner terrace|inter terrace\b/i.test(text)) return "landed";
   if (/\bcondo|apartment|mcst|condominium\b/i.test(text)) return "condo";
   if (/\bcommercial|office|shop|clinic|restaurant|retail\b/i.test(text)) return "commercial";
   return leadProperty;
@@ -71,8 +77,67 @@ function propertyTypeFromText(text: string, lead: Lead) {
 
 function scopeFromText(text: string, lead: Lead) {
   if (lead.scopeSummary && lead.scopeSummary !== "New WhatsApp enquiry") return lead.scopeSummary;
-  const scopeMatch = text.match(/\b(?:kitchen extension|full renovation|landed renovation|bathroom renovation|toilet renovation|carpentry|wardrobe|hacking works|commercial renovation|clinic renovation|a&a|aa works)\b/i);
+  const scopeMatch = text.match(/\b(?:kitchen extension|full renovation|landed renovation|bathroom renovation|toilet renovation|carpentry|wardrobe|hacking works|commercial renovation|clinic renovation|a&a works?|a a works?|aa works?|addition and alteration|renovation|reno)\b/i);
+  if (scopeMatch && /\ba\s*a works?|aa works?|a&a works?|addition and alteration/i.test(scopeMatch[0])) return "A&A works";
   return scopeMatch?.[0] ?? "";
+}
+
+function storeysFromText(text: string) {
+  const match = text.match(/\b([1-9])\s*[- ]?\s*storey\b/i);
+  if (!match) return "";
+  return `${match[1]}-storey`;
+}
+
+function addressFromText(text: string, lead: Lead) {
+  if (lead.projectAddress) return lead.projectAddress;
+  if (lead.propertyArea) return lead.propertyArea;
+  const roadMatch = text.match(/\b\d{1,4}[a-z]?\s+(?:[a-z]+\s+){0,4}(?:road|rd|street|st|avenue|ave|drive|dr|lane|ln|terrace|crescent|close|way|place|walk)\b/i);
+  if (roadMatch) {
+    return roadMatch[0]
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+      .replace(/\bRd\b/g, "Road")
+      .replace(/\bSt\b/g, "Street")
+      .replace(/\bAve\b/g, "Avenue")
+      .replace(/\bDr\b/g, "Drive");
+  }
+  const postalMatch = text.match(/\b(?:singapore\s*)?\d{6}\b/i);
+  return postalMatch?.[0]?.trim() ?? "";
+}
+
+function timelineFromText(text: string) {
+  if (/\b(?:take|collect|key collection|getting).{0,24}\bkey\b.{0,24}\bnext month\b/i.test(text) || /\btake key next month\b/i.test(text)) {
+    return "key collection next month";
+  }
+  if (/\bkey collection next month\b/i.test(text)) return "key collection next month";
+  if (/\bmove[\s-]?in next month\b/i.test(text)) return "move-in next month";
+  if (/\bstart next month\b/i.test(text)) return "start next month";
+  const deadline = text.match(/\b(?:move[\s-]?in|start|key collection|take key|need to move in by)\s+(?:by\s+)?(?:next month|this month|[a-z]{3,9}\s+\d{1,2}|\d{1,2}\s+[a-z]{3,9})\b/i);
+  return deadline?.[0]?.trim().replace(/\s+/g, " ") ?? "";
+}
+
+export function isBudgetStatementText(text: string) {
+  return /\b(?:my\s+)?budget(?:\s+expectation)?(?:\s+is)?(?:\s+around|\s+about)?\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)?\b/i.test(text) ||
+    /\b(?:around|about)\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)?\s+budget\b/i.test(text) ||
+    /\bi have (?:around|about)?\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)\b/i.test(text);
+}
+
+function budgetExpectationFromText(text: string) {
+  const match =
+    text.match(/\b(?:my\s+)?budget(?:\s+expectation)?(?:\s+is)?(?:\s+around|\s+about)?\s*(s\$|\$)?\s*(\d+(?:\.\d+)?)\s*(k|thousand|m|million)?\b/i) ??
+    text.match(/\b(?:around|about)\s*(s\$|\$)?\s*(\d+(?:\.\d+)?)\s*(k|thousand|m|million)?\s+budget\b/i) ??
+    text.match(/\bi have (?:around|about)?\s*(s\$|\$)?\s*(\d+(?:\.\d+)?)\s*(k|thousand|m|million)\b/i);
+  if (!match) return "";
+  const amount = match[2];
+  const suffix = (match[3] ?? "").toLowerCase();
+  if (suffix === "m" || suffix === "million") return `around $${amount}m`;
+  if (suffix === "k" || suffix === "thousand") return `around $${amount}k`;
+  return `around $${amount}`;
+}
+
+function alreadyToldYou(text: string) {
+  return /\b(i already told you|i said already|i already sent|i told you already|i already mentioned|already told you|already mentioned)\b/i.test(text);
 }
 
 export function inferWhatsAppLeadContext(input: {
@@ -94,6 +159,12 @@ export function inferWhatsAppLeadContext(input: {
   const normalized = normalise(relevantText);
   const normalizedCurrent = normalise(currentText);
   const normalizedPrevious = normalise(previousText);
+  const knownStoreys = storeysFromText(relevantText);
+  const knownAddressOrArea = addressFromText(relevantText, input.lead);
+  const knownTimeline = timelineFromText(relevantText);
+  const knownBudgetExpectation = budgetExpectationFromText(relevantText);
+  const budgetStatementDetected = isBudgetStatementText(input.inboundText);
+  const alreadyToldYouDetected = alreadyToldYou(input.inboundText);
 
   const hasImageOrDocument = hasAny(normalized, [
     /\bmessagetype\s+(?:image|document)\b/i,
@@ -174,7 +245,7 @@ export function inferWhatsAppLeadContext(input: {
     /\btosca\b/i,
     /\bsingapore\s*\d{6}\b/i,
     /\b\d{6}\b/i
-  ]);
+  ]) || Boolean(knownAddressOrArea);
   const hasPreferredAppointmentTime = hasAny(normalized, [
     /\b(?:mon|tue|wed|thu|fri|sat|sun)(?:day)?\b/i,
     /\b\d{1,2}\s*(?:am|pm)\b/i,
@@ -184,17 +255,18 @@ export function inferWhatsAppLeadContext(input: {
     /\bmeeting\b/i,
     /\bslot\b/i
   ]);
-  const hasTimeline = hasAny(normalized, [
+  const hasTimeline = Boolean(knownTimeline) || hasAny(normalized, [
     /\btimeline\b/i,
     /\bstart\b/i,
     /\bmove-in\b/i,
     /\bmove[\s-]?in\b/i,
+    /\btake key\b/i,
     /\bkey collection\b/i,
     /\bdeadline\b/i,
     /\bbefore cny\b/i,
     /\bby (?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i
   ]);
-  const hasBudgetExpectation = hasAny(normalized, [
+  const hasBudgetExpectation = Boolean(knownBudgetExpectation) || hasAny(normalized, [
     /\bbudget\b/i,
     /\bcomfort level\b/i,
     /\bspend\b/i,
@@ -319,7 +391,10 @@ export function inferWhatsAppLeadContext(input: {
       /\blanded\b/i,
       /\bsite photos?\b/i,
       /\baddress\b/i,
-      /\barea\b/i
+      /\barea\b/i,
+      /\broad\b/i,
+      /\btake key\b/i,
+      /\bbudget\b/i
     ]),
     contextFromPreviousMessages: hasAny(normalizedPrevious, [
       /\bfloor plan\b/i,
@@ -333,14 +408,49 @@ export function inferWhatsAppLeadContext(input: {
       /\blanded\b/i,
       /\bsite photos?\b/i,
       /\baddress\b/i,
-      /\barea\b/i
+      /\barea\b/i,
+      /\broad\b/i,
+      /\btake key\b/i,
+      /\bbudget\b/i
     ]),
     knownScopeSummary,
     knownPropertyType,
+    knownStoreys,
+    knownAddressOrArea,
+    knownTimeline,
+    knownBudgetExpectation,
+    alreadyToldYouDetected,
+    budgetStatementDetected,
     missingFields,
     receivedFields,
     knownContextSummary
   };
+}
+
+type KnownProjectInfoContext = Pick<
+  WhatsAppLeadContextMemory,
+  "knownPropertyType" | "knownStoreys" | "knownAddressOrArea" | "knownScopeSummary" | "knownTimeline" | "knownBudgetExpectation"
+>;
+
+export function describeKnownProjectInfo(context: KnownProjectInfoContext, prefix = "Thanks, noted.") {
+  const property = context.knownPropertyType
+    ? `${context.knownStoreys ? `${context.knownStoreys} ` : ""}${context.knownPropertyType} property`
+    : "";
+  const location = context.knownAddressOrArea ? `at ${context.knownAddressOrArea}` : "";
+  const leadLine = [property, location].filter(Boolean).join(" ");
+  const details = [
+    context.knownScopeSummary ? `with ${context.knownScopeSummary}` : "",
+    context.knownTimeline || "",
+    context.knownBudgetExpectation ? `budget expectation ${context.knownBudgetExpectation}` : ""
+  ].filter(Boolean);
+
+  if (!leadLine && !details.length) return "";
+  if (prefix.trim().endsWith(":")) {
+    const noted = [leadLine, ...details].filter(Boolean);
+    return `${prefix} ${readableList(noted)}.`;
+  }
+  const suffix = details.length ? `${leadLine ? ", " : ""}${readableList(details)}` : "";
+  return `${prefix} ${leadLine ? `This is a ${leadLine}` : "We have noted"}${suffix}.`;
 }
 
 export function describeReceivedInfo(context: WhatsAppLeadContextMemory) {

@@ -1,4 +1,5 @@
 import type { Lead, LeadMessage } from "@/lib/types";
+import { inferWhatsAppLeadContext } from "@/lib/whatsapp-lead-context";
 import { normaliseV6Text } from "@/lib/whatsapp-v6/singapore-renovation-language";
 import type { V6ContextTruthGate, V6Understanding, V6VerifiedContext } from "@/lib/whatsapp-v6/types";
 
@@ -43,6 +44,11 @@ export function buildVerifiedContext(input: {
   inboundMessageType: string;
   understanding: V6Understanding;
 }): V6VerifiedContext {
+  const memory = inferWhatsAppLeadContext({
+    lead: input.lead,
+    previousMessages: input.previousMessages,
+    inboundText: input.inboundText
+  });
   const prior = inboundText(input.previousMessages);
   const allText = `${input.lead.propertyType} ${input.lead.scopeSummary} ${input.lead.lastClientMessage} ${input.inboundText} ${prior}`;
   const normalized = normaliseV6Text(allText);
@@ -58,11 +64,11 @@ export function buildVerifiedContext(input: {
     /\bdrawing\b/i,
     /\bfilename\s+[\w\s-]*(floorplan|floor plan|plan|layout|drawing)[\w\s-]*(pdf|jpg|jpeg|png|webp)\b/i
   ]);
-  const hasFloorPlan = strongFloorPlan || clientSaidAlready(input.inboundText, "floor_plan");
+  const hasFloorPlan = strongFloorPlan || clientSaidAlready(input.inboundText, "floor_plan") || memory.hasFloorPlan;
   if (hasFloorPlan) addUnique(confirmedFacts, "floor plan");
   else if (hasImageOrFile) addUnique(inferredButNotConfirmed, "image/file received, content not fully verified");
 
-  const hasSitePhotos = clientSaidAlready(input.inboundText, "photos") || hasAny(normalized, [
+  const hasSitePhotos = memory.hasSitePhotos || clientSaidAlready(input.inboundText, "photos") || hasAny(normalized, [
     /\bsite photos?\b/i,
     /\bphotos? of (?:wall|kitchen|toilet|bathroom|site|area)\b/i,
     /\bcaption\s+[\w\s]*(site|wall|condition|leak|roof)[\w\s]*(photo|image|picture)\b/i
@@ -71,6 +77,7 @@ export function buildVerifiedContext(input: {
 
   const hasScopeOfWork =
     clientSaidAlready(input.inboundText, "scope") ||
+    memory.hasScopeOfWork ||
     meaningfulLeadScope(input.lead.scopeSummary) ||
     input.understanding.detectedScopes.length > 0 ||
     hasAny(normalized, [/\bscope\b/i, /\bkitchen\b/i, /\bdemo\b/i, /\bdemolition\b/i, /\bhacking\b/i, /\bcarpentry\b/i, /\bbathroom\b/i]);
@@ -79,10 +86,10 @@ export function buildVerifiedContext(input: {
 
   const knownPropertyType =
     input.lead.propertyType && input.lead.propertyType !== "Unknown" ? input.lead.propertyType.toLowerCase() : "";
-  const hasPropertyType = Boolean(knownPropertyType) || hasAny(normalized, [/\blanded\b/i, /\bcondo\b/i, /\bcommercial\b/i, /\boffice\b/i, /\bshop\b/i, /\bclinic\b/i]);
+  const hasPropertyType = memory.hasPropertyType || Boolean(knownPropertyType) || hasAny(normalized, [/\blanded\b/i, /\bcondo\b/i, /\bcommercial\b/i, /\boffice\b/i, /\bshop\b/i, /\bclinic\b/i]);
   if (hasPropertyType) addUnique(confirmedFacts, "property type");
 
-  const hasAddressOrArea = clientSaidAlready(input.inboundText, "address") || hasAny(normalized, [
+  const hasAddressOrArea = memory.hasAddressOrArea || clientSaidAlready(input.inboundText, "address") || hasAny(normalized, [
     /\baddress\b/i,
     /\barea\b/i,
     /\bpostal\b/i,
@@ -94,7 +101,7 @@ export function buildVerifiedContext(input: {
   ]);
   if (hasAddressOrArea) addUnique(confirmedFacts, "address/area");
 
-  const hasPreferredAppointmentTime = hasAny(normaliseV6Text(input.inboundText), [
+  const hasPreferredAppointmentTime = memory.hasPreferredAppointmentTime || hasAny(normaliseV6Text(input.inboundText), [
     /\b(mon|tue|wed|thu|fri|sat|sun)(day)?\b/i,
     /\b\d{1,2}\s*(am|pm)\b/i,
     /\btomorrow\b/i,
@@ -102,7 +109,7 @@ export function buildVerifiedContext(input: {
   ]);
   if (hasPreferredAppointmentTime) addUnique(inferredButNotConfirmed, "preferred appointment timing mentioned");
 
-  const hasDesignReferences = hasAny(normalized, [
+  const hasDesignReferences = memory.hasDesignReferences || hasAny(normalized, [
     /\bdesign reference\b/i,
     /\breference image\b/i,
     /\bmoodboard\b/i,
@@ -127,6 +134,14 @@ export function buildVerifiedContext(input: {
     hasPreferredAppointmentTime,
     hasDesignReferences,
     hasImageOrFile,
+    knownScopeSummary: memory.knownScopeSummary,
+    knownPropertyType: memory.knownPropertyType,
+    knownStoreys: memory.knownStoreys,
+    knownAddressOrArea: memory.knownAddressOrArea,
+    knownTimeline: memory.knownTimeline,
+    knownBudgetExpectation: memory.knownBudgetExpectation,
+    alreadyToldYouDetected: memory.alreadyToldYouDetected,
+    budgetStatementDetected: memory.budgetStatementDetected,
     confirmedFacts,
     inferredButNotConfirmed,
     missingFields

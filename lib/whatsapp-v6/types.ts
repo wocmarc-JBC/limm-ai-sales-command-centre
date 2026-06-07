@@ -35,6 +35,14 @@ export interface V6VerifiedContext {
   hasPreferredAppointmentTime: boolean;
   hasDesignReferences: boolean;
   hasImageOrFile: boolean;
+  knownScopeSummary: string;
+  knownPropertyType: string;
+  knownStoreys: string;
+  knownAddressOrArea: string;
+  knownTimeline: string;
+  knownBudgetExpectation: string;
+  alreadyToldYouDetected: boolean;
+  budgetStatementDetected: boolean;
   confirmedFacts: string[];
   inferredButNotConfirmed: string[];
   missingFields: string[];

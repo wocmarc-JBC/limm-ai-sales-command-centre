@@ -1,4 +1,4 @@
-import { getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
+import { describeKnownProjectInfo, getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
 import { BUDGET_EXPECTATION_WORDING, SHORT_EARLY_STAGE_INTAKE_MESSAGE, composeSmartLeadIntakeMessage } from "@/lib/lead-intake";
 import { normaliseV6Text } from "@/lib/whatsapp-v6/singapore-renovation-language";
 import { receivedAcknowledgement } from "@/lib/whatsapp-v6/context-truth-gate";
@@ -82,6 +82,8 @@ function intakeSnapshot(context: V6VerifiedContext) {
     hasFloorPlan: context.hasFloorPlan,
     hasSitePhotos: context.hasSitePhotos,
     hasDesignReferences: context.hasDesignReferences,
+    hasTimeline: Boolean(context.knownTimeline),
+    hasBudgetExpectation: Boolean(context.knownBudgetExpectation),
     hasPreferredAppointmentTime: context.hasPreferredAppointmentTime
   };
 }
@@ -96,13 +98,60 @@ function composeSmartV6MeetingPrep(context: V6VerifiedContext, intro = "To prepa
 
 function composePrice(input: { text: string; understanding: V6Understanding; context: V6VerifiedContext }) {
   const ack = receivedAcknowledgement(input.context);
+  const budgetAsk = input.context.knownBudgetExpectation ? "" : ` ${BUDGET_EXPECTATION_WORDING}`;
   if (input.context.hasFloorPlan && input.context.hasScopeOfWork) {
-    return `I understand you'd like a rough idea. ${ack || "Thanks, we've received the project details."} We'll need to review the drawings, site condition and material direction first, because giving a rough figure too early can be misleading. ${BUDGET_EXPECTATION_WORDING} The team can go through this properly during the initial project review.`;
+    return `I understand you'd like a rough idea. ${ack || "Thanks, we've received the project details."} We'll need to review the drawings, site condition and material direction first, because giving a rough figure too early can be misleading.${budgetAsk} The team can go through this properly during the initial project review.`;
   }
   if (hasIntent(input.understanding, "kitchen_renovation")) {
-    return `I understand you'd like a rough idea. To advise properly, could you share the kitchen scope first, such as whether it involves carpentry, wet works or appliance changes? Pricing depends on the site condition, materials and exact scope, so we should review the details first for an initial project review. ${BUDGET_EXPECTATION_WORDING}`;
+    return `I understand you'd like a rough idea. To advise properly, could you share the kitchen scope first, such as whether it involves carpentry, wet works or appliance changes? Pricing depends on the site condition, materials and exact scope, so we should review the details first for an initial project review.${budgetAsk}`;
   }
-  return `I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed. ${BUDGET_EXPECTATION_WORDING} Once we understand the scope, we can review the next step more accurately for an initial project review.`;
+  return `I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed.${budgetAsk} Once we understand the scope, we can review the next step more accurately for an initial project review.`;
+}
+
+function readableList(items: string[]) {
+  if (items.length <= 1) return items.join("");
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+function detailedProjectAsk(context: V6VerifiedContext, includeTimeline = true) {
+  const mediaAsk = !context.hasFloorPlan && !context.hasSitePhotos
+    ? "could you send the floor plan and any site photos if available?"
+    : !context.hasFloorPlan
+      ? "could you send the floor plan if available?"
+      : !context.hasSitePhotos
+        ? "could you send any site photos if available?"
+        : "";
+  const helpful = [
+    /a&a|a a|aa/i.test(context.knownScopeSummary) ? "the main areas you are planning to change" : "",
+    !context.hasDesignReferences ? "any preferred design direction or reference images" : "",
+    includeTimeline && !context.knownTimeline ? "timeline" : ""
+  ].filter(Boolean);
+  const sentences = [
+    mediaAsk ? `For the initial project review, ${mediaAsk}` : "",
+    helpful.length ? `It would also help to know ${readableList(helpful)}.` : ""
+  ].filter(Boolean);
+  return sentences.join(" ");
+}
+
+function composeKnownProjectReply(context: V6VerifiedContext) {
+  const ack = describeKnownProjectInfo(context);
+  const ask = detailedProjectAsk(context);
+  return [ack, ask || "The team can review the current details and advise the next step for the initial project review."].filter(Boolean).join("\n\n");
+}
+
+function composeAlreadyToldYouReply(context: V6VerifiedContext) {
+  const ack = describeKnownProjectInfo(context, "You're right, sorry about that. We have noted:");
+  const items = [
+    !context.hasFloorPlan ? "the floor plan" : "",
+    !context.hasSitePhotos ? "site photos" : "",
+    /a&a|a a|aa/i.test(context.knownScopeSummary) ? "which areas you are planning to change" : "",
+    !context.hasDesignReferences ? "design references" : ""
+  ].filter(Boolean);
+  const ask = items.length
+    ? `The main items still helpful for review are ${readableList(items)}.`
+    : "The team can review the current details and advise the next step for the initial project review.";
+  return `${ack || "You're right, sorry about that. We have noted the details you shared."}\n\n${ask}`;
 }
 
 function specificWorkLabel(text: string) {
@@ -156,12 +205,15 @@ export function composeNaturalV6Reply(input: {
     return "Sorry, we're not able to listen to voice messages here. Could you type the key details instead, such as your property type, renovation scope, and preferred appointment timing for an initial project review?";
   }
 
+  if (context.alreadyToldYouDetected) return composeAlreadyToldYouReply(context);
+
   if (hasIntent(understanding, "human_escalation")) {
     return "Thanks, the team should follow up with you directly on this. Could you share the key details, photos or messages related to the issue so it can be checked properly for an initial project review?";
   }
 
   if (hasIntent(understanding, "portfolio_request")) return composePortfolio(context);
   if (hasIntent(understanding, "price_question")) return composePrice({ text: input.inboundText, understanding, context });
+  if (context.budgetStatementDetected && (context.knownPropertyType || context.knownScopeSummary || context.knownAddressOrArea)) return composeKnownProjectReply(context);
   if (hasIntent(understanding, "specific_works") && !hasIntent(understanding, "demolition_hacking") && !hasIntent(understanding, "structural_wall")) {
     const specificReply = composeSpecificWork(input.inboundText, context);
     if (specificReply) return specificReply;
@@ -193,8 +245,8 @@ export function composeNaturalV6Reply(input: {
     if (hasDesign) parts.push(`For the design theme, we can propose a suitable direction after reviewing your layout, lighting, storage needs and preferred style. ${composeSmartV6MeetingPrep(context, "For design preparation")}`);
     if (hasAppointment) parts.push(composeAppointment(input.inboundText, context));
     if (hasWallRisk || hasApproval) parts.push("For wall hacking or approval matters, we'll need to review the drawings and site condition first because it depends on the wall type, structure, services, scope and whether submission is required.");
-    const ack = receivedAcknowledgement(context);
-    const missing = askForMissing(context, ["floor_plan", "site_photos", "address_or_area", "scope"], "general");
+    const ack = describeKnownProjectInfo(context) || receivedAcknowledgement(context);
+    const missing = detailedProjectAsk(context) || askForMissing(context, ["floor_plan", "site_photos", "address_or_area", "scope"], "general");
     if (!hasAppointment && (ack || missing)) parts.push(`${ack ? `${ack} ` : ""}${missing || "The team can review the details for an initial project review."}`.trim());
     if (!hasAppointment && !missing) parts.push(composeSmartV6MeetingPrep(context));
     return parts.join("\n\n").trim();

@@ -15,6 +15,21 @@ function has(text: string, pattern: RegExp) {
   return pattern.test(text);
 }
 
+function isBudgetStatement(text: string) {
+  return /\b(?:my\s+)?budget(?:\s+expectation)?(?:\s+is)?(?:\s+around|\s+about)?\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)?\b/i.test(text) ||
+    /\b(?:around|about)\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)?\s+budget\b/i.test(text) ||
+    /\bi have (?:around|about)?\s*(?:s\$|\$)?\s*\d+(?:\.\d+)?\s*(?:k|thousand|m|million)\b/i.test(text);
+}
+
+function isActualPriceQuestion(text: string) {
+  return /\b(how much|roughly how much|how much roughly|what price|how much.*cost|estimate\?|rough estimate|quotation\?|quote\?|budget how|price\?)\b/i.test(text);
+}
+
+function removeIntent(target: string[], value: string) {
+  const index = target.indexOf(value);
+  if (index >= 0) target.splice(index, 1);
+}
+
 export function understandWhatsAppMessage(text: string, type = "text"): V6Understanding {
   const normalized = normaliseV6Text(text);
   const raw = text.toLowerCase();
@@ -103,6 +118,12 @@ export function understandWhatsAppMessage(text: string, type = "text"): V6Unders
   }
   if (has(normalized, /\b(renovate|renovation|reno|can do|got do|house|home)\b/i)) {
     addUnique(detectedIntents, "general_renovation");
+  }
+  if (isBudgetStatement(text) && !isActualPriceQuestion(text)) {
+    removeIntent(detectedIntents, "price_question");
+    removeIntent(detectedRisks, "pricing_request");
+    addUnique(detectedIntents, "budget_statement");
+    addUnique(detectedScopes, "budget expectation");
   }
   if (!detectedIntents.length && normalized) addUnique(detectedIntents, "general_renovation");
 

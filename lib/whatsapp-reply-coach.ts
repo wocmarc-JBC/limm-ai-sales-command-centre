@@ -7,9 +7,11 @@ import {
 } from "@/lib/lead-intake";
 import {
   buildMissingInfoAsk,
+  describeKnownProjectInfo,
   describeReceivedInfo,
   getLimmInstagramUrl,
   inferWhatsAppLeadContext,
+  isBudgetStatementText,
   type WhatsAppLeadContextMemory
 } from "@/lib/whatsapp-lead-context";
 import {
@@ -142,7 +144,7 @@ export function detectReplyCoachIntent(text: string): QuestionBankIntentKey {
   if (!normalized) return "unsupported";
   if (has(normalized, /\b(past works?|past projects?|project photos?|portfolio|before[-\s]?after|before and after|show me your work|photos of your works?|renovation photos?|completed project|design photos?|got landed photo|got project photo)\b/i)) return "design_theme";
   if (has(normalized, /\b(refund|lawyer|complaint|unhappy|angry|defect|your work.*problem|call me|urgent|paid deposit|cancel project|cancel)\b/i)) return "complaint_or_risk";
-  if (has(normalized, /\b(how much|roughly|price|cost|estimate|quotation|quote|package|budget|budget how|price ah)\b/i)) return "price_question";
+  if (!isBudgetStatementText(text) && has(normalized, /\b(how much|roughly|price|cost|estimate|quotation|quote|package|budget how|price ah)\b/i)) return "price_question";
   if (has(normalized, /\b(need approval|can approve|ura|bca|submission|permit|will this pass|will pass)\b/i)) return "submission_approval";
   if (has(normalized, /\b(hack wall|remove wall|structural wall|load bearing|need pe|pe endorsement|beam|column)\b/i)) return "structural_wall";
   if (has(normalized, /\b(can hack|hacking|demolish|demolition|debris|disposal)\b/i)) return "hacking_demo";
@@ -263,6 +265,41 @@ function composePriceReply(context: WhatsAppLeadContextMemory) {
   return `I understand you'd like a rough idea. To advise properly, could you share the scope of work first? Pricing depends on the property type, areas involved, site condition, material direction and whether any A&A or authority-related work is needed. ${BUDGET_EXPECTATION_WORDING} Once we understand the scope, we can review the next step more accurately for an initial project review.`;
 }
 
+function projectReviewMissingAsk(context: WhatsAppLeadContextMemory, includeTimeline = true) {
+  const mediaAsk = !context.hasFloorPlan && !context.hasSitePhotos
+    ? "could you send the floor plan and any site photos if available?"
+    : !context.hasFloorPlan
+      ? "could you send the floor plan if available?"
+      : !context.hasSitePhotos
+        ? "could you send any site photos if available?"
+        : "";
+  const helpful = [
+    /a&a|a a|aa/i.test(context.knownScopeSummary) ? "the main areas you are planning to change" : "",
+    !context.hasDesignReferences ? "any preferred design direction or reference images" : "",
+    includeTimeline && !context.hasTimeline ? "timeline" : ""
+  ].filter(Boolean);
+  const sentences = [
+    mediaAsk ? `For the initial project review, ${mediaAsk}` : "",
+    helpful.length ? `It would also help to know ${readableList(helpful)}.` : ""
+  ].filter(Boolean);
+  return sentences.join(" ");
+}
+
+function composeKnownIntakeReply(context: WhatsAppLeadContextMemory) {
+  const ack = describeKnownProjectInfo(context);
+  const ask = projectReviewMissingAsk(context);
+  return [ack, ask || "The team can review the current details and advise the next step for the initial project review."].filter(Boolean).join("\n\n");
+}
+
+function composeAlreadyToldYouReply(context: WhatsAppLeadContextMemory) {
+  const ack = describeKnownProjectInfo(context, "You're right, sorry about that. We have noted:");
+  const ask = projectReviewMissingAsk(context, false) || "The team can review the current details and advise the next step for the initial project review.";
+  return `${ack || "You're right, sorry about that. We have noted the details you shared."}\n\nThe main items still helpful for review are ${ask
+    .replace(/^For the initial project review,\s*/i, "")
+    .replace(/^could you /i, "")
+    .replace(/\?$/i, ".")}`;
+}
+
 function composeAppointmentReply(input: WhatsAppReplyCoachInput, context: WhatsAppLeadContextMemory, followUp = false) {
   const requestedTime = appointmentTimeText(input.inboundText);
   if (context.hasPropertyType && context.hasScopeOfWork && context.hasAddressOrArea) {
@@ -380,6 +417,8 @@ function replyFor(input: WhatsAppReplyCoachInput, intent: QuestionBankIntentKey,
   const hasPriorContext = input.previousMessages.length > 1;
   const context = inferWhatsAppLeadContext({ lead: input.lead, previousMessages: input.previousMessages, inboundText: input.inboundText });
   const scan = detectWhatsAppMessageIntents(input.inboundText);
+  if (context.alreadyToldYouDetected) return composeAlreadyToldYouReply(context);
+  if (context.budgetStatementDetected && (context.knownPropertyType || context.knownScopeSummary || context.knownAddressOrArea)) return composeKnownIntakeReply(context);
   if (intent === "unsupported_media" && /audio|voice/i.test(input.inboundText)) return composeVoiceMessageReply();
   if (scan.multiIntentDetected) return composeMultiIntentReply(input, scan.detectedIntents, context);
   if (scan.portfolioRequestDetected) return composePortfolioReply(context);
