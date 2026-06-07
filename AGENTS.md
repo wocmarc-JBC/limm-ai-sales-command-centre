@@ -1,5 +1,30 @@
 # AGENTS.md
 
+## Before Coding WhatsApp Sales Agent Changes
+
+Before coding any WhatsApp reply-brain, sales-agent, lead-intake, conversation memory, or CRM client-message behaviour, do not jump straight into patches.
+
+First read:
+
+docs/LIMM_WHATSAPP_SALES_AGENT_PLAYBOOK_V5.md
+
+Then produce a short implementation blueprint before editing code.
+
+The blueprint must confirm:
+- one single reply planner will control the reply
+- no competing fallback composers will be added
+- all replies will use merged lead context
+- every reply will choose one primary sales move
+- client-facing summaries will never expose internal placeholders
+- direct questions will be answered first
+- serious landed A&A will not default ask “which areas/main areas”
+- budget statements will not be treated as price questions
+- file/floorplan questions will answer file status first
+- human-feel judge and replay tests will be added/updated
+- WhatsApp webhook, send payload, price guide, calendar, voice transcription, auth, env, and Supabase schema will not be touched unless explicitly required
+
+For WhatsApp sales-agent work, do not implement until the blueprint is clear.
+
 ## LIMM WhatsApp Sales Agent Playbook
 
 For any WhatsApp reply-brain, sales-agent, lead-intake, conversation memory, client messaging, or CRM conversation logic work, read and follow:
