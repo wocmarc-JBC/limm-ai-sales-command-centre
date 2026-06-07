@@ -879,7 +879,7 @@ for (const phrase of [
   "instagramUrlAvailable",
   "humanFollowUpTaskCreated",
   "combinedReplyUsed",
-  "NO_SILENCE_FALLBACK_REPLY",
+  "ULTRA_SAFE_MINIMAL_FALLBACK_REPLY",
   "safety_result",
   "repetition_result",
   "quality_result",

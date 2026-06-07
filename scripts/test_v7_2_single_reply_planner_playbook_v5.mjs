@@ -56,10 +56,11 @@ check(
 
 check(
   "4. old fallback paths cannot override v7 planner",
-  decision.includes("let usingV7Reply = Boolean(v7Decision.replyText)") &&
-    decision.includes("let replyText = v7Decision.replyText || v6Decision.replyText || coach.replyText") &&
+  decision.includes("let usingV7Reply = Boolean(v7Decision.replyText.trim())") &&
+    decision.includes("let replyText = usingV7Reply ? v7Decision.replyText : ULTRA_SAFE_MINIMAL_FALLBACK_REPLY") &&
+    !decision.includes("v7Decision.replyText || v6Decision.replyText || coach.replyText") &&
     v7.includes("shouldReply: input.autoReplyEnabled && Boolean(replyText)"),
-  "v7 returns the first non-empty reply for valid text; v6/coach are fallback only."
+  "v7 controls final replies; non-v7 fallback is ultra-safe only."
 );
 
 check(
@@ -132,8 +133,8 @@ check(
 
 check(
   "13. price question gets safe no-price reply",
-  v7.includes("I understand you'd like a rough idea. To avoid giving the wrong figure") &&
-    v7.includes("Giving a rough figure too early can be misleading") &&
+  v7.includes("I understand you'd like a rough idea.") &&
+    v7.includes("before advising") &&
     safety.includes("pricing_amount"),
   "Price replies must not give a figure."
 );
@@ -257,7 +258,7 @@ check(
 
 check(
   "28. no-silence guard preserved",
-  decision.includes("NO_SILENCE_FALLBACK_REPLY") &&
+  decision.includes("ULTRA_SAFE_MINIMAL_FALLBACK_REPLY") &&
     decision.includes("noSilenceGuardResult") &&
     decision.includes("valid_client_text"),
   "Final reply decision still protects against empty replies."

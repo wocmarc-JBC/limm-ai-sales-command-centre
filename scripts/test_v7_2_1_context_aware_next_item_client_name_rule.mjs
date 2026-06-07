@@ -29,10 +29,11 @@ const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
 
 check(
   "1. v7.2.1 successor version marker exists",
-  v7.includes('V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION = "v7_2_1_context_aware_next_item_client_name_rule"') &&
+    v7.includes('V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION = "v7_2_1_context_aware_next_item_client_name_rule"') &&
     v7.includes('V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION = "v7_2_2_price_reply_uses_known_context"') &&
-    health.includes('version: "v7_2_2_price_reply_uses_known_context"') &&
-    health.includes('salesBrainVersion: "v7.2.2"'),
+    v7.includes('V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION = "v7_2_3_remove_legacy_whatsapp_reply_templates"') &&
+    health.includes('version: "v7_2_3_remove_legacy_whatsapp_reply_templates"') &&
+    health.includes('salesBrainVersion: "v7.2.3"'),
   "Health must prove the current v7.2.x refinement after deploy."
 );
 

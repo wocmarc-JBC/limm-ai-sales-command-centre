@@ -58,6 +58,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v7.2.1"
 // version: "v7_2_2_price_reply_uses_known_context"
 // salesBrainVersion: "v7.2.2"
+// version: "v7_2_3_remove_legacy_whatsapp_reply_templates"
+// salesBrainVersion: "v7.2.3"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -81,9 +83,14 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v7_2_2_price_reply_uses_known_context",
-      salesBrainVersion: "v7.2.2",
+      version: "v7_2_3_remove_legacy_whatsapp_reply_templates",
+      salesBrainVersion: "v7.2.3",
       runtime: "vercel",
+      legacyReplyTemplatesRemovedFromLivePath: true,
+      replySourceTraceAvailable: true,
+      legacyTemplateBlockedInFinalReplies: true,
+      priceReplyUsesV72PlannerOnly: true,
+      priceReplyNoScopeAskForSeriousAa: true,
       contextAwareNextUsefulItemAvailable: true,
       priceReplyUsesKnownContext: true,
       priceReplyNoBroadScopeAskForSeriousLandedAa: true,
@@ -468,9 +475,14 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v7_2_2_price_reply_uses_known_context",
-      salesBrainVersion: "v7.2.2",
+      version: "v7_2_3_remove_legacy_whatsapp_reply_templates",
+      salesBrainVersion: "v7.2.3",
       runtime: "vercel",
+      legacyReplyTemplatesRemovedFromLivePath: false,
+      replySourceTraceAvailable: false,
+      legacyTemplateBlockedInFinalReplies: false,
+      priceReplyUsesV72PlannerOnly: false,
+      priceReplyNoScopeAskForSeriousAa: false,
       contextAwareNextUsefulItemAvailable: false,
       priceReplyUsesKnownContext: false,
       priceReplyNoBroadScopeAskForSeriousLandedAa: false,

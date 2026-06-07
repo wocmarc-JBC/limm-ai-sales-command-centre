@@ -31,11 +31,12 @@ const replyReturnLiterals = [...v7.matchAll(/return\s+(`[^`]*`|"[^"]*"|'[^']*')/
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
 
 check(
-  "1. v7.2.2 version marker exists",
+  "1. v7.2.2 successor version marker exists",
   v7.includes('V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION = "v7_2_2_price_reply_uses_known_context"') &&
-    health.includes('version: "v7_2_2_price_reply_uses_known_context"') &&
-    health.includes('salesBrainVersion: "v7.2.2"'),
-  "Health must prove v7.2.2 after deploy."
+    v7.includes('V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION = "v7_2_3_remove_legacy_whatsapp_reply_templates"') &&
+    health.includes('version: "v7_2_3_remove_legacy_whatsapp_reply_templates"') &&
+    health.includes('salesBrainVersion: "v7.2.3"'),
+  "Health must prove the current v7.2.x refinement after deploy."
 );
 
 check(
@@ -92,7 +93,7 @@ check(
 check(
   "8. low-info price question can still ask for property/scope/files",
   activeMissingSelector.includes('return ["scope", "floor_plan", "site_photos", "design_references"].filter') &&
-    activePlannerComposer.includes('const followUp = ask || "Could you share the scope of work first for an initial project review?";'),
+    activePlannerComposer.includes('const followUp = ask || "Could you share the property type, renovation scope and any floor plan/site photos if available?";'),
   "Low-context price enquiries still need safe basic intake."
 );
 

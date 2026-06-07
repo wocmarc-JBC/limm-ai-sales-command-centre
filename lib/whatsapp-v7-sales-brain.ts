@@ -14,6 +14,7 @@ export const V7_1_MEMORY_CONTRACT_VERSION = "v7_1_whatsapp_conversation_memory_c
 export const V7_2_SINGLE_REPLY_PLANNER_VERSION = "v7_2_single_reply_planner_playbook_v5";
 export const V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION = "v7_2_1_context_aware_next_item_client_name_rule";
 export const V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION = "v7_2_2_price_reply_uses_known_context";
+export const V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION = "v7_2_3_remove_legacy_whatsapp_reply_templates";
 
 export type V7WhatsAppIntent =
   | "greeting"
@@ -128,7 +129,7 @@ export interface V7WhatsAppSalesBrainInput {
 }
 
 export interface V7WhatsAppSalesBrainDecision {
-  version: typeof V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION;
+  version: typeof V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION;
   shouldReply: boolean;
   replyText: string;
   intents: V7WhatsAppIntent[];
@@ -367,9 +368,9 @@ function composePriceQuestionReply(context: NormalizedWhatsAppLeadContext) {
     const known = context.known_facts_summary ? ` ${shortKnownAcknowledgement(context)}` : "";
     const fields = selectMissingFields(context, "price").filter((field) => field !== "scope");
     const ask = fields.length ? ` If possible, send the ${readableList(fields.map(fieldLabel))} so the team can review more accurately.` : "";
-    return `I understand you'd like a rough idea.${known} To avoid giving the wrong figure, the team needs to review the scope, drawings/site photos, site condition and material direction first.${ask} We can advise the next step for an initial project review.`;
+    return `I understand you'd like a rough idea.${known} The team should review the drawings/site photos, site condition and material direction first before advising.${ask} We can advise the next step after review.`;
   }
-  return "I understand you'd like a rough idea. To avoid giving the wrong figure, the team needs to review the scope, drawings/site photos, site condition and material direction first. If you can send the floor plan, site photos and main areas involved, we can advise the next step for an initial project review.";
+  return "I understand you'd like a rough idea. The team needs to review your property type, renovation scope, floor plan/site photos, site condition and material direction first before advising.";
 }
 
 function composeAppointmentReply(text: string, context: NormalizedWhatsAppLeadContext) {
@@ -751,7 +752,7 @@ function directAnswerFor(input: V7WhatsAppSalesBrainInput, intents: V7WhatsAppIn
   if (primaryMove === "safe_price_reply" && shouldUseKnownLandedAaPriceContext(context)) {
     return "I understand you'd like a rough idea. For landed A&A works, the team should review the floor plan, site photos, site condition and material direction first before advising.";
   }
-  if (primaryMove === "safe_price_reply") return "I understand you'd like a rough idea. To avoid giving the wrong figure, the team needs to review the floor plan, site photos, scope and material direction first.";
+  if (primaryMove === "safe_price_reply") return "I understand you'd like a rough idea. The team needs to review your property type, renovation scope, floor plan/site photos and material direction first before advising.";
   if (primaryMove === "collect_meeting_preference") {
     const timing = extractPreferredTiming(input.inboundMessageText, context);
     return `${timing} noted as your preferred timing. The team will check availability before confirming.`;
@@ -961,9 +962,9 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
     if (context.scope_summary || context.floor_plan_received || context.budget_expectation) {
       const known = knownFull ? ` Thanks, we've noted your ${knownFull}.` : "";
       const followUp = ask ? ` ${ask}` : " The team can go through this properly during the initial project review.";
-      return `${plan.directAnswer}${known} Giving a rough figure too early can be misleading.${followUp}`;
+      return `${plan.directAnswer}${known}${followUp}`;
     }
-    const followUp = ask || "Could you share the scope of work first for an initial project review?";
+    const followUp = ask || "Could you share the property type, renovation scope and any floor plan/site photos if available?";
     return `${plan.directAnswer} ${followUp}`;
   }
 
@@ -1106,7 +1107,7 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
   const stage = determineStage(primary, context);
 
   return {
-    version: V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION,
+    version: V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION,
     shouldReply: input.autoReplyEnabled && Boolean(replyText),
     replyText,
     intents,
@@ -1120,13 +1121,19 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
     repeatedQuestionRisk: context.repeated_question_risk,
     context,
     trace: {
-      v7_version: V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION,
+      v7_version: V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION,
       v7PreviousVersion: V7_WORLD_CLASS_SALES_BRAIN_VERSION,
       v7MemoryContractVersion: V7_1_MEMORY_CONTRACT_VERSION,
       v7SingleReplyPlannerVersion: V7_2_SINGLE_REPLY_PLANNER_VERSION,
+      v7KnownContextPriceVersion: V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION,
       worldClassSalesConversationBrainAvailable: true,
       playbookV5SingleReplyPlannerAvailable: true,
       contextAwareNextUsefulItemAvailable: true,
+      legacyReplyTemplatesRemovedFromLivePath: true,
+      replySourceTraceAvailable: true,
+      legacyTemplateBlockedInFinalReplies: true,
+      priceReplyUsesV72PlannerOnly: true,
+      priceReplyNoScopeAskForSeriousAa: true,
       priceReplyUsesKnownContext: true,
       priceReplyNoBroadScopeAskForSeriousLandedAa: true,
       priceReplyDoesNotAskReceivedFiles: true,

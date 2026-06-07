@@ -2,7 +2,6 @@ import type { Lead, LeadMessage } from "@/lib/types";
 import {
   coachWhatsAppReply,
   evaluateReplyQuality,
-  NO_SILENCE_FALLBACK_REPLY,
   type WhatsAppConversationStage,
   type WhatsAppSalesMove
 } from "@/lib/whatsapp-reply-coach";
@@ -54,6 +53,23 @@ export interface WhatsAppReplyDecision {
   appointmentStatus: "none" | "requested_pending_review" | "pending_calendar_confirmation" | "confirmed_with_calendar_event";
   calendarEventId: string | null;
   blackBoxTrace: Record<string, unknown>;
+}
+
+const ULTRA_SAFE_MINIMAL_FALLBACK_REPLY =
+  "Thanks for your message. The team will review the details and get back to you shortly. If you have site photos, design references or preferred timing, you can send them here too.";
+
+const LEGACY_REPLY_TEMPLATE_PATTERNS = [
+  /Giving a rough figure too early can be misleading/i,
+  /To avoid giving (?:you )?the wrong figure/i,
+  /Could you share the scope of work/i,
+  /Could you share main renovation scope/i,
+  /WhatsApp renovation enquiry pending review/i,
+  /This is a at/i,
+  /This is with/i
+];
+
+function containsLegacyReplyTemplate(text: string) {
+  return LEGACY_REPLY_TEMPLATE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 function normalise(text: string) {
@@ -123,7 +139,7 @@ function riskFlagsFromIntents(intents: string[]) {
 
 function safeRewriteFor(intent: string) {
   if (intent === "price_question") {
-    return "I understand you'd like a rough idea. To avoid giving you the wrong figure, we need to understand the scope, layout, site condition and material direction first. Could you send the floor plan, photos and the main areas you're planning to renovate for an initial project review?";
+    return "I understand you'd like a rough idea. The team needs to review the project details, site condition and material direction first before advising. If you have site photos or design references, you can send them here too.";
   }
   if (intent === "appointment_request" || intent === "site_visit_request") {
     return "We can help check availability. Before confirming a slot, could you share your property type, property area/address and basic renovation scope? The team will review availability before confirming for an initial project review.";
@@ -134,7 +150,7 @@ function safeRewriteFor(intent: string) {
   if (intent === "structural_wall" || intent === "hacking_demo") {
     return "We can help review it, but wall hacking should not be advised blindly because the wall type, services and structure need to be checked. Could you send the floor plan and photos of the wall so the team can review the next step for an initial project review?";
   }
-  return NO_SILENCE_FALLBACK_REPLY;
+  return ULTRA_SAFE_MINIMAL_FALLBACK_REPLY;
 }
 
 export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): WhatsAppReplyDecision {
@@ -305,11 +321,11 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     };
   }
 
-  let usingV7Reply = Boolean(v7Decision.replyText);
-  let replyText = v7Decision.replyText || v6Decision.replyText || coach.replyText;
-  let replySource: WhatsAppReplySource = usingV7Reply
-    ? "world_class_sales_brain"
-    : v6Decision.replyText ? "reply_coach" : coach.handoffRequired && coach.intent === "complaint_or_risk" ? "handoff_holding" : "reply_coach";
+  let usingV7Reply = Boolean(v7Decision.replyText.trim());
+  let replyText = usingV7Reply ? v7Decision.replyText : ULTRA_SAFE_MINIMAL_FALLBACK_REPLY;
+  let replySource: WhatsAppReplySource = usingV7Reply ? "world_class_sales_brain" : "safe_fallback";
+  let templateId = usingV7Reply ? `v7:${v7Decision.salesMove}` : "ultra_safe_minimal_fallback";
+  let blockedLegacyTemplate = false;
   let safetyResult: WhatsAppReplyDecision["safetyResult"] = "pass";
   let repetitionResult: WhatsAppReplyDecision["repetitionResult"] = "pass";
   let qualityResult: WhatsAppReplyDecision["qualityResult"] = "pass";
@@ -318,9 +334,10 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
 
   let safety = validateWhatsAppAutoReply(replyText, { calendarEventId: input.calendarEventId ?? "" });
   if (!safety.ok) {
-    replyText = safeRewriteFor(coach.intent);
+    replyText = usingV7Reply ? ULTRA_SAFE_MINIMAL_FALLBACK_REPLY : safeRewriteFor(coach.intent);
     usingV7Reply = false;
     replySource = "safe_fallback";
+    templateId = usingV7Reply ? "v7_safety_fallback" : "safe_rewrite";
     safetyResult = "rewritten";
     safety = validateWhatsAppAutoReply(replyText, { calendarEventId: input.calendarEventId ?? "" });
   }
@@ -329,6 +346,7 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
   if (repeated && !usingV7Reply && coach.intent !== "follow_up_ping") {
     replyText = safeRewriteFor(coach.intent);
     replySource = "repetition_rewrite";
+    templateId = "repetition_rewrite";
     repetitionResult = "rewritten";
   }
 
@@ -351,24 +369,37 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     replyText = qualityReply;
     quality = rewrittenQuality;
     replySource = "quality_rewrite";
+    templateId = "quality_rewrite";
     qualityResult = rewrittenQuality.rewriteRequired ? "fallback_used" : "rewritten";
   }
 
   if (!replyText.trim()) {
-    replyText = NO_SILENCE_FALLBACK_REPLY;
+    replyText = ULTRA_SAFE_MINIMAL_FALLBACK_REPLY;
     usingV7Reply = false;
     replySource = "safe_fallback";
+    templateId = "ultra_safe_no_silence_fallback";
     safetyResult = "fallback_used";
     noSilenceGuardResult = "used";
   }
 
   safety = validateWhatsAppAutoReply(replyText, { calendarEventId: input.calendarEventId ?? "" });
   if (!safety.ok) {
-    replyText = NO_SILENCE_FALLBACK_REPLY;
+    replyText = ULTRA_SAFE_MINIMAL_FALLBACK_REPLY;
     usingV7Reply = false;
     replySource = "safe_fallback";
+    templateId = "ultra_safe_final_safety_fallback";
     safetyResult = "fallback_used";
     noSilenceGuardResult = "used";
+    safety = validateWhatsAppAutoReply(replyText, { calendarEventId: input.calendarEventId ?? "" });
+  }
+
+  if (containsLegacyReplyTemplate(replyText)) {
+    replyText = ULTRA_SAFE_MINIMAL_FALLBACK_REPLY;
+    usingV7Reply = false;
+    replySource = "safe_fallback";
+    templateId = "blocked_legacy_template_ultra_safe_fallback";
+    blockedLegacyTemplate = true;
+    safetyResult = "fallback_used";
     safety = validateWhatsAppAutoReply(replyText, { calendarEventId: input.calendarEventId ?? "" });
   }
 
@@ -442,6 +473,11 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       detectedIntents: coach.detectedIntents,
       v6_version: v6Decision.version,
       v7_version: v7Decision.version,
+      replyEngine: usingV7Reply ? "v7_2_planner" : "ultra_safe_fallback",
+      primaryMove: v7Decision.salesMove,
+      templateId,
+      usedPlanner: usingV7Reply,
+      blockedLegacyTemplate,
       v7_detectedIntents: v7Decision.intents,
       v7_primaryIntent: v7Decision.primaryIntent,
       v7_stage: v7Decision.stage,
