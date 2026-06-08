@@ -82,8 +82,8 @@ function loadProjectModule(specifier, parentDir = ROOT) {
 
 const { buildWhatsAppReplyDecision } = loadProjectModule("lib/whatsapp-reply-decision.ts");
 
-function baseLead(caseItem) {
-  const memory = caseItem.memory_before ?? {};
+function baseLead(caseItem, memoryOverride = null) {
+  const memory = memoryOverride ?? caseItem.memory_before ?? {};
   const now = new Date("2026-06-08T09:00:00+08:00").toISOString();
   return {
     id: `replay-${caseItem.id}`,
@@ -125,7 +125,10 @@ function baseLead(caseItem) {
       scopeOfWork: memory.scope_summary ?? "",
       floorPlanStatus: memory.floor_plan_received ? "received" : "",
       sitePhotosStatus: memory.site_photos_received ? "received" : "",
-      trace: memory.trace ?? {}
+      trace: {
+        ...(memory.trace ?? {}),
+        v9Memory: memory
+      }
     }
   };
 }
@@ -146,8 +149,8 @@ function makeMessage(caseId, index, direction, body, metadata = {}) {
   };
 }
 
-function memoryMessages(caseItem) {
-  const memory = caseItem.memory_before ?? {};
+function memoryMessages(caseItem, memoryOverride = null) {
+  const memory = memoryOverride ?? caseItem.memory_before ?? {};
   const messages = [];
   let index = 1;
   const addInbound = (body, metadata = {}) => messages.push(makeMessage(caseItem.id, index++, "inbound", body, metadata));
@@ -187,8 +190,8 @@ function intentMatches(decision, expected) {
     decision.intent,
     decision.salesMove,
     trace.primaryIntent,
-    trace.v7_primaryIntent,
     trace.detected_intent,
+    trace.v7_primaryIntent,
     ...(Array.isArray(trace.detectedIntents) ? trace.detectedIntents : []),
     ...(Array.isArray(trace.v7_detectedIntents) ? trace.v7_detectedIntents : [])
   ].map(String);
@@ -201,6 +204,7 @@ function salesMoveMatches(decision, expected) {
     decision.salesMove,
     trace.primarySalesMove,
     trace.primaryMove,
+    trace.selected_sales_move,
     trace.v7_salesMove
   ].map(String);
   return candidates.includes(expected);
@@ -228,7 +232,7 @@ const requiredTraceFields = [
 
 function compactTrace(trace) {
   const source = trace ?? {};
-  const normalizedContext = source.v7_normalizedContext ?? {};
+  const normalizedContext = source.v9Memory ?? source.memoryAfter ?? source.v7_normalizedContext ?? {};
   return {
     replyEngine: source.replyEngine,
     plannerVersion: source.plannerVersion,
@@ -242,6 +246,15 @@ function compactTrace(trace) {
     blockedLegacyTemplate: source.blockedLegacyTemplate,
     safetyValidatorPassed: source.safetyValidatorPassed,
     finalReplyHash: source.finalReplyHash,
+    v9Memory: source.v9Memory,
+    memoryPatch: source.memoryPatch,
+    memoryAfter: source.memoryAfter,
+    handoffLockActive: source.handoffLockActive,
+    durableCorrectionMemoryAvailable: source.durableCorrectionMemoryAvailable,
+    correctionApplied: source.correctionApplied,
+    correctionHistory: source.correctionHistory,
+    singleReplyCoreOnly: source.singleReplyCoreOnly,
+    legacyReplyLogicQuarantined: source.legacyReplyLogicQuarantined,
     v7_primaryIntent: source.v7_primaryIntent,
     v7_salesMove: source.v7_salesMove,
     v7_detectedIntents: source.v7_detectedIntents,
@@ -249,21 +262,22 @@ function compactTrace(trace) {
     v7_askedFields: source.v7_askedFields,
     v7_normalizedContext: {
       property_type: normalizedContext.property_type,
-      property_address: normalizedContext.property_address,
+      property_address: normalizedContext.property_address ?? normalizedContext.address,
       scope_summary: normalizedContext.scope_summary,
-      floor_plan_received: normalizedContext.floor_plan_received,
-      site_photos_received: normalizedContext.site_photos_received,
-      reference_images_received: normalizedContext.reference_images_received,
+      floor_plan_received: normalizedContext.floor_plan_received ?? ["received", "client_claimed_sent"].includes(normalizedContext.floor_plan_status),
+      site_photos_received: normalizedContext.site_photos_received ?? ["received", "client_claimed_sent"].includes(normalizedContext.site_photo_status),
+      reference_images_received: normalizedContext.reference_images_received ?? ["received", "client_claimed_sent", "provided"].includes(normalizedContext.design_reference_status),
       budget_expectation: normalizedContext.budget_expectation ? "received" : "",
-      timeline: normalizedContext.timeline ? "received" : "",
-      known_facts_summary: normalizedContext.known_facts_summary
+      timeline: normalizedContext.timeline ?? normalizedContext.timeline_expectation ? "received" : "",
+      known_facts_summary: normalizedContext.known_facts_summary ?? source.knownFactsSummary
     }
   };
 }
 
-function validateCase(caseItem) {
-  const lead = baseLead(caseItem);
-  const previousMessages = memoryMessages(caseItem);
+function validateCase(caseItem, effectiveMemory = null) {
+  const memory = effectiveMemory ?? caseItem.memory_before ?? {};
+  const lead = baseLead(caseItem, memory);
+  const previousMessages = memoryMessages(caseItem, memory);
   const decision = buildWhatsAppReplyDecision({
     inboundMessageText: caseItem.client_message,
     inboundMessageType: caseItem.message_type ?? "text",
@@ -298,7 +312,8 @@ function validateCase(caseItem) {
     if (!(field in (decision.blackBoxTrace ?? {}))) failures.push(`missing_trace:${field}`);
   }
   for (const [field, expected] of Object.entries(caseItem.expected_memory_after ?? {})) {
-    const actual = valueAt(decision.blackBoxTrace, `v7_normalizedContext.${field}`);
+    const memoryContext = decision.blackBoxTrace?.v9Memory ?? decision.blackBoxTrace?.memoryAfter ?? decision.blackBoxTrace?.v7_normalizedContext ?? {};
+    const actual = valueAt(memoryContext, field);
     if (actual !== expected) failures.push(`memory_after_mismatch:${field}`);
   }
   if (caseItem.memory_before?.serious_landed_aa && /\bscope of work|main areas|areas involved\b/i.test(reply)) failures.push("serious_landed_aa_broad_scope_ask");
@@ -315,12 +330,32 @@ function validateCase(caseItem) {
     reply,
     expected_intent: caseItem.expected_intent,
     expected_sales_move: caseItem.expected_sales_move,
-    trace: compactTrace(decision.blackBoxTrace)
+    trace: compactTrace(decision.blackBoxTrace),
+    memoryAfter: decision.blackBoxTrace?.v9Memory ?? decision.blackBoxTrace?.memoryAfter ?? decision.blackBoxTrace?.v7_normalizedContext ?? {}
   };
 }
 
 function reportPaths(packPath, count) {
   const name = path.basename(packPath);
+  if (name.includes("v9_golden_300")) {
+    return {
+      json: path.join(ROOT, "reports", "replay_v9_golden_300_report.json"),
+      md: path.join(ROOT, "reports", "replay_v9_golden_300_report.md")
+    };
+  }
+  if (name.includes("v9_live_angry_flow")) {
+    return {
+      json: path.join(ROOT, "reports", "replay_v9_live_angry_flow_report.json"),
+      md: path.join(ROOT, "reports", "replay_v9_live_angry_flow_report.md")
+    };
+  }
+  if (name.includes("v9_10000")) {
+    const sampled = Number(argValue("--sample", "0")) > 0;
+    return {
+      json: path.join(ROOT, "reports", sampled ? "replay_v9_10000_sampled_report.json" : "replay_v9_10000_report.json"),
+      md: path.join(ROOT, sampled ? "replay_v9_10000_sampled_report.md" : "replay_v9_10000_report.md")
+    };
+  }
   if (name.includes("golden_100")) {
     return {
       json: path.join(ROOT, "reports", "replay_golden_100_report.json"),
@@ -360,13 +395,25 @@ function writeMarkdownReport(filePath, summary, results) {
 
 const packPath = path.resolve(ROOT, argValue("--pack", "tests/replay/limm_replay_golden_100.json"));
 const pack = readJson(packPath);
-const cases = pack.cases ?? [];
+const allCases = pack.cases ?? [];
+const sampleSize = Number(argValue("--sample", "0"));
+const cases = Number.isFinite(sampleSize) && sampleSize > 0 ? allCases.slice(0, sampleSize) : allCases;
 if (!Array.isArray(cases) || !cases.length) {
   console.error("Replay pack has no cases.");
   process.exit(1);
 }
 
-const results = cases.map(validateCase);
+const conversationMemory = new Map();
+const results = cases.map((caseItem) => {
+  const conversationId = caseItem.conversation_id ?? "";
+  const priorMemory = conversationId ? conversationMemory.get(conversationId) ?? {} : {};
+  const effectiveMemory = { ...priorMemory, ...(caseItem.memory_before ?? {}) };
+  const result = validateCase(caseItem, effectiveMemory);
+  if (conversationId && result.memoryAfter && typeof result.memoryAfter === "object") {
+    conversationMemory.set(conversationId, { ...effectiveMemory, ...result.memoryAfter });
+  }
+  return result;
+});
 const failed = results.filter((item) => !item.passed);
 const summary = {
   pack: path.relative(ROOT, packPath),

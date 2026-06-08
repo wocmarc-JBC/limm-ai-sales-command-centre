@@ -1,0 +1,601 @@
+{
+  "version": "v9_0_live_angry_flow",
+  "generatedAt": "2026-06-08T03:02:47.782Z",
+  "cases": [
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_01",
+      "category": "live_angry_flow",
+      "turn_index": 1,
+      "client_message": "how much to do A&A?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_review",
+      "expected_reply_must_include": [
+        "I understand you'd like a rough idea"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 1,
+      "memory_before": {
+        "property_type": "landed",
+        "project_type": "landed A&A",
+        "address": "47 Kasai Road",
+        "serious_landed_aa": true
+      }
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_02",
+      "category": "live_angry_flow",
+      "turn_index": 2,
+      "client_message": "floor plan already sent right",
+      "expected_intent": "file_correction",
+      "expected_sales_move": "file_correction_acknowledgement",
+      "expected_reply_must_include": [
+        "avoid asking for it again"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_03",
+      "category": "live_angry_flow",
+      "turn_index": 3,
+      "client_message": "photos also have been sent",
+      "expected_intent": "file_correction",
+      "expected_sales_move": "file_correction_acknowledgement",
+      "expected_reply_must_include": [
+        "already sent"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_04",
+      "category": "live_angry_flow",
+      "turn_index": 4,
+      "client_message": "design resort style, 1 kid, no elders, 1 helper and 1 dog and 1 cat and 1 giraffe",
+      "expected_intent": "design_direction_statement",
+      "expected_sales_move": "design_direction_noted",
+      "expected_reply_must_include": [
+        "Resort style noted"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": false,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_05",
+      "category": "live_angry_flow",
+      "turn_index": 5,
+      "client_message": "already told you resort style... are you stupid",
+      "expected_intent": "frustration_or_correction",
+      "expected_sales_move": "handoff_to_team",
+      "expected_reply_must_include": [
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_06",
+      "category": "live_angry_flow",
+      "turn_index": 6,
+      "client_message": "???",
+      "expected_intent": "frustration_or_correction",
+      "expected_sales_move": "handoff_to_team",
+      "expected_reply_must_include": [
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_07",
+      "category": "live_angry_flow",
+      "turn_index": 7,
+      "client_message": "WTF..FLOORPLAN ALREADY SENT",
+      "expected_intent": "frustration_or_correction",
+      "expected_sales_move": "handoff_to_team",
+      "expected_reply_must_include": [
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_08",
+      "category": "live_angry_flow",
+      "turn_index": 8,
+      "client_message": "3 months can finish all reno?",
+      "expected_intent": "timeline_question",
+      "expected_sales_move": "timeline_reality_check",
+      "expected_reply_must_include": [
+        "can't confirm 3 months",
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_09",
+      "category": "live_angry_flow",
+      "turn_index": 9,
+      "client_message": "so 3 months cannot finish?",
+      "expected_intent": "timeline_followup",
+      "expected_sales_move": "timeline_reality_check",
+      "expected_reply_must_include": [
+        "can't say it cannot finish",
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_10",
+      "category": "live_angry_flow",
+      "turn_index": 10,
+      "client_message": "give you 6 months for condo reno enough?",
+      "expected_intent": "hypothetical_timeline",
+      "expected_sales_move": "hypothetical_answer_without_context_overwrite",
+      "expected_reply_must_include": [
+        "For many condo renovations",
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_11",
+      "category": "live_angry_flow",
+      "turn_index": 11,
+      "client_message": "tmr 2pm i go your office for meeting with your senior designer ok",
+      "expected_intent": "office_visit_request",
+      "expected_sales_move": "office_visit_pending_confirmation",
+      "expected_reply_must_include": [
+        "office visit timing",
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_12",
+      "category": "live_angry_flow",
+      "turn_index": 12,
+      "client_message": "got any promo now?",
+      "expected_intent": "promotion_question",
+      "expected_sales_move": "promo_deflection",
+      "expected_reply_must_include": [
+        "don't confirm discounts",
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_13",
+      "category": "live_angry_flow",
+      "turn_index": 13,
+      "client_message": "why you keep repeating same shit",
+      "expected_intent": "frustration_or_correction",
+      "expected_sales_move": "handoff_to_team",
+      "expected_reply_must_include": [
+        "follow up directly"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_14",
+      "category": "live_angry_flow",
+      "turn_index": 14,
+      "client_message": "are you AI?",
+      "expected_intent": "identity_question",
+      "expected_sales_move": "human_identity_answer",
+      "expected_reply_must_include": [
+        "assisted by LIMM's enquiry assistant"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    },
+    {
+      "conversation_id": "v9_live_angry_flow",
+      "forbidden_phrases": [
+        "Giving a rough figure too early can be misleading",
+        "To avoid giving the wrong figure",
+        "Could you share the scope of work",
+        "Could you share main renovation scope",
+        "WhatsApp renovation enquiry pending review",
+        "This is a at",
+        "This is with",
+        "free consultation",
+        "appointment confirmed",
+        "booked for you",
+        "approval sure pass",
+        "sure can hack",
+        "confirm can",
+        "from $",
+        "around $",
+        "package price"
+      ],
+      "no_price_language": true,
+      "id": "angry_15",
+      "category": "live_angry_flow",
+      "turn_index": 15,
+      "client_message": "are you human?",
+      "expected_intent": "identity_question",
+      "expected_sales_move": "human_identity_answer",
+      "expected_reply_must_include": [
+        "assisted by LIMM's enquiry assistant"
+      ],
+      "expected_reply_must_not_include": [
+        "send floor plan",
+        "share floor plan",
+        "scope of work"
+      ],
+      "handoff_required": true,
+      "max_questions_allowed": 0,
+      "memory_before": {}
+    }
+  ]
+}

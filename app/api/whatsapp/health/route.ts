@@ -62,6 +62,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v7.2.3"
 // version: "v8_0_sales_agent_reliability_replay_system"
 // salesBrainVersion: "v8.0"
+// version: "v9_0_clean_whatsapp_sales_brain"
+// salesBrainVersion: "v9_clean_core"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -85,9 +87,16 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v8_0_sales_agent_reliability_replay_system",
-      salesBrainVersion: "v8.0",
+      version: "v9_0_clean_whatsapp_sales_brain",
+      salesBrainVersion: "v9_clean_core",
       runtime: "vercel",
+      v9ProductionRouteEnabled: true,
+      legacyReplyLogicQuarantined: true,
+      singleReplyCoreOnly: true,
+      durableCorrectionMemoryAvailable: true,
+      frustrationHandoffLockAvailable: true,
+      hypotheticalContextSwitchGuardAvailable: true,
+      antiRepeatGuardAvailable: true,
       singleReplyPlannerEnforced: true,
       goldenReplayPackAvailable: true,
       goldenReplayPackCount: 100,
@@ -484,9 +493,16 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v8_0_sales_agent_reliability_replay_system",
-      salesBrainVersion: "v8.0",
+      version: "v9_0_clean_whatsapp_sales_brain",
+      salesBrainVersion: "v9_clean_core",
       runtime: "vercel",
+      v9ProductionRouteEnabled: false,
+      legacyReplyLogicQuarantined: false,
+      singleReplyCoreOnly: false,
+      durableCorrectionMemoryAvailable: false,
+      frustrationHandoffLockAvailable: false,
+      hypotheticalContextSwitchGuardAvailable: false,
+      antiRepeatGuardAvailable: false,
       singleReplyPlannerEnforced: false,
       goldenReplayPackAvailable: false,
       goldenReplayPackCount: 0,
