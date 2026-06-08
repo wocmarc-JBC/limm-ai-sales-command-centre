@@ -1,0 +1,5079 @@
+{
+  "summary": {
+    "pack": "tests\\replay\\limm_replay_golden_100.json",
+    "version": "v8_0_golden_100",
+    "total": 100,
+    "passedCount": 100,
+    "failedCount": 0,
+    "score": 100,
+    "passed": true,
+    "generatedAt": "2026-06-08T02:07:51.973Z"
+  },
+  "results": [
+    {
+      "id": "mandatory_001",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 1,
+      "passed": true,
+      "failures": [],
+      "client_message": "hello",
+      "reply": "Hi, yes we're here. Could you share the property type, what kind of renovation you're planning, and whether you have a floor plan or site photos available?",
+      "expected_intent": "greeting",
+      "expected_sales_move": "greet",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "greeting_ping",
+        "primarySalesMove": "greet",
+        "templateId": "v7:greet",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "a8aa8dfb",
+        "v7_primaryIntent": "greeting",
+        "v7_salesMove": "greet",
+        "v7_detectedIntents": [
+          "short_ping",
+          "greeting"
+        ],
+        "v7_stage": "context_collection",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "mandatory_002",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 2,
+      "passed": true,
+      "failures": [],
+      "client_message": "2-storey landed at 47 Kasai Road, A&A, key next month, budget 500k",
+      "reply": "Thanks, noted. This is a 2-storey landed property at 47 Kasai Road for A&A works and budget expectation received.\n\nCould you send the floor plan and site photos if available so the team can review from there?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "provide_budget_expectation",
+      "expected_sales_move": "request_files",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_aa",
+        "primarySalesMove": "request_files",
+        "templateId": "v7:request_files",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "ea796b5b",
+        "v7_primaryIntent": "provide_budget_expectation",
+        "v7_salesMove": "request_files",
+        "v7_detectedIntents": [
+          "provide_budget_expectation",
+          "provide_project_details"
+        ],
+        "v7_stage": "budget_expectation_given",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "",
+          "known_facts_summary": "2-storey landed property at 47 Kasai Road, with A&A works and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_003",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 3,
+      "passed": true,
+      "failures": [],
+      "client_message": "ok?",
+      "reply": "Yes, noted. We have your landed A&A enquiry at 47 Kasai Road recorded. We have enough key details for the team to start reviewing. We've received your floor plan, so site photos or design references would be useful if available.",
+      "expected_intent": "short_ping",
+      "expected_sales_move": "simple_acknowledgement",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "simple_acknowledgement",
+        "templateId": "v7:simple_acknowledgement",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "43536045",
+        "v7_primaryIntent": "file_or_media_sent",
+        "v7_salesMove": "simple_acknowledgement",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "short_ping"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_004",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 4,
+      "passed": true,
+      "failures": [],
+      "client_message": "can you see the floorplan i send you?",
+      "reply": "Yes, we've received the floor plan. That will help the team review the layout and A&A scope more properly.",
+      "expected_intent": "floorplan_status_question",
+      "expected_sales_move": "confirm_file_status",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "floorplan_or_photos_sent",
+        "primarySalesMove": "confirm_file_status",
+        "templateId": "v7:confirm_file_status",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "scope"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "ba6482d2",
+        "v7_primaryIntent": "floorplan_status_question",
+        "v7_salesMove": "confirm_file_status",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "file_status_question",
+          "floorplan_status_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "scope"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_005",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 5,
+      "passed": true,
+      "failures": [],
+      "client_message": "can see past works?",
+      "reply": "You can view some of our past works here: https://www.instagram.com/limmworks/\n\nWe've received your floor plan, so site photos or design references would be useful if available.",
+      "expected_intent": "portfolio_request",
+      "expected_sales_move": "route_to_portfolio",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "portfolio_request",
+        "primarySalesMove": "route_to_portfolio",
+        "templateId": "v7:route_to_portfolio",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "d8d7770f",
+        "v7_primaryIntent": "portfolio_request",
+        "v7_salesMove": "route_to_portfolio",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "portfolio_request"
+        ],
+        "v7_stage": "portfolio_routing",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_006",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 6,
+      "passed": true,
+      "failures": [],
+      "client_message": "how much to do A&A?",
+      "reply": "I understand you'd like a rough idea. For landed A&A works, the team should review the floor plan, site photos, site condition and material direction first before advising.\n\nWe've received the floor plan, so site photos and any design references would be useful next.\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_reply",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "safe_price_reply",
+        "templateId": "v7:safe_price_reply",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "31273387",
+        "v7_primaryIntent": "price_question",
+        "v7_salesMove": "safe_price_reply",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "price_question",
+          "provide_project_details"
+        ],
+        "v7_stage": "price_safety",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_007",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 7,
+      "passed": true,
+      "failures": [],
+      "client_message": "3 months can finish all reno?",
+      "reply": "The timeline should be reviewed after the team checks the full scope, site condition, material lead times and work sequencing. We should not promise a completion date before that review.\n\nWe have your landed property at 47 Kasai Road for A&A works, key collection next month and budget expectation received noted.",
+      "expected_intent": "timeline_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "scope",
+          "timeline"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "0b9674d6",
+        "v7_primaryIntent": "timeline_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "timeline_question",
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "scope",
+          "timeline"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_008",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 8,
+      "passed": true,
+      "failures": [],
+      "client_message": "tmr 2pm i go your office ok",
+      "reply": "tomorrow 2PM noted as your preferred timing for an office visit. The team will check availability before confirming. We have your landed A&A enquiry at 47 Kasai Road recorded. Could you send the site photos if available so the team can review from there?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "office_visit_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "dd8d9464",
+        "v7_primaryIntent": "office_visit_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "office_visit_request",
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_009",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 9,
+      "passed": true,
+      "failures": [],
+      "client_message": "tmr 3pm i meeting with you at office k",
+      "reply": "tomorrow 3PM noted as your preferred timing for an office visit. The team will check availability before confirming. We have your landed A&A enquiry at 47 Kasai Road recorded. Could you send the site photos if available so the team can review from there?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "office_visit_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "cb7114e5",
+        "v7_primaryIntent": "office_visit_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "office_visit_request",
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_010",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 10,
+      "passed": true,
+      "failures": [],
+      "client_message": "got any promo now?",
+      "reply": "We do not confirm discounts or promotional offers in this chat. The team can review the project details and advise the appropriate next step after checking the details properly.\n\nWe have your landed property at 47 Kasai Road for A&A works, key collection next month and budget expectation received noted.",
+      "expected_intent": "promo_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "afffe7f6",
+        "v7_primaryIntent": "promo_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "promo_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_011",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 11,
+      "passed": true,
+      "failures": [],
+      "client_message": "wtf you talking",
+      "reply": "Thanks for raising this. I'll get the team to follow up directly and review the matter properly before advising the next step.",
+      "expected_intent": "complaint_or_frustration",
+      "expected_sales_move": "escalate_to_manager",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "escalate_to_manager",
+        "templateId": "v7:escalate_to_manager",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7abb7084",
+        "v7_primaryIntent": "complaint_or_frustration",
+        "v7_salesMove": "escalate_to_manager",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "complaint_or_frustration",
+          "human_takeover_request"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_012",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 12,
+      "passed": true,
+      "failures": [],
+      "client_message": "can do for free?",
+      "reply": "We would not be able to take on renovation works for free. If you would still like the team to review the enquiry, we can look at the details properly first.\n\nWe have your landed property at 47 Kasai Road for A&A works, key collection next month and budget expectation received noted.",
+      "expected_intent": "free_request",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "ba25c0b4",
+        "v7_primaryIntent": "free_request",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "free_request"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_013",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 13,
+      "passed": true,
+      "failures": [],
+      "client_message": "are you AI?",
+      "reply": "This WhatsApp chat is assisted by LIMM's enquiry assistant, and important project details are routed for the team to review.",
+      "expected_intent": "ai_or_human_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "6512dd2a",
+        "v7_primaryIntent": "ai_or_human_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "ai_or_human_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "mandatory_014",
+      "category": "mandatory exact sequence",
+      "conversation_id": "mandatory_47_kasai",
+      "turn_index": 14,
+      "passed": true,
+      "failures": [],
+      "client_message": "are you human?",
+      "reply": "This WhatsApp chat is assisted by LIMM's enquiry assistant, and important project details are routed for the team to review.",
+      "expected_intent": "ai_or_human_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "6512dd2a",
+        "v7_primaryIntent": "ai_or_human_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "ai_or_human_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "greeting_015",
+      "category": "greeting / first enquiry",
+      "conversation_id": "greeting_first_enquiry",
+      "turn_index": 15,
+      "passed": true,
+      "failures": [],
+      "client_message": "hi",
+      "reply": "Hi, yes we're here. Could you share the property type, what kind of renovation you're planning, and whether you have a floor plan or site photos available?",
+      "expected_intent": "greeting",
+      "expected_sales_move": "greet",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "greeting_ping",
+        "primarySalesMove": "greet",
+        "templateId": "v7:greet",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "a8aa8dfb",
+        "v7_primaryIntent": "greeting",
+        "v7_salesMove": "greet",
+        "v7_detectedIntents": [
+          "short_ping",
+          "greeting"
+        ],
+        "v7_stage": "context_collection",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "greeting_016",
+      "category": "greeting / first enquiry",
+      "conversation_id": "greeting_first_enquiry",
+      "turn_index": 16,
+      "passed": true,
+      "failures": [],
+      "client_message": "hello, can help with renovation?",
+      "reply": "Thanks, noted. This is a renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "greeting",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "greeting_ping",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "c196c61b",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "greeting",
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "renovation"
+        }
+      }
+    },
+    {
+      "id": "greeting_017",
+      "category": "greeting / first enquiry",
+      "conversation_id": "greeting_first_enquiry",
+      "turn_index": 17,
+      "passed": true,
+      "failures": [],
+      "client_message": "good morning",
+      "reply": "Hi, yes we're here. Could you share the property type, what kind of renovation you're planning, and whether you have a floor plan or site photos available?",
+      "expected_intent": "greeting",
+      "expected_sales_move": "greet",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "greet",
+        "templateId": "v7:greet",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "a8aa8dfb",
+        "v7_primaryIntent": "greeting",
+        "v7_salesMove": "greet",
+        "v7_detectedIntents": [
+          "greeting"
+        ],
+        "v7_stage": "context_collection",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "greeting_018",
+      "category": "greeting / first enquiry",
+      "conversation_id": "greeting_first_enquiry",
+      "turn_index": 18,
+      "passed": true,
+      "failures": [],
+      "client_message": "reno landed can?",
+      "reply": "Thanks, noted. This is a landed property, with renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "2866e236",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details",
+          "renovation_enquiry"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with renovation"
+        }
+      }
+    },
+    {
+      "id": "landed_aa_019",
+      "category": "serious landed A&A",
+      "conversation_id": "serious_landed_a_a",
+      "turn_index": 19,
+      "passed": true,
+      "failures": [],
+      "client_message": "I want to do landed A&A for my 2-storey house",
+      "reply": "Thanks, noted. This is a 2-storey landed property for A&A works.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_aa",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "57b75bad",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details",
+          "renovation_enquiry"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "2-storey landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "landed_aa_020",
+      "category": "serious landed A&A",
+      "conversation_id": "serious_landed_a_a",
+      "turn_index": 20,
+      "passed": true,
+      "failures": [],
+      "client_message": "A&A works for landed terrace at Kasai Road",
+      "reply": "Thanks, noted. This is a landed property for A&A works.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_aa",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "87982ae6",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "landed_aa_021",
+      "category": "serious landed A&A",
+      "conversation_id": "serious_landed_a_a",
+      "turn_index": 21,
+      "passed": true,
+      "failures": [],
+      "client_message": "landed addition and alteration, I have floor plan",
+      "reply": "Thanks, noted. This is a landed property for A&A works.\n\nCould you send the design references if available? It would also help to know who will be staying there, such as children, elderly family members, helper or pets, so the team can plan the proposal direction more properly.\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "file_or_media_sent",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_aa",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "96b1e3ec",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "landed_aa_022",
+      "category": "serious landed A&A",
+      "conversation_id": "serious_landed_a_a",
+      "turn_index": 22,
+      "passed": true,
+      "failures": [],
+      "client_message": "corner terrace extension and roofline change",
+      "reply": "Thanks, noted. This is a landed property for A&A works.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "renovation_enquiry",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_aa",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "87982ae6",
+        "v7_primaryIntent": "renovation_enquiry",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "renovation_enquiry"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "landed_aa_023",
+      "category": "vague A&A",
+      "conversation_id": "vague_a_a",
+      "turn_index": 23,
+      "passed": true,
+      "failures": [],
+      "client_message": "do you do A&A?",
+      "reply": "Thanks, noted. This is a A&A works.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_aa",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "2cbf9a72",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "A&A works"
+        }
+      }
+    },
+    {
+      "id": "landed_aa_024",
+      "category": "vague A&A",
+      "conversation_id": "vague_a_a",
+      "turn_index": 24,
+      "passed": true,
+      "failures": [],
+      "client_message": "can extend kitchen?",
+      "reply": "Thanks, noted. This is a landed property, with kitchen.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_aa",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "15b02e1d",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "kitchen",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with kitchen"
+        }
+      }
+    },
+    {
+      "id": "condo_025",
+      "category": "condo renovation",
+      "conversation_id": "condo_renovation",
+      "turn_index": 25,
+      "passed": true,
+      "failures": [],
+      "client_message": "Do you do condo renovation?",
+      "reply": "Thanks, noted. This is a condo property, with renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7d7e42c5",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "condo",
+          "property_address": "",
+          "scope_summary": "renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "condo property, with renovation"
+        }
+      }
+    },
+    {
+      "id": "condo_026",
+      "category": "condo renovation",
+      "conversation_id": "condo_renovation",
+      "turn_index": 26,
+      "passed": true,
+      "failures": [],
+      "client_message": "full condo renovation",
+      "reply": "Thanks, noted. This is a condo property, with renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7d7e42c5",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "condo",
+          "property_address": "",
+          "scope_summary": "renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "condo property, with renovation"
+        }
+      }
+    },
+    {
+      "id": "condo_027",
+      "category": "condo renovation",
+      "conversation_id": "condo_renovation",
+      "turn_index": 27,
+      "passed": true,
+      "failures": [],
+      "client_message": "condo mcst renovation can?",
+      "reply": "Thanks, noted. This is a condo property, with renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7d7e42c5",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "condo",
+          "property_address": "",
+          "scope_summary": "renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "condo property, with renovation"
+        }
+      }
+    },
+    {
+      "id": "hdb_028",
+      "category": "HDB renovation",
+      "conversation_id": "hdb_renovation",
+      "turn_index": 28,
+      "passed": true,
+      "failures": [],
+      "client_message": "hdb renovation can?",
+      "reply": "Thanks, noted. This is a HDB property, with renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "bc54d23e",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "HDB",
+          "property_address": "",
+          "scope_summary": "renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "HDB property, with renovation"
+        }
+      }
+    },
+    {
+      "id": "hdb_029",
+      "category": "HDB renovation",
+      "conversation_id": "hdb_renovation",
+      "turn_index": 29,
+      "passed": true,
+      "failures": [],
+      "client_message": "4 room HDB kitchen toilet reno",
+      "reply": "Thanks, noted. This is a HDB property, with kitchen.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "b25f7b15",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "HDB",
+          "property_address": "",
+          "scope_summary": "kitchen",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "HDB property, with kitchen"
+        }
+      }
+    },
+    {
+      "id": "commercial_030",
+      "category": "commercial renovation",
+      "conversation_id": "commercial_renovation",
+      "turn_index": 30,
+      "passed": true,
+      "failures": [],
+      "client_message": "do you do commercial shop renovation?",
+      "reply": "Thanks, noted. This is a commercial property, with shop renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "76bfbed6",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "commercial",
+          "property_address": "",
+          "scope_summary": "shop renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "commercial property, with shop renovation"
+        }
+      }
+    },
+    {
+      "id": "commercial_031",
+      "category": "commercial renovation",
+      "conversation_id": "commercial_renovation",
+      "turn_index": 31,
+      "passed": true,
+      "failures": [],
+      "client_message": "office renovation for our company",
+      "reply": "Thanks, noted. This is a commercial property, with renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "cacb50b6",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "commercial",
+          "property_address": "",
+          "scope_summary": "renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "commercial property, with renovation"
+        }
+      }
+    },
+    {
+      "id": "commercial_032",
+      "category": "commercial renovation",
+      "conversation_id": "commercial_renovation",
+      "turn_index": 32,
+      "passed": true,
+      "failures": [],
+      "client_message": "clinic renovation possible?",
+      "reply": "Thanks, noted. This is a commercial property, with clinic renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "a309e6e4",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "commercial",
+          "property_address": "",
+          "scope_summary": "clinic renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "commercial property, with clinic renovation"
+        }
+      }
+    },
+    {
+      "id": "kitchen_033",
+      "category": "kitchen renovation",
+      "conversation_id": "kitchen_renovation",
+      "turn_index": 33,
+      "passed": true,
+      "failures": [],
+      "client_message": "hello can help me do my kitchen?",
+      "reply": "Thanks, noted. This is a kitchen.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "greeting_ping",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "e1045c58",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "greeting",
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "kitchen",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "kitchen"
+        }
+      }
+    },
+    {
+      "id": "kitchen_034",
+      "category": "kitchen renovation",
+      "conversation_id": "kitchen_renovation",
+      "turn_index": 34,
+      "passed": true,
+      "failures": [],
+      "client_message": "wet kitchen and dry kitchen redesign",
+      "reply": "Thanks, noted. This is a wet kitchen.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "bb06a69e",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "wet kitchen",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "wet kitchen"
+        }
+      }
+    },
+    {
+      "id": "bathroom_035",
+      "category": "bathroom renovation",
+      "conversation_id": "bathroom_renovation",
+      "turn_index": 35,
+      "passed": true,
+      "failures": [],
+      "client_message": "renovate toilet and bathroom",
+      "reply": "Thanks, noted. This is a toilet.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "a97374b5",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "toilet",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "toilet"
+        }
+      }
+    },
+    {
+      "id": "bathroom_036",
+      "category": "bathroom renovation",
+      "conversation_id": "bathroom_renovation",
+      "turn_index": 36,
+      "passed": true,
+      "failures": [],
+      "client_message": "waterproofing problem in bathroom",
+      "reply": "Thanks, noted. This is a bathroom.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "e2072876",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "bathroom",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "bathroom"
+        }
+      }
+    },
+    {
+      "id": "carpentry_037",
+      "category": "carpentry",
+      "conversation_id": "carpentry",
+      "turn_index": 37,
+      "passed": true,
+      "failures": [],
+      "client_message": "do you do carpentry wardrobe?",
+      "reply": "Thanks, noted. This is a carpentry.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "8ffb560a",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "carpentry",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "carpentry"
+        }
+      }
+    },
+    {
+      "id": "carpentry_038",
+      "category": "carpentry",
+      "conversation_id": "carpentry",
+      "turn_index": 38,
+      "passed": true,
+      "failures": [],
+      "client_message": "kitchen cabinet and TV console",
+      "reply": "Thanks, noted. This is a kitchen.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "e1045c58",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "kitchen",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "kitchen"
+        }
+      }
+    },
+    {
+      "id": "risk_039",
+      "category": "hacking / approval risk",
+      "conversation_id": "hacking_approval_risk",
+      "turn_index": 39,
+      "passed": true,
+      "failures": [],
+      "client_message": "can hack wall?",
+      "reply": "The team can review wall hacking works, but they need to check the floor plan and site condition before advising what is suitable.\n\nCould you share the property type, scope of work, floor plan and site photos if available for an initial project review?",
+      "expected_intent": "hacking_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "hacking_wall",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "c1661434",
+        "v7_primaryIntent": "hacking_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "hacking_question"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "risk_040",
+      "category": "hacking / approval risk",
+      "conversation_id": "hacking_approval_risk",
+      "turn_index": 40,
+      "passed": true,
+      "failures": [],
+      "client_message": "this wall confirm can hack?",
+      "reply": "The team can review wall hacking works, but they need to check the floor plan and site condition before advising what is suitable.\n\nCould you share the property type, scope of work, floor plan and site photos if available for an initial project review?",
+      "expected_intent": "hacking_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "hacking_wall",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "c1661434",
+        "v7_primaryIntent": "hacking_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "hacking_question"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "risk_041",
+      "category": "hacking / approval risk",
+      "conversation_id": "hacking_approval_risk",
+      "turn_index": 41,
+      "passed": true,
+      "failures": [],
+      "client_message": "need approval?",
+      "reply": "It depends on the exact scope and property type. Some works may require proper checking or submission before the team can advise.\n\nCould you share the property type, scope of work, floor plan and site photos if available for an initial project review?",
+      "expected_intent": "approval_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "approval_submission",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "75cf23be",
+        "v7_primaryIntent": "approval_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "approval_question"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "risk_042",
+      "category": "hacking / approval risk",
+      "conversation_id": "hacking_approval_risk",
+      "turn_index": 42,
+      "passed": true,
+      "failures": [],
+      "client_message": "approval sure pass?",
+      "reply": "It depends on the exact scope and property type. Some works may require proper checking or submission before the team can advise.\n\nCould you share the property type, scope of work, floor plan and site photos if available for an initial project review?",
+      "expected_intent": "approval_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "approval_submission",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "75cf23be",
+        "v7_primaryIntent": "approval_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "approval_question"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "risk_043",
+      "category": "hacking / approval risk",
+      "conversation_id": "hacking_approval_risk",
+      "turn_index": 43,
+      "passed": true,
+      "failures": [],
+      "client_message": "can extend kitchen without submission?",
+      "reply": "It depends on the exact scope and property type. Some works may require proper checking or submission before the team can advise.\n\nWe have your landed property for A&A works noted.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "approval_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "approval_submission",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "926467c0",
+        "v7_primaryIntent": "approval_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "approval_question",
+          "provide_project_details"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "price_044",
+      "category": "price question",
+      "conversation_id": "price_question",
+      "turn_index": 44,
+      "passed": true,
+      "failures": [],
+      "client_message": "how much roughly?",
+      "reply": "I understand you'd like a rough idea. The team needs to review your property type, renovation scope, floor plan/site photos and material direction first before advising. Could you share the renovation scope, floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_reply",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "safe_price_reply",
+        "templateId": "v7:safe_price_reply",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "aac3fb8a",
+        "v7_primaryIntent": "price_question",
+        "v7_salesMove": "safe_price_reply",
+        "v7_detectedIntents": [
+          "price_question"
+        ],
+        "v7_stage": "price_safety",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "price_045",
+      "category": "price question",
+      "conversation_id": "price_question",
+      "turn_index": 45,
+      "passed": true,
+      "failures": [],
+      "client_message": "price?",
+      "reply": "I understand you'd like a rough idea. The team needs to review your property type, renovation scope, floor plan/site photos and material direction first before advising. Could you share the renovation scope, floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_reply",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "safe_price_reply",
+        "templateId": "v7:safe_price_reply",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "aac3fb8a",
+        "v7_primaryIntent": "price_question",
+        "v7_salesMove": "safe_price_reply",
+        "v7_detectedIntents": [
+          "price_question"
+        ],
+        "v7_stage": "price_safety",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "price_046",
+      "category": "price question",
+      "conversation_id": "price_question",
+      "turn_index": 46,
+      "passed": true,
+      "failures": [],
+      "client_message": "can give estimate?",
+      "reply": "I understand you'd like a rough idea. The team needs to review your property type, renovation scope, floor plan/site photos and material direction first before advising. Could you share the renovation scope, floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_reply",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "safe_price_reply",
+        "templateId": "v7:safe_price_reply",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "aac3fb8a",
+        "v7_primaryIntent": "price_question",
+        "v7_salesMove": "safe_price_reply",
+        "v7_detectedIntents": [
+          "price_question"
+        ],
+        "v7_stage": "price_safety",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "price_047",
+      "category": "price question",
+      "conversation_id": "price_question",
+      "turn_index": 47,
+      "passed": true,
+      "failures": [],
+      "client_message": "quotation for landed A&A?",
+      "reply": "I understand you'd like a rough idea. For landed A&A works, the team should review the floor plan, site photos, site condition and material direction first before advising.\n\nWe've received the floor plan, so site photos and any design references would be useful next.\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_reply",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "safe_price_reply",
+        "templateId": "v7:safe_price_reply",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "31273387",
+        "v7_primaryIntent": "price_question",
+        "v7_salesMove": "safe_price_reply",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "price_question",
+          "provide_project_details"
+        ],
+        "v7_stage": "price_safety",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "price_048",
+      "category": "price question",
+      "conversation_id": "price_question",
+      "turn_index": 48,
+      "passed": true,
+      "failures": [],
+      "client_message": "how much to do A&A?",
+      "reply": "I understand you'd like a rough idea. For landed A&A works, the team should review the floor plan, site photos, site condition and material direction first before advising.\n\nWe've received the floor plan, so site photos and any design references would be useful next.\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_reply",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "safe_price_reply",
+        "templateId": "v7:safe_price_reply",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "31273387",
+        "v7_primaryIntent": "price_question",
+        "v7_salesMove": "safe_price_reply",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "price_question",
+          "provide_project_details"
+        ],
+        "v7_stage": "price_safety",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "price_049",
+      "category": "price question",
+      "conversation_id": "price_question",
+      "turn_index": 49,
+      "passed": true,
+      "failures": [],
+      "client_message": "budget how much ah?",
+      "reply": "I understand you'd like a rough idea. The team needs to review your property type, renovation scope, floor plan/site photos and material direction first before advising. Could you share the renovation scope, floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_reply",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "safe_price_reply",
+        "templateId": "v7:safe_price_reply",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "aac3fb8a",
+        "v7_primaryIntent": "price_question",
+        "v7_salesMove": "safe_price_reply",
+        "v7_detectedIntents": [
+          "price_question"
+        ],
+        "v7_stage": "price_safety",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "price_050",
+      "category": "budget statement",
+      "conversation_id": "budget_statement",
+      "turn_index": 50,
+      "passed": true,
+      "failures": [],
+      "client_message": "my budget 500k",
+      "reply": "Thanks, that budget expectation helps. The team can use it to consider the right scope and material direction, while final pricing still depends on confirmed drawings, site condition and works.",
+      "expected_intent": "provide_budget_expectation",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "scope"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "1b07b869",
+        "v7_primaryIntent": "provide_budget_expectation",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_budget_expectation"
+        ],
+        "v7_stage": "budget_expectation_given",
+        "v7_askedFields": [
+          "scope"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "",
+          "known_facts_summary": "budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "price_051",
+      "category": "budget statement",
+      "conversation_id": "budget_statement",
+      "turn_index": 51,
+      "passed": true,
+      "failures": [],
+      "client_message": "I have around 300k budget for landed A&A",
+      "reply": "Thanks, that budget expectation helps. The team can use it to consider the right scope and material direction, while final pricing still depends on confirmed drawings, site condition and works.",
+      "expected_intent": "provide_budget_expectation",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_aa",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "scope"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "1b07b869",
+        "v7_primaryIntent": "provide_budget_expectation",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_budget_expectation",
+          "provide_project_details"
+        ],
+        "v7_stage": "budget_expectation_given",
+        "v7_askedFields": [
+          "scope"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "appointment_052",
+      "category": "appointment request",
+      "conversation_id": "appointment_request",
+      "turn_index": 52,
+      "passed": true,
+      "failures": [],
+      "client_message": "can make appt wed 2pm?",
+      "reply": "Wed 2PM noted as your preferred timing. The team will check availability before confirming. Could you share the property type first so the team can review before confirming?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "appointment_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "f64f8164",
+        "v7_primaryIntent": "appointment_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "appointment_053",
+      "category": "appointment request",
+      "conversation_id": "appointment_request",
+      "turn_index": 53,
+      "passed": true,
+      "failures": [],
+      "client_message": "confirm tomorrow 3pm",
+      "reply": "tomorrow 3PM noted as your preferred timing. The team will check availability before confirming. Could you share the property type first so the team can review before confirming?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "appointment_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "63689574",
+        "v7_primaryIntent": "appointment_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "appointment_054",
+      "category": "appointment request",
+      "conversation_id": "appointment_request",
+      "turn_index": 54,
+      "passed": true,
+      "failures": [],
+      "client_message": "book me this Saturday",
+      "reply": "Saturday noted as your preferred timing. The team will check availability before confirming. Could you share the property type first so the team can review before confirming?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "appointment_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "e8954078",
+        "v7_primaryIntent": "appointment_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "appointment_055",
+      "category": "appointment request",
+      "conversation_id": "appointment_request",
+      "turn_index": 55,
+      "passed": true,
+      "failures": [],
+      "client_message": "when is next available slot?",
+      "reply": "the requested timing noted as your preferred timing. The team will check availability before confirming. Could you share the property type first so the team can review before confirming?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "appointment_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "meeting_availability",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "feec062a",
+        "v7_primaryIntent": "appointment_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "office_056",
+      "category": "office visit request",
+      "conversation_id": "office_visit_request",
+      "turn_index": 56,
+      "passed": true,
+      "failures": [],
+      "client_message": "tmr 2pm i go your office ok",
+      "reply": "tomorrow 2PM noted as your preferred timing for an office visit. The team will check availability before confirming. We have your landed A&A enquiry at 47 Kasai Road recorded. Could you send the site photos if available so the team can review from there?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "office_visit_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "dd8d9464",
+        "v7_primaryIntent": "office_visit_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "office_visit_request",
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "office_057",
+      "category": "office visit request",
+      "conversation_id": "office_visit_request",
+      "turn_index": 57,
+      "passed": true,
+      "failures": [],
+      "client_message": "can I come to your office tomorrow?",
+      "reply": "tomorrow noted as your preferred timing for an office visit. The team will check availability before confirming. Could you share the property type first so the team can review before confirming?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "office_visit_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "87fcf041",
+        "v7_primaryIntent": "office_visit_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "office_visit_request",
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "file_058",
+      "category": "file received / file status",
+      "conversation_id": "file_received_file_status",
+      "turn_index": 58,
+      "passed": true,
+      "failures": [],
+      "client_message": "I sent floor plan already",
+      "reply": "You're right, sorry about that. We have the details you shared noted.\n\nThe remaining useful items are the site photos if available for an initial project review?",
+      "expected_intent": "already_told_you",
+      "expected_sales_move": "recover_from_mistake",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "floorplan_or_photos_sent",
+        "primarySalesMove": "recover_from_mistake",
+        "templateId": "v7:recover_from_mistake",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "dc44b259",
+        "v7_primaryIntent": "already_told_you",
+        "v7_salesMove": "recover_from_mistake",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "already_told_you"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "file_059",
+      "category": "file received / file status",
+      "conversation_id": "file_received_file_status",
+      "turn_index": 59,
+      "passed": true,
+      "failures": [],
+      "client_message": "can you see my floor plan?",
+      "reply": "Yes, we've received the floor plan. That will help the team review the layout and A&A scope more properly.",
+      "expected_intent": "floorplan_status_question",
+      "expected_sales_move": "confirm_file_status",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "floorplan_or_photos_sent",
+        "primarySalesMove": "confirm_file_status",
+        "templateId": "v7:confirm_file_status",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "scope"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "ba6482d2",
+        "v7_primaryIntent": "floorplan_status_question",
+        "v7_salesMove": "confirm_file_status",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "file_status_question",
+          "floorplan_status_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "scope"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "file_060",
+      "category": "file received / file status",
+      "conversation_id": "file_received_file_status",
+      "turn_index": 60,
+      "passed": true,
+      "failures": [],
+      "client_message": "see attached layout",
+      "reply": "Thanks, noted. Could you send the design references if available? It would also help to know who will be staying there, such as children, elderly family members, helper or pets, so the team can plan the proposal direction more properly.\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "file_or_media_sent",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "floorplan_or_photos_sent",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "88e80a7b",
+        "v7_primaryIntent": "file_or_media_sent",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "file_or_media_sent"
+        ],
+        "v7_stage": "context_collection",
+        "v7_askedFields": [
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "file_061",
+      "category": "file received / file status",
+      "conversation_id": "file_received_file_status",
+      "turn_index": 61,
+      "passed": true,
+      "failures": [],
+      "client_message": "I sent photos already",
+      "reply": "You're right, sorry about that. We have the details you shared noted.\n\nThe remaining useful items are the floor plan if available for an initial project review?",
+      "expected_intent": "already_told_you",
+      "expected_sales_move": "recover_from_mistake",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "floorplan_or_photos_sent",
+        "primarySalesMove": "recover_from_mistake",
+        "templateId": "v7:recover_from_mistake",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "dce790c2",
+        "v7_primaryIntent": "already_told_you",
+        "v7_salesMove": "recover_from_mistake",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "already_told_you"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "floor_plan"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": true,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "file_062",
+      "category": "file received / file status",
+      "conversation_id": "file_received_file_status",
+      "turn_index": 62,
+      "passed": true,
+      "failures": [],
+      "client_message": "floorplan pdf attached",
+      "reply": "Thanks, noted. Could you send the design references if available? It would also help to know who will be staying there, such as children, elderly family members, helper or pets, so the team can plan the proposal direction more properly.\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "file_or_media_sent",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "floorplan_or_photos_sent",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "88e80a7b",
+        "v7_primaryIntent": "file_or_media_sent",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "file_or_media_sent"
+        ],
+        "v7_stage": "context_collection",
+        "v7_askedFields": [
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "portfolio_063",
+      "category": "portfolio request",
+      "conversation_id": "portfolio_request",
+      "turn_index": 63,
+      "passed": true,
+      "failures": [],
+      "client_message": "can see your past works?",
+      "reply": "You can view some of our past works here: https://www.instagram.com/limmworks/\n\nYou can also send your floor plan or site photos when available, and the team can review from there.",
+      "expected_intent": "portfolio_request",
+      "expected_sales_move": "route_to_portfolio",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "portfolio_request",
+        "primarySalesMove": "route_to_portfolio",
+        "templateId": "v7:route_to_portfolio",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "3314c140",
+        "v7_primaryIntent": "portfolio_request",
+        "v7_salesMove": "route_to_portfolio",
+        "v7_detectedIntents": [
+          "portfolio_request"
+        ],
+        "v7_stage": "portfolio_routing",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "portfolio_064",
+      "category": "portfolio request",
+      "conversation_id": "portfolio_request",
+      "turn_index": 64,
+      "passed": true,
+      "failures": [],
+      "client_message": "got project photos?",
+      "reply": "You can view some of our past works here: https://www.instagram.com/limmworks/\n\nWe've received your site photos, so the floor plan or design references would be useful if available.",
+      "expected_intent": "portfolio_request",
+      "expected_sales_move": "route_to_portfolio",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "portfolio_request",
+        "primarySalesMove": "route_to_portfolio",
+        "templateId": "v7:route_to_portfolio",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "b69f6e34",
+        "v7_primaryIntent": "portfolio_request",
+        "v7_salesMove": "route_to_portfolio",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "portfolio_request"
+        ],
+        "v7_stage": "portfolio_routing",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": true,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "portfolio_065",
+      "category": "portfolio request",
+      "conversation_id": "portfolio_request",
+      "turn_index": 65,
+      "passed": true,
+      "failures": [],
+      "client_message": "got landed project photo?",
+      "reply": "You can view some of our past works here: https://www.instagram.com/limmworks/\n\nWe've received your site photos, so the floor plan or design references would be useful if available.",
+      "expected_intent": "portfolio_request",
+      "expected_sales_move": "route_to_portfolio",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "portfolio_request",
+        "primarySalesMove": "route_to_portfolio",
+        "templateId": "v7:route_to_portfolio",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "b69f6e34",
+        "v7_primaryIntent": "portfolio_request",
+        "v7_salesMove": "route_to_portfolio",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "portfolio_request",
+          "provide_project_details"
+        ],
+        "v7_stage": "portfolio_routing",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": true,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property"
+        }
+      }
+    },
+    {
+      "id": "portfolio_066",
+      "category": "portfolio request",
+      "conversation_id": "portfolio_request",
+      "turn_index": 66,
+      "passed": true,
+      "failures": [],
+      "client_message": "show before after",
+      "reply": "You can view some of our past works here: https://www.instagram.com/limmworks/\n\nYou can also send your floor plan or site photos when available, and the team can review from there.",
+      "expected_intent": "portfolio_request",
+      "expected_sales_move": "route_to_portfolio",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "portfolio_request",
+        "primarySalesMove": "route_to_portfolio",
+        "templateId": "v7:route_to_portfolio",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "3314c140",
+        "v7_primaryIntent": "portfolio_request",
+        "v7_salesMove": "route_to_portfolio",
+        "v7_detectedIntents": [
+          "portfolio_request"
+        ],
+        "v7_stage": "portfolio_routing",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "design_067",
+      "category": "design/lifestyle question",
+      "conversation_id": "design_lifestyle_question",
+      "turn_index": 67,
+      "passed": true,
+      "failures": [],
+      "client_message": "can you come up with design theme?",
+      "reply": "Yes, we can help with design direction and renovation planning. We have your design direction: design direction requested noted. The right direction should match the layout, lighting, lifestyle, storage needs and renovation scope. Could you share the design references, floor plan and site photos if available for an initial project review?",
+      "expected_intent": "design_question",
+      "expected_sales_move": "collect_design_lifestyle_info",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "design_theme",
+        "primarySalesMove": "collect_design_lifestyle_info",
+        "templateId": "v7:collect_design_lifestyle_info",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "design_references"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "42ae5f45",
+        "v7_primaryIntent": "design_question",
+        "v7_salesMove": "collect_design_lifestyle_info",
+        "v7_detectedIntents": [
+          "design_question"
+        ],
+        "v7_stage": "design_discussion",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "design direction: design direction requested"
+        }
+      }
+    },
+    {
+      "id": "design_068",
+      "category": "design/lifestyle question",
+      "conversation_id": "design_lifestyle_question",
+      "turn_index": 68,
+      "passed": true,
+      "failures": [],
+      "client_message": "can help with Japandi style?",
+      "reply": "Yes, we can help with design direction and renovation planning. We have your design direction: Japandi noted. The right direction should match the layout, lighting, lifestyle, storage needs and renovation scope. Could you share the floor plan and site photos if available for an initial project review?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "design_question",
+      "expected_sales_move": "collect_design_lifestyle_info",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "design_theme",
+        "primarySalesMove": "collect_design_lifestyle_info",
+        "templateId": "v7:collect_design_lifestyle_info",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "c1759629",
+        "v7_primaryIntent": "design_question",
+        "v7_salesMove": "collect_design_lifestyle_info",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "design_question"
+        ],
+        "v7_stage": "design_discussion",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": true,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "design direction: Japandi"
+        }
+      }
+    },
+    {
+      "id": "design_069",
+      "category": "design/lifestyle question",
+      "conversation_id": "design_lifestyle_question",
+      "turn_index": 69,
+      "passed": true,
+      "failures": [],
+      "client_message": "we have kids and elderly at home",
+      "reply": "Thanks, noted. This is a household: children and elderly family members.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "renovation_enquiry",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "e8e2b0f3",
+        "v7_primaryIntent": "renovation_enquiry",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "renovation_enquiry"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "household: children and elderly family members"
+        }
+      }
+    },
+    {
+      "id": "design_070",
+      "category": "design/lifestyle question",
+      "conversation_id": "design_lifestyle_question",
+      "turn_index": 70,
+      "passed": true,
+      "failures": [],
+      "client_message": "I need storage and helper room",
+      "reply": "Thanks, noted. This is a household: helper.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "renovation_enquiry",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "ef3fba67",
+        "v7_primaryIntent": "renovation_enquiry",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "renovation_enquiry"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "household: helper"
+        }
+      }
+    },
+    {
+      "id": "timeline_071",
+      "category": "timeline question",
+      "conversation_id": "timeline_question",
+      "turn_index": 71,
+      "passed": true,
+      "failures": [],
+      "client_message": "how long will it take?",
+      "reply": "The timeline should be reviewed after the team checks the full scope, site condition, material lead times and work sequencing. We should not promise a completion date before that review.",
+      "expected_intent": "timeline_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "scope",
+          "timeline"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "8a28f55d",
+        "v7_primaryIntent": "timeline_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "timeline_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "scope",
+          "timeline"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "timeline_072",
+      "category": "timeline question",
+      "conversation_id": "timeline_question",
+      "turn_index": 72,
+      "passed": true,
+      "failures": [],
+      "client_message": "can finish before CNY?",
+      "reply": "The timeline should be reviewed after the team checks the full scope, site condition, material lead times and work sequencing. We should not promise a completion date before that review.",
+      "expected_intent": "timeline_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "scope",
+          "timeline"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "8a28f55d",
+        "v7_primaryIntent": "timeline_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "timeline_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "scope",
+          "timeline"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "timeline_073",
+      "category": "timeline question",
+      "conversation_id": "timeline_question",
+      "turn_index": 73,
+      "passed": true,
+      "failures": [],
+      "client_message": "3 months can finish all reno?",
+      "reply": "The timeline should be reviewed after the team checks the full scope, site condition, material lead times and work sequencing. We should not promise a completion date before that review.\n\nWe have your landed property at 47 Kasai Road for A&A works, key collection next month and budget expectation received noted.",
+      "expected_intent": "timeline_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "scope",
+          "timeline"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "0b9674d6",
+        "v7_primaryIntent": "timeline_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "timeline_question",
+          "provide_project_details"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "scope",
+          "timeline"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "timeline_074",
+      "category": "timeline question",
+      "conversation_id": "timeline_question",
+      "turn_index": 74,
+      "passed": true,
+      "failures": [],
+      "client_message": "key next month can start fast?",
+      "reply": "The timeline should be reviewed after the team checks the full scope, site condition, material lead times and work sequencing. We should not promise a completion date before that review.\n\nWe have your landed property noted.",
+      "expected_intent": "timeline_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "scope",
+          "timeline"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "fa93025b",
+        "v7_primaryIntent": "timeline_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "timeline_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "scope",
+          "timeline"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property"
+        }
+      }
+    },
+    {
+      "id": "promo_075",
+      "category": "promo question",
+      "conversation_id": "promo_question",
+      "turn_index": 75,
+      "passed": true,
+      "failures": [],
+      "client_message": "got any promo now?",
+      "reply": "We do not confirm discounts or promotional offers in this chat. The team can review the project details and advise the appropriate next step after checking the details properly.",
+      "expected_intent": "promo_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "4adbe63d",
+        "v7_primaryIntent": "promo_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "promo_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "promo_076",
+      "category": "promo question",
+      "conversation_id": "promo_question",
+      "turn_index": 76,
+      "passed": true,
+      "failures": [],
+      "client_message": "any discount?",
+      "reply": "We do not confirm discounts or promotional offers in this chat. The team can review the project details and advise the appropriate next step after checking the details properly.",
+      "expected_intent": "promo_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "4adbe63d",
+        "v7_primaryIntent": "promo_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "promo_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "free_077",
+      "category": "free/unreasonable request",
+      "conversation_id": "free_unreasonable_request",
+      "turn_index": 77,
+      "passed": true,
+      "failures": [],
+      "client_message": "can do for free?",
+      "reply": "We would not be able to take on renovation works for free. If you would still like the team to review the enquiry, we can look at the details properly first.",
+      "expected_intent": "free_request",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "52e3453f",
+        "v7_primaryIntent": "free_request",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "free_request"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "free_078",
+      "category": "free/unreasonable request",
+      "conversation_id": "free_unreasonable_request",
+      "turn_index": 78,
+      "passed": true,
+      "failures": [],
+      "client_message": "can waive everything free or not",
+      "reply": "We would not be able to take on renovation works for free. If you would still like the team to review the enquiry, we can look at the details properly first.",
+      "expected_intent": "free_request",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "52e3453f",
+        "v7_primaryIntent": "free_request",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "free_request"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "ai_079",
+      "category": "AI/human question",
+      "conversation_id": "ai_human_question",
+      "turn_index": 79,
+      "passed": true,
+      "failures": [],
+      "client_message": "are you AI?",
+      "reply": "This WhatsApp chat is assisted by LIMM's enquiry assistant, and important project details are routed for the team to review.",
+      "expected_intent": "ai_or_human_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "6512dd2a",
+        "v7_primaryIntent": "ai_or_human_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "ai_or_human_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "ai_080",
+      "category": "AI/human question",
+      "conversation_id": "ai_human_question",
+      "turn_index": 80,
+      "passed": true,
+      "failures": [],
+      "client_message": "are you human?",
+      "reply": "This WhatsApp chat is assisted by LIMM's enquiry assistant, and important project details are routed for the team to review.",
+      "expected_intent": "ai_or_human_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "6512dd2a",
+        "v7_primaryIntent": "ai_or_human_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "ai_or_human_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "ai_081",
+      "category": "AI/human question",
+      "conversation_id": "ai_human_question",
+      "turn_index": 81,
+      "passed": true,
+      "failures": [],
+      "client_message": "real person replying?",
+      "reply": "This WhatsApp chat is assisted by LIMM's enquiry assistant, and important project details are routed for the team to review.",
+      "expected_intent": "ai_or_human_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "6512dd2a",
+        "v7_primaryIntent": "ai_or_human_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "ai_or_human_question"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "annoyed_082",
+      "category": "client annoyance",
+      "conversation_id": "client_annoyance",
+      "turn_index": 82,
+      "passed": true,
+      "failures": [],
+      "client_message": "wtf you talking",
+      "reply": "Thanks for raising this. I'll get the team to follow up directly and review the matter properly before advising the next step.",
+      "expected_intent": "complaint_or_frustration",
+      "expected_sales_move": "escalate_to_manager",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "escalate_to_manager",
+        "templateId": "v7:escalate_to_manager",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7abb7084",
+        "v7_primaryIntent": "complaint_or_frustration",
+        "v7_salesMove": "escalate_to_manager",
+        "v7_detectedIntents": [
+          "complaint_or_frustration",
+          "human_takeover_request"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "annoyed_083",
+      "category": "client annoyance",
+      "conversation_id": "client_annoyance",
+      "turn_index": 83,
+      "passed": true,
+      "failures": [],
+      "client_message": "you asked already",
+      "reply": "Thanks for raising this. I'll get the team to follow up directly and review the matter properly before advising the next step.",
+      "expected_intent": "complaint_or_frustration",
+      "expected_sales_move": "escalate_to_manager",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "escalate_to_manager",
+        "templateId": "v7:escalate_to_manager",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7abb7084",
+        "v7_primaryIntent": "complaint_or_frustration",
+        "v7_salesMove": "escalate_to_manager",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "complaint_or_frustration",
+          "human_takeover_request"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "annoyed_084",
+      "category": "client annoyance",
+      "conversation_id": "client_annoyance",
+      "turn_index": 84,
+      "passed": true,
+      "failures": [],
+      "client_message": "I already told you",
+      "reply": "You're right, sorry about that. We have your landed property at 47 Kasai Road for A&A works, key collection next month and budget expectation received noted.\n\nThe remaining useful items are the site photos if available so the team can review from there?",
+      "expected_intent": "already_told_you",
+      "expected_sales_move": "recover_from_mistake",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "recover_from_mistake",
+        "templateId": "v7:recover_from_mistake",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7350626a",
+        "v7_primaryIntent": "already_told_you",
+        "v7_salesMove": "recover_from_mistake",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "already_told_you"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "annoyed_085",
+      "category": "client annoyance",
+      "conversation_id": "client_annoyance",
+      "turn_index": 85,
+      "passed": true,
+      "failures": [],
+      "client_message": "??",
+      "reply": "Sorry if that was unclear. We have your landed A&A enquiry at 47 Kasai Road noted. Could you send the site photos if available so the team can review from there?",
+      "expected_intent": "confusion_ping",
+      "expected_sales_move": "clarify_confusion",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "clarify_confusion",
+        "templateId": "v7:clarify_confusion",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "bfba5eeb",
+        "v7_primaryIntent": "confusion_ping",
+        "v7_salesMove": "clarify_confusion",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "confusion_ping"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "annoyed_086",
+      "category": "client annoyance",
+      "conversation_id": "client_annoyance",
+      "turn_index": 86,
+      "passed": true,
+      "failures": [],
+      "client_message": "huh?",
+      "reply": "Sorry if that was unclear. We have your landed A&A enquiry at 47 Kasai Road noted. Could you send the site photos if available so the team can review from there?",
+      "expected_intent": "confusion_ping",
+      "expected_sales_move": "clarify_confusion",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "clarify_confusion",
+        "templateId": "v7:clarify_confusion",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "bfba5eeb",
+        "v7_primaryIntent": "confusion_ping",
+        "v7_salesMove": "clarify_confusion",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "confusion_ping"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    },
+    {
+      "id": "annoyed_087",
+      "category": "client annoyance",
+      "conversation_id": "client_annoyance",
+      "turn_index": 87,
+      "passed": true,
+      "failures": [],
+      "client_message": "are you there?",
+      "reply": "Hi, yes we're here. Could you share the property type, what kind of renovation you're planning, and whether you have a floor plan or site photos available?",
+      "expected_intent": "follow_up_ping",
+      "expected_sales_move": "simple_acknowledgement",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "greeting_ping",
+        "primarySalesMove": "simple_acknowledgement",
+        "templateId": "v7:simple_acknowledgement",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "a8aa8dfb",
+        "v7_primaryIntent": "short_ping",
+        "v7_salesMove": "simple_acknowledgement",
+        "v7_detectedIntents": [
+          "short_ping",
+          "follow_up_ping"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "annoyed_088",
+      "category": "client annoyance",
+      "conversation_id": "client_annoyance",
+      "turn_index": 88,
+      "passed": true,
+      "failures": [],
+      "client_message": "can reply?",
+      "reply": "Hi, yes we're here. Could you share the property type, what kind of renovation you're planning, and whether you have a floor plan or site photos available?",
+      "expected_intent": "follow_up_ping",
+      "expected_sales_move": "simple_acknowledgement",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "greeting_ping",
+        "primarySalesMove": "simple_acknowledgement",
+        "templateId": "v7:simple_acknowledgement",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "handoffRequired": false,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "a8aa8dfb",
+        "v7_primaryIntent": "short_ping",
+        "v7_salesMove": "simple_acknowledgement",
+        "v7_detectedIntents": [
+          "short_ping",
+          "follow_up_ping"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "singlish_089",
+      "category": "Singlish / casual Singapore phrasing",
+      "conversation_id": "singlish_casual_singapore_phrasing",
+      "turn_index": 89,
+      "passed": true,
+      "failures": [],
+      "client_message": "how much ah",
+      "reply": "I understand you'd like a rough idea. The team needs to review your property type, renovation scope, floor plan/site photos and material direction first before advising. Could you share the renovation scope, floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "price_question",
+      "expected_sales_move": "safe_price_reply",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "safe_price_reply",
+        "templateId": "v7:safe_price_reply",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "aac3fb8a",
+        "v7_primaryIntent": "price_question",
+        "v7_salesMove": "safe_price_reply",
+        "v7_detectedIntents": [
+          "price_question"
+        ],
+        "v7_stage": "price_safety",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "singlish_090",
+      "category": "Singlish / casual Singapore phrasing",
+      "conversation_id": "singlish_casual_singapore_phrasing",
+      "turn_index": 90,
+      "passed": true,
+      "failures": [],
+      "client_message": "can make appt anot",
+      "reply": "the requested timing noted as your preferred timing. The team will check availability before confirming. Could you share the property type first so the team can review before confirming?\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "appointment_request",
+      "expected_sales_move": "collect_meeting_preference",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "collect_meeting_preference",
+        "templateId": "v7:collect_meeting_preference",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "feec062a",
+        "v7_primaryIntent": "appointment_request",
+        "v7_salesMove": "collect_meeting_preference",
+        "v7_detectedIntents": [
+          "appointment_request"
+        ],
+        "v7_stage": "appointment_preference_collection",
+        "v7_askedFields": [
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "singlish_091",
+      "category": "Singlish / casual Singapore phrasing",
+      "conversation_id": "singlish_casual_singapore_phrasing",
+      "turn_index": 91,
+      "passed": true,
+      "failures": [],
+      "client_message": "got landed photo?",
+      "reply": "You can view some of our past works here: https://www.instagram.com/limmworks/\n\nWe've received your site photos, so the floor plan or design references would be useful if available.",
+      "expected_intent": "portfolio_request",
+      "expected_sales_move": "route_to_portfolio",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "portfolio_request",
+        "primarySalesMove": "route_to_portfolio",
+        "templateId": "v7:route_to_portfolio",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "b69f6e34",
+        "v7_primaryIntent": "portfolio_request",
+        "v7_salesMove": "route_to_portfolio",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "portfolio_request",
+          "provide_project_details"
+        ],
+        "v7_stage": "portfolio_routing",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": true,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property"
+        }
+      }
+    },
+    {
+      "id": "singlish_092",
+      "category": "Singlish / casual Singapore phrasing",
+      "conversation_id": "singlish_casual_singapore_phrasing",
+      "turn_index": 92,
+      "passed": true,
+      "failures": [],
+      "client_message": "can hack wall or not",
+      "reply": "The team can review wall hacking works, but they need to check the floor plan and site condition before advising what is suitable.\n\nCould you share the property type, scope of work, floor plan and site photos if available for an initial project review?",
+      "expected_intent": "hacking_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "hacking_wall",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "c1661434",
+        "v7_primaryIntent": "hacking_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "hacking_question"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "singlish_093",
+      "category": "Singlish / casual Singapore phrasing",
+      "conversation_id": "singlish_casual_singapore_phrasing",
+      "turn_index": 93,
+      "passed": true,
+      "failures": [],
+      "client_message": "need approval meh",
+      "reply": "It depends on the exact scope and property type. Some works may require proper checking or submission before the team can advise.\n\nCould you share the property type, scope of work, floor plan and site photos if available for an initial project review?",
+      "expected_intent": "approval_question",
+      "expected_sales_move": "answer_direct_question",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "approval_submission",
+        "primarySalesMove": "answer_direct_question",
+        "templateId": "v7:answer_direct_question",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "75cf23be",
+        "v7_primaryIntent": "approval_question",
+        "v7_salesMove": "answer_direct_question",
+        "v7_detectedIntents": [
+          "approval_question"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "scope",
+          "property_type"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "singlish_094",
+      "category": "Singlish / casual Singapore phrasing",
+      "conversation_id": "singlish_casual_singapore_phrasing",
+      "turn_index": 94,
+      "passed": true,
+      "failures": [],
+      "client_message": "reno landed can",
+      "reply": "Thanks, noted. This is a landed property, with renovation.\n\nCould you share the floor plan, site photos and design references if available for an initial project review?",
+      "expected_intent": "provide_project_details",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "landed_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "2866e236",
+        "v7_primaryIntent": "provide_project_details",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "provide_project_details",
+          "renovation_enquiry"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "renovation",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with renovation"
+        }
+      }
+    },
+    {
+      "id": "misc_095",
+      "category": "greeting / first enquiry",
+      "conversation_id": "greeting_first_enquiry",
+      "turn_index": 95,
+      "passed": true,
+      "failures": [],
+      "client_message": "what next?",
+      "reply": "Thanks, noted. This is a landed property for A&A works.\n\nCould you send the design references if available? It would also help to know who will be staying there, such as children, elderly family members, helper or pets, so the team can plan the proposal direction more properly.\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "file_or_media_sent",
+      "expected_sales_move": "acknowledge_details",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "acknowledge_details",
+        "templateId": "v7:acknowledge_details",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "96b1e3ec",
+        "v7_primaryIntent": "file_or_media_sent",
+        "v7_salesMove": "acknowledge_details",
+        "v7_detectedIntents": [
+          "file_or_media_sent"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": true,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "misc_096",
+      "category": "file received / file status",
+      "conversation_id": "file_received_file_status",
+      "turn_index": 96,
+      "passed": true,
+      "failures": [],
+      "client_message": "I already sent floor plan and scope. how much roughly?",
+      "reply": "You're right, sorry about that. We have your landed property for A&A works noted.\n\nThe remaining useful items are the site photos if available for an initial project review?",
+      "expected_intent": "already_told_you",
+      "expected_sales_move": "recover_from_mistake",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "price_question",
+        "primarySalesMove": "recover_from_mistake",
+        "templateId": "v7:recover_from_mistake",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "e16f7dc7",
+        "v7_primaryIntent": "already_told_you",
+        "v7_salesMove": "recover_from_mistake",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "already_told_you",
+          "price_question"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "misc_097",
+      "category": "appointment request",
+      "conversation_id": "appointment_request",
+      "turn_index": 97,
+      "passed": true,
+      "failures": [],
+      "client_message": "I already sent floor plan and scope. can make appt wed 2pm?",
+      "reply": "You're right, sorry about that. We have your landed property for A&A works noted.\n\nThe remaining useful items are the site photos if available for an initial project review?",
+      "expected_intent": "already_told_you",
+      "expected_sales_move": "recover_from_mistake",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "appointment_request",
+        "primarySalesMove": "recover_from_mistake",
+        "templateId": "v7:recover_from_mistake",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "site_photos"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "e16f7dc7",
+        "v7_primaryIntent": "already_told_you",
+        "v7_salesMove": "recover_from_mistake",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "already_told_you",
+          "appointment_request"
+        ],
+        "v7_stage": "short_recovery",
+        "v7_askedFields": [
+          "site_photos"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": "landed property, with A&A works"
+        }
+      }
+    },
+    {
+      "id": "misc_098",
+      "category": "complaint / risk",
+      "conversation_id": "complaint_risk",
+      "turn_index": 98,
+      "passed": true,
+      "failures": [],
+      "client_message": "I want refund lawyer",
+      "reply": "Thanks for raising this. I'll get the team to follow up directly and review the matter properly before advising the next step.",
+      "expected_intent": "complaint_or_frustration",
+      "expected_sales_move": "escalate_to_manager",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "complaint_or_risk",
+        "primarySalesMove": "escalate_to_manager",
+        "templateId": "v7:escalate_to_manager",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7abb7084",
+        "v7_primaryIntent": "complaint_or_frustration",
+        "v7_salesMove": "escalate_to_manager",
+        "v7_detectedIntents": [
+          "complaint_or_frustration",
+          "human_takeover_request"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "misc_099",
+      "category": "complaint / risk",
+      "conversation_id": "complaint_risk",
+      "turn_index": 99,
+      "passed": true,
+      "failures": [],
+      "client_message": "call me urgent",
+      "reply": "Thanks for raising this. I'll get the team to follow up directly and review the matter properly before advising the next step.",
+      "expected_intent": "complaint_or_frustration",
+      "expected_sales_move": "escalate_to_manager",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "complaint_or_risk",
+        "primarySalesMove": "escalate_to_manager",
+        "templateId": "v7:escalate_to_manager",
+        "memoryUsed": true,
+        "knownFactsUsed": false,
+        "missingFactsSelected": [],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "7abb7084",
+        "v7_primaryIntent": "complaint_or_frustration",
+        "v7_salesMove": "escalate_to_manager",
+        "v7_detectedIntents": [
+          "complaint_or_frustration",
+          "human_takeover_request"
+        ],
+        "v7_stage": "human_review_needed",
+        "v7_askedFields": [],
+        "v7_normalizedContext": {
+          "property_type": "",
+          "property_address": "",
+          "scope_summary": "",
+          "floor_plan_received": false,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "",
+          "timeline": "",
+          "known_facts_summary": ""
+        }
+      }
+    },
+    {
+      "id": "misc_100",
+      "category": "greeting / first enquiry",
+      "conversation_id": "greeting_first_enquiry",
+      "turn_index": 100,
+      "passed": true,
+      "failures": [],
+      "client_message": "thanks",
+      "reply": "Thanks, noted. This is a landed property at 47 Kasai Road for A&A works, key collection next month and budget expectation received.\n\nWe have enough key details for the team to start reviewing. We've received your floor plan, so site photos or design references would be useful if available.\n\nMay I also have your name so the team can record the enquiry properly?",
+      "expected_intent": "file_or_media_sent",
+      "expected_sales_move": "request_files",
+      "trace": {
+        "replyEngine": "v8_single_reply_planner",
+        "plannerVersion": "v8_0_sales_agent_reliability_replay_system",
+        "primaryIntent": "generic_renovation",
+        "primarySalesMove": "request_files",
+        "templateId": "v7:request_files",
+        "memoryUsed": true,
+        "knownFactsUsed": true,
+        "missingFactsSelected": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "handoffRequired": true,
+        "blockedLegacyTemplate": false,
+        "safetyValidatorPassed": true,
+        "finalReplyHash": "71f5e5ab",
+        "v7_primaryIntent": "file_or_media_sent",
+        "v7_salesMove": "request_files",
+        "v7_detectedIntents": [
+          "file_or_media_sent",
+          "thanks_or_acknowledgement"
+        ],
+        "v7_stage": "context_confirmed",
+        "v7_askedFields": [
+          "floor_plan",
+          "site_photos",
+          "design_references"
+        ],
+        "v7_normalizedContext": {
+          "property_type": "landed",
+          "property_address": "47 Kasai Road",
+          "scope_summary": "A&A works",
+          "floor_plan_received": true,
+          "site_photos_received": false,
+          "reference_images_received": false,
+          "budget_expectation": "received",
+          "timeline": "received",
+          "known_facts_summary": "landed property at 47 Kasai Road, with A&A works, key collection next month and budget expectation received"
+        }
+      }
+    }
+  ]
+}

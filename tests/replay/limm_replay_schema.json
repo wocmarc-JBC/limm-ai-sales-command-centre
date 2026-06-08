@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LIMM WhatsApp Sales Agent Replay Pack",
+  "type": "object",
+  "required": ["version", "cases"],
+  "properties": {
+    "version": { "type": "string" },
+    "description": { "type": "string" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "category",
+          "conversation_id",
+          "turn_index",
+          "memory_before",
+          "client_message",
+          "expected_intent",
+          "expected_sales_move",
+          "expected_reply_must_include",
+          "expected_reply_must_not_include",
+          "forbidden_phrases",
+          "expected_memory_after",
+          "handoff_required",
+          "max_questions_allowed",
+          "notes"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "category": { "type": "string" },
+          "conversation_id": { "type": "string" },
+          "turn_index": { "type": "integer", "minimum": 1 },
+          "memory_before": { "type": "object" },
+          "client_message": { "type": "string" },
+          "message_type": { "type": "string", "default": "text" },
+          "expected_intent": { "type": "string" },
+          "expected_sales_move": { "type": "string" },
+          "expected_reply_must_include": { "type": "array", "items": { "type": "string" } },
+          "expected_reply_must_not_include": { "type": "array", "items": { "type": "string" } },
+          "forbidden_phrases": { "type": "array", "items": { "type": "string" } },
+          "expected_memory_after": { "type": "object" },
+          "handoff_required": { "type": "boolean" },
+          "max_questions_allowed": { "type": "integer", "minimum": 0 },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

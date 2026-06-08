@@ -72,6 +72,14 @@ function containsLegacyReplyTemplate(text: string) {
   return LEGACY_REPLY_TEMPLATE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+function hashReply(text: string) {
+  let hash = 0;
+  for (const char of text) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
 function normalise(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -94,6 +102,7 @@ function similarity(a: string, b: string) {
 function isValidClientText(input: WhatsAppReplyDecisionInput) {
   const type = input.inboundMessageType.toLowerCase();
   if (!["text", "image", "document", "video"].includes(type)) return false;
+  if (type === "text" && /^\s*\?{1,4}\s*$/.test(input.inboundMessageText)) return true;
   return normalise(input.inboundMessageText).length > 0;
 }
 
@@ -411,9 +420,25 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
     calendarEventId: input.calendarEventId
   });
   const detectedIntents = coach.detectedIntents;
+  const simpleLowRiskPing =
+    ["greeting", "follow_up_ping", "short_ping"].includes(coach.intent) &&
+    !detectedIntents.some((intent) =>
+      [
+        "appointment_request",
+        "meeting_availability",
+        "price_question",
+        "portfolio_request",
+        "hacking_wall",
+        "approval_submission",
+        "landed_renovation",
+        "landed_aa",
+        "complaint_or_risk",
+        "free_request"
+      ].includes(intent)
+    );
   const needsHuman =
     coach.handoffRequired ||
-    v6Decision.replyPlan.handoffNeeded ||
+    (v6Decision.replyPlan.handoffNeeded && !simpleLowRiskPing) ||
     coach.multiIntentDetected ||
     detectedIntents.some((intent) =>
       [
@@ -425,11 +450,13 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
         "approval_submission",
         "landed_renovation",
         "landed_aa",
-        "complaint_or_risk"
+        "complaint_or_risk",
+        "free_request"
       ].includes(intent)
     ) ||
+    v7Decision.intents.includes("free_request") ||
     coach.leadContext.hasImageOrDocument ||
-    coach.confidence < 75;
+    (coach.confidence < 75 && !simpleLowRiskPing);
   const escalationReason = [
     coach.handoffRequired ? "risk_or_complaint" : "",
     coach.multiIntentDetected ? "multi_intent_high_value_lead" : "",
@@ -473,11 +500,19 @@ export function buildWhatsAppReplyDecision(input: WhatsAppReplyDecisionInput): W
       detectedIntents: coach.detectedIntents,
       v6_version: v6Decision.version,
       v7_version: v7Decision.version,
-      replyEngine: usingV7Reply ? "v7_2_planner" : "ultra_safe_fallback",
+      replyEngine: usingV7Reply ? "v8_single_reply_planner" : "ultra_safe_fallback",
+      plannerVersion: v7Decision.version,
       primaryMove: v7Decision.salesMove,
+      primarySalesMove: v7Decision.salesMove,
       templateId,
       usedPlanner: usingV7Reply,
+      memoryUsed: true,
+      knownFactsUsed: Boolean(v7Decision.context.known_facts_summary),
+      missingFactsSelected: v7Decision.askedFields,
+      handoffRequired: needsHuman,
       blockedLegacyTemplate,
+      safetyValidatorPassed: safety.ok,
+      finalReplyHash: hashReply(replyText),
       v7_detectedIntents: v7Decision.intents,
       v7_primaryIntent: v7Decision.primaryIntent,
       v7_stage: v7Decision.stage,

@@ -122,16 +122,18 @@ function readableList(items: string[]) {
 
 function propertyTypeFromText(text: string, lead: Lead) {
   const leadProperty = cleanClientFacingText(lead.propertyType);
+  const officeVisitRequest = /\b(?:go|come|visit|meet|meeting|appt|appointment).{0,32}(?:your\s+office|office)\b|\byour\s+office\b/i.test(text);
   if (/\blanded|terrace|semi d|semi detached|semi-detached|detached|bungalow|corner terrace|inter terrace\b/i.test(text)) return "landed";
   if (/\bcondo|apartment|mcst|condominium\b/i.test(text)) return "condo";
   if (/\bhdb\b/i.test(text)) return "HDB";
-  if (/\bcommercial|office|shop|clinic|restaurant|retail\b/i.test(text)) return "commercial";
+  if (/\bcommercial|shop|clinic|restaurant|retail\b/i.test(text) || (/\boffice\b/i.test(text) && !officeVisitRequest)) return "commercial";
   return leadProperty;
 }
 
 function scopeFromText(text: string, lead: Lead) {
-  const scopeMatch = text.match(/\b(?:kitchen extension|full renovation|landed renovation|bathroom renovation|toilet renovation|carpentry|wardrobe|hacking works|commercial renovation|clinic renovation|a&a works?|a a works?|aa works?|addition and alteration|renovation|reno)\b/i);
-  if (scopeMatch && /\ba\s*a works?|aa works?|a&a works?|addition and alteration/i.test(scopeMatch[0])) return "A&A works";
+  const scopeMatch = text.match(/\b(?:kitchen extension|wet kitchen|dry kitchen|kitchen|full renovation|landed renovation|bathroom renovation|toilet renovation|bathroom|toilet|carpentry|wardrobe|cabinet|hacking works|commercial renovation|shop renovation|clinic renovation|a&a works?|a a works?|aa works?|a&a|a a|aa|addition and alteration|renovation|reno)\b/i);
+  if (scopeMatch && /\ba\s*a works?|aa works?|a&a works?|^a\s*a$|^aa$|^a&a$|addition and alteration/i.test(scopeMatch[0])) return "A&A works";
+  if (/^reno$/i.test(scopeMatch?.[0] ?? "")) return "renovation";
   if (scopeMatch) return scopeMatch[0];
   return cleanClientFacingText(lead.scopeSummary);
 }
@@ -495,7 +497,7 @@ export function describeKnownProjectInfo(context: KnownProjectInfoContext, prefi
   const details = [
     context.knownScopeSummary ? `with ${context.knownScopeSummary}` : "",
     context.knownTimeline || "",
-    context.knownBudgetExpectation ? `budget expectation ${context.knownBudgetExpectation}` : ""
+    context.knownBudgetExpectation ? "budget expectation received" : ""
   ].filter(Boolean);
 
   if (!leadLine && !details.length) return "";
@@ -663,11 +665,11 @@ function knownFactsSummary(context: Omit<NormalizedWhatsAppLeadContext, "known_f
   const facts = [
     cleanClientFacingText(context.scope_summary) ? `with ${cleanClientFacingText(context.scope_summary)}` : "",
     context.timeline || context.key_collection_date || context.move_in_date,
-    context.budget_expectation ? `budget expectation ${context.budget_expectation}` : "",
+    context.budget_expectation ? "budget expectation received" : "",
     context.design_direction ? `design direction: ${context.design_direction}` : "",
     context.occupants_summary ? `household: ${context.occupants_summary}` : ""
   ].filter(Boolean);
-  if (!leadLine) return readableList(facts);
+  if (!leadLine) return readableList(facts.map((fact) => fact.replace(/^with\s+/i, "")));
   if (!facts.length) return leadLine;
   return `${leadLine}, ${readableList(facts)}`;
 }

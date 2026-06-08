@@ -15,6 +15,7 @@ export const V7_2_SINGLE_REPLY_PLANNER_VERSION = "v7_2_single_reply_planner_play
 export const V7_2_1_CONTEXT_AWARE_NEXT_ITEM_VERSION = "v7_2_1_context_aware_next_item_client_name_rule";
 export const V7_2_2_PRICE_REPLY_KNOWN_CONTEXT_VERSION = "v7_2_2_price_reply_uses_known_context";
 export const V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION = "v7_2_3_remove_legacy_whatsapp_reply_templates";
+export const V8_REPLAY_RELIABILITY_VERSION = "v8_0_sales_agent_reliability_replay_system";
 
 export type V7WhatsAppIntent =
   | "greeting"
@@ -23,10 +24,15 @@ export type V7WhatsAppIntent =
   | "provide_budget_expectation"
   | "price_question"
   | "appointment_request"
+  | "office_visit_request"
   | "design_question"
   | "portfolio_request"
   | "hacking_question"
   | "approval_question"
+  | "timeline_question"
+  | "promo_question"
+  | "free_request"
+  | "ai_or_human_question"
   | "file_or_media_sent"
   | "file_status_question"
   | "floorplan_status_question"
@@ -129,7 +135,7 @@ export interface V7WhatsAppSalesBrainInput {
 }
 
 export interface V7WhatsAppSalesBrainDecision {
-  version: typeof V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION;
+  version: typeof V8_REPLAY_RELIABILITY_VERSION;
   shouldReply: boolean;
   replyText: string;
   intents: V7WhatsAppIntent[];
@@ -161,13 +167,18 @@ function readableList(items: string[]) {
 }
 
 function extractPreferredTiming(text: string, context: NormalizedWhatsAppLeadContext) {
-  if (context.preferred_meeting_time) return context.preferred_meeting_time;
   const normalized = normalise(text);
+  if (context.preferred_meeting_time) {
+    if (has(normalized, /\b(?:tomorrow|tmr)\b/i) && !/\btomorrow\b/i.test(context.preferred_meeting_time)) {
+      return `tomorrow ${context.preferred_meeting_time}`;
+    }
+    return context.preferred_meeting_time;
+  }
   const day = normalized.match(/\b(mon|monday|tue|tuesday|wed|wednesday|thu|thursday|fri|friday|sat|saturday|sun|sunday)\b/i)?.[0];
   const time = normalized.match(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i)?.[0];
   if (day && time) return `${day.replace(/^\w/, (char) => char.toUpperCase())} ${time.toUpperCase().replace(/\s+/g, "")}`;
   if (day) return day.replace(/^\w/, (char) => char.toUpperCase());
-  if (has(normalized, /\btomorrow\b/i)) return time ? `tomorrow ${time.toUpperCase().replace(/\s+/g, "")}` : "tomorrow";
+  if (has(normalized, /\b(?:tomorrow|tmr)\b/i)) return time ? `tomorrow ${time.toUpperCase().replace(/\s+/g, "")}` : "tomorrow";
   return time ? time.toUpperCase().replace(/\s+/g, "") : "the requested timing";
 }
 
@@ -186,20 +197,25 @@ export function detectV7WhatsAppIntents(text: string, type: string, context: Nor
     if (has(normalized, /\bfloor\s*plan|floorplan|drawing|layout\b/i)) add("floorplan_status_question");
     if (has(normalized, /\bphoto|image|file|document\b/i)) add("media_status_question");
   }
-  if (has(text, /\b(i already told you|i said already|i told you already|already told you|already sent|already mentioned)\b/i)) add("already_told_you");
+  if (has(normalized, /\b(i already told you|i said already|i told you already|already told you|already sent|sent .* already|i sent .* already|already mentioned|i already mentioned)\b/i)) add("already_told_you");
   if (isConfusionPingText(text)) add("confusion_ping");
   if (isShortPingText(text)) add("short_ping");
   if (has(normalized, /\b(hello|hi|hey|good morning|good afternoon)\b/i) && normalized.length <= 80) add("greeting");
   if (isBudgetStatementText(text) || has(normalized, /\b(set aside|budget expectation|budget around|my budget|budget 500k|budget 80k|budget 120k)\b/i)) add("provide_budget_expectation");
   if (!intents.includes("provide_budget_expectation") && has(normalized, /\b(how much|roughly how much|price|cost|estimate|quote|quotation|package)\b/i)) add("price_question");
-  if (has(normalized, /\b(appt|appointment|meeting|meet|site visit|come down|slot|available|wed|wednesday|tomorrow|next available)\b/i)) add("appointment_request");
+  if (has(normalized, /\b(how long|can finish|finish all|finish fast|complete before|timeline|3 months|three months|before cny|can start fast)\b/i)) add("timeline_question");
+  if (has(normalized, /\b(promo|promotion|discount|offer|deal)\b/i)) add("promo_question");
+  if (has(normalized, /\b(can do for free|do for free|free or not|free)\b/i)) add("free_request");
+  if (has(normalized, /\b(are you ai|you ai|chatbot|bot|are you human|human or ai|real person)\b/i)) add("ai_or_human_question");
+  if (has(normalized, /\b(?:go|come|visit|meet|meeting|appt|appointment).{0,32}(?:your office|office)\b|\byour office\b/i)) add("office_visit_request");
+  if (has(normalized, /\b(appt|appointment|meeting|meet|site visit|come down|slot|available|mon|monday|tue|tuesday|wed|wednesday|thu|thursday|fri|friday|sat|saturday|sun|sunday|tomorrow|tmr|next available|book me)\b/i)) add("appointment_request");
   if (has(normalized, /\b(design theme|design concept|design direction|design ideas?|style|moodboard|japandi|modern luxury|minimalist)\b/i)) add("design_question");
   if (has(normalized, /\b(past works?|past projects?|project photos?|portfolio|before after|before and after|show me your work|can see your work|got landed photo|completed project)\b/i)) add("portfolio_request");
   if (has(normalized, /\b(hack|hacking|wall hacking|demolish|demolition|remove wall|wall)\b/i)) add("hacking_question");
   if (has(normalized, /\b(approval|permit|submission|ura|bca|approve|pass)\b/i)) add("approval_question");
-  if (has(normalized, /\b(landed|condo|hdb|commercial|office|clinic|shop|renovation|reno|a a|aa works|a&a|addition and alteration|kitchen|bathroom|carpentry|hacking|full house|whole house)\b/i)) add("provide_project_details");
+  if (has(normalized, /\b(landed|condo|hdb|commercial|clinic|shop|renovation|reno|a a|aa works|a&a|addition and alteration|kitchen|bathroom|carpentry|hacking|full house|whole house)\b/i)) add("provide_project_details");
   if (has(normalized, /\b(i want to renovate|want to do|can help with house|reno landed can)\b/i)) add("renovation_enquiry");
-  if (has(normalized, /\b(refund|lawyer|complaint|unhappy|cancel project|paid deposit|urgent|call me|start project)\b/i)) {
+  if (has(normalized, /\b(refund|lawyer|complaint|unhappy|cancel project|paid deposit|urgent|call me|start project|wtf|what the fuck|you asked already|why you ask again)\b/i)) {
     add("complaint_or_frustration");
     add("human_takeover_request");
   }
@@ -216,12 +232,16 @@ function primaryIntent(intents: V7WhatsAppIntent[]) {
     "complaint_or_frustration",
     "human_takeover_request",
     "price_question",
+    "office_visit_request",
     "appointment_request",
+    "timeline_question",
+    "promo_question",
+    "free_request",
+    "ai_or_human_question",
     "floorplan_status_question",
     "file_status_question",
     "media_status_question",
     "confusion_ping",
-    "short_ping",
     "provide_budget_expectation",
     "design_question",
     "portfolio_request",
@@ -229,8 +249,9 @@ function primaryIntent(intents: V7WhatsAppIntent[]) {
     "approval_question",
     "provide_project_details",
     "file_or_media_sent",
-    "follow_up_ping",
     "greeting",
+    "short_ping",
+    "follow_up_ping",
     "renovation_enquiry",
     "thanks_or_acknowledgement"
   ];
@@ -242,7 +263,8 @@ function determineStage(intent: V7WhatsAppIntent, context: NormalizedWhatsAppLea
   if (intent === "complaint_or_frustration" || intent === "human_takeover_request") return "human_review_needed";
   if (intent === "price_question") return "price_safety";
   if (intent === "file_status_question" || intent === "floorplan_status_question" || intent === "media_status_question") return "context_confirmed";
-  if (intent === "appointment_request") return "appointment_preference_collection";
+  if (intent === "appointment_request" || intent === "office_visit_request") return "appointment_preference_collection";
+  if (intent === "timeline_question" || intent === "promo_question" || intent === "free_request" || intent === "ai_or_human_question") return "context_confirmed";
   if (intent === "design_question") return "design_discussion";
   if (intent === "portfolio_request") return "portfolio_routing";
   if (intent === "hacking_question" || intent === "approval_question") return "human_review_needed";
@@ -489,10 +511,15 @@ function salesMoveFor(primary: V7WhatsAppIntent) {
     provide_budget_expectation: "record_budget_expectation_without_quoting",
     price_question: "safe_price_scope_first_reply",
     appointment_request: "collect_preferred_timing_without_confirmation",
+    office_visit_request: "collect_office_visit_preference_without_confirmation",
     design_question: "answer_design_direction_and_request_references",
     portfolio_request: "route_to_instagram_portfolio",
     hacking_question: "technical_caution_and_collect_drawings",
     approval_question: "authority_caution_and_collect_scope",
+    timeline_question: "timeline_caution_and_collect_scope",
+    promo_question: "answer_promo_question_without_discount_claim",
+    free_request: "safe_decline_free_work_request",
+    ai_or_human_question: "explain_assistant_and_team_review",
     file_or_media_sent: "acknowledge_file_context",
     file_status_question: "answer_file_status_question",
     floorplan_status_question: "answer_floorplan_status_question",
@@ -524,9 +551,10 @@ function playbookKnownSummary(context: NormalizedWhatsAppLeadContext, mode: "sho
   const summary = buildClientFacingKnownSummary(context)
     .replace(/,\s+with A&A works/i, " for A&A works")
     .replace(/,\s+with aa works/i, " for A&A works")
+    .replace(/^with\s+/i, "")
     .replace(/\s+/g, " ")
     .trim();
-  if (!summary || /pending review|unknown|not provided|This is a at|This is with/i.test(summary)) return "";
+  if (!summary || /^with\b/i.test(summary) || /pending review|unknown|not provided|This is a at|This is with/i.test(summary)) return "";
   if (mode === "short") {
     const location = context.property_address || context.property_area || context.postal_code;
     if (context.property_type && /a&a|aa works|addition and alteration/i.test(context.scope_summary) && location) {
@@ -723,16 +751,19 @@ function playbookMissingFields(context: NormalizedWhatsAppLeadContext, planSeed:
 }
 
 function selectPrimaryMove(intents: V7WhatsAppIntent[], clientState: V7ClientState, context: NormalizedWhatsAppLeadContext): V7PrimaryMove {
-  if (clientState === "annoyed" || intents.includes("already_told_you")) return "recover_from_mistake";
   if (intents.includes("complaint_or_frustration") || intents.includes("human_takeover_request")) return "escalate_to_manager";
+  if (clientState === "annoyed" || intents.includes("already_told_you")) return "recover_from_mistake";
   if (intents.includes("floorplan_status_question") || intents.includes("file_status_question") || intents.includes("media_status_question")) return "confirm_file_status";
   if (intents.includes("price_question")) return "safe_price_reply";
-  if (intents.includes("appointment_request")) return "collect_meeting_preference";
+  if (intents.includes("office_visit_request") || intents.includes("appointment_request")) return "collect_meeting_preference";
+  if (intents.includes("timeline_question") || intents.includes("promo_question") || intents.includes("free_request") || intents.includes("ai_or_human_question")) return "answer_direct_question";
   if (intents.includes("portfolio_request")) return "route_to_portfolio";
   if (intents.includes("design_question")) return "collect_design_lifestyle_info";
   if (intents.includes("hacking_question") || intents.includes("approval_question")) return "answer_direct_question";
   if (intents.includes("confusion_ping")) return "clarify_confusion";
-  if (intents.includes("short_ping") || intents.includes("follow_up_ping") || intents.includes("thanks_or_acknowledgement")) return "simple_acknowledgement";
+  if (intents.includes("greeting") && !intents.includes("provide_project_details") && !intents.includes("renovation_enquiry")) return "greet";
+  if (intents.includes("short_ping") || intents.includes("follow_up_ping")) return "simple_acknowledgement";
+  if (intents.includes("thanks_or_acknowledgement") && intents.length === 1) return "simple_acknowledgement";
   if (isSeriousLandedAa(context)) return "request_files";
   if (intents.includes("provide_budget_expectation") || intents.includes("provide_project_details") || intents.includes("file_or_media_sent")) return "acknowledge_details";
   if (intents.includes("greeting")) return "greet";
@@ -753,9 +784,22 @@ function directAnswerFor(input: V7WhatsAppSalesBrainInput, intents: V7WhatsAppIn
     return "I understand you'd like a rough idea. For landed A&A works, the team should review the floor plan, site photos, site condition and material direction first before advising.";
   }
   if (primaryMove === "safe_price_reply") return "I understand you'd like a rough idea. The team needs to review your property type, renovation scope, floor plan/site photos and material direction first before advising.";
+  if (intents.includes("timeline_question")) {
+    return "The timeline should be reviewed after the team checks the full scope, site condition, material lead times and work sequencing. We should not promise a completion date before that review.";
+  }
+  if (intents.includes("promo_question")) {
+    return "We do not confirm discounts or promotional offers in this chat. The team can review the project details and advise the appropriate next step after checking the details properly.";
+  }
+  if (intents.includes("free_request")) {
+    return "We would not be able to take on renovation works for free. If you would still like the team to review the enquiry, we can look at the details properly first.";
+  }
+  if (intents.includes("ai_or_human_question")) {
+    return "This WhatsApp chat is assisted by LIMM's enquiry assistant, and important project details are routed for the team to review.";
+  }
   if (primaryMove === "collect_meeting_preference") {
     const timing = extractPreferredTiming(input.inboundMessageText, context);
-    return `${timing} noted as your preferred timing. The team will check availability before confirming.`;
+    const office = intents.includes("office_visit_request") ? " for an office visit" : "";
+    return `${timing} noted as your preferred timing${office}. The team will check availability before confirming.`;
   }
   if (primaryMove === "route_to_portfolio") return `You can view some of our past works here: ${getLimmInstagramUrl()}`;
   if (primaryMove === "collect_design_lifestyle_info") return "Yes, we can help with design direction and renovation planning.";
@@ -801,7 +845,7 @@ export function planWhatsAppSalesReply(input: V7WhatsAppSalesBrainInput): {
   const shouldAskClientName =
     !hasClientName &&
     patience === "normal" &&
-    !["clarify_confusion", "recover_from_mistake", "greet", "simple_acknowledgement"].includes(primaryMove) &&
+    !["clarify_confusion", "recover_from_mistake", "greet", "simple_acknowledgement", "confirm_file_status", "answer_direct_question", "route_to_portfolio", "escalate_to_manager"].includes(primaryMove) &&
     (
       leadStage === "serious_project" ||
       leadStage === "files_received" ||
@@ -961,10 +1005,12 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
     }
     if (context.scope_summary || context.floor_plan_received || context.budget_expectation) {
       const known = knownFull ? ` Thanks, we've noted your ${knownFull}.` : "";
-      const followUp = ask ? ` ${ask}` : " The team can go through this properly during the initial project review.";
+      const followUp = ask ? ` ${ask.replace(/\bscope of work\b/i, "renovation scope")}` : " The team can go through this properly during the initial project review.";
       return `${plan.directAnswer}${known}${followUp}`;
     }
-    const followUp = ask || "Could you share the property type, renovation scope and any floor plan/site photos if available?";
+    const followUp = ask
+      ? ask.replace(/\bscope of work\b/i, "renovation scope")
+      : "Could you share the property type, renovation scope and any floor plan/site photos if available?";
     return `${plan.directAnswer} ${followUp}`;
   }
 
@@ -987,6 +1033,10 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
 
   if (plan.primaryMove === "answer_direct_question") {
     const parts = [plan.directAnswer];
+    if (intents.some((intent) => ["timeline_question", "promo_question", "free_request", "ai_or_human_question"].includes(intent))) {
+      if (knownFull && !intents.includes("ai_or_human_question")) parts.push(`We have your ${knownFull} noted.`);
+      return parts.join("\n\n");
+    }
     if (intents.includes("design_question")) parts.push("For the design direction, the team can propose a suitable direction after reviewing your layout, lighting, storage needs and preferred style.");
     if (intents.includes("appointment_request")) parts.push(directAnswerFor(input, ["appointment_request"], "collect_meeting_preference", context));
     if (knownFull) parts.push(`We have your ${knownFull} noted.`);
@@ -1004,7 +1054,7 @@ export function composeReplyFromPlan(plan: V7WhatsAppSalesReplyPlan, input: V7Wh
       return `Hi, yes we're here. We have your ${knownShort} noted.${next}`;
     }
     if (/^\s*ok\?\s*$/i.test(input.inboundMessageText) && knownShort) {
-      const next = ask || "You can send the floor plan, site photos or design references when available.";
+      const next = ask || reviewReadyLine(context) || nextUsefulFileLine(context, "general");
       return `Yes, noted. We have your ${knownShort} recorded. ${next}`;
     }
     if (knownShort) {
@@ -1107,7 +1157,7 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
   const stage = determineStage(primary, context);
 
   return {
-    version: V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION,
+    version: V8_REPLAY_RELIABILITY_VERSION,
     shouldReply: input.autoReplyEnabled && Boolean(replyText),
     replyText,
     intents,
@@ -1121,7 +1171,14 @@ export function buildV7WorldClassWhatsAppSalesBrainDecision(input: V7WhatsAppSal
     repeatedQuestionRisk: context.repeated_question_risk,
     context,
     trace: {
-      v7_version: V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION,
+      v7_version: V8_REPLAY_RELIABILITY_VERSION,
+      v7LegacyTemplateRemovalVersion: V7_2_3_LEGACY_TEMPLATE_REMOVAL_VERSION,
+      v8ReplayReliabilityVersion: V8_REPLAY_RELIABILITY_VERSION,
+      singleReplyPlannerEnforced: true,
+      goldenReplayPackAvailable: true,
+      replayRunnerAvailable: true,
+      replayVariationGeneratorAvailable: true,
+      memoryBasedReplayAvailable: true,
       v7PreviousVersion: V7_WORLD_CLASS_SALES_BRAIN_VERSION,
       v7MemoryContractVersion: V7_1_MEMORY_CONTRACT_VERSION,
       v7SingleReplyPlannerVersion: V7_2_SINGLE_REPLY_PLANNER_VERSION,
