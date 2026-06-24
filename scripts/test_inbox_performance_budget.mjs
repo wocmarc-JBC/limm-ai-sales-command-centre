@@ -31,7 +31,6 @@ for (const phrase of [
   "listLatestLeadMessagesForInbox(leadIds, 3)",
   "listLeadMessagesPage(selectedLead.id, 30)",
   "activeLeads = leads.slice(0, 30)",
-  "selectedAuditLogs",
   "hasOlderMessages",
   "oldestMessageCursor"
 ]) {
@@ -40,6 +39,7 @@ for (const phrase of [
 
 assert(!inboxPage.includes("listLeadMessages(lead.id)"), "/inbox page must not load full message history for every conversation.");
 assert(!inboxPage.includes("listAuditLogs({ entityType: \"lead\", entityId: lead.id })"), "/inbox page must not load audit logs for every conversation.");
+assert(!inboxPage.includes("selectedAuditLogs"), "/inbox page must not build selected audit logs during chat open.");
 assert(!inboxPage.includes("WhatsAppSalesInbox"), "/inbox must not import the old heavy lead-detail timeline component.");
 
 for (const phrase of [
@@ -86,13 +86,14 @@ assert(!summariesApi.includes("listAuditLogs"), "conversation summaries API must
 for (const phrase of [
   "listLeadMessagesPage(lead.id, 30)",
   "listLeadFiles(lead.id)",
-  "listAuditLogs({ entityType: \"lead\", entityId: lead.id })",
   "hasOlderMessages",
   "oldestMessageCursor",
-  "auditTrail"
+  "auditTrail: []"
 ]) {
   assertIncludes(detailApi, phrase, "selected conversation API");
 }
+
+assert(!detailApi.includes("listAuditLogs"), "selected conversation API must not fetch audit trails during chat open.");
 
 for (const phrase of [
   "listLeadMessagesAfter(leadId, after, 30)",

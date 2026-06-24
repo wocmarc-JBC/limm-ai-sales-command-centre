@@ -1,7 +1,6 @@
 import { MultiChatInbox, type MultiChatConversation, type MultiChatSummary } from "@/components/inbox/MultiChatInbox";
 import { PageHeader } from "@/components/PageHeader";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { listAuditLogs } from "@/lib/data/audit-repository";
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
@@ -84,12 +83,9 @@ export default async function WhatsAppInboxPage({
     ? searchParams.lead
     : activeLeads[0]?.id;
   const selectedLead = activeLeads.find((lead) => lead.id === defaultSelectedLeadId);
-  const [selectedPage, selectedAuditLogs] = selectedLead
-    ? await Promise.all([
-      listLeadMessagesPage(selectedLead.id, 30),
-      listAuditLogs({ entityType: "lead", entityId: selectedLead.id })
-    ])
-    : [{ messages: [], hasOlder: false, oldestCursor: null }, []];
+  const selectedPage = selectedLead
+    ? await listLeadMessagesPage(selectedLead.id, 30)
+    : { messages: [], hasOlder: false, oldestCursor: null };
 
   const conversations: MultiChatConversation[] = activeLeads.map((lead) => {
     const summaryMessages = summaryMessagesByLead.get(lead.id) ?? [];
@@ -120,15 +116,7 @@ export default async function WhatsAppInboxPage({
       },
       hasOlderMessages: selected ? selectedPage.hasOlder : false,
       oldestMessageCursor: selected ? selectedPage.oldestCursor : null,
-      auditTrail: selectedAuditLogs
-        .filter((entry) => entry.action.startsWith("whatsapp_"))
-        .slice(0, 8)
-        .map((entry) => ({
-          id: entry.id,
-          action: entry.action,
-          summary: entry.summary,
-          createdAt: entry.createdAt
-        }))
+      auditTrail: []
     };
   }).sort((a, b) => new Date(b.summary.lastActivityAt).getTime() - new Date(a.summary.lastActivityAt).getTime());
 

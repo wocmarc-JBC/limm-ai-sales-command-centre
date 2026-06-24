@@ -651,7 +651,9 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     conversations.map((conversation) => [conversation.lead.id, conversation])
   ));
   const [chatSummaries, setChatSummaries] = useState<MultiChatSummary[]>(() => conversations.map((conversation) => conversation.summary));
-  const [loadedConversations, setLoadedConversations] = useState<Record<string, boolean>>(() => initialLeadId ? { [initialLeadId]: true } : {});
+  const [conversationCache, setConversationCache] = useState<Record<string, { fetchedAt: string }>>(() => initialLeadId
+    ? { [initialLeadId]: { fetchedAt: new Date().toISOString() } }
+    : {});
   const [activeLeadId, setActiveLeadId] = useState(initialLeadId);
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
@@ -665,6 +667,11 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const messagePaneRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
+  const conversationCacheRef = useRef(conversationCache);
+
+  useEffect(() => {
+    conversationCacheRef.current = conversationCache;
+  }, [conversationCache]);
 
   const patchSummary = useCallback((leadId: string, patch: Partial<MultiChatSummary>) => {
     setChatSummaries((current) => current
@@ -683,9 +690,9 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     });
   }, []);
 
-  const loadConversation = useCallback(async (leadId: string) => {
+  const loadConversation = useCallback(async (leadId: string, options: { background?: boolean } = {}) => {
     if (!leadId) return;
-    setLoadingConversationId(leadId);
+    if (!options.background) setLoadingConversationId(leadId);
     try {
       const response = await fetch(`/api/inbox/conversations/${encodeURIComponent(leadId)}`, { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
@@ -704,10 +711,15 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             cursor: conversation.oldestMessageCursor
           }
         }));
-        setLoadedConversations((current) => ({ ...current, [leadId]: true }));
+        setConversationCache((current) => ({
+          ...current,
+          [leadId]: { fetchedAt: new Date().toISOString() }
+        }));
       }
     } finally {
-      setLoadingConversationId((current) => current === leadId ? "" : current);
+      if (!options.background) {
+        setLoadingConversationId((current) => current === leadId ? "" : current);
+      }
     }
   }, []);
 
@@ -736,9 +748,9 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   useEffect(() => {
     if (selectedLeadId && chatSummaries.some((item) => item.id === selectedLeadId)) {
       setActiveLeadId(selectedLeadId);
-      if (!loadedConversations[selectedLeadId]) void loadConversation(selectedLeadId);
+      if (!conversationCacheRef.current[selectedLeadId]) void loadConversation(selectedLeadId);
     }
-  }, [chatSummaries, loadConversation, loadedConversations, selectedLeadId]);
+  }, [chatSummaries, loadConversation, selectedLeadId]);
 
   const activeConversation = conversationMap[activeLeadId] ?? conversations[0];
   const activeOlderState = activeConversation
@@ -841,8 +853,31 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `/inbox?lead=${encodeURIComponent(leadId)}`);
     }
-    if (!loadedConversations[leadId]) void loadConversation(leadId);
-  }, [loadConversation, loadedConversations]);
+    const cached = conversationCacheRef.current[leadId];
+    if (!cached) {
+      void loadConversation(leadId);
+      return;
+    }
+    const fetchedAt = Date.parse(cached.fetchedAt);
+    if (!Number.isNaN(fetchedAt) && Date.now() - fetchedAt > 60000) {
+      void loadConversation(leadId, { background: true });
+    }
+  }, [loadConversation]);
+
+  useEffect(() => {
+    const candidates = waitingChats
+      .filter((summary) => summary.id !== activeLeadId && !conversationCacheRef.current[summary.id])
+      .slice(0, 3);
+    if (!candidates.length) return;
+    const timer = window.setTimeout(() => {
+      for (const candidate of candidates) {
+        if (!conversationCacheRef.current[candidate.id]) {
+          void loadConversation(candidate.id, { background: true });
+        }
+      }
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [activeLeadId, loadConversation, waitingChats]);
 
   const nextWaitingChat = () => {
     if (!waitingChats.length) return;
@@ -1050,7 +1085,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
                   </button>
                 ) : null}
                 <Link href={`/leads/${activeConversation.lead.id}`} className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-command-muted">
-                  Lead detail
+                  View full lead detail
                 </Link>
               </div>
             </div>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { listAuditLogs } from "@/lib/data/audit-repository";
 import { listLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
@@ -72,10 +71,9 @@ export async function GET(
   const lead = await getLeadById(params.leadId);
   if (!lead) return NextResponse.json({ ok: false, error: "lead_not_found" }, { status: 404 });
 
-  const [messagePage, leadFiles, auditLogs] = await Promise.all([
+  const [messagePage, leadFiles] = await Promise.all([
     listLeadMessagesPage(lead.id, 30),
-    listLeadFiles(lead.id),
-    listAuditLogs({ entityType: "lead", entityId: lead.id })
+    listLeadFiles(lead.id)
   ]);
   const summary = buildSummary(lead, messagePage.messages, leadFiles);
   const intakePlan = buildLeadIntakePlan(lead, messagePage.messages);
@@ -101,15 +99,7 @@ export async function GET(
       },
       hasOlderMessages: messagePage.hasOlder,
       oldestMessageCursor: messagePage.oldestCursor,
-      auditTrail: auditLogs
-        .filter((entry) => entry.action.startsWith("whatsapp_"))
-        .slice(0, 8)
-        .map((entry) => ({
-          id: entry.id,
-          action: entry.action,
-          summary: entry.summary,
-          createdAt: entry.createdAt
-        }))
+      auditTrail: []
     }
   });
 }
