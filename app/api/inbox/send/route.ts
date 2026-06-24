@@ -1,4 +1,3 @@
-import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   getWhatsAppSendPayloadSummary,
@@ -23,13 +22,6 @@ function safeWhatsAppError(error: unknown) {
 
 function safeInput(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function revalidateInboxLeadPaths(leadId: string) {
-  revalidatePath("/inbox");
-  revalidatePath("/leads");
-  revalidatePath(`/leads/${leadId}`);
-  revalidatePath("/audit-log");
 }
 
 export async function POST(request: Request) {
@@ -128,7 +120,6 @@ export async function POST(request: Request) {
         noTokenLogged: true
       }
     }).catch(() => null);
-    revalidateInboxLeadPaths(leadId);
     return NextResponse.json({
       ok: false,
       errorCode: "whatsapp_send_failed",
@@ -183,7 +174,6 @@ export async function POST(request: Request) {
         noTokenLogged: true
       }
     });
-    revalidateInboxLeadPaths(leadId);
     return NextResponse.json({
       ok: true,
       leadId,

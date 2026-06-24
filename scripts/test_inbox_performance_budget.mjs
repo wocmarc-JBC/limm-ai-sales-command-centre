@@ -63,6 +63,7 @@ for (const phrase of [
 }
 
 assert(!sendApi.includes("redirect("), "fast inbox send API must not redirect.");
+assert(!sendApi.includes("revalidatePath"), "fast inbox send API must not revalidate the whole page.");
 assert(!sendApi.includes("WHATSAPP_ACCESS_TOKEN"), "fast inbox send API must not read or expose WhatsApp token directly.");
 assert(!sendApi.includes("WHATSAPP_PHONE_NUMBER_ID"), "fast inbox send API must not read or expose WhatsApp phone number id directly.");
 
@@ -129,6 +130,7 @@ for (const phrase of [
   "showDeliveryDetails",
   "showTechnicalAudit",
   "NEXT_REDIRECT",
+  "metadataMetaMessageId",
   "messageStatus(message)"
 ]) {
   assertIncludes(inboxClient, phrase, "multi-chat inbox client");
