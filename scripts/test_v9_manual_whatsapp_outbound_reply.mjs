@@ -170,7 +170,7 @@ for (const phrase of [
   'direction: "outbound"',
   'whatsappStatus: "sent"',
   'whatsappStatus: "failed"',
-  "takeOverLead(leadId, actor)",
+  "markLeadAwaitingClientAfterManualReply(leadId, actor)",
   "pauseBotForLead(leadId",
   "NextResponse.json({",
   "inboxJsonApiSend: true",

@@ -5,38 +5,18 @@ import { listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadIntakePlan } from "@/lib/lead-intake";
+import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { inferLeadLocation } from "@/lib/singapore-location";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
-  return [...messages]
-    .filter((message) => message.channel === "whatsapp")
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
-}
-
-function hasRealFailedSend(messages: LeadMessage[]) {
-  return messages.some((message) => (
-    message.channel === "whatsapp" &&
-    message.direction === "outbound" &&
-    message.whatsappStatus === "failed" &&
-    !message.providerMessageId &&
-    !/NEXT_REDIRECT/i.test(typeof message.metadata?.error === "string" ? message.metadata.error : "")
-  ));
-}
-
-function countUnread(lead: Lead, messages: LeadMessage[]) {
-  const lastReplyAt = lead.lastReplyAt ? new Date(lead.lastReplyAt).getTime() : 0;
-  return messages.filter((message) => (
-    message.channel === "whatsapp" &&
-    message.direction === "inbound" &&
-    new Date(message.createdAt).getTime() > lastReplyAt
-  )).length;
+  return latestMeaningfulWhatsAppMessage(messages);
 }
 
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
   const latestMessage = latestWhatsAppMessage(messages);
-  const unreadCount = countUnread(lead, messages);
+  const queue = getInboxQueueState(lead, messages);
   const floorPlanReceived = files.some((file) => file.fileStatus !== "voided" && file.fileCategory === "floor_plan");
   const sitePhotosReceived = files.some((file) => file.fileStatus !== "voided" && file.fileCategory === "site_photos");
   return {
@@ -50,10 +30,12 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
     scopeSummary: lead.scopeSummary,
     lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
     lastActivityAt: latestMessage?.createdAt ?? lead.updatedAt ?? lead.createdAt,
-    unreadCount,
-    failedSend: hasRealFailedSend(messages),
-    waitingForClient: lead.status === "Awaiting Client",
-    waitingForMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded || unreadCount > 0),
+    primaryStatus: queue.primaryStatus,
+    unreadCount: queue.unreadCount,
+    failedSend: queue.failedSend,
+    waitingForClient: queue.waitingForClient,
+    waitingForMarcus: queue.waitingForMarcus,
+    closedOrDone: queue.closedOrDone,
     floorPlanReceived,
     sitePhotosReceived
   };

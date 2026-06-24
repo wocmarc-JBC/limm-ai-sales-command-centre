@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
+import { getInboxQueueState, inboxQueuePriority, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadIntakePlan } from "@/lib/lead-intake";
 import { getNextBestAction } from "@/lib/next-best-action";
@@ -11,33 +12,12 @@ import { inferLeadLocation } from "@/lib/singapore-location";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
-  return [...messages]
-    .filter((message) => message.channel === "whatsapp")
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
-}
-
-function hasRealFailedSend(messages: LeadMessage[]) {
-  return messages.some((message) => (
-    message.channel === "whatsapp" &&
-    message.direction === "outbound" &&
-    message.whatsappStatus === "failed" &&
-    !message.providerMessageId &&
-    !/NEXT_REDIRECT/i.test(typeof message.metadata?.error === "string" ? message.metadata.error : "")
-  ));
-}
-
-function countUnread(lead: Lead, messages: LeadMessage[]) {
-  const lastReplyAt = lead.lastReplyAt ? new Date(lead.lastReplyAt).getTime() : 0;
-  return messages.filter((message) => (
-    message.channel === "whatsapp" &&
-    message.direction === "inbound" &&
-    new Date(message.createdAt).getTime() > lastReplyAt
-  )).length;
+  return latestMeaningfulWhatsAppMessage(messages);
 }
 
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): MultiChatSummary {
   const latestMessage = latestWhatsAppMessage(messages);
-  const unreadCount = countUnread(lead, messages);
+  const queue = getInboxQueueState(lead, messages);
   const floorPlanReceived = files.some((file) => file.fileStatus !== "voided" && file.fileCategory === "floor_plan");
   const sitePhotosReceived = files.some((file) => file.fileStatus !== "voided" && file.fileCategory === "site_photos");
   return {
@@ -51,10 +31,12 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): M
     scopeSummary: lead.scopeSummary,
     lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
     lastActivityAt: latestMessage?.createdAt ?? lead.updatedAt ?? lead.createdAt,
-    unreadCount,
-    failedSend: hasRealFailedSend(messages),
-    waitingForClient: lead.status === "Awaiting Client",
-    waitingForMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded || unreadCount > 0),
+    primaryStatus: queue.primaryStatus,
+    unreadCount: queue.unreadCount,
+    failedSend: queue.failedSend,
+    waitingForClient: queue.waitingForClient,
+    waitingForMarcus: queue.waitingForMarcus,
+    closedOrDone: queue.closedOrDone,
     floorPlanReceived,
     sitePhotosReceived
   };
@@ -118,7 +100,11 @@ export default async function WhatsAppInboxPage({
       oldestMessageCursor: selected ? selectedPage.oldestCursor : null,
       auditTrail: []
     };
-  }).sort((a, b) => new Date(b.summary.lastActivityAt).getTime() - new Date(a.summary.lastActivityAt).getTime());
+  }).sort((a, b) => {
+    const priority = inboxQueuePriority(a.summary) - inboxQueuePriority(b.summary);
+    if (priority !== 0) return priority;
+    return new Date(b.summary.lastActivityAt).getTime() - new Date(a.summary.lastActivityAt).getTime();
+  });
 
   return (
     <>

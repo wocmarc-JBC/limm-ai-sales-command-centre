@@ -404,6 +404,25 @@ export async function takeOverLead(id: string, actorName = "Marcus") {
   );
 }
 
+export async function markLeadAwaitingClientAfterManualReply(id: string, actorName = "Marcus") {
+  const now = new Date().toISOString();
+  return updateLead(
+    id,
+    {
+      status: "Awaiting Client",
+      botPaused: true,
+      botPausedAt: now,
+      botPausedBy: actorName,
+      botPauseReason: "Human takeover",
+      needsMarcus: false,
+      bossApprovalNeeded: false
+    },
+    "lead_waiting_for_client_after_manual_reply",
+    "Manual WhatsApp reply sent; bot remains paused and lead is waiting for client response.",
+    { botPaused: true, waitingForClient: true }
+  );
+}
+
 export async function pauseBotForLead(id: string, reason: string, actorName = "Marcus") {
   const now = new Date().toISOString();
   return updateLead(

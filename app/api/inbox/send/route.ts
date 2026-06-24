@@ -7,7 +7,7 @@ import {
 import { requirePermission } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/data/audit-repository";
 import { saveLeadMessage } from "@/lib/data/lead-messages-repository";
-import { getLeadById, pauseBotForLead, takeOverLead } from "@/lib/data/leads-repository";
+import { getLeadById, markLeadAwaitingClientAfterManualReply, pauseBotForLead } from "@/lib/data/leads-repository";
 
 function safeWhatsAppError(error: unknown) {
   if (error instanceof WhatsAppCloudApiSendError) {
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
         noVoiceTranscription: true
       }
     });
-    await takeOverLead(leadId, actor);
+    await markLeadAwaitingClientAfterManualReply(leadId, actor);
     await createAuditLog({
       actorName: actor,
       actorEmail,

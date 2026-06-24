@@ -20,6 +20,7 @@ import {
   resumeBotForLeadAction,
   updateLeadStatusAction
 } from "@/lib/actions";
+import { getInboxQueueState, inboxQueuePriority, type InboxPrimaryStatus } from "@/lib/inbox-queue";
 import type { Lead, LeadMessage } from "@/lib/types";
 
 export type MultiChatSummary = {
@@ -33,10 +34,12 @@ export type MultiChatSummary = {
   scopeSummary: string;
   lastMessagePreview: string;
   lastActivityAt: string;
+  primaryStatus: InboxPrimaryStatus;
   unreadCount: number;
   failedSend: boolean;
   waitingForClient: boolean;
   waitingForMarcus: boolean;
+  closedOrDone: boolean;
   floorPlanReceived: boolean;
   sitePhotosReceived: boolean;
 };
@@ -172,10 +175,7 @@ function isInternalTestChat(chat: MultiChatSummary) {
 }
 
 function chatPriority(chat: MultiChatSummary) {
-  if (chat.failedSend) return 0;
-  if (chat.waitingForMarcus || chat.unreadCount > 0) return 1;
-  if (chat.status === "New Enquiry") return 2;
-  return 3;
+  return inboxQueuePriority(chat);
 }
 
 function sortQueue(chats: MultiChatSummary[]) {
@@ -283,12 +283,7 @@ function bubbleTone(message: LeadMessage) {
 }
 
 function chatStatusLabel(chat: MultiChatSummary) {
-  if (chat.failedSend) return "Failed send";
-  if (chat.unreadCount > 0 || chat.waitingForMarcus) return "Waiting for Marcus";
-  if (chat.waitingForClient) return "Waiting for client";
-  if (chat.botPaused) return "Human takeover";
-  if (chat.status === "New Enquiry") return "New";
-  return "Bot active";
+  return chat.primaryStatus || "Bot active";
 }
 
 function chatStatusTone(chat: MultiChatSummary) {
@@ -297,18 +292,19 @@ function chatStatusTone(chat: MultiChatSummary) {
   if (label === "Waiting for Marcus") return "border-command-gold/60 bg-command-gold/12 text-command-gold";
   if (label === "Waiting for client") return "border-command-amber/50 bg-command-amber/10 text-command-amber";
   if (label === "Human takeover") return "border-command-cyan/45 bg-command-cyan/10 text-command-cyan";
+  if (label === "Closed / Done") return "border-command-line bg-command-bg/60 text-command-muted";
   return "border-command-green/45 bg-command-green/10 text-command-green";
 }
 
 function matchesFilter(chat: MultiChatSummary, filter: (typeof filters)[number]) {
   if (filter === "All") return true;
   if (filter === "Unread") return chat.unreadCount > 0;
-  if (filter === "Waiting for Marcus") return chat.waitingForMarcus || chat.unreadCount > 0;
-  if (filter === "Waiting for client") return chat.waitingForClient;
-  if (filter === "New leads") return chat.status === "New Enquiry";
-  if (filter === "Bot active") return !chat.botPaused;
+  if (filter === "Waiting for Marcus") return chat.primaryStatus === "Waiting for Marcus";
+  if (filter === "Waiting for client") return chat.primaryStatus === "Waiting for client";
+  if (filter === "New leads") return chat.primaryStatus === "New lead";
+  if (filter === "Bot active") return chat.primaryStatus === "Bot active";
   if (filter === "Human takeover") return chat.botPaused;
-  if (filter === "Failed send") return chat.failedSend;
+  if (filter === "Failed send") return chat.primaryStatus === "Failed send";
   return true;
 }
 
@@ -897,7 +893,11 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const patchSummary = useCallback((leadId: string, patch: Partial<MultiChatSummary>) => {
     setChatSummaries((current) => current
       .map((summary) => summary.id === leadId ? { ...summary, ...patch } : summary)
-      .sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime()));
+      .sort((a, b) => {
+        const priority = chatPriority(a) - chatPriority(b);
+        if (priority !== 0) return priority;
+        return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
+      }));
     setConversationMap((current) => {
       const conversation = current[leadId];
       if (!conversation) return current;
@@ -922,8 +922,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
         setConversationMap((current) => ({ ...current, [leadId]: conversation }));
         setChatSummaries((current) => {
           const others = current.filter((summary) => summary.id !== leadId);
-          return [conversation.summary, ...others]
-            .sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime());
+          return sortQueue([conversation.summary, ...others]);
         });
         setOlderState((current) => ({
           ...current,
@@ -1007,6 +1006,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
           if (!conversation) return current;
           const messages = mergeTimelineMessages([...conversation.messages, ...incoming]);
           const latest = newestMessage(messages);
+          const queue = getInboxQueueState(conversation.lead, messages);
           return {
             ...current,
             [activeLeadId]: {
@@ -1016,19 +1016,39 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
                 ...conversation.summary,
                 lastMessagePreview: latest.body,
                 lastActivityAt: latest.createdAt,
-                failedSend: messageStatus(latest) === "Failed"
+                primaryStatus: queue.primaryStatus,
+                unreadCount: queue.unreadCount,
+                failedSend: queue.failedSend,
+                waitingForClient: queue.waitingForClient,
+                waitingForMarcus: queue.waitingForMarcus,
+                closedOrDone: queue.closedOrDone
               } : conversation.summary
             }
           };
         });
         const latest = newestMessage(incoming);
         if (latest) {
+          const currentConversation = conversationMap[activeLeadId];
+          const mergedMessages = currentConversation ? mergeTimelineMessages([...currentConversation.messages, ...incoming]) : incoming;
+          const queue = currentConversation
+            ? getInboxQueueState(currentConversation.lead, mergedMessages)
+            : {
+              primaryStatus: (latest.direction === "inbound" ? "Waiting for Marcus" : "Waiting for client") as InboxPrimaryStatus,
+              unreadCount: latest.direction === "inbound" ? 1 : 0,
+              failedSend: messageStatus(latest) === "Failed",
+              waitingForClient: latest.direction === "outbound",
+              waitingForMarcus: latest.direction === "inbound",
+              closedOrDone: false
+            };
           patchSummary(activeLeadId, {
             lastMessagePreview: latest.body,
             lastActivityAt: latest.createdAt,
-            failedSend: messageStatus(latest) === "Failed",
-            waitingForMarcus: latest.direction === "inbound",
-            waitingForClient: latest.direction === "outbound"
+            primaryStatus: queue.primaryStatus,
+            unreadCount: queue.unreadCount,
+            failedSend: queue.failedSend,
+            waitingForMarcus: queue.waitingForMarcus,
+            waitingForClient: queue.waitingForClient,
+            closedOrDone: queue.closedOrDone
           });
         }
       } catch {
@@ -1036,7 +1056,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
       }
     }, 9000);
     return () => window.clearInterval(timer);
-  }, [activeLeadId, latestPersistedCursor, loadConversation, patchSummary]);
+  }, [activeLeadId, conversationMap, latestPersistedCursor, loadConversation, patchSummary]);
 
   useEffect(() => {
     if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ block: "end" });
@@ -1058,11 +1078,11 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     [chatSummaries]
   );
   const queueCounters = useMemo(() => ({
-    waitingForMarcus: visibleChatSummaries.filter((chat) => chat.waitingForMarcus || chat.unreadCount > 0).length,
-    newLeads: visibleChatSummaries.filter((chat) => chat.status === "New Enquiry").length,
-    botActive: visibleChatSummaries.filter((chat) => !chat.botPaused).length,
+    waitingForMarcus: visibleChatSummaries.filter((chat) => chat.primaryStatus === "Waiting for Marcus").length,
+    newLeads: visibleChatSummaries.filter((chat) => chat.primaryStatus === "New lead").length,
+    botActive: visibleChatSummaries.filter((chat) => chat.primaryStatus === "Bot active").length,
     humanTakeover: visibleChatSummaries.filter((chat) => chat.botPaused).length,
-    failedSends: visibleChatSummaries.filter((chat) => chat.failedSend).length
+    failedSends: visibleChatSummaries.filter((chat) => chat.primaryStatus === "Failed send").length
   }), [visibleChatSummaries]);
 
   const filteredConversations = useMemo(() => {
@@ -1081,7 +1101,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   }, [deferredSearch, filter, visibleChatSummaries]);
 
   const waitingChats = useMemo(
-    () => visibleChatSummaries.filter((summary) => summary.waitingForMarcus || summary.unreadCount > 0),
+    () => visibleChatSummaries.filter((summary) => summary.primaryStatus === "Failed send" || summary.primaryStatus === "Waiting for Marcus"),
     [visibleChatSummaries]
   );
 
@@ -1132,9 +1152,12 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     patchSummary(leadId, {
       lastMessagePreview: message.body,
       lastActivityAt: message.createdAt,
+      primaryStatus: "Waiting for client",
+      unreadCount: 0,
       failedSend: false,
       waitingForClient: true,
       waitingForMarcus: false,
+      closedOrDone: false,
       botPaused: true
     });
   }, [patchSummary]);
@@ -1185,6 +1208,35 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
       });
       return { ...current, [leadId]: updated };
     });
+    if (result.ok) {
+      setConversationMap((current) => {
+        const conversation = current[leadId];
+        if (!conversation) return current;
+        return {
+          ...current,
+          [leadId]: {
+            ...conversation,
+            lead: {
+              ...conversation.lead,
+              status: "Awaiting Client",
+              botPaused: true,
+              botPauseReason: "Human takeover",
+              needsMarcus: false,
+              bossApprovalNeeded: false
+            },
+            summary: {
+              ...conversation.summary,
+              primaryStatus: "Waiting for client",
+              unreadCount: 0,
+              failedSend: false,
+              waitingForClient: true,
+              waitingForMarcus: false,
+              botPaused: true
+            }
+          }
+        };
+      });
+    }
     setErrorByLeadId((current) => {
       if (result.ok) {
         if (!current[leadId]) return current;
@@ -1200,9 +1252,12 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     patchSummary(leadId, {
       lastMessagePreview: result.body || "",
       lastActivityAt: result.createdAt || new Date().toISOString(),
+      primaryStatus: result.ok ? "Waiting for client" : "Failed send",
+      unreadCount: 0,
       failedSend: !result.ok,
       waitingForClient: result.ok,
       waitingForMarcus: !result.ok,
+      closedOrDone: false,
       botPaused: true
     });
   }, [patchSummary]);
