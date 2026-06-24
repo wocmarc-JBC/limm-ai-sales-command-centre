@@ -13,7 +13,9 @@ import {
   type KeyboardEvent
 } from "react";
 import {
+  markBossApprovalNeededAction,
   markLeadNotSuitableAction,
+  moveLeadToQuotationReadinessAction,
   pauseBotForLeadAction,
   resumeBotForLeadAction,
   updateLeadStatusAction
@@ -130,6 +132,52 @@ const quickReplies = [
     text: "May I know if this is for a condo, HDB, landed property, or commercial unit?"
   }
 ];
+
+const internalTestSignals = [
+  "marcus",
+  "fio",
+  "test lead",
+  "qa lead",
+  "demo lead",
+  "sample lead",
+  "sandbox",
+  "hello...can help me do my kitchen",
+  "do kitchen and demo 2 wall",
+  "how much ah",
+  "can make appt wed 2pm",
+  "can see your past works",
+  "got landed project photo",
+  "voice test",
+  "floor plan test",
+  "laminated wall cladding test"
+];
+
+function isInternalTestChat(chat: MultiChatSummary) {
+  const haystack = [
+    chat.displayName,
+    chat.phone,
+    chat.lastMessagePreview,
+    chat.propertyType,
+    chat.scopeSummary,
+    chat.status
+  ].join(" ").toLowerCase();
+  return internalTestSignals.some((signal) => haystack.includes(signal));
+}
+
+function chatPriority(chat: MultiChatSummary) {
+  if (chat.failedSend) return 0;
+  if (chat.waitingForMarcus || chat.unreadCount > 0) return 1;
+  if (chat.status === "New Enquiry") return 2;
+  return 3;
+}
+
+function sortQueue(chats: MultiChatSummary[]) {
+  return [...chats].sort((a, b) => {
+    const priority = chatPriority(a) - chatPriority(b);
+    if (priority !== 0) return priority;
+    return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
+  });
+}
 
 function formatTimestamp(value: string) {
   const date = new Date(value);
@@ -267,11 +315,34 @@ function sortMessages(messages: LeadMessage[]) {
   return [...messages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+function normalizedOutboundBody(message: LeadMessage) {
+  return message.body.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function looksLikeSameOutboundAttempt(a: LeadMessage, b: LeadMessage) {
+  if (a.direction !== "outbound" || b.direction !== "outbound") return false;
+  const body = normalizedOutboundBody(a);
+  if (!body || body !== normalizedOutboundBody(b)) return false;
+  const aTime = new Date(a.createdAt).getTime();
+  const bTime = new Date(b.createdAt).getTime();
+  return !Number.isNaN(aTime) && !Number.isNaN(bTime) && Math.abs(aTime - bTime) <= 120000;
+}
+
 function mergeTimelineMessages(messages: LeadMessage[]) {
   const seen = new Set<string>();
   const merged: LeadMessage[] = [];
   for (const message of sortMessages(messages)) {
     if (isLegacyRedirectFailure(message)) continue;
+    if (messageStatus(message) === "Failed" && merged.some((item) => messageStatus(item) === "Sent" && looksLikeSameOutboundAttempt(item, message))) {
+      continue;
+    }
+    if (messageStatus(message) === "Sent") {
+      for (let index = merged.length - 1; index >= 0; index -= 1) {
+        if (messageStatus(merged[index]) === "Failed" && looksLikeSameOutboundAttempt(merged[index], message)) {
+          merged.splice(index, 1);
+        }
+      }
+    }
     const keys = [
       `id:${message.id}`,
       message.providerMessageId ? `provider:${message.providerMessageId}` : "",
@@ -322,9 +393,6 @@ const ChatRow = memo(function ChatRow({
         <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>
           {chatStatusLabel(chat)}
         </span>
-        <span className="rounded-full border border-command-line bg-command-panel2 px-2.5 py-1 text-[11px] text-command-muted">
-          {chat.propertyType || "Property pending"}
-        </span>
         {chat.floorPlanReceived || chat.sitePhotosReceived ? (
           <span className="rounded-full border border-command-green/40 bg-command-green/10 px-2.5 py-1 text-[11px] text-command-green">
             Files received
@@ -336,7 +404,13 @@ const ChatRow = memo(function ChatRow({
   );
 });
 
-const MessageBubble = memo(function MessageBubble({ message }: { message: LeadMessage }) {
+const MessageBubble = memo(function MessageBubble({
+  message,
+  onRetry
+}: {
+  message: LeadMessage;
+  onRetry?: (leadId: string, body: string) => void;
+}) {
   const outbound = message.direction === "outbound";
   const internal = message.direction === "internal";
   const error = metadataString(message, "error");
@@ -356,9 +430,18 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: LeadMe
           {message.metadata?.manualReply ? <span>Manual reply</span> : outbound ? <span>AI/system reply</span> : null}
         </div>
         {showFailure ? (
-          <p className="mt-3 rounded-lg border border-command-red/40 bg-command-red/10 p-2 text-xs leading-5 text-command-red">
-            WhatsApp send failed: {error || "Check Technical Audit for details."}
-          </p>
+          <div className="mt-3 rounded-lg border border-command-red/40 bg-command-red/10 p-2 text-xs leading-5 text-command-red">
+            <p>WhatsApp send failed: {error || "Check Technical Audit for details."}</p>
+            {onRetry && message.body.trim() ? (
+              <button
+                type="button"
+                onClick={() => onRetry(message.leadId, message.body)}
+                className="mt-2 rounded-md border border-command-red/40 bg-command-bg/60 px-2.5 py-1 font-semibold text-command-red transition hover:bg-command-red/10"
+              >
+                Retry in composer
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </article>
@@ -367,10 +450,14 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: LeadMe
 
 function ReplyComposer({
   conversation,
+  draftSeed,
+  onDraftSeedConsumed,
   onOptimisticReply,
   onSendSettled
 }: {
   conversation: MultiChatConversation;
+  draftSeed?: { id: string; text: string };
+  onDraftSeedConsumed?: (leadId: string, seedId: string) => void;
   onOptimisticReply: (leadId: string, message: LeadMessage) => void;
   onSendSettled: (leadId: string, clientTempId: string, result: SendResult) => void;
 }) {
@@ -386,6 +473,12 @@ function ReplyComposer({
     setAiDraft("");
     setIsSending(false);
   }, [leadId]);
+
+  useEffect(() => {
+    if (!draftSeed?.text) return;
+    setDrafts((current) => ({ ...current, [leadId]: draftSeed.text }));
+    onDraftSeedConsumed?.(leadId, draftSeed.id);
+  }, [draftSeed, leadId, onDraftSeedConsumed]);
 
   const setReply = useCallback((value: string) => {
     setDrafts((current) => ({ ...current, [leadId]: value }));
@@ -601,6 +694,63 @@ const LeadContextPanel = memo(function LeadContextPanel({
           <p className="mt-2 text-sm leading-6 text-command-muted">{context.nextReason}</p>
         </div>
 
+        <details className="mt-4 rounded-xl border border-command-line bg-command-bg/55 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-command-text">Lead Actions</summary>
+          <div className="mt-4 grid gap-2 text-sm">
+            <form action={markBossApprovalNeededAction}>
+              <input type="hidden" name="lead_id" value={conversation.lead.id} />
+              <button className="w-full rounded-md border border-command-gold/60 bg-command-gold/12 px-3 py-2 font-semibold text-command-gold transition hover:bg-command-gold/18" type="submit">
+                Approve Reply
+              </button>
+            </form>
+            <form action={updateLeadStatusAction}>
+              <input type="hidden" name="lead_id" value={conversation.lead.id} />
+              <input type="hidden" name="status" value="Appointment Pending" />
+              <button className="w-full rounded-md border border-command-cyan/45 bg-command-cyan/10 px-3 py-2 font-semibold text-command-cyan transition hover:bg-command-cyan/15" type="submit">
+                Book Appointment
+              </button>
+            </form>
+            <form action={moveLeadToQuotationReadinessAction}>
+              <input type="hidden" name="lead_id" value={conversation.lead.id} />
+              <button className="w-full rounded-md border border-command-line bg-command-panel2 px-3 py-2 font-semibold text-command-muted transition hover:border-command-gold/60" type="submit">
+                Move to Quotation Review
+              </button>
+            </form>
+            <form action={updateLeadStatusAction}>
+              <input type="hidden" name="lead_id" value={conversation.lead.id} />
+              <input type="hidden" name="status" value="Awaiting Client" />
+              <button className="w-full rounded-md border border-command-amber/50 bg-command-amber/10 px-3 py-2 font-semibold text-command-amber transition hover:bg-command-amber/15" type="submit">
+                Mark waiting for client
+              </button>
+            </form>
+            {conversation.lead.botPaused ? (
+              <form action={resumeBotForLeadAction}>
+                <input type="hidden" name="lead_id" value={conversation.lead.id} />
+                <button className="w-full rounded-md border border-command-green/45 bg-command-green/10 px-3 py-2 font-semibold text-command-green transition hover:bg-command-green/15" type="submit">
+                  Resume bot
+                </button>
+              </form>
+            ) : (
+              <form action={pauseBotForLeadAction}>
+                <input type="hidden" name="lead_id" value={conversation.lead.id} />
+                <input type="hidden" name="reason" value="Paused from WhatsApp Sales Inbox." />
+                <button className="w-full rounded-md border border-command-cyan/45 bg-command-cyan/10 px-3 py-2 font-semibold text-command-cyan transition hover:bg-command-cyan/15" type="submit">
+                  Pause bot
+                </button>
+              </form>
+            )}
+            <form action={markLeadNotSuitableAction}>
+              <input type="hidden" name="lead_id" value={conversation.lead.id} />
+              <button className="w-full rounded-md border border-command-line bg-command-panel2 px-3 py-2 font-semibold text-command-muted transition hover:border-command-red/50 hover:text-command-red" type="submit">
+                Mark closed/lost/done
+              </button>
+            </form>
+            <Link href={`/leads/${conversation.lead.id}`} className="w-full rounded-md border border-command-line bg-command-panel2 px-3 py-2 text-center font-semibold text-command-muted transition hover:border-command-gold/60">
+              View full lead detail
+            </Link>
+          </div>
+        </details>
+
         <details
           className="mt-4 rounded-xl border border-command-line bg-command-bg/55 p-4"
           onToggle={(event) => setShowDeliveryDetails(event.currentTarget.open)}
@@ -644,9 +794,10 @@ const LeadContextPanel = memo(function LeadContextPanel({
 });
 
 export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
+  const firstVisibleConversation = conversations.find((item) => !isInternalTestChat(item.summary)) ?? conversations[0];
   const initialLeadId = selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)
     ? selectedLeadId
-    : conversations[0]?.lead.id ?? "";
+    : firstVisibleConversation?.lead.id ?? "";
   const [conversationMap, setConversationMap] = useState<Record<string, MultiChatConversation>>(() => Object.fromEntries(
     conversations.map((conversation) => [conversation.lead.id, conversation])
   ));
@@ -658,8 +809,10 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
+  const [showInternalTestLeads, setShowInternalTestLeads] = useState(false);
   const [contextOpen, setContextOpen] = useState(true);
   const [optimisticReplies, setOptimisticReplies] = useState<Record<string, LeadMessage[]>>({});
+  const [draftSeeds, setDraftSeeds] = useState<Record<string, { id: string; text: string }>>({});
   const [olderMessages, setOlderMessages] = useState<Record<string, LeadMessage[]>>({});
   const [olderState, setOlderState] = useState<Record<string, { hasOlder: boolean; cursor: string | null }>>({});
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -827,9 +980,26 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     stickToBottomRef.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 160;
   };
 
+  const visibleChatSummaries = useMemo(() => sortQueue(
+    showInternalTestLeads
+      ? chatSummaries
+      : chatSummaries.filter((chat) => !isInternalTestChat(chat))
+  ), [chatSummaries, showInternalTestLeads]);
+  const hiddenInternalCount = useMemo(
+    () => chatSummaries.filter((chat) => isInternalTestChat(chat)).length,
+    [chatSummaries]
+  );
+  const queueCounters = useMemo(() => ({
+    waitingForMarcus: visibleChatSummaries.filter((chat) => chat.waitingForMarcus || chat.unreadCount > 0).length,
+    newLeads: visibleChatSummaries.filter((chat) => chat.status === "New Enquiry").length,
+    botActive: visibleChatSummaries.filter((chat) => !chat.botPaused).length,
+    humanTakeover: visibleChatSummaries.filter((chat) => chat.botPaused).length,
+    failedSends: visibleChatSummaries.filter((chat) => chat.failedSend).length
+  }), [visibleChatSummaries]);
+
   const filteredConversations = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
-    return chatSummaries.filter((chat) => {
+    return sortQueue(visibleChatSummaries.filter((chat) => {
       const haystack = [
         chat.displayName,
         chat.phone,
@@ -839,12 +1009,12 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
         chat.status
       ].join(" ").toLowerCase();
       return matchesFilter(chat, filter) && (!needle || haystack.includes(needle));
-    });
-  }, [chatSummaries, deferredSearch, filter]);
+    }));
+  }, [deferredSearch, filter, visibleChatSummaries]);
 
   const waitingChats = useMemo(
-    () => chatSummaries.filter((summary) => summary.waitingForMarcus || summary.unreadCount > 0),
-    [chatSummaries]
+    () => visibleChatSummaries.filter((summary) => summary.waitingForMarcus || summary.unreadCount > 0),
+    [visibleChatSummaries]
   );
 
   const selectConversation = useCallback((leadId: string) => {
@@ -935,6 +1105,24 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     });
   }, [patchSummary]);
 
+  const handleRetryDraft = useCallback((leadId: string, body: string) => {
+    const text = body.trim();
+    if (!text) return;
+    setDraftSeeds((current) => ({
+      ...current,
+      [leadId]: { id: `retry-${Date.now()}`, text }
+    }));
+  }, []);
+
+  const consumeDraftSeed = useCallback((leadId: string, seedId: string) => {
+    setDraftSeeds((current) => {
+      if (current[leadId]?.id !== seedId) return current;
+      const next = { ...current };
+      delete next[leadId];
+      return next;
+    });
+  }, []);
+
   const loadEarlierMessages = async () => {
     if (!activeConversation || !activeOlderState.hasOlder || !activeOlderState.cursor || loadingOlder) return;
     setLoadingOlder(true);
@@ -974,9 +1162,32 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
 
   const chat = activeConversation.summary;
   const conversationLoading = loadingConversationId === activeConversation.lead.id;
+  const counterItems = [
+    { label: "Waiting for Marcus", value: queueCounters.waitingForMarcus, tone: "text-command-gold" },
+    { label: "New leads", value: queueCounters.newLeads, tone: "text-command-cyan" },
+    { label: "Bot active", value: queueCounters.botActive, tone: "text-command-green" },
+    { label: "Human takeover", value: queueCounters.humanTakeover, tone: "text-command-amber" },
+    { label: "Failed sends", value: queueCounters.failedSends, tone: "text-command-red" }
+  ];
 
   return (
     <section className="overflow-hidden rounded-3xl border border-command-cyan/20 bg-command-card shadow-premium">
+      <div className="border-b border-command-cyan/20 bg-command-panel2/90 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-command-gold">Daily WhatsApp command screen</p>
+            <h1 className="mt-1 text-2xl font-semibold text-command-text">LIMM WhatsApp Inbox</h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {counterItems.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-command-line bg-command-bg/65 px-3 py-2">
+                <p className={`text-lg font-semibold ${item.tone}`}>{item.value}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-command-muted">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
       <div className={`grid min-h-[calc(100vh-9rem)] grid-cols-1 ${
         contextOpen
           ? "xl:grid-cols-[21rem_minmax(34rem,1fr)_minmax(18rem,0.38fr)]"
@@ -987,7 +1198,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-command-gold">WhatsApp Sales Inbox</p>
-                <h1 className="mt-1 text-2xl font-semibold text-command-text">Conversations</h1>
+                <h2 className="mt-1 text-2xl font-semibold text-command-text">Queue</h2>
               </div>
               <button
                 type="button"
@@ -1003,6 +1214,15 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
               placeholder="Search name, phone, message, property..."
               className="mt-4 w-full rounded-xl border border-command-line bg-command-bg px-3 py-2.5 text-sm text-command-text outline-none transition placeholder:text-command-muted focus:border-command-cyan"
             />
+            <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-command-line bg-command-bg/55 px-3 py-2 text-xs font-semibold text-command-muted">
+              <span>Show internal/test leads{hiddenInternalCount ? ` (${hiddenInternalCount} hidden)` : ""}</span>
+              <input
+                type="checkbox"
+                checked={showInternalTestLeads}
+                onChange={(event) => setShowInternalTestLeads(event.target.checked)}
+                className="h-4 w-4 accent-command-gold"
+              />
+            </label>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible">
               {filters.map((item) => (
                 <button
@@ -1046,35 +1266,6 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
                 <p className="mt-1 text-sm text-command-muted">{chat.phone} | {chatStatusLabel(chat)}</p>
               </div>
               <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                <form action={updateLeadStatusAction}>
-                  <input type="hidden" name="lead_id" value={activeConversation.lead.id} />
-                  <input type="hidden" name="status" value="Awaiting Client" />
-                  <button className="rounded-full border border-command-amber/50 bg-command-amber/10 px-3 py-1.5 text-command-amber" type="submit">
-                    Mark waiting for client
-                  </button>
-                </form>
-                <form action={markLeadNotSuitableAction}>
-                  <input type="hidden" name="lead_id" value={activeConversation.lead.id} />
-                  <button className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-command-muted" type="submit">
-                    Mark closed/lost/done
-                  </button>
-                </form>
-                {activeConversation.lead.botPaused ? (
-                  <form action={resumeBotForLeadAction}>
-                    <input type="hidden" name="lead_id" value={activeConversation.lead.id} />
-                    <button className="rounded-full border border-command-green/45 bg-command-green/10 px-3 py-1.5 text-command-green" type="submit">
-                      Resume bot
-                    </button>
-                  </form>
-                ) : (
-                  <form action={pauseBotForLeadAction}>
-                    <input type="hidden" name="lead_id" value={activeConversation.lead.id} />
-                    <input type="hidden" name="reason" value="Paused from WhatsApp Sales Inbox." />
-                    <button className="rounded-full border border-command-cyan/45 bg-command-cyan/10 px-3 py-1.5 text-command-cyan" type="submit">
-                      Pause bot
-                    </button>
-                  </form>
-                )}
                 {!contextOpen ? (
                   <button
                     type="button"
@@ -1084,9 +1275,6 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
                     Open context
                   </button>
                 ) : null}
-                <Link href={`/leads/${activeConversation.lead.id}`} className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-command-muted">
-                  View full lead detail
-                </Link>
               </div>
             </div>
           </header>
@@ -1122,7 +1310,13 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
                     </button>
                   </div>
                 ) : null}
-                {activeMessages.map((message) => <MessageBubble key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`} message={message} />)}
+                {activeMessages.map((message) => (
+                  <MessageBubble
+                    key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`}
+                    message={message}
+                    onRetry={handleRetryDraft}
+                  />
+                ))}
                 <div ref={bottomRef} />
               </div>
             ) : (
@@ -1132,7 +1326,13 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             )}
           </div>
 
-          <ReplyComposer conversation={activeConversation} onOptimisticReply={handleOptimisticReply} onSendSettled={handleSendSettled} />
+          <ReplyComposer
+            conversation={activeConversation}
+            draftSeed={draftSeeds[activeConversation.lead.id]}
+            onDraftSeedConsumed={consumeDraftSeed}
+            onOptimisticReply={handleOptimisticReply}
+            onSendSettled={handleSendSettled}
+          />
         </main>
 
         {contextOpen ? (

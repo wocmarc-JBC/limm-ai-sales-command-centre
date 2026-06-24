@@ -122,7 +122,7 @@ export default async function WhatsAppInboxPage({
 
   return (
     <>
-      <PageHeader title="WhatsApp Sales Inbox" eyebrow="Operator console">
+      <PageHeader title="LIMM WhatsApp Inbox" eyebrow="Operator console">
         <a
           href="/leads"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-muted transition hover:border-command-gold/60"
