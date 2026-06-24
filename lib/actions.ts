@@ -77,6 +77,17 @@ function safeWhatsAppError(error: unknown) {
   return error instanceof Error ? error.message : "Unknown WhatsApp send failure.";
 }
 
+function isNextRedirectError(error: unknown) {
+  if (typeof error === "string") return /NEXT_REDIRECT/i.test(error);
+  if (!error || typeof error !== "object") return false;
+  const digest = "digest" in error ? (error as { digest?: unknown }).digest : undefined;
+  const message = "message" in error ? (error as { message?: unknown }).message : undefined;
+  return (
+    (typeof digest === "string" && /NEXT_REDIRECT/i.test(digest)) ||
+    (typeof message === "string" && /NEXT_REDIRECT/i.test(message))
+  );
+}
+
 function leadReplyRedirect(leadId: string, params: Record<string, string>): never {
   const query = new URLSearchParams(params);
   redirect(`/leads/${encodeURIComponent(leadId)}?${query.toString()}`);
@@ -369,6 +380,7 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
     revalidateLeadPaths(leadId);
     manualReplyRedirect(formData, leadId, { manualReplyStatus: "sent", metaMessageId: sent.providerMessageId || "recorded" });
   } catch (error) {
+    if (isNextRedirectError(error)) throw error;
     const reason = safeWhatsAppError(error);
     console.error("whatsapp_manual_reply_failed", {
       leadId,
@@ -466,6 +478,7 @@ export async function sendManualWhatsAppTestAction(formData: FormData) {
     }
     redirect("/leads?manualTestStatus=sent");
   } catch (error) {
+    if (isNextRedirectError(error)) throw error;
     const reason = safeWhatsAppError(error);
     console.error("whatsapp_manual_test_failed", {
       reason,

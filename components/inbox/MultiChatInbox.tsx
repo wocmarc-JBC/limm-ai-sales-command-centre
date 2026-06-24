@@ -174,6 +174,15 @@ function isNextRedirectOnly(error: unknown) {
   return typeof error === "string" && /NEXT_REDIRECT/i.test(error);
 }
 
+function isLegacyRedirectFailure(message: LeadMessage) {
+  return (
+    message.direction === "outbound" &&
+    message.whatsappStatus === "failed" &&
+    !message.providerMessageId &&
+    isNextRedirectOnly(metadataString(message, "error"))
+  );
+}
+
 function messageStatus(message: LeadMessage) {
   if (message.direction === "inbound") return "Received";
   const metadataMetaMessageId = metadataString(message, "metaMessageId") || metadataString(message, "providerMessageId");
@@ -262,6 +271,7 @@ function mergeTimelineMessages(messages: LeadMessage[]) {
   const seen = new Set<string>();
   const merged: LeadMessage[] = [];
   for (const message of sortMessages(messages)) {
+    if (isLegacyRedirectFailure(message)) continue;
     const keys = [
       `id:${message.id}`,
       message.providerMessageId ? `provider:${message.providerMessageId}` : "",

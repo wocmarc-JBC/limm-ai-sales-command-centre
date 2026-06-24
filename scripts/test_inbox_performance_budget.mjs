@@ -126,6 +126,7 @@ for (const phrase of [
   "after=${encodeURIComponent(latestPersistedCursor)}",
   "window.history.replaceState",
   "mergeTimelineMessages",
+  "isLegacyRedirectFailure(message)",
   "Load earlier messages",
   "showDeliveryDetails",
   "showTechnicalAudit",
