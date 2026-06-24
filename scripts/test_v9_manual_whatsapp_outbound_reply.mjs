@@ -142,6 +142,7 @@ for (const phrase of [
   '"use client"',
   "memo(function ChatRow",
   "memo(function MessageBubble",
+  "memo(function LeadContextPanel",
   "function ReplyComposer",
   "WhatsApp Sales Inbox",
   "Conversations",
@@ -152,11 +153,17 @@ for (const phrase of [
   "Waiting for client",
   "Human takeover",
   "Failed send",
-  "window.setInterval(() => router.refresh(), 12000)",
+  'fetch("/api/inbox/send"',
+  'fetch("/api/inbox/conversations"',
+  "clientTempId",
+  "optimisticReplies",
+  "onSendSettled",
+  "useDeferredValue",
   "selectConversation",
-  "router.replace(`/inbox?lead=${encodeURIComponent(leadId)}`",
+  "window.history.replaceState",
   "Load earlier messages",
   "fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeConversation.lead.id)}",
+  "after=${encodeURIComponent(latestPersistedCursor)}",
   "Ask property type/scope",
   "Ask floor plan/photos",
   "Ask appointment preference",
@@ -166,13 +173,10 @@ for (const phrase of [
   "May I know if this is for a condo, HDB, landed property, or commercial unit?",
   "Generate AI Draft",
   "Draft only. Marcus must review, edit, and send manually.",
-  'name="return_to"',
-  'value="inbox"',
   'placeholder="Type WhatsApp reply..."',
   "event.ctrlKey || event.metaKey",
   "event.key === \"Escape\"",
   "disabled={!canSend}",
-  "optimisticReplies",
   "onOptimisticReply",
   "Mark waiting for client",
   "Mark closed/lost/done",
@@ -194,6 +198,9 @@ assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(inboxPage), "/inbo
 assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(multiChatInbox), "multi-chat inbox must not reference WhatsApp server credentials.");
 assert(!multiChatInbox.includes("<details open"), "multi-chat technical panels must be collapsed by default.");
 assert(!multiChatInbox.includes("from $"), "multi-chat inbox must not include price/package quick replies.");
+assert(!multiChatInbox.includes("sendManualWhatsAppReplyAction"), "multi-chat inbox must not use redirect-based send action.");
+assert(!multiChatInbox.includes("router.refresh()"), "multi-chat inbox must not refresh the full route for polling.");
+assert(!multiChatInbox.includes("useRouter"), "multi-chat inbox must not depend on router navigation for chat switching.");
 
 for (const phrase of [
   "export async function listLatestLeadMessagesForInbox",
@@ -209,12 +216,21 @@ for (const phrase of [
 
 for (const phrase of [
   "export async function GET",
+  "listLeadMessagesAfter(leadId, after, 30)",
   "listLeadMessagesPage(leadId, 30, before)",
   "hasOlder",
   "oldestCursor",
   "unauthorized"
 ]) {
   assert(inboxMessagesApi.includes(phrase), `inbox message API missing ${phrase}`);
+}
+
+for (const phrase of [
+  "export async function listLeadMessagesAfter",
+  ".gt(\"created_at\", after)",
+  ".order(\"created_at\", { ascending: true })"
+]) {
+  assert(leadMessagesRepository.includes(phrase), `lead message repository missing new-message polling helper ${phrase}`);
 }
 
 for (const phrase of [

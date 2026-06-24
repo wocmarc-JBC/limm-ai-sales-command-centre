@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   memo,
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
   useState,
-  useTransition,
   type FormEvent,
   type KeyboardEvent
 } from "react";
@@ -17,7 +16,6 @@ import {
   markLeadNotSuitableAction,
   pauseBotForLeadAction,
   resumeBotForLeadAction,
-  sendManualWhatsAppReplyAction,
   updateLeadStatusAction
 } from "@/lib/actions";
 import type { Lead, LeadMessage } from "@/lib/types";
@@ -72,6 +70,19 @@ type MultiChatInboxProps = {
   selectedLeadId?: string;
   manualReplyStatus?: string;
   manualReplyError?: string;
+};
+
+type SendResult = {
+  ok: boolean;
+  leadId: string;
+  clientTempId: string;
+  messageId?: string;
+  providerMessageId?: string;
+  whatsappStatus?: LeadMessage["whatsappStatus"];
+  createdAt?: string;
+  body?: string;
+  errorCode?: string;
+  errorMessage?: string;
 };
 
 const filters = [
@@ -146,23 +157,38 @@ function humanize(value?: string | null) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function metadataString(message: LeadMessage, key: string) {
+  const value = message.metadata?.[key];
+  return typeof value === "string" ? value : "";
+}
+
+function metadataBoolean(message: LeadMessage, key: string) {
+  return message.metadata?.[key] === true;
+}
+
+function messageClientTempId(message: LeadMessage) {
+  return metadataString(message, "clientTempId");
+}
+
 function isNextRedirectOnly(error: unknown) {
   return typeof error === "string" && /NEXT_REDIRECT/i.test(error);
 }
 
 function messageStatus(message: LeadMessage) {
   if (message.direction === "inbound") return "Received";
-  if (message.providerMessageId && message.whatsappStatus === "failed" && isNextRedirectOnly(message.metadata?.error)) {
-    return message.metadata?.manualReply ? "Marcus sent" : "AI sent";
-  }
+  if (metadataBoolean(message, "sending")) return "Sending";
+  if (metadataBoolean(message, "clientSendFailed")) return "Failed";
+  if (message.providerMessageId && message.whatsappStatus === "failed" && isNextRedirectOnly(message.metadata?.error)) return "Sent";
+  if (message.providerMessageId || message.whatsappStatus === "sent") return "Sent";
   if (message.whatsappStatus === "failed" && !message.providerMessageId) return "Failed";
-  if (message.direction === "outbound" && message.metadata?.manualReply) return "Marcus sent";
-  if (message.direction === "outbound") return "AI sent";
+  if (message.direction === "outbound") return "Sent";
   return humanize(message.whatsappStatus || "Received");
 }
 
 function statusTone(message: LeadMessage) {
-  if (messageStatus(message) === "Failed") return "border-command-red/45 bg-command-red/10 text-command-red";
+  const status = messageStatus(message);
+  if (status === "Failed") return "border-command-red/45 bg-command-red/10 text-command-red";
+  if (status === "Sending") return "border-command-amber/45 bg-command-amber/10 text-command-amber";
   if (message.direction === "inbound") return "border-command-cyan/35 bg-command-cyan/10 text-command-cyan";
   return "border-command-green/45 bg-command-green/10 text-command-green";
 }
@@ -223,6 +249,35 @@ function buildAiDraft(conversation: MultiChatConversation) {
   return "Thanks for sharing. I will review this with the team and get back to you shortly. If you have a floor plan, site photos, or reference images, you can send them here too.";
 }
 
+function newestMessage(messages: LeadMessage[]) {
+  return [...messages].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+}
+
+function sortMessages(messages: LeadMessage[]) {
+  return [...messages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+function mergeTimelineMessages(messages: LeadMessage[]) {
+  const seen = new Set<string>();
+  const merged: LeadMessage[] = [];
+  for (const message of sortMessages(messages)) {
+    const keys = [
+      `id:${message.id}`,
+      message.providerMessageId ? `provider:${message.providerMessageId}` : "",
+      messageClientTempId(message) ? `client:${messageClientTempId(message)}` : ""
+    ].filter(Boolean);
+    if (keys.some((key) => seen.has(key))) continue;
+    keys.forEach((key) => seen.add(key));
+    merged.push(message);
+  }
+  return merged;
+}
+
+function randomClientTempId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
+  return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 const ChatRow = memo(function ChatRow({
   chat,
   active,
@@ -273,7 +328,7 @@ const ChatRow = memo(function ChatRow({
 const MessageBubble = memo(function MessageBubble({ message }: { message: LeadMessage }) {
   const outbound = message.direction === "outbound";
   const internal = message.direction === "internal";
-  const error = typeof message.metadata?.error === "string" ? message.metadata.error : "";
+  const error = metadataString(message, "error");
   const showFailure = messageStatus(message) === "Failed" && !isNextRedirectOnly(error);
   return (
     <article className={`flex ${internal ? "justify-center" : outbound ? "justify-end" : "justify-start"}`}>
@@ -301,46 +356,94 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: LeadMe
 
 function ReplyComposer({
   conversation,
-  onOptimisticReply
+  onOptimisticReply,
+  onSendSettled
 }: {
   conversation: MultiChatConversation;
   onOptimisticReply: (leadId: string, message: LeadMessage) => void;
+  onSendSettled: (leadId: string, clientTempId: string, result: SendResult) => void;
 }) {
-  const [reply, setReply] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [aiDraft, setAiDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const leadId = conversation.lead.id;
+  const reply = drafts[leadId] ?? "";
   const canSend = reply.trim().length > 0 && !isSending;
 
   useEffect(() => {
-    setReply("");
     setAiDraft("");
     setIsSending(false);
-  }, [conversation.lead.id]);
+  }, [leadId]);
+
+  const setReply = useCallback((value: string) => {
+    setDrafts((current) => ({ ...current, [leadId]: value }));
+  }, [leadId]);
 
   const insertQuickReply = (text: string) => {
-    setReply((current) => (current.trim() ? `${current.trim()}\n\n${text}` : text));
+    setReply(reply.trim() ? `${reply.trim()}\n\n${text}` : text);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    if (!reply.trim()) {
-      event.preventDefault();
-      return;
-    }
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const body = reply.trim();
+    if (!body || isSending) return;
+
+    const clientTempId = randomClientTempId();
     const optimistic: LeadMessage = {
-      id: `optimistic-${Date.now()}`,
-      leadId: conversation.lead.id,
+      id: `optimistic-${clientTempId}`,
+      leadId,
       direction: "outbound",
       channel: "whatsapp",
-      body: reply.trim(),
+      body,
       safeToSend: true,
-      whatsappStatus: "sent",
-      metadata: { manualReply: true, optimistic: true },
+      whatsappStatus: "",
+      metadata: {
+        manualReply: true,
+        optimistic: true,
+        sending: true,
+        clientTempId,
+        inboxJsonApiSend: true
+      },
       createdAt: new Date().toISOString()
     };
-    onOptimisticReply(conversation.lead.id, optimistic);
+    onOptimisticReply(leadId, optimistic);
     setReply("");
     setIsSending(true);
+
+    try {
+      const response = await fetch("/api/inbox/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId, body, clientTempId })
+      });
+      const data = await response.json().catch(() => ({}));
+      const result: SendResult = {
+        ok: Boolean(data?.ok),
+        leadId,
+        clientTempId,
+        messageId: typeof data?.messageId === "string" ? data.messageId : undefined,
+        providerMessageId: typeof data?.providerMessageId === "string" ? data.providerMessageId : undefined,
+        whatsappStatus: data?.whatsappStatus === "sent" || data?.whatsappStatus === "failed" ? data.whatsappStatus : undefined,
+        createdAt: typeof data?.createdAt === "string" ? data.createdAt : undefined,
+        body: typeof data?.body === "string" ? data.body : body,
+        errorCode: typeof data?.errorCode === "string" ? data.errorCode : undefined,
+        errorMessage: typeof data?.errorMessage === "string" ? data.errorMessage : undefined
+      };
+      onSendSettled(leadId, clientTempId, result);
+      if (!result.ok) setReply(body);
+    } catch (error) {
+      onSendSettled(leadId, clientTempId, {
+        ok: false,
+        leadId,
+        clientTempId,
+        errorCode: "network_error",
+        errorMessage: error instanceof Error ? error.message : "Network error while sending WhatsApp reply."
+      });
+      setReply(body);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -395,9 +498,7 @@ function ReplyComposer({
         </div>
         {aiDraft ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-command-muted">{aiDraft}</p> : null}
       </div>
-      <form ref={formRef} action={sendManualWhatsAppReplyAction} onSubmit={handleSubmit}>
-        <input type="hidden" name="lead_id" value={conversation.lead.id} />
-        <input type="hidden" name="return_to" value="inbox" />
+      <form ref={formRef} onSubmit={handleSubmit}>
         <label htmlFor="manual_reply_body" className="sr-only">Type WhatsApp reply</label>
         <div className="flex gap-3">
           <textarea
@@ -429,56 +530,283 @@ function ReplyComposer({
   );
 }
 
+const LeadContextPanel = memo(function LeadContextPanel({
+  conversation,
+  activeMessages,
+  onClose
+}: {
+  conversation: MultiChatConversation;
+  activeMessages: LeadMessage[];
+  onClose: () => void;
+}) {
+  const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
+  const [showTechnicalAudit, setShowTechnicalAudit] = useState(false);
+  const chat = conversation.summary;
+  const context = conversation.context;
+
+  useEffect(() => {
+    setShowDeliveryDetails(false);
+    setShowTechnicalAudit(false);
+  }, [conversation.lead.id]);
+
+  return (
+    <aside className="border-t border-command-line bg-command-panel2/90 xl:border-l xl:border-t-0">
+      <div className="flex items-center justify-between border-b border-command-line p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Lead Context</p>
+          <p className="mt-1 text-base font-semibold text-command-text">Sales details</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border border-command-line bg-command-bg px-3 py-1 text-xs font-semibold text-command-muted transition hover:border-command-gold/60"
+        >
+          Collapse
+        </button>
+      </div>
+      <div className="max-h-[calc(100vh-14rem)] overflow-y-auto p-4">
+        <div className="flex flex-wrap gap-2">
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${chatStatusTone(chat)}`}>{chatStatusLabel(chat)}</span>
+          <span className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold text-command-muted">
+            {conversation.lead.botPaused ? "Manual takeover" : "Bot active"}
+          </span>
+        </div>
+        <dl className="mt-5 space-y-4 text-sm">
+          <div><dt className="text-command-muted">Client</dt><dd className="mt-1 text-command-text">{chat.displayName}</dd></div>
+          <div><dt className="text-command-muted">Phone</dt><dd className="mt-1 text-command-text">{chat.phone || "Not provided"}</dd></div>
+          <div><dt className="text-command-muted">Lead status</dt><dd className="mt-1 text-command-text">{conversation.lead.status}</dd></div>
+          <div><dt className="text-command-muted">Property type</dt><dd className="mt-1 text-command-text">{conversation.lead.propertyType || "Not provided"}</dd></div>
+          <div><dt className="text-command-muted">Address / area</dt><dd className="mt-1 text-command-text">{context.addressOrArea}</dd></div>
+          <div><dt className="text-command-muted">Scope</dt><dd className="mt-1 leading-6 text-command-text">{conversation.lead.scopeSummary || "Scope pending"}</dd></div>
+          <div><dt className="text-command-muted">Budget expectation</dt><dd className="mt-1 text-command-text">{context.budgetExpectation}</dd></div>
+          <div><dt className="text-command-muted">Floor plan</dt><dd className="mt-1 text-command-text">{context.floorPlanStatus}</dd></div>
+          <div><dt className="text-command-muted">Photos</dt><dd className="mt-1 text-command-text">{context.sitePhotosStatus}</dd></div>
+          <div><dt className="text-command-muted">Appointment preference</dt><dd className="mt-1 text-command-text">{context.appointmentPreference}</dd></div>
+          <div><dt className="text-command-muted">Notes</dt><dd className="mt-1 leading-6 text-command-text">{context.notes}</dd></div>
+        </dl>
+        <div className="mt-5 rounded-2xl border border-command-gold/35 bg-command-gold/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-gold">Next action</p>
+          <p className="mt-2 text-base font-semibold text-command-text">{context.nextAction}</p>
+          <p className="mt-2 text-sm leading-6 text-command-muted">{context.nextReason}</p>
+        </div>
+
+        <details
+          className="mt-4 rounded-xl border border-command-line bg-command-bg/55 p-4"
+          onToggle={(event) => setShowDeliveryDetails(event.currentTarget.open)}
+        >
+          <summary className="cursor-pointer text-sm font-semibold text-command-text">WhatsApp Delivery Details</summary>
+          {showDeliveryDetails ? (
+            <div className="mt-4 space-y-2 text-xs text-command-muted">
+              {activeMessages.filter((message) => message.providerMessageId).map((message) => (
+                <div key={message.id} className="rounded-lg border border-command-line bg-command-panel2 p-3">
+                  <p>{senderLabel(message)} | {messageStatus(message)} | {formatTimestamp(message.createdAt)}</p>
+                  <p className="mt-1 break-all">Meta message id: {message.providerMessageId}</p>
+                </div>
+              ))}
+              {activeMessages.every((message) => !message.providerMessageId) ? <p>No Meta delivery IDs recorded yet.</p> : null}
+            </div>
+          ) : null}
+        </details>
+
+        <details
+          className="mt-3 rounded-xl border border-command-line bg-command-bg/55 p-4"
+          onToggle={(event) => setShowTechnicalAudit(event.currentTarget.open)}
+        >
+          <summary className="cursor-pointer text-sm font-semibold text-command-text">Technical Audit</summary>
+          {showTechnicalAudit ? (
+            <div className="mt-4 space-y-3">
+              {conversation.auditTrail.length ? conversation.auditTrail.map((entry) => (
+                <div key={entry.id} className="border-b border-command-line pb-3 text-sm last:border-b-0">
+                  <p className="font-semibold text-command-text">{humanize(entry.action)}</p>
+                  <p className="text-command-muted">{entry.summary}</p>
+                  <p className="mt-1 text-xs text-command-muted">{formatTimestamp(entry.createdAt)}</p>
+                </div>
+              )) : (
+                <p className="text-sm text-command-muted">No WhatsApp audit events for this lead yet.</p>
+              )}
+            </div>
+          ) : null}
+        </details>
+      </div>
+    </aside>
+  );
+});
+
 export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
-  const router = useRouter();
   const initialLeadId = selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)
     ? selectedLeadId
     : conversations[0]?.lead.id ?? "";
+  const [conversationMap, setConversationMap] = useState<Record<string, MultiChatConversation>>(() => Object.fromEntries(
+    conversations.map((conversation) => [conversation.lead.id, conversation])
+  ));
+  const [chatSummaries, setChatSummaries] = useState<MultiChatSummary[]>(() => conversations.map((conversation) => conversation.summary));
+  const [loadedConversations, setLoadedConversations] = useState<Record<string, boolean>>(() => initialLeadId ? { [initialLeadId]: true } : {});
   const [activeLeadId, setActiveLeadId] = useState(initialLeadId);
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const [contextOpen, setContextOpen] = useState(true);
   const [optimisticReplies, setOptimisticReplies] = useState<Record<string, LeadMessage[]>>({});
   const [olderMessages, setOlderMessages] = useState<Record<string, LeadMessage[]>>({});
   const [olderState, setOlderState] = useState<Record<string, { hasOlder: boolean; cursor: string | null }>>({});
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
-  const [showTechnicalAudit, setShowTechnicalAudit] = useState(false);
-  const [, startTransition] = useTransition();
+  const [loadingConversationId, setLoadingConversationId] = useState("");
+  const messagePaneRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => router.refresh(), 12000);
-    return () => window.clearInterval(timer);
-  }, [router]);
+  const patchSummary = useCallback((leadId: string, patch: Partial<MultiChatSummary>) => {
+    setChatSummaries((current) => current
+      .map((summary) => summary.id === leadId ? { ...summary, ...patch } : summary)
+      .sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime()));
+    setConversationMap((current) => {
+      const conversation = current[leadId];
+      if (!conversation) return current;
+      return {
+        ...current,
+        [leadId]: {
+          ...conversation,
+          summary: { ...conversation.summary, ...patch }
+        }
+      };
+    });
+  }, []);
 
-  useEffect(() => {
-    if (selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)) {
-      setActiveLeadId(selectedLeadId);
+  const loadConversation = useCallback(async (leadId: string) => {
+    if (!leadId) return;
+    setLoadingConversationId(leadId);
+    try {
+      const response = await fetch(`/api/inbox/conversations/${encodeURIComponent(leadId)}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (data?.ok && data.conversation) {
+        const conversation = data.conversation as MultiChatConversation;
+        setConversationMap((current) => ({ ...current, [leadId]: conversation }));
+        setChatSummaries((current) => {
+          const others = current.filter((summary) => summary.id !== leadId);
+          return [conversation.summary, ...others]
+            .sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime());
+        });
+        setOlderState((current) => ({
+          ...current,
+          [leadId]: {
+            hasOlder: conversation.hasOlderMessages,
+            cursor: conversation.oldestMessageCursor
+          }
+        }));
+        setLoadedConversations((current) => ({ ...current, [leadId]: true }));
+      }
+    } finally {
+      setLoadingConversationId((current) => current === leadId ? "" : current);
     }
-  }, [conversations, selectedLeadId]);
+  }, []);
 
-  const activeConversation = conversations.find((item) => item.lead.id === activeLeadId) ?? conversations[0];
-  const activeMessages = [
-    ...(activeConversation ? olderMessages[activeConversation.lead.id] ?? [] : []),
-    ...(activeConversation?.messages ?? []),
-    ...(activeConversation ? optimisticReplies[activeConversation.lead.id] ?? [] : [])
-  ];
+  useEffect(() => {
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch("/api/inbox/conversations", { cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (!data?.ok || !Array.isArray(data.conversations)) return;
+        const nextSummaries = data.conversations as MultiChatSummary[];
+        setChatSummaries(nextSummaries);
+        setConversationMap((current) => {
+          const next = { ...current };
+          for (const summary of nextSummaries) {
+            if (next[summary.id]) next[summary.id] = { ...next[summary.id], summary };
+          }
+          return next;
+        });
+      } catch {
+        // Keep the inbox responsive; the next lightweight poll can recover.
+      }
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (selectedLeadId && chatSummaries.some((item) => item.id === selectedLeadId)) {
+      setActiveLeadId(selectedLeadId);
+      if (!loadedConversations[selectedLeadId]) void loadConversation(selectedLeadId);
+    }
+  }, [chatSummaries, loadConversation, loadedConversations, selectedLeadId]);
+
+  const activeConversation = conversationMap[activeLeadId] ?? conversations[0];
   const activeOlderState = activeConversation
     ? olderState[activeConversation.lead.id] ?? {
       hasOlder: activeConversation.hasOlderMessages,
       cursor: activeConversation.oldestMessageCursor
     }
     : { hasOlder: false, cursor: null };
+  const activeMessages = useMemo(() => mergeTimelineMessages([
+    ...(activeConversation ? olderMessages[activeConversation.lead.id] ?? [] : []),
+    ...(activeConversation?.messages ?? []),
+    ...(activeConversation ? optimisticReplies[activeConversation.lead.id] ?? [] : [])
+  ]), [activeConversation, olderMessages, optimisticReplies]);
+  const latestPersistedCursor = useMemo(() => {
+    const persisted = activeConversation?.messages.filter((message) => !message.id.startsWith("optimistic-")) ?? [];
+    return newestMessage(persisted)?.createdAt ?? "";
+  }, [activeConversation]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
+    if (!activeLeadId) return;
+    const timer = window.setInterval(async () => {
+      if (!latestPersistedCursor) {
+        await loadConversation(activeLeadId);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeLeadId)}&after=${encodeURIComponent(latestPersistedCursor)}`, { cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (!data?.ok || !Array.isArray(data.messages) || data.messages.length === 0) return;
+        const incoming = data.messages as LeadMessage[];
+        setConversationMap((current) => {
+          const conversation = current[activeLeadId];
+          if (!conversation) return current;
+          const messages = mergeTimelineMessages([...conversation.messages, ...incoming]);
+          const latest = newestMessage(messages);
+          return {
+            ...current,
+            [activeLeadId]: {
+              ...conversation,
+              messages,
+              summary: latest ? {
+                ...conversation.summary,
+                lastMessagePreview: latest.body,
+                lastActivityAt: latest.createdAt,
+                failedSend: messageStatus(latest) === "Failed"
+              } : conversation.summary
+            }
+          };
+        });
+        const latest = newestMessage(incoming);
+        if (latest) {
+          patchSummary(activeLeadId, {
+            lastMessagePreview: latest.body,
+            lastActivityAt: latest.createdAt,
+            failedSend: messageStatus(latest) === "Failed",
+            waitingForMarcus: latest.direction === "inbound",
+            waitingForClient: latest.direction === "outbound"
+          });
+        }
+      } catch {
+        // Selected-chat polling is intentionally lightweight and self-healing.
+      }
+    }, 9000);
+    return () => window.clearInterval(timer);
+  }, [activeLeadId, latestPersistedCursor, loadConversation, patchSummary]);
+
+  useEffect(() => {
+    if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ block: "end" });
   }, [activeLeadId, activeMessages.length]);
 
+  const handleMessagePaneScroll = () => {
+    const pane = messagePaneRef.current;
+    if (!pane) return;
+    stickToBottomRef.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 160;
+  };
+
   const filteredConversations = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return conversations.filter((conversation) => {
-      const chat = conversation.summary;
+    const needle = deferredSearch.trim().toLowerCase();
+    return chatSummaries.filter((chat) => {
       const haystack = [
         chat.displayName,
         chat.phone,
@@ -489,46 +817,91 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
       ].join(" ").toLowerCase();
       return matchesFilter(chat, filter) && (!needle || haystack.includes(needle));
     });
-  }, [conversations, filter, search]);
+  }, [chatSummaries, deferredSearch, filter]);
 
-  const waitingChats = conversations.filter((conversation) => conversation.summary.waitingForMarcus || conversation.summary.unreadCount > 0);
+  const waitingChats = useMemo(
+    () => chatSummaries.filter((summary) => summary.waitingForMarcus || summary.unreadCount > 0),
+    [chatSummaries]
+  );
 
   const selectConversation = useCallback((leadId: string) => {
     setActiveLeadId(leadId);
-    setShowDeliveryDetails(false);
-    setShowTechnicalAudit(false);
-    startTransition(() => {
-      router.replace(`/inbox?lead=${encodeURIComponent(leadId)}`, { scroll: false });
-    });
-  }, [router, startTransition]);
+    stickToBottomRef.current = true;
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/inbox?lead=${encodeURIComponent(leadId)}`);
+    }
+    if (!loadedConversations[leadId]) void loadConversation(leadId);
+  }, [loadConversation, loadedConversations]);
 
   const nextWaitingChat = () => {
     if (!waitingChats.length) return;
-    const activeIndex = waitingChats.findIndex((item) => item.lead.id === activeLeadId);
+    const activeIndex = waitingChats.findIndex((item) => item.id === activeLeadId);
     const next = waitingChats[(activeIndex + 1 + waitingChats.length) % waitingChats.length];
-    selectConversation(next.lead.id);
+    selectConversation(next.id);
   };
 
   const handleOptimisticReply = useCallback((leadId: string, message: LeadMessage) => {
     setOptimisticReplies((current) => ({
       ...current,
-      [leadId]: [...(current[leadId] ?? []), message]
+      [leadId]: mergeTimelineMessages([...(current[leadId] ?? []), message])
     }));
-  }, []);
+    patchSummary(leadId, {
+      lastMessagePreview: message.body,
+      lastActivityAt: message.createdAt,
+      failedSend: false,
+      waitingForClient: true,
+      waitingForMarcus: false,
+      botPaused: true
+    });
+  }, [patchSummary]);
+
+  const handleSendSettled = useCallback((leadId: string, clientTempId: string, result: SendResult) => {
+    setOptimisticReplies((current) => {
+      const updated = (current[leadId] ?? []).map((message) => {
+        if (messageClientTempId(message) !== clientTempId) return message;
+        return {
+          ...message,
+          id: result.messageId || message.id,
+          providerMessageId: result.providerMessageId || message.providerMessageId,
+          whatsappStatus: result.ok ? "sent" as const : "failed" as const,
+          safeToSend: result.ok,
+          createdAt: result.createdAt || message.createdAt,
+          metadata: {
+            ...message.metadata,
+            sending: false,
+            optimistic: false,
+            clientSendFailed: !result.ok,
+            error: result.ok ? "" : result.errorMessage || "WhatsApp send failed.",
+            serverMessageId: result.messageId || "",
+            providerMessageId: result.providerMessageId || ""
+          }
+        };
+      });
+      return { ...current, [leadId]: updated };
+    });
+    patchSummary(leadId, {
+      lastMessagePreview: result.body || "",
+      lastActivityAt: result.createdAt || new Date().toISOString(),
+      failedSend: !result.ok,
+      waitingForClient: result.ok,
+      waitingForMarcus: !result.ok,
+      botPaused: true
+    });
+  }, [patchSummary]);
 
   const loadEarlierMessages = async () => {
     if (!activeConversation || !activeOlderState.hasOlder || !activeOlderState.cursor || loadingOlder) return;
     setLoadingOlder(true);
     try {
-      const response = await fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeConversation.lead.id)}&before=${encodeURIComponent(activeOlderState.cursor)}`);
-      const data = await response.json();
+      const response = await fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeConversation.lead.id)}&before=${encodeURIComponent(activeOlderState.cursor)}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
       if (data?.ok) {
         setOlderMessages((current) => ({
           ...current,
-          [activeConversation.lead.id]: [
+          [activeConversation.lead.id]: mergeTimelineMessages([
             ...(data.messages ?? []),
             ...(current[activeConversation.lead.id] ?? [])
-          ]
+          ])
         }));
         setOlderState((current) => ({
           ...current,
@@ -554,7 +927,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   }
 
   const chat = activeConversation.summary;
-  const context = activeConversation.context;
+  const conversationLoading = loadingConversationId === activeConversation.lead.id;
 
   return (
     <section className="overflow-hidden rounded-3xl border border-command-cyan/20 bg-command-card shadow-premium">
@@ -602,17 +975,14 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             </div>
           </div>
           <div className="max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto px-3 pb-4">
-            {filteredConversations.map((conversation) => {
-              const item = conversation.summary;
-              return (
-                <ChatRow
-                  key={item.id}
-                  chat={item}
-                  active={item.id === activeLeadId}
-                  onSelect={selectConversation}
-                />
-              );
-            })}
+            {filteredConversations.map((item) => (
+              <ChatRow
+                key={item.id}
+                chat={item}
+                active={item.id === activeLeadId}
+                onSelect={selectConversation}
+              />
+            ))}
             {filteredConversations.length === 0 ? (
               <p className="rounded-2xl border border-command-line bg-command-bg/55 p-4 text-sm text-command-muted">
                 No chats match this search or filter.
@@ -685,8 +1055,13 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
               WhatsApp send failed: {manualReplyError || "Unknown send error."}
             </div>
           ) : null}
+          {conversationLoading ? (
+            <div className="border-b border-command-line bg-command-cyan/10 px-5 py-3 text-sm text-command-cyan">
+              Loading selected conversation...
+            </div>
+          ) : null}
 
-          <div className="flex-1 overflow-y-auto px-5 py-6">
+          <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="flex-1 overflow-y-auto px-5 py-6">
             {activeMessages.length ? (
               <div className="space-y-4">
                 {activeOlderState.hasOlder ? (
@@ -701,7 +1076,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
                     </button>
                   </div>
                 ) : null}
-                {activeMessages.map((message) => <MessageBubble key={message.id} message={message} />)}
+                {activeMessages.map((message) => <MessageBubble key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`} message={message} />)}
                 <div ref={bottomRef} />
               </div>
             ) : (
@@ -711,88 +1086,16 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             )}
           </div>
 
-          <ReplyComposer conversation={activeConversation} onOptimisticReply={handleOptimisticReply} />
+          <ReplyComposer conversation={activeConversation} onOptimisticReply={handleOptimisticReply} onSendSettled={handleSendSettled} />
         </main>
 
-        <aside className={`${contextOpen ? "block" : "hidden"} border-t border-command-line bg-command-panel2/90 xl:border-l xl:border-t-0`}>
-          <div className="flex items-center justify-between border-b border-command-line p-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Lead Context</p>
-              <p className="mt-1 text-base font-semibold text-command-text">Sales details</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setContextOpen(false)}
-              className="rounded-full border border-command-line bg-command-bg px-3 py-1 text-xs font-semibold text-command-muted transition hover:border-command-gold/60"
-            >
-              Collapse
-            </button>
-          </div>
-          <div className="max-h-[calc(100vh-14rem)] overflow-y-auto p-4">
-            <div className="flex flex-wrap gap-2">
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${chatStatusTone(chat)}`}>{chatStatusLabel(chat)}</span>
-              <span className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold text-command-muted">
-                {activeConversation.lead.botPaused ? "Manual takeover" : "Bot active"}
-              </span>
-            </div>
-            <dl className="mt-5 space-y-4 text-sm">
-              <div><dt className="text-command-muted">Client</dt><dd className="mt-1 text-command-text">{chat.displayName}</dd></div>
-              <div><dt className="text-command-muted">Phone</dt><dd className="mt-1 text-command-text">{chat.phone || "Not provided"}</dd></div>
-              <div><dt className="text-command-muted">Lead status</dt><dd className="mt-1 text-command-text">{activeConversation.lead.status}</dd></div>
-              <div><dt className="text-command-muted">Property type</dt><dd className="mt-1 text-command-text">{activeConversation.lead.propertyType || "Not provided"}</dd></div>
-              <div><dt className="text-command-muted">Address / area</dt><dd className="mt-1 text-command-text">{context.addressOrArea}</dd></div>
-              <div><dt className="text-command-muted">Scope</dt><dd className="mt-1 leading-6 text-command-text">{activeConversation.lead.scopeSummary || "Scope pending"}</dd></div>
-              <div><dt className="text-command-muted">Budget expectation</dt><dd className="mt-1 text-command-text">{context.budgetExpectation}</dd></div>
-              <div><dt className="text-command-muted">Floor plan</dt><dd className="mt-1 text-command-text">{context.floorPlanStatus}</dd></div>
-              <div><dt className="text-command-muted">Photos</dt><dd className="mt-1 text-command-text">{context.sitePhotosStatus}</dd></div>
-              <div><dt className="text-command-muted">Appointment preference</dt><dd className="mt-1 text-command-text">{context.appointmentPreference}</dd></div>
-              <div><dt className="text-command-muted">Notes</dt><dd className="mt-1 leading-6 text-command-text">{context.notes}</dd></div>
-            </dl>
-            <div className="mt-5 rounded-2xl border border-command-gold/35 bg-command-gold/10 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-gold">Next action</p>
-              <p className="mt-2 text-base font-semibold text-command-text">{context.nextAction}</p>
-              <p className="mt-2 text-sm leading-6 text-command-muted">{context.nextReason}</p>
-            </div>
-
-            <details
-              className="mt-4 rounded-xl border border-command-line bg-command-bg/55 p-4"
-              onToggle={(event) => setShowDeliveryDetails(event.currentTarget.open)}
-            >
-              <summary className="cursor-pointer text-sm font-semibold text-command-text">WhatsApp Delivery Details</summary>
-              {showDeliveryDetails ? (
-                <div className="mt-4 space-y-2 text-xs text-command-muted">
-                  {activeMessages.filter((message) => message.providerMessageId).map((message) => (
-                    <div key={message.id} className="rounded-lg border border-command-line bg-command-panel2 p-3">
-                      <p>{senderLabel(message)} | {messageStatus(message)} | {formatTimestamp(message.createdAt)}</p>
-                      <p className="mt-1 break-all">Meta message id: {message.providerMessageId}</p>
-                    </div>
-                  ))}
-                  {activeMessages.every((message) => !message.providerMessageId) ? <p>No Meta delivery IDs recorded yet.</p> : null}
-                </div>
-              ) : null}
-            </details>
-
-            <details
-              className="mt-3 rounded-xl border border-command-line bg-command-bg/55 p-4"
-              onToggle={(event) => setShowTechnicalAudit(event.currentTarget.open)}
-            >
-              <summary className="cursor-pointer text-sm font-semibold text-command-text">Technical Audit</summary>
-              {showTechnicalAudit ? (
-                <div className="mt-4 space-y-3">
-                  {activeConversation.auditTrail.length ? activeConversation.auditTrail.map((entry) => (
-                    <div key={entry.id} className="border-b border-command-line pb-3 text-sm last:border-b-0">
-                      <p className="font-semibold text-command-text">{humanize(entry.action)}</p>
-                      <p className="text-command-muted">{entry.summary}</p>
-                      <p className="mt-1 text-xs text-command-muted">{formatTimestamp(entry.createdAt)}</p>
-                    </div>
-                  )) : (
-                    <p className="text-sm text-command-muted">No WhatsApp audit events for this lead yet.</p>
-                  )}
-                </div>
-              ) : null}
-            </details>
-          </div>
-        </aside>
+        {contextOpen ? (
+          <LeadContextPanel
+            conversation={activeConversation}
+            activeMessages={activeMessages}
+            onClose={() => setContextOpen(false)}
+          />
+        ) : null}
       </div>
     </section>
   );

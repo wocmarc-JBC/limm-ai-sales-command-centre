@@ -270,6 +270,28 @@ export async function listLeadMessagesPage(leadId: string, limit = 30, before?: 
   };
 }
 
+export async function listLeadMessagesAfter(leadId: string, after: string, limit = 30) {
+  if (!leadId || !after) return [];
+
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase!
+      .from("lead_messages")
+      .select("*")
+      .eq("lead_id", leadId)
+      .eq("channel", "whatsapp")
+      .gt("created_at", after)
+      .order("created_at", { ascending: true })
+      .limit(limit);
+    if (!error && data) return data.map(mapLeadMessageRow);
+  }
+
+  return mockClone(getMockStore().leadMessages)
+    .filter((message) => message.leadId === leadId && message.channel === "whatsapp" && message.createdAt > after)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .slice(0, limit);
+}
+
 export async function listRecentLeadMessagesForWebhook(leadId: string, limit = 8) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();

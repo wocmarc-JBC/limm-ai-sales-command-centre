@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
+import { listLeadMessagesAfter, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 
 export async function GET(request: Request) {
   const auth = await getCurrentProfile();
@@ -11,8 +11,17 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const leadId = url.searchParams.get("leadId") ?? "";
   const before = url.searchParams.get("before") ?? undefined;
+  const after = url.searchParams.get("after") ?? undefined;
   if (!leadId) {
     return NextResponse.json({ ok: false, error: "missing_lead_id" }, { status: 400 });
+  }
+
+  if (after) {
+    const messages = await listLeadMessagesAfter(leadId, after, 30);
+    return NextResponse.json({
+      ok: true,
+      messages
+    });
   }
 
   const page = await listLeadMessagesPage(leadId, 30, before);
