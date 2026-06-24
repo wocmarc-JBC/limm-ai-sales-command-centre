@@ -24,6 +24,8 @@ import {
   resumeBotForLeadAction,
   reviewAiDraftAction,
   saveLeadIntakeProfileAction,
+  sendManualWhatsAppReplyAction,
+  sendManualWhatsAppTestAction,
   softDeleteLeadAction,
   takeOverLeadAction,
   updateLeadStatusAction,
@@ -123,7 +125,15 @@ export default async function LeadDetailPage({
   searchParams
 }: {
   params: { id: string };
-  searchParams?: { uploadLink?: string };
+  searchParams?: {
+    uploadLink?: string;
+    manualReplyStatus?: string;
+    manualReplyError?: string;
+    metaMessageId?: string;
+    manualTestStatus?: string;
+    manualTestError?: string;
+    manualTestMetaMessageId?: string;
+  };
 }) {
   const auth = await getCurrentProfile();
   if (!auth.authenticated) return null;
@@ -155,6 +165,9 @@ export default async function LeadDetailPage({
   const validationDisplay = aiRecommendation ? getValidationDisplay(aiRecommendation) : null;
   const latestInbound = leadMessages.find((message) => message.direction === "inbound" && message.channel === "whatsapp");
   const latestOutbound = leadMessages.find((message) => message.direction === "outbound" && message.channel === "whatsapp");
+  const conversationMessages = [...leadMessages]
+    .filter((message) => message.channel === "whatsapp")
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const brainMetadata = latestOutbound?.metadata ?? {};
   const intakePlan = buildLeadIntakePlan(lead, leadMessages);
   const intakeProfile = intakePlan.profile;
@@ -634,17 +647,18 @@ export default async function LeadDetailPage({
       <section className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">WhatsApp Auto-Reply</p>
-            <h2 className="mt-1 text-xl font-semibold">Inbound and auto-reply audit</h2>
+            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">WhatsApp Conversation</p>
+            <h2 className="mt-1 text-xl font-semibold">Manual reply and message timeline</h2>
             <p className="mt-2 max-w-3xl text-sm text-command-muted">
-              {whatsapp.statusLabel}. This section shows WhatsApp messages saved for this lead and any auto-reply status.
+              {whatsapp.statusLabel}. Messages are displayed oldest to newest. Manual replies pause the bot for human takeover after send.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             {[
               whatsapp.liveAutoReplyApproved ? "Marcus-approved live mode" : "Closed test mode available",
               whatsapp.publicAutoReplyEnabled ? "Public auto-reply enabled by Marcus" : "Public auto-reply disabled",
-              "No pricing / no Calendar booking"
+              lead.botPaused ? "Bot paused for this lead" : "Bot active until Marcus replies",
+              "No pricing / no Calendar booking / no voice transcription"
             ].map((label) => (
               <span key={label} className="rounded border border-command-line bg-command-panel2 px-3 py-1 text-command-muted">
                 {label}
@@ -652,18 +666,50 @@ export default async function LeadDetailPage({
             ))}
           </div>
         </div>
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_20rem]">
+        {searchParams?.manualReplyStatus === "sent" ? (
+          <div className="mt-5 rounded-lg border border-command-green/50 bg-command-green/10 p-4 text-sm text-command-green">
+            Manual WhatsApp reply sent. Meta message id: {searchParams.metaMessageId || "recorded"}. Bot takeover is now active for this lead.
+          </div>
+        ) : null}
+        {searchParams?.manualReplyStatus === "failed" ? (
+          <div className="mt-5 rounded-lg border border-command-red/50 bg-command-red/10 p-4 text-sm text-command-red">
+            Manual WhatsApp reply failed: {searchParams.manualReplyError || "Unknown send error."}
+          </div>
+        ) : null}
+        {searchParams?.manualTestStatus === "sent" ? (
+          <div className="mt-5 rounded-lg border border-command-green/50 bg-command-green/10 p-4 text-sm text-command-green">
+            Test WhatsApp message sent. Meta message id: {searchParams.manualTestMetaMessageId || "recorded"}.
+          </div>
+        ) : null}
+        {searchParams?.manualTestStatus === "failed" ? (
+          <div className="mt-5 rounded-lg border border-command-red/50 bg-command-red/10 p-4 text-sm text-command-red">
+            Test WhatsApp send failed: {searchParams.manualTestError || "Unknown send error."}
+          </div>
+        ) : null}
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="space-y-3">
-            {leadMessages.length ? leadMessages.map((message) => (
-              <div key={message.id} className="rounded border border-command-line bg-command-panel2 p-4">
+            {conversationMessages.length ? conversationMessages.map((message) => (
+              <div
+                key={message.id}
+                className={`rounded border p-4 ${
+                  message.direction === "outbound"
+                    ? "border-command-cyan/35 bg-command-cyan/10"
+                    : "border-command-line bg-command-panel2"
+                }`}
+              >
                 <div className="flex flex-wrap justify-between gap-2 text-xs text-command-muted">
-                  <span>{message.direction === "inbound" ? "Inbound client message" : "Outbound auto-reply"}</span>
-                  <span>Status: {message.whatsappStatus || "recorded"}</span>
+                  <span>{message.direction === "inbound" ? "Client WhatsApp" : message.metadata?.manualReply ? "Marcus manual WhatsApp" : "System WhatsApp reply"}</span>
+                  <span>Status: {humanizeLabel(message.whatsappStatus || "recorded")}</span>
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm">{message.body}</p>
                 <p className="mt-2 text-xs text-command-muted">
-                  Provider message id: {message.providerMessageId || "Not provided"} | {message.createdAt}
+                  Meta message id: {message.providerMessageId || "Not provided"} | {message.createdAt}
                 </p>
+                {message.whatsappStatus === "failed" ? (
+                  <p className="mt-2 rounded border border-command-red/40 bg-command-red/10 p-2 text-xs text-command-red">
+                    Failed send reason: {typeof message.metadata?.error === "string" ? message.metadata.error : "Check audit log for details."}
+                  </p>
+                ) : null}
               </div>
             )) : (
               <p className="rounded border border-command-line bg-command-panel2 p-4 text-sm text-command-muted">
@@ -671,18 +717,59 @@ export default async function LeadDetailPage({
               </p>
             )}
           </div>
-          <aside className="rounded border border-command-line bg-command-panel2 p-4">
-            <p className="text-sm font-semibold">Auto-reply audit trail</p>
-            <div className="mt-3 space-y-3">
-              {whatsappAuditTrail.length ? whatsappAuditTrail.map((entry) => (
-                <div key={entry.id} className="border-b border-command-line pb-3 text-sm last:border-b-0">
-                  <p className="font-semibold">{entry.action}</p>
-                  <p className="text-command-muted">{entry.summary}</p>
-                  <p className="mt-1 text-xs text-command-muted">{entry.createdAt}</p>
-                </div>
-              )) : (
-                <p className="text-sm text-command-muted">No WhatsApp audit events for this lead yet.</p>
-              )}
+          <aside className="space-y-4">
+            <form action={sendManualWhatsAppReplyAction} className="rounded border border-command-cyan/35 bg-command-panel2 p-4">
+              <input type="hidden" name="lead_id" value={lead.id} />
+              <p className="text-sm font-semibold text-command-text">Manual WhatsApp reply</p>
+              <p className="mt-1 text-xs text-command-muted">
+                Sends from the connected Meta WhatsApp number to {lead.phone || "this lead"}. This does not generate prices or book appointments.
+              </p>
+              <textarea
+                name="manual_reply_body"
+                rows={6}
+                required
+                placeholder="Type Marcus's WhatsApp reply here..."
+                className="mt-3 w-full rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-cyan"
+              />
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <span className="text-xs text-command-muted">Refresh-safe: the page redirects after send.</span>
+                <ActionButton type="submit">Send WhatsApp</ActionButton>
+              </div>
+            </form>
+            <form action={sendManualWhatsAppTestAction} className="rounded border border-command-line bg-command-panel2 p-4">
+              <input type="hidden" name="lead_id" value={lead.id} />
+              <p className="text-sm font-semibold text-command-text">Test send to Marcus first</p>
+              <p className="mt-1 text-xs text-command-muted">
+                Use Marcus&apos;s own WhatsApp number here before replying to a real lead. Tokens stay server-side.
+              </p>
+              <input
+                name="test_recipient_phone"
+                placeholder="Marcus test number, digits only"
+                className="mt-3 w-full rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-cyan"
+              />
+              <textarea
+                name="test_message_body"
+                rows={3}
+                defaultValue="LIMM Works manual WhatsApp test. Please ignore if this was not expected."
+                className="mt-3 w-full rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-cyan"
+              />
+              <div className="mt-3 flex justify-end">
+                <ActionButton type="submit" tone="muted">Send Test</ActionButton>
+              </div>
+            </form>
+            <div className="rounded border border-command-line bg-command-panel2 p-4">
+              <p className="text-sm font-semibold">WhatsApp audit trail</p>
+              <div className="mt-3 space-y-3">
+                {whatsappAuditTrail.length ? whatsappAuditTrail.map((entry) => (
+                  <div key={entry.id} className="border-b border-command-line pb-3 text-sm last:border-b-0">
+                    <p className="font-semibold">{entry.action}</p>
+                    <p className="text-command-muted">{entry.summary}</p>
+                    <p className="mt-1 text-xs text-command-muted">{entry.createdAt}</p>
+                  </div>
+                )) : (
+                  <p className="text-sm text-command-muted">No WhatsApp audit events for this lead yet.</p>
+                )}
+              </div>
             </div>
           </aside>
         </div>

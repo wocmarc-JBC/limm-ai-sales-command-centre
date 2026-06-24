@@ -5,8 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { defaultAppointmentSettings } from "@/lib/appointment-engine";
 import { requirePermission } from "@/lib/auth/session";
+import {
+  getWhatsAppSendPayloadSummary,
+  WhatsAppCloudApiAdapter,
+  WhatsAppCloudApiSendError
+} from "@/lib/adapters/whatsapp-adapter";
 import { decideApprovalRequest } from "@/lib/data/approvals-repository";
 import { saveAppointmentSettings } from "@/lib/data/appointment-settings-repository";
+import { createAuditLog } from "@/lib/data/audit-repository";
 import { generateAndSaveAiDryRunRecommendation, recordAiDraftReviewAction } from "@/lib/data/ai-decisions-repository";
 import {
   LEAD_FILE_CATEGORIES,
@@ -46,7 +52,7 @@ import {
 } from "@/lib/data/leads-repository";
 import { updateQuotationReadinessStatus } from "@/lib/data/quotation-repository";
 import { saveMonthlySalesTarget } from "@/lib/data/sales-collection-repository";
-import { listLeadMessages } from "@/lib/data/lead-messages-repository";
+import { listLeadMessages, saveLeadMessage } from "@/lib/data/lead-messages-repository";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildLeadIntakePlan } from "@/lib/lead-intake";
 import { currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
@@ -58,6 +64,22 @@ const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturd
 
 function text(formData: FormData, key: string, fallback = "") {
   return String(formData.get(key) ?? fallback);
+}
+
+function safeWhatsAppError(error: unknown) {
+  if (error instanceof WhatsAppCloudApiSendError) {
+    return [
+      `Meta status ${error.status}`,
+      error.metaCode ? `code ${error.metaCode}` : "",
+      error.metaMessage ? error.metaMessage : ""
+    ].filter(Boolean).join(" - ");
+  }
+  return error instanceof Error ? error.message : "Unknown WhatsApp send failure.";
+}
+
+function leadReplyRedirect(leadId: string, params: Record<string, string>): never {
+  const query = new URLSearchParams(params);
+  redirect(`/leads/${encodeURIComponent(leadId)}?${query.toString()}`);
 }
 
 function parseSlot(value: string, fallback: Array<{ start: string; end: string }>) {
@@ -262,6 +284,205 @@ export async function uploadClientFileByTokenAction(formData: FormData) {
   revalidatePath(`/leads/${uploadLink.leadId}`);
   revalidatePath("/client-files");
   redirect(`/upload/${encodeURIComponent(token)}?uploaded=1`);
+}
+
+export async function sendManualWhatsAppReplyAction(formData: FormData) {
+  const permission = await requirePermission("control_bot");
+  const leadId = text(formData, "lead_id");
+  if (!permission.ok) leadReplyRedirect(leadId, { manualReplyStatus: "failed", manualReplyError: permission.error || "Permission denied." });
+
+  const body = text(formData, "manual_reply_body").trim();
+  if (!leadId) redirect("/leads?manualReplyStatus=failed&manualReplyError=Missing%20lead%20id");
+  if (!body) leadReplyRedirect(leadId, { manualReplyStatus: "failed", manualReplyError: "Reply message is empty." });
+
+  const lead = await getLeadById(leadId);
+  if (!lead) leadReplyRedirect(leadId, { manualReplyStatus: "failed", manualReplyError: "Lead was not found." });
+
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const actorEmail = permission.auth.profile?.email ?? "";
+  const actorId = permission.auth.profile?.id ?? null;
+  const adapter = new WhatsAppCloudApiAdapter();
+  const payloadSummary = getWhatsAppSendPayloadSummary(lead.phone, body);
+  console.info("whatsapp_manual_reply_send_payload_summary", {
+    leadId,
+    phoneNumberIdPresent: payloadSummary.phoneNumberIdPresent,
+    toDigitsLength: payloadSummary.toDigitsLength,
+    bodyLength: payloadSummary.bodyLength,
+    hasMessagingProduct: payloadSummary.hasMessagingProduct,
+    hasRecipientType: payloadSummary.hasRecipientType,
+    hasTextBody: payloadSummary.hasTextBody,
+    graphVersion: payloadSummary.graphVersion
+  });
+
+  try {
+    const sent = await adapter.sendReply(lead.phone, body);
+    console.info("whatsapp_manual_reply_sent", {
+      leadId,
+      providerMessageIdPresent: Boolean(sent.providerMessageId),
+      toDigitsLength: payloadSummary.toDigitsLength,
+      bodyLength: payloadSummary.bodyLength
+    });
+    await saveLeadMessage({
+      leadId,
+      direction: "outbound",
+      body,
+      safeToSend: true,
+      providerMessageId: sent.providerMessageId || undefined,
+      whatsappStatus: "sent",
+      metadata: {
+        manualReply: true,
+        manualTakeover: true,
+        sentBy: actor,
+        mode: sent.mode,
+        metaMessageId: sent.providerMessageId || "",
+        replaySafePostRedirect: true,
+        noAutoPricing: true,
+        noCalendarBooking: true,
+        noVoiceTranscription: true
+      }
+    });
+    await takeOverLead(leadId, actor);
+    await createAuditLog({
+      actorName: actor,
+      actorEmail,
+      actorId,
+      action: "whatsapp_manual_reply_sent",
+      entityType: "lead",
+      entityId: leadId,
+      summary: "Manual WhatsApp reply sent by Marcus/admin and bot paused for human takeover.",
+      metadata: {
+        providerMessageIdPresent: Boolean(sent.providerMessageId),
+        metaMessageId: sent.providerMessageId || "",
+        toDigitsLength: payloadSummary.toDigitsLength,
+        bodyLength: payloadSummary.bodyLength,
+        manualTakeover: true,
+        noTokenLogged: true
+      }
+    });
+    revalidateLeadPaths(leadId);
+    leadReplyRedirect(leadId, { manualReplyStatus: "sent", metaMessageId: sent.providerMessageId || "recorded" });
+  } catch (error) {
+    const reason = safeWhatsAppError(error);
+    console.error("whatsapp_manual_reply_failed", {
+      leadId,
+      reason,
+      toDigitsLength: payloadSummary.toDigitsLength,
+      bodyLength: payloadSummary.bodyLength
+    });
+    await saveLeadMessage({
+      leadId,
+      direction: "outbound",
+      body,
+      safeToSend: false,
+      whatsappStatus: "failed",
+      metadata: {
+        manualReply: true,
+        manualTakeover: true,
+        failedBy: actor,
+        error: reason,
+        replaySafePostRedirect: true,
+        noTokenLogged: true
+      }
+    }).catch(() => null);
+    await pauseBotForLead(leadId, "Manual WhatsApp reply attempted; bot paused for human takeover.", actor).catch(() => null);
+    await createAuditLog({
+      actorName: actor,
+      actorEmail,
+      actorId,
+      action: "whatsapp_manual_reply_failed",
+      entityType: "lead",
+      entityId: leadId,
+      summary: "Manual WhatsApp reply failed. Error was shown in Command Centre without exposing secrets.",
+      metadata: {
+        error: reason,
+        toDigitsLength: payloadSummary.toDigitsLength,
+        bodyLength: payloadSummary.bodyLength,
+        manualTakeover: true,
+        noTokenLogged: true
+      }
+    }).catch(() => null);
+    revalidateLeadPaths(leadId);
+    leadReplyRedirect(leadId, { manualReplyStatus: "failed", manualReplyError: reason.slice(0, 220) });
+  }
+}
+
+export async function sendManualWhatsAppTestAction(formData: FormData) {
+  const permission = await requirePermission("control_bot");
+  const returnLeadId = text(formData, "lead_id");
+  if (!permission.ok) leadReplyRedirect(returnLeadId, { manualTestStatus: "failed", manualTestError: permission.error || "Permission denied." });
+
+  const to = text(formData, "test_recipient_phone").trim();
+  const body = text(
+    formData,
+    "test_message_body",
+    "LIMM Works manual WhatsApp test. Please ignore if this was not expected."
+  ).trim();
+  if (!to) leadReplyRedirect(returnLeadId, { manualTestStatus: "failed", manualTestError: "Test recipient phone is empty." });
+  if (!body) leadReplyRedirect(returnLeadId, { manualTestStatus: "failed", manualTestError: "Test message is empty." });
+
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const actorEmail = permission.auth.profile?.email ?? "";
+  const actorId = permission.auth.profile?.id ?? null;
+  const adapter = new WhatsAppCloudApiAdapter();
+  const payloadSummary = getWhatsAppSendPayloadSummary(to, body);
+  console.info("whatsapp_manual_test_send_payload_summary", {
+    phoneNumberIdPresent: payloadSummary.phoneNumberIdPresent,
+    toDigitsLength: payloadSummary.toDigitsLength,
+    bodyLength: payloadSummary.bodyLength,
+    hasMessagingProduct: payloadSummary.hasMessagingProduct,
+    hasRecipientType: payloadSummary.hasRecipientType,
+    hasTextBody: payloadSummary.hasTextBody,
+    graphVersion: payloadSummary.graphVersion
+  });
+
+  try {
+    const sent = await adapter.sendReply(to, body);
+    await createAuditLog({
+      actorName: actor,
+      actorEmail,
+      actorId,
+      action: "whatsapp_manual_test_sent",
+      entityType: "system",
+      entityId: "whatsapp_manual_test",
+      summary: "Manual WhatsApp test message sent before client reply.",
+      metadata: {
+        providerMessageIdPresent: Boolean(sent.providerMessageId),
+        metaMessageId: sent.providerMessageId || "",
+        toDigitsLength: payloadSummary.toDigitsLength,
+        bodyLength: payloadSummary.bodyLength,
+        noTokenLogged: true
+      }
+    });
+    if (returnLeadId) {
+      revalidateLeadPaths(returnLeadId);
+      leadReplyRedirect(returnLeadId, { manualTestStatus: "sent", manualTestMetaMessageId: sent.providerMessageId || "recorded" });
+    }
+    redirect("/leads?manualTestStatus=sent");
+  } catch (error) {
+    const reason = safeWhatsAppError(error);
+    console.error("whatsapp_manual_test_failed", {
+      reason,
+      toDigitsLength: payloadSummary.toDigitsLength,
+      bodyLength: payloadSummary.bodyLength
+    });
+    await createAuditLog({
+      actorName: actor,
+      actorEmail,
+      actorId,
+      action: "whatsapp_manual_test_failed",
+      entityType: "system",
+      entityId: "whatsapp_manual_test",
+      summary: "Manual WhatsApp test message failed. Error was shown without exposing secrets.",
+      metadata: {
+        error: reason,
+        toDigitsLength: payloadSummary.toDigitsLength,
+        bodyLength: payloadSummary.bodyLength,
+        noTokenLogged: true
+      }
+    }).catch(() => null);
+    if (returnLeadId) leadReplyRedirect(returnLeadId, { manualTestStatus: "failed", manualTestError: reason.slice(0, 220) });
+    redirect(`/leads?manualTestStatus=failed&manualTestError=${encodeURIComponent(reason.slice(0, 220))}`);
+  }
 }
 
 export async function markBossApprovalNeededAction(formData: FormData) {
