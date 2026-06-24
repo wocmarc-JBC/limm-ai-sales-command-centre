@@ -87,6 +87,11 @@ type SendResult = {
   errorMessage?: string;
 };
 
+type SendState = {
+  clientTempId: string;
+  startedAt: number;
+};
+
 const filters = [
   "All",
   "Unread",
@@ -226,6 +231,12 @@ function isNextRedirectOnly(error: unknown) {
 
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
+}
+
+function debugInboxSendState(event: string, details: Record<string, unknown>) {
+  if (process.env.NODE_ENV !== "production") {
+    console.info("inbox_send_state_machine", { event, ...details });
+  }
 }
 
 function isLegacyRedirectFailure(message: LeadMessage) {
@@ -457,27 +468,34 @@ const MessageBubble = memo(function MessageBubble({
 function ReplyComposer({
   conversation,
   draftSeed,
+  sendingState,
+  sendError,
   onDraftSeedConsumed,
+  onSendStarted,
+  onSendFinished,
   onOptimisticReply,
   onSendSettled
 }: {
   conversation: MultiChatConversation;
   draftSeed?: { id: string; text: string };
+  sendingState?: SendState;
+  sendError?: string;
   onDraftSeedConsumed?: (leadId: string, seedId: string) => void;
+  onSendStarted: (leadId: string, clientTempId: string) => void;
+  onSendFinished: (leadId: string, clientTempId: string) => void;
   onOptimisticReply: (leadId: string, message: LeadMessage) => void;
   onSendSettled: (leadId: string, clientTempId: string, result: SendResult) => void;
 }) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [aiDraft, setAiDraft] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const leadId = conversation.lead.id;
   const reply = drafts[leadId] ?? "";
+  const isSending = Boolean(sendingState);
   const canSend = reply.trim().length > 0 && !isSending;
 
   useEffect(() => {
     setAiDraft("");
-    setIsSending(false);
   }, [leadId]);
 
   useEffect(() => {
@@ -519,10 +537,38 @@ function ReplyComposer({
     };
     onOptimisticReply(leadId, optimistic);
     setReply("");
-    setIsSending(true);
+    onSendStarted(leadId, clientTempId);
+    debugInboxSendState("send started", { leadId, clientTempId });
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+    let settled = false;
+    let finished = false;
+    let timeoutId: number | undefined;
+    const finishOnce = () => {
+      if (finished) return;
+      finished = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      onSendFinished(leadId, clientTempId);
+      debugInboxSendState("finally executed", { leadId, clientTempId });
+    };
+    const settleOnce = (result: SendResult, restoreDraft: boolean) => {
+      if (settled) return;
+      settled = true;
+      onSendSettled(leadId, clientTempId, result);
+      if (restoreDraft) setReply(body);
+    };
+    timeoutId = window.setTimeout(() => {
+      controller.abort();
+      settleOnce({
+        ok: false,
+        leadId,
+        clientTempId,
+        body,
+        errorCode: "send_timeout",
+        errorMessage: "WhatsApp send timed out after 15 seconds. Please check the conversation before retrying."
+      }, true);
+      finishOnce();
+    }, SEND_TIMEOUT_MS);
 
     try {
       const response = await fetch("/api/inbox/send", {
@@ -532,6 +578,11 @@ function ReplyComposer({
         signal: controller.signal
       });
       const data = await response.json().catch(() => ({}));
+      debugInboxSendState("api response received", {
+        leadId,
+        clientTempId,
+        ok: Boolean(data?.ok)
+      });
       const result: SendResult = {
         ok: Boolean(data?.ok),
         leadId,
@@ -544,23 +595,21 @@ function ReplyComposer({
         errorCode: typeof data?.errorCode === "string" ? data.errorCode : undefined,
         errorMessage: typeof data?.errorMessage === "string" ? data.errorMessage : undefined
       };
-      onSendSettled(leadId, clientTempId, result);
-      if (!result.ok) setReply(body);
+      settleOnce(result, !result.ok);
     } catch (error) {
       const timedOut = isAbortError(error);
-      onSendSettled(leadId, clientTempId, {
+      settleOnce({
         ok: false,
         leadId,
         clientTempId,
+        body,
         errorCode: timedOut ? "send_timeout" : "network_error",
         errorMessage: timedOut
           ? "WhatsApp send timed out after 15 seconds. Please check the conversation before retrying."
           : error instanceof Error ? error.message : "Network error while sending WhatsApp reply."
-      });
-      setReply(body);
+      }, true);
     } finally {
-      window.clearTimeout(timeoutId);
-      setIsSending(false);
+      finishOnce();
     }
   };
 
@@ -641,6 +690,9 @@ function ReplyComposer({
             <p className="text-xs leading-5 text-command-muted">
               Ctrl+Enter or Cmd+Enter sends. Esc clears focus.
             </p>
+            {sendError ? (
+              <p className="text-xs leading-5 text-command-red">{sendError}</p>
+            ) : null}
           </div>
         </div>
       </form>
@@ -826,6 +878,8 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const [showInternalTestLeads, setShowInternalTestLeads] = useState(false);
   const [contextOpen, setContextOpen] = useState(true);
   const [optimisticReplies, setOptimisticReplies] = useState<Record<string, LeadMessage[]>>({});
+  const [sendingByLeadId, setSendingByLeadId] = useState<Record<string, SendState>>({});
+  const [errorByLeadId, setErrorByLeadId] = useState<Record<string, string>>({});
   const [draftSeeds, setDraftSeeds] = useState<Record<string, { id: string; text: string }>>({});
   const [olderMessages, setOlderMessages] = useState<Record<string, LeadMessage[]>>({});
   const [olderState, setOlderState] = useState<Record<string, { hasOlder: boolean; cursor: string | null }>>({});
@@ -1085,6 +1139,28 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     });
   }, [patchSummary]);
 
+  const handleSendStarted = useCallback((leadId: string, clientTempId: string) => {
+    setSendingByLeadId((current) => ({
+      ...current,
+      [leadId]: { clientTempId, startedAt: Date.now() }
+    }));
+    setErrorByLeadId((current) => {
+      if (!current[leadId]) return current;
+      const next = { ...current };
+      delete next[leadId];
+      return next;
+    });
+  }, []);
+
+  const handleSendFinished = useCallback((leadId: string, clientTempId: string) => {
+    setSendingByLeadId((current) => {
+      if (current[leadId]?.clientTempId !== clientTempId) return current;
+      const next = { ...current };
+      delete next[leadId];
+      return next;
+    });
+  }, []);
+
   const handleSendSettled = useCallback((leadId: string, clientTempId: string, result: SendResult) => {
     setOptimisticReplies((current) => {
       const updated = (current[leadId] ?? []).map((message) => {
@@ -1108,6 +1184,18 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
         };
       });
       return { ...current, [leadId]: updated };
+    });
+    setErrorByLeadId((current) => {
+      if (result.ok) {
+        if (!current[leadId]) return current;
+        const next = { ...current };
+        delete next[leadId];
+        return next;
+      }
+      return {
+        ...current,
+        [leadId]: result.errorMessage || "WhatsApp send failed."
+      };
     });
     patchSummary(leadId, {
       lastMessagePreview: result.body || "",
@@ -1343,7 +1431,11 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
           <ReplyComposer
             conversation={activeConversation}
             draftSeed={draftSeeds[activeConversation.lead.id]}
+            sendingState={sendingByLeadId[activeConversation.lead.id]}
+            sendError={errorByLeadId[activeConversation.lead.id]}
             onDraftSeedConsumed={consumeDraftSeed}
+            onSendStarted={handleSendStarted}
+            onSendFinished={handleSendFinished}
             onOptimisticReply={handleOptimisticReply}
             onSendSettled={handleSendSettled}
           />
