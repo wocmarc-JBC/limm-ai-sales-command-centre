@@ -1,7 +1,6 @@
 import { ActionButton } from "@/components/ActionButton";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { WhatsAppSalesInbox, type InboxChatSummary } from "@/components/WhatsAppSalesInbox";
 import {
   approveAppointmentBookingAction,
   archiveLeadAction,
@@ -42,7 +41,7 @@ import {
   listLeadUploadLinks
 } from "@/lib/data/lead-files-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
-import { getLeadById, listLeads } from "@/lib/data/leads-repository";
+import { getLeadById } from "@/lib/data/leads-repository";
 import { getQuotationReadinessForLead } from "@/lib/data/quotation-repository";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
 import { buildLeadIntakePlan, MAX_INTAKE_QUESTIONS } from "@/lib/lead-intake";
@@ -51,8 +50,7 @@ import { getNextBestAction } from "@/lib/next-best-action";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
 import { inferLeadLocation } from "@/lib/singapore-location";
-import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
-import type { AiDraftReviewStatus, AiDryRunRecommendation, Lead, LeadFileCategory, LeadMessage, LeadStatus } from "@/lib/types";
+import type { AiDraftReviewStatus, AiDryRunRecommendation, LeadFileCategory, LeadMessage, LeadStatus } from "@/lib/types";
 
 const statuses: LeadStatus[] = [
   "New Enquiry",
@@ -119,47 +117,6 @@ function getValidationDisplay(recommendation: AiDryRunRecommendation) {
   };
 }
 
-function latestWhatsAppMessage(messages: LeadMessage[]) {
-  return [...messages]
-    .filter((message) => message.channel === "whatsapp")
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
-}
-
-function buildInboxChatSummary(lead: Lead, messages: LeadMessage[]): InboxChatSummary {
-  const latestMessage = latestWhatsAppMessage(messages);
-  const latestActivityAt = latestMessage?.createdAt ?? lead.updatedAt ?? lead.createdAt;
-  const lastInbound = [...messages]
-    .filter((message) => message.channel === "whatsapp" && message.direction === "inbound")
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-  const lastReplyAt = lead.lastReplyAt ? new Date(lead.lastReplyAt).getTime() : 0;
-  const unread = lastInbound ? new Date(lastInbound.createdAt).getTime() > lastReplyAt : false;
-  const failedSend = messages.some((message) => (
-    message.channel === "whatsapp" &&
-    message.direction === "outbound" &&
-    message.whatsappStatus === "failed" &&
-    !message.providerMessageId &&
-    !/NEXT_REDIRECT/i.test(typeof message.metadata?.error === "string" ? message.metadata.error : "")
-  ));
-
-  return {
-    id: lead.id,
-    displayName: formatLeadDisplayName(lead),
-    phone: lead.phone,
-    status: lead.status,
-    botPaused: Boolean(lead.botPaused),
-    needsMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded),
-    propertyType: lead.propertyType,
-    scopeSummary: lead.scopeSummary,
-    lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
-    lastActivityAt: latestActivityAt,
-    unread,
-    failedSend,
-    waitingForClient: lead.status === "Awaiting Client",
-    waitingForMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded || unread),
-    source: lead.source
-  };
-}
-
 export default async function LeadDetailPage({
   params,
   searchParams
@@ -167,12 +124,7 @@ export default async function LeadDetailPage({
   params: { id: string };
   searchParams?: {
     uploadLink?: string;
-    manualReplyStatus?: string;
-    manualReplyError?: string;
     metaMessageId?: string;
-    manualTestStatus?: string;
-    manualTestError?: string;
-    manualTestMetaMessageId?: string;
   };
 }) {
   const auth = await getCurrentProfile();
@@ -183,16 +135,6 @@ export default async function LeadDetailPage({
   const readiness = await getQuotationReadinessForLead(lead.id);
   const aiRecommendation = await getLatestAiRecommendationForLead(lead.id);
   const leadMessages = await listLeadMessages(lead.id);
-  const allInboxLeads = await listLeads();
-  const inboxSourceLeads = allInboxLeads.some((item) => item.id === lead.id)
-    ? allInboxLeads
-    : [lead, ...allInboxLeads];
-  const inboxChatSummaries = (await Promise.all(
-    inboxSourceLeads.slice(0, 80).map(async (item) => {
-      const messages = item.id === lead.id ? leadMessages : await listLeadMessages(item.id);
-      return buildInboxChatSummary(item, messages);
-    })
-  )).sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime());
   const leadFiles = await listLeadFiles(lead.id);
   const leadUploadLinks = await listLeadUploadLinks(lead.id);
   const signedFileUrls = new Map<string, string>(
@@ -206,7 +148,6 @@ export default async function LeadDetailPage({
     .filter((entry) => entry.action.startsWith("whatsapp_"))
     .slice(0, 8);
   const openAi = getOpenAiBrainRuntime();
-  const whatsapp = getWhatsAppRuntime();
   const calendar = getCalendarRuntime();
   const next = getNextBestAction(lead);
   const leadLevel = lead.leadLevel ?? calculateLeadLevel(lead);
@@ -276,36 +217,41 @@ export default async function LeadDetailPage({
           <ActionButton type="submit" tone="muted">Move to Quotation Review</ActionButton>
         </form>
       </PageHeader>
-      <WhatsAppSalesInbox
-        lead={lead}
-        displayName={displayName}
-        leadLevel={leadLevel}
-        chatSummaries={inboxChatSummaries}
-        messages={conversationMessages}
-        auditTrail={whatsappAuditTrail.map((entry) => ({
-          id: entry.id,
-          action: entry.action,
-          summary: entry.summary,
-          createdAt: entry.createdAt
-        }))}
-        context={{
-          budgetExpectation: intakeProfile.budgetExpectation || "Not collected yet",
-          floorPlanStatus: hasFloorPlanFile || intakeProfile.floorPlanStatus ? "Received / available" : "Not received yet",
-          sitePhotosStatus: hasSitePhotosFile || intakeProfile.sitePhotosStatus ? "Received / available" : "Not received yet",
-          appointmentPreference: intakeProfile.preferredMeetingTiming || lead.preferredContactTime || "Not provided yet",
-          addressOrArea: intakeProfile.propertyAreaOrAddress || lead.projectAddress || lead.propertyArea || leadLocation.area || "Not provided yet",
-          notes: lead.stageNotes || lead.conversationSummary || buildConversationSummary(lead),
-          nextAction: next.action,
-          nextReason: next.reason
-        }}
-        whatsappStatusLabel={whatsapp.statusLabel}
-        liveModeLabel={whatsapp.liveAutoReplyApproved ? "Marcus-approved live mode" : "Closed test mode available"}
-        publicAutoReplyLabel={whatsapp.publicAutoReplyEnabled ? "Public auto-reply enabled by Marcus" : "Public auto-reply disabled"}
-        manualReplyStatus={searchParams?.manualReplyStatus}
-        manualReplyError={searchParams?.manualReplyError}
-        manualTestStatus={searchParams?.manualTestStatus}
-        manualTestError={searchParams?.manualTestError}
-      />
+      <section className="mt-6 rounded-lg border border-command-cyan/25 bg-command-card p-6 shadow-premium">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">WhatsApp Conversation</p>
+            <h2 className="mt-1 text-xl font-semibold text-command-text">Read-only lead view</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
+              Manual WhatsApp replies now happen only in the WhatsApp Inbox to avoid duplicate send paths and stuck pending states.
+            </p>
+          </div>
+          <a
+            href={`/inbox?lead=${encodeURIComponent(lead.id)}`}
+            className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover"
+          >
+            Reply in WhatsApp Inbox
+          </a>
+        </div>
+        <div className="mt-5 space-y-3">
+          {conversationMessages.slice(-5).map((message) => (
+            <div key={message.id} className="rounded-xl border border-command-line bg-command-bg/55 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-command-muted">
+                <span className="font-semibold uppercase tracking-[0.14em]">
+                  {message.direction === "inbound" ? "Client" : message.metadata?.manualReply ? "Marcus" : "AI / system"}
+                </span>
+                <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("en-SG")}</time>
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-command-text">{message.body || "Message body not available."}</p>
+            </div>
+          ))}
+          {conversationMessages.length === 0 ? (
+            <p className="rounded-xl border border-command-line bg-command-bg/55 p-4 text-sm text-command-muted">
+              No WhatsApp messages saved for this lead yet.
+            </p>
+          ) : null}
+        </div>
+      </section>
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
           <div className="flex flex-wrap gap-2">

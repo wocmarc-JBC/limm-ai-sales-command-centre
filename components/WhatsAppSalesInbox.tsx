@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ActionButton } from "@/components/ActionButton";
-import { sendManualWhatsAppReplyAction, sendManualWhatsAppTestAction } from "@/lib/actions";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Lead, LeadMessage } from "@/lib/types";
 
 export type InboxChatSummary = {
@@ -53,38 +51,7 @@ type WhatsAppSalesInboxProps = {
   whatsappStatusLabel: string;
   liveModeLabel: string;
   publicAutoReplyLabel: string;
-  manualReplyStatus?: string;
-  manualReplyError?: string;
-  manualTestStatus?: string;
-  manualTestError?: string;
 };
-
-const quickReplies = [
-  {
-    label: "Ask for floor plan/photos",
-    text: "You may send us your floor plan, site photos, and any reference images here. We will review from there."
-  },
-  {
-    label: "Ask property type",
-    text: "Thanks for reaching out. May I know your property type and the main scope of works?"
-  },
-  {
-    label: "Ask scope",
-    text: "Could you share the main areas you are planning to renovate and what you would like to change? That will help us review the next step properly."
-  },
-  {
-    label: "Ask appointment preference",
-    text: "We can help check a suitable time for an initial discussion. Could you share your preferred day and timing?"
-  },
-  {
-    label: "Instagram portfolio",
-    text: "You can view some of our past works here: https://www.instagram.com/limmworks/"
-  },
-  {
-    label: "Acknowledge and review",
-    text: "Thanks, I will review this with the team and get back to you shortly."
-  }
-];
 
 const filters = [
   "All",
@@ -177,17 +144,6 @@ function chatMatchesFilter(chat: InboxChatSummary, filter: (typeof filters)[numb
   return true;
 }
 
-function buildAiDraft(latestInbound?: LeadMessage) {
-  const latestText = latestInbound?.body?.trim() || "";
-  if (/price|how much|budget|quote|quotation|rough/i.test(latestText)) {
-    return "I understand you would like a rough idea. We should review the scope, site condition, and material direction first before advising, so we do not give you the wrong expectation. You can send any floor plan, site photos, or reference images here and we will review the next step properly.";
-  }
-  if (/appointment|appt|meet|site visit|available|wed|tomorrow|slot/i.test(latestText)) {
-    return "Thanks, we can help check availability for an initial discussion. Before confirming any timing, the team should review the property type, address or area, and renovation scope first.";
-  }
-  return "Thanks for sharing. I will review this with the team and get back to you shortly. If you have a floor plan, site photos, or reference images, you can send them here too.";
-}
-
 export function WhatsAppSalesInbox({
   lead,
   displayName,
@@ -198,22 +154,13 @@ export function WhatsAppSalesInbox({
   context,
   whatsappStatusLabel,
   liveModeLabel,
-  publicAutoReplyLabel,
-  manualReplyStatus,
-  manualReplyError,
-  manualTestStatus,
-  manualTestError
+  publicAutoReplyLabel
 }: WhatsAppSalesInboxProps) {
-  const [reply, setReply] = useState("");
-  const [aiDraft, setAiDraft] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const [contextOpen, setContextOpen] = useState(true);
-  const formRef = useRef<HTMLFormElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const latestInbound = [...messages].reverse().find((message) => message.direction === "inbound");
   const filteredChats = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return chatSummaries.filter((chat) => {
@@ -232,27 +179,6 @@ export function WhatsAppSalesInbox({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
-
-  const canSend = reply.trim().length > 0 && !isSending;
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    if (!reply.trim()) {
-      event.preventDefault();
-      return;
-    }
-    setIsSending(true);
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-      event.preventDefault();
-      if (canSend) formRef.current?.requestSubmit();
-    }
-  };
-
-  const insertQuickReply = (text: string) => {
-    setReply((current) => (current.trim() ? `${current.trim()}\n\n${text}` : text));
-  };
 
   return (
     <section className="overflow-hidden rounded-3xl border border-command-cyan/20 bg-command-card shadow-premium">
@@ -361,27 +287,10 @@ export function WhatsAppSalesInbox({
             </div>
           </header>
 
-          <div className="space-y-3 border-b border-command-line bg-command-bg/45 px-5 py-3">
-            {manualReplyStatus === "sent" ? (
-              <div className="rounded-xl border border-command-green/50 bg-command-green/10 px-4 py-3 text-sm text-command-green">
-                Manual WhatsApp reply sent. Bot takeover is now active for this lead.
-              </div>
-            ) : null}
-            {manualReplyStatus === "failed" && !/NEXT_REDIRECT/i.test(manualReplyError || "") ? (
-              <div className="rounded-xl border border-command-red/50 bg-command-red/10 px-4 py-3 text-sm text-command-red">
-                Manual WhatsApp reply failed: {manualReplyError || "Unknown send error."}
-              </div>
-            ) : null}
-            {manualTestStatus === "sent" ? (
-              <div className="rounded-xl border border-command-green/50 bg-command-green/10 px-4 py-3 text-sm text-command-green">
-                Test WhatsApp message sent.
-              </div>
-            ) : null}
-            {manualTestStatus === "failed" && !/NEXT_REDIRECT/i.test(manualTestError || "") ? (
-              <div className="rounded-xl border border-command-red/50 bg-command-red/10 px-4 py-3 text-sm text-command-red">
-                Test WhatsApp send failed: {manualTestError || "Unknown send error."}
-              </div>
-            ) : null}
+          <div className="border-b border-command-line bg-command-bg/45 px-5 py-3">
+            <div className="rounded-xl border border-command-cyan/35 bg-command-cyan/10 px-4 py-3 text-sm leading-6 text-command-cyan">
+              Read-only: this lead-detail view is read-only for WhatsApp. Reply from the WhatsApp Inbox so the Command Centre uses one JSON send path.
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 py-6">
@@ -429,72 +338,20 @@ export function WhatsAppSalesInbox({
           </div>
 
           <div className="sticky bottom-0 border-t border-command-cyan/25 bg-command-card/95 p-5 backdrop-blur">
-            <div className="mb-4 flex flex-wrap gap-2">
-              {quickReplies.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => insertQuickReply(item.text)}
-                  className="rounded-full border border-command-line bg-command-panel2 px-3 py-1.5 text-xs font-semibold text-command-muted transition hover:border-command-gold/60 hover:text-command-text"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="mb-4 rounded-2xl border border-command-cyan/25 bg-command-cyan/8 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-command-text">AI Draft Assist</p>
-                  <p className="text-xs leading-5 text-command-muted">Draft only. Marcus must review, edit, and send manually.</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setAiDraft(buildAiDraft(latestInbound))}
-                    className="rounded-md border border-command-cyan/40 bg-command-cyan/10 px-3 py-2 text-sm font-semibold text-command-cyan transition hover:bg-command-cyan/15"
-                  >
-                    Generate suggested reply
-                  </button>
-                  {aiDraft ? (
-                    <button
-                      type="button"
-                      onClick={() => setReply(aiDraft)}
-                      className="rounded-md border border-command-gold/60 bg-command-gold/12 px-3 py-2 text-sm font-semibold text-command-gold transition hover:bg-command-gold/18"
-                    >
-                      Use draft
-                    </button>
-                  ) : null}
-                </div>
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-command-gold/45 bg-command-gold/10 p-4">
+              <div>
+                <p className="text-sm font-semibold text-command-text">Reply from the WhatsApp Inbox</p>
+                <p className="mt-1 text-xs leading-5 text-command-muted">
+                  The old lead-detail send form is disabled. This prevents duplicate send paths and stuck pending states.
+                </p>
               </div>
-              {aiDraft ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-command-muted">{aiDraft}</p> : null}
+              <Link
+                href={`/inbox?lead=${encodeURIComponent(lead.id)}`}
+                className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-sm font-semibold text-black transition hover:bg-command-goldHover"
+              >
+                Reply in WhatsApp Inbox
+              </Link>
             </div>
-
-            <form ref={formRef} action={sendManualWhatsAppReplyAction} onSubmit={handleSubmit}>
-              <input type="hidden" name="lead_id" value={lead.id} />
-              <label htmlFor="manual_reply_body" className="sr-only">Type your WhatsApp reply</label>
-              <div className="flex gap-3">
-                <textarea
-                  id="manual_reply_body"
-                  name="manual_reply_body"
-                  rows={5}
-                  required
-                  value={reply}
-                  onChange={(event) => setReply(event.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type your WhatsApp reply..."
-                  className="min-h-32 flex-1 resize-y rounded-2xl border border-command-line bg-command-bg px-4 py-3 text-base leading-7 text-command-text outline-none transition placeholder:text-command-muted focus:border-command-cyan"
-                />
-                <div className="flex min-w-32 flex-col justify-between gap-3">
-                  <ActionButton type="submit" disabled={!canSend}>
-                    {isSending ? "Sending..." : "Send"}
-                  </ActionButton>
-                  <p className="text-xs leading-5 text-command-muted">
-                    Ctrl+Enter or Cmd+Enter sends. Refresh-safe after send.
-                  </p>
-                </div>
-              </div>
-            </form>
           </div>
         </main>
 
@@ -569,25 +426,12 @@ export function WhatsAppSalesInbox({
 
               <details className="mt-3 rounded-xl border border-command-line bg-command-bg/55 p-4">
                 <summary className="cursor-pointer text-sm font-semibold text-command-text">Developer Test Tools</summary>
-                <form action={sendManualWhatsAppTestAction} className="mt-4 rounded-lg border border-command-line bg-command-panel2 p-4">
-                  <input type="hidden" name="lead_id" value={lead.id} />
-                  <p className="text-sm font-semibold text-command-text">Test send to Marcus first</p>
-                  <p className="mt-1 text-xs leading-5 text-command-muted">Tokens stay server-side.</p>
-                  <input
-                    name="test_recipient_phone"
-                    placeholder="Marcus test number, digits only"
-                    className="mt-3 w-full rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-cyan"
-                  />
-                  <textarea
-                    name="test_message_body"
-                    rows={3}
-                    defaultValue="LIMM Works manual WhatsApp test. Please ignore if this was not expected."
-                    className="mt-3 w-full rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-cyan"
-                  />
-                  <div className="mt-3 flex justify-end">
-                    <ActionButton type="submit" tone="muted">Send Test</ActionButton>
-                  </div>
-                </form>
+                <div className="mt-4 rounded-lg border border-command-line bg-command-panel2 p-4">
+                  <p className="text-sm font-semibold text-command-text">Legacy send tools disabled</p>
+                  <p className="mt-1 text-xs leading-5 text-command-muted">
+                    WhatsApp sending is intentionally centralized in /inbox through the JSON API path.
+                  </p>
+                </div>
               </details>
             </div>
           ) : null}

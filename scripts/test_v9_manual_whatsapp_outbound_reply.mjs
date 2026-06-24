@@ -14,60 +14,40 @@ function assert(condition, message) {
   }
 }
 
-const actions = read("lib/actions.ts");
+function assertIncludes(source, phrase, label) {
+  assert(source.includes(phrase), `${label} missing ${phrase}`);
+}
+
 const leadPage = read("app/leads/[id]/page.tsx");
-const salesInbox = read("components/WhatsAppSalesInbox.tsx");
+const legacySalesInbox = read("components/WhatsAppSalesInbox.tsx");
 const multiChatInbox = read("components/inbox/MultiChatInbox.tsx");
 const inboxPage = read("app/inbox/page.tsx");
+const sendApi = read("app/api/inbox/send/route.ts");
 const inboxMessagesApi = read("app/api/inbox/messages/route.ts");
 const leadMessagesRepository = read("lib/data/lead-messages-repository.ts");
 const adapter = read("lib/adapters/whatsapp-adapter.ts");
 const health = read("app/api/whatsapp/health/route.ts");
 
 for (const phrase of [
-  "sendManualWhatsAppReplyAction",
-  "WhatsAppCloudApiAdapter",
-  "getWhatsAppSendPayloadSummary",
-  "adapter.sendReply(lead.phone, body)",
-  "saveLeadMessage({",
-  'direction: "outbound"',
-  'whatsappStatus: "sent"',
-  'whatsappStatus: "failed"',
-  "metaMessageId",
-  "takeOverLead(leadId, actor)",
-  "pauseBotForLead(leadId",
-  "whatsapp_manual_reply_send_payload_summary",
-  "whatsapp_manual_reply_sent",
-  "whatsapp_manual_reply_failed",
-  "isNextRedirectError(error)",
-  "replaySafePostRedirect",
-  "manualReplyRedirect(formData",
-  'returnTo === "inbox"',
-  'redirect(`/inbox?lead=${encodeURIComponent(leadId)}&${query.toString()}`)',
-  'revalidatePath("/inbox")'
-]) {
-  assert(actions.includes(phrase), `manual outbound action missing ${phrase}`);
-}
-
-for (const phrase of [
-  "sendManualWhatsAppTestAction",
-  "adapter.sendReply(to, body)",
-  "whatsapp_manual_test_send_payload_summary",
-  "whatsapp_manual_test_sent",
-  "whatsapp_manual_test_failed"
-]) {
-  assert(actions.includes(phrase), `manual test send action missing ${phrase}`);
-}
-
-for (const phrase of [
   "conversationMessages",
   ".sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())",
-  "WhatsAppSalesInbox",
-  "inboxChatSummaries",
-  "listLeads()",
-  "buildInboxChatSummary"
+  "Read-only lead view",
+  "Manual WhatsApp replies now happen only in the WhatsApp Inbox",
+  "Reply in WhatsApp Inbox",
+  "href={`/inbox?lead=${encodeURIComponent(lead.id)}`"
 ]) {
-  assert(leadPage.includes(phrase), `lead page missing inbox split phrase ${phrase}`);
+  assertIncludes(leadPage, phrase, "lead detail read-only WhatsApp routing");
+}
+
+for (const forbidden of [
+  "WhatsAppSalesInbox",
+  "sendManualWhatsAppReplyAction",
+  "sendManualWhatsAppTestAction",
+  'name="manual_reply_body"',
+  "Test send to Marcus first",
+  "Sending..."
+]) {
+  assert(!leadPage.includes(forbidden), `/leads/[id] must not expose active WhatsApp send path: ${forbidden}`);
 }
 
 for (const phrase of [
@@ -75,37 +55,14 @@ for (const phrase of [
   "Sales Inbox",
   "WhatsApp Leads",
   "Search name, phone, message, property",
-  "Waiting for Marcus",
-  "Waiting for client",
-  "Human takeover",
-  "Failed send",
-  'name="manual_reply_body"',
-  "Type your WhatsApp reply...",
-  "Ask for floor plan/photos",
-  "Ask property type",
-  "Ask scope",
-  "Ask appointment preference",
-  "Instagram portfolio",
-  "Acknowledge and review",
-  "AI Draft Assist",
-  "Generate suggested reply",
-  "Draft only. Marcus must review, edit, and send manually.",
-  "Send",
-  "Manual WhatsApp reply sent",
-  "Manual WhatsApp reply failed",
-  "Test send to Marcus first",
-  "Send Test",
-  "Bot takeover is now active",
-  "Developer Test Tools",
+  "Read-only",
+  "Reply in WhatsApp Inbox",
+  "href={`/inbox?lead=${encodeURIComponent(lead.id)}`",
+  "Legacy send tools disabled",
   "Technical Audit",
   "WhatsApp Delivery Details",
   "scrollIntoView",
   "bottomRef",
-  "sticky bottom-0",
-  "event.ctrlKey || event.metaKey",
-  "requestSubmit",
-  "disabled={!canSend}",
-  "isSending ? \"Sending...\" : \"Send\"",
   "justify-end",
   "justify-start",
   "rounded-br-md",
@@ -114,13 +71,21 @@ for (const phrase of [
   "displayMessageStatus",
   "providerMessageId"
 ]) {
-  assert(salesInbox.includes(phrase), `sales inbox missing manual inbox UI phrase ${phrase}`);
+  assertIncludes(legacySalesInbox, phrase, "legacy read-only WhatsApp component");
 }
 
-assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(leadPage), "lead page must not reference WhatsApp server credentials.");
-assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(salesInbox), "sales inbox must not reference WhatsApp server credentials.");
-assert(!salesInbox.includes("<details open"), "developer tools, delivery details, and audit trail must be collapsed by default.");
-assert(!salesInbox.includes("from $"), "sales inbox must not include price/package quick replies.");
+for (const forbidden of [
+  "sendManualWhatsAppReplyAction",
+  "sendManualWhatsAppTestAction",
+  'name="manual_reply_body"',
+  "Type your WhatsApp reply...",
+  "isSending ? \"Sending...\" : \"Send\"",
+  "requestSubmit",
+  "Send Test",
+  "form ref={formRef}"
+]) {
+  assert(!legacySalesInbox.includes(forbidden), `legacy WhatsApp component must not keep active send path: ${forbidden}`);
+}
 
 for (const phrase of [
   "WhatsAppInboxPage",
@@ -130,10 +95,9 @@ for (const phrase of [
   "listLeadMessagesPage(selectedLead.id, 30)",
   "listAllLeadFiles()",
   "slice(0, 30)",
-  "buildSummary",
-  "manualReplyStatus={searchParams?.manualReplyStatus}"
+  "buildSummary"
 ]) {
-  assert(inboxPage.includes(phrase), `/inbox page missing ${phrase}`);
+  assertIncludes(inboxPage, phrase, "/inbox page");
 }
 
 assert(!inboxPage.includes("listLeadMessages(lead.id)"), "/inbox must not load full message history for every chat.");
@@ -145,18 +109,20 @@ for (const phrase of [
   "memo(function MessageBubble",
   "memo(function LeadContextPanel",
   "function ReplyComposer",
-  "WhatsApp Sales Inbox",
-  "Conversations",
-  "Search name, phone, message, property",
+  "LIMM WhatsApp Inbox",
+  "Queue",
   "Next waiting chat",
-  "Unread",
   "Waiting for Marcus",
   "Waiting for client",
   "Human takeover",
   "Failed send",
   'fetch("/api/inbox/send"',
-  'fetch("/api/inbox/conversations"',
   "clientTempId",
+  "sendingByLeadId",
+  "handleSendStarted",
+  "handleSendFinished",
+  "finishOnce",
+  "settleOnce",
   "isLegacyRedirectFailure(message)",
   "optimisticReplies",
   "onSendSettled",
@@ -164,15 +130,7 @@ for (const phrase of [
   "selectConversation",
   "window.history.replaceState",
   "Load earlier messages",
-  "fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeConversation.lead.id)}",
   "after=${encodeURIComponent(latestPersistedCursor)}",
-  "Ask property type/scope",
-  "Ask floor plan/photos",
-  "Ask appointment preference",
-  "Instagram portfolio",
-  "Ask design/reference images",
-  "Team review handoff",
-  "May I know if this is for a condo, HDB, landed property, or commercial unit?",
   "Generate AI Draft",
   "Draft only. Marcus must review, edit, and send manually.",
   'placeholder="Type WhatsApp reply..."',
@@ -180,29 +138,51 @@ for (const phrase of [
   "event.key === \"Escape\"",
   "disabled={!canSend}",
   "onOptimisticReply",
-  "Mark waiting for client",
-  "Mark closed/lost/done",
-  "Pause bot",
-  "Resume bot",
   "WhatsApp Delivery Details",
   "Technical Audit",
   "showDeliveryDetails ?",
   "showTechnicalAudit ?",
-  "onToggle={(event) => setShowDeliveryDetails(event.currentTarget.open)}",
   "providerMessageId",
   "NEXT_REDIRECT",
   "messageStatus(message)"
 ]) {
-  assert(multiChatInbox.includes(phrase), `multi-chat inbox missing ${phrase}`);
+  assertIncludes(multiChatInbox, phrase, "single active /inbox reply path");
 }
 
-assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(inboxPage), "/inbox page must not reference WhatsApp server credentials.");
-assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(multiChatInbox), "multi-chat inbox must not reference WhatsApp server credentials.");
-assert(!multiChatInbox.includes("<details open"), "multi-chat technical panels must be collapsed by default.");
-assert(!multiChatInbox.includes("from $"), "multi-chat inbox must not include price/package quick replies.");
-assert(!multiChatInbox.includes("sendManualWhatsAppReplyAction"), "multi-chat inbox must not use redirect-based send action.");
-assert(!multiChatInbox.includes("router.refresh()"), "multi-chat inbox must not refresh the full route for polling.");
-assert(!multiChatInbox.includes("useRouter"), "multi-chat inbox must not depend on router navigation for chat switching.");
+for (const forbidden of [
+  "sendManualWhatsAppReplyAction",
+  "router.refresh()",
+  "useRouter",
+  'action={sendManualWhatsAppReplyAction}',
+  "formAction",
+  "useTransition"
+]) {
+  assert(!multiChatInbox.includes(forbidden), `/inbox must not use legacy send machinery: ${forbidden}`);
+}
+
+for (const phrase of [
+  "POST(request: Request)",
+  "request.json()",
+  "clientTempId",
+  "WhatsAppCloudApiAdapter",
+  "adapter.sendReply(lead.phone, body)",
+  "saveLeadMessage({",
+  'direction: "outbound"',
+  'whatsappStatus: "sent"',
+  'whatsappStatus: "failed"',
+  "takeOverLead(leadId, actor)",
+  "pauseBotForLead(leadId",
+  "NextResponse.json({",
+  "inboxJsonApiSend: true",
+  "replaySafeJsonPost: true",
+  "noTokenLogged: true"
+]) {
+  assertIncludes(sendApi, phrase, "POST /api/inbox/send");
+}
+
+assert(!sendApi.includes("redirect("), "POST /api/inbox/send must not redirect.");
+assert(!sendApi.includes("revalidatePath"), "POST /api/inbox/send must not revalidate the whole inbox.");
+assert(!sendApi.includes("sendManualWhatsAppReplyAction"), "POST /api/inbox/send must not call the old server action.");
 
 for (const phrase of [
   "export async function listLatestLeadMessagesForInbox",
@@ -211,9 +191,11 @@ for (const phrase of [
   "export async function listLeadMessagesPage",
   ".limit(limit + 1)",
   "hasOlder",
-  "oldestCursor"
+  "oldestCursor",
+  "export async function listLeadMessagesAfter",
+  ".gt(\"created_at\", after)"
 ]) {
-  assert(leadMessagesRepository.includes(phrase), `lead message repository missing performance helper ${phrase}`);
+  assertIncludes(leadMessagesRepository, phrase, "lead message repository performance helpers");
 }
 
 for (const phrase of [
@@ -224,15 +206,7 @@ for (const phrase of [
   "oldestCursor",
   "unauthorized"
 ]) {
-  assert(inboxMessagesApi.includes(phrase), `inbox message API missing ${phrase}`);
-}
-
-for (const phrase of [
-  "export async function listLeadMessagesAfter",
-  ".gt(\"created_at\", after)",
-  ".order(\"created_at\", { ascending: true })"
-]) {
-  assert(leadMessagesRepository.includes(phrase), `lead message repository missing new-message polling helper ${phrase}`);
+  assertIncludes(inboxMessagesApi, phrase, "inbox message API");
 }
 
 for (const phrase of [
@@ -243,24 +217,23 @@ for (const phrase of [
   "normalizeWhatsAppPhone(process.env.WHATSAPP_PHONE_NUMBER_ID",
   "Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`"
 ]) {
-  assert(adapter.includes(phrase), `known-good WhatsApp adapter contract missing ${phrase}`);
+  assertIncludes(adapter, phrase, "known-good WhatsApp adapter contract");
 }
 
 for (const phrase of [
   "manualWhatsappOutboundReplyAvailable: true",
   "leadConversationTimelineAvailable: true",
   "manualTakeoverOnReplyAvailable: true",
-  "whatsappManualTestSendAvailable: true",
-  "replaySafeManualReplyPostRedirect: true",
   "priceGuideOnHold: true",
   "calendarAutoBookingEnabled: calendar.autoBookingEnabled",
   "voiceTranscriptionEnabled: false"
 ]) {
-  assert(health.includes(phrase), `health proof missing ${phrase}`);
+  assertIncludes(health, phrase, "health proof");
 }
 
-assert(!actions.includes("autoPricingEnabled: true"), "manual WhatsApp reply must not enable auto-pricing.");
-assert(!actions.includes("calendarAutoBookingEnabled: true"), "manual WhatsApp reply must not enable calendar auto-booking.");
-assert(!actions.includes("voiceTranscriptionEnabled: true"), "manual WhatsApp reply must not enable voice transcription.");
+assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(leadPage), "lead page must not reference WhatsApp server credentials.");
+assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(legacySalesInbox), "legacy read-only component must not reference WhatsApp server credentials.");
+assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(multiChatInbox), "/inbox client must not reference WhatsApp server credentials.");
+assert(!multiChatInbox.includes("from $"), "/inbox must not include price/package quick replies.");
 
-console.log("PASS: v9 manual WhatsApp outbound reply static test passed.");
+console.log("PASS: v9 manual WhatsApp outbound reply single-path static test passed.");
