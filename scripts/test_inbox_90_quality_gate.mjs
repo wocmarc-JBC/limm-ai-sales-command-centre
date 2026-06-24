@@ -125,6 +125,12 @@ for (const phrase of [
   "Use draft",
   "setReply(aiDraft)",
   'fetch("/api/inbox/send"',
+  "SEND_TIMEOUT_MS = 15000",
+  "new AbortController()",
+  "signal: controller.signal",
+  "window.clearTimeout(timeoutId)",
+  "send_timeout",
+  "setIsSending(false)",
   "Ctrl+Enter or Cmd+Enter sends"
 ]) {
   assertIncludes(inboxClient, phrase, "isolated manual composer");

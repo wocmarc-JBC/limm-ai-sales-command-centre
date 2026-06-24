@@ -133,6 +133,8 @@ const quickReplies = [
   }
 ];
 
+const SEND_TIMEOUT_MS = 15000;
+
 const internalTestSignals = [
   "marcus",
   "fio",
@@ -220,6 +222,10 @@ function messageClientTempId(message: LeadMessage) {
 
 function isNextRedirectOnly(error: unknown) {
   return typeof error === "string" && /NEXT_REDIRECT/i.test(error);
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 function isLegacyRedirectFailure(message: LeadMessage) {
@@ -515,11 +521,15 @@ function ReplyComposer({
     setReply("");
     setIsSending(true);
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+
     try {
       const response = await fetch("/api/inbox/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId, body, clientTempId })
+        body: JSON.stringify({ leadId, body, clientTempId }),
+        signal: controller.signal
       });
       const data = await response.json().catch(() => ({}));
       const result: SendResult = {
@@ -537,15 +547,19 @@ function ReplyComposer({
       onSendSettled(leadId, clientTempId, result);
       if (!result.ok) setReply(body);
     } catch (error) {
+      const timedOut = isAbortError(error);
       onSendSettled(leadId, clientTempId, {
         ok: false,
         leadId,
         clientTempId,
-        errorCode: "network_error",
-        errorMessage: error instanceof Error ? error.message : "Network error while sending WhatsApp reply."
+        errorCode: timedOut ? "send_timeout" : "network_error",
+        errorMessage: timedOut
+          ? "WhatsApp send timed out after 15 seconds. Please check the conversation before retrying."
+          : error instanceof Error ? error.message : "Network error while sending WhatsApp reply."
       });
       setReply(body);
     } finally {
+      window.clearTimeout(timeoutId);
       setIsSending(false);
     }
   };
