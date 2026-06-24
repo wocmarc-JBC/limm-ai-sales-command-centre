@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
-import { listLeadMessages } from "@/lib/data/lead-messages-repository";
+import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadIntakePlan } from "@/lib/lead-intake";
@@ -78,16 +78,27 @@ export default async function WhatsAppInboxPage({
     listAllLeadFiles()
   ]);
   const activeLeads = leads.slice(0, 30);
-  const conversations: MultiChatConversation[] = (await Promise.all(activeLeads.map(async (lead) => {
-    const [messages, auditLogs] = await Promise.all([
-      listLeadMessages(lead.id),
-      listAuditLogs({ entityType: "lead", entityId: lead.id })
-    ]);
-    const orderedMessages = [...messages]
-      .filter((message) => message.channel === "whatsapp")
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const leadIds = activeLeads.map((lead) => lead.id);
+  const summaryMessagesByLead = await listLatestLeadMessagesForInbox(leadIds, 3);
+  const defaultSelectedLeadId = searchParams?.lead && activeLeads.some((lead) => lead.id === searchParams.lead)
+    ? searchParams.lead
+    : activeLeads[0]?.id;
+  const selectedLead = activeLeads.find((lead) => lead.id === defaultSelectedLeadId);
+  const [selectedPage, selectedAuditLogs] = selectedLead
+    ? await Promise.all([
+      listLeadMessagesPage(selectedLead.id, 30),
+      listAuditLogs({ entityType: "lead", entityId: selectedLead.id })
+    ])
+    : [{ messages: [], hasOlder: false, oldestCursor: null }, []];
+
+  const conversations: MultiChatConversation[] = activeLeads.map((lead) => {
+    const summaryMessages = summaryMessagesByLead.get(lead.id) ?? [];
+    const selected = lead.id === selectedLead?.id;
+    const orderedMessages = selected
+      ? selectedPage.messages
+      : [...summaryMessages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const leadFiles = allFiles.filter((file) => file.leadId === lead.id);
-    const summary = buildSummary(lead, orderedMessages, leadFiles);
+    const summary = buildSummary(lead, summaryMessages, leadFiles);
     const intakePlan = buildLeadIntakePlan(lead, orderedMessages);
     const intakeProfile = intakePlan.profile;
     const location = inferLeadLocation(lead);
@@ -107,7 +118,9 @@ export default async function WhatsAppInboxPage({
         nextAction: next.action,
         nextReason: next.reason
       },
-      auditTrail: auditLogs
+      hasOlderMessages: selected ? selectedPage.hasOlder : false,
+      oldestMessageCursor: selected ? selectedPage.oldestCursor : null,
+      auditTrail: selectedAuditLogs
         .filter((entry) => entry.action.startsWith("whatsapp_"))
         .slice(0, 8)
         .map((entry) => ({
@@ -117,7 +130,7 @@ export default async function WhatsAppInboxPage({
           createdAt: entry.createdAt
         }))
     };
-  }))).sort((a, b) => new Date(b.summary.lastActivityAt).getTime() - new Date(a.summary.lastActivityAt).getTime());
+  }).sort((a, b) => new Date(b.summary.lastActivityAt).getTime() - new Date(a.summary.lastActivityAt).getTime());
 
   return (
     <>

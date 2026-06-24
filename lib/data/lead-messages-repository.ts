@@ -199,6 +199,77 @@ export async function listLeadMessages(leadId: string) {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
+export async function listLatestLeadMessagesForInbox(leadIds: string[], perLead = 3) {
+  const uniqueLeadIds = Array.from(new Set(leadIds.filter(Boolean)));
+  if (!uniqueLeadIds.length) return new Map<string, LeadMessage[]>();
+
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase!
+      .from("lead_messages")
+      .select("*")
+      .in("lead_id", uniqueLeadIds)
+      .eq("channel", "whatsapp")
+      .order("created_at", { ascending: false })
+      .limit(Math.max(uniqueLeadIds.length * perLead * 2, uniqueLeadIds.length));
+    if (!error && data) {
+      const grouped = new Map<string, LeadMessage[]>();
+      for (const row of data.map(mapLeadMessageRow)) {
+        const current = grouped.get(row.leadId) ?? [];
+        if (current.length < perLead) {
+          current.push(row);
+          grouped.set(row.leadId, current);
+        }
+      }
+      return grouped;
+    }
+  }
+
+  const grouped = new Map<string, LeadMessage[]>();
+  for (const message of mockClone(getMockStore().leadMessages)
+    .filter((item) => uniqueLeadIds.includes(item.leadId) && item.channel === "whatsapp")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))) {
+    const current = grouped.get(message.leadId) ?? [];
+    if (current.length < perLead) {
+      current.push(message);
+      grouped.set(message.leadId, current);
+    }
+  }
+  return grouped;
+}
+
+export async function listLeadMessagesPage(leadId: string, limit = 30, before?: string) {
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseServerClient();
+    let query = supabase!
+      .from("lead_messages")
+      .select("*")
+      .eq("lead_id", leadId)
+      .eq("channel", "whatsapp")
+      .order("created_at", { ascending: false })
+      .limit(limit + 1);
+    if (before) query = query.lt("created_at", before);
+    const { data, error } = await query;
+    if (!error && data) {
+      const rows = data.map(mapLeadMessageRow);
+      return {
+        messages: rows.slice(0, limit).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+        hasOlder: rows.length > limit,
+        oldestCursor: rows[Math.min(rows.length, limit) - 1]?.createdAt ?? null
+      };
+    }
+  }
+
+  const all = mockClone(getMockStore().leadMessages)
+    .filter((message) => message.leadId === leadId && message.channel === "whatsapp" && (!before || message.createdAt < before))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return {
+    messages: all.slice(0, limit).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    hasOlder: all.length > limit,
+    oldestCursor: all[Math.min(all.length, limit) - 1]?.createdAt ?? null
+  };
+}
+
 export async function listRecentLeadMessagesForWebhook(leadId: string, limit = 8) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();

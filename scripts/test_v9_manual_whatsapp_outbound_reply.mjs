@@ -19,6 +19,8 @@ const leadPage = read("app/leads/[id]/page.tsx");
 const salesInbox = read("components/WhatsAppSalesInbox.tsx");
 const multiChatInbox = read("components/inbox/MultiChatInbox.tsx");
 const inboxPage = read("app/inbox/page.tsx");
+const inboxMessagesApi = read("app/api/inbox/messages/route.ts");
+const leadMessagesRepository = read("lib/data/lead-messages-repository.ts");
 const adapter = read("lib/adapters/whatsapp-adapter.ts");
 const health = read("app/api/whatsapp/health/route.ts");
 
@@ -123,7 +125,8 @@ for (const phrase of [
   "WhatsAppInboxPage",
   "MultiChatInbox",
   "listLeads()",
-  "listLeadMessages(lead.id)",
+  "listLatestLeadMessagesForInbox(leadIds, 3)",
+  "listLeadMessagesPage(selectedLead.id, 30)",
   "listAllLeadFiles()",
   "slice(0, 30)",
   "buildSummary",
@@ -132,8 +135,14 @@ for (const phrase of [
   assert(inboxPage.includes(phrase), `/inbox page missing ${phrase}`);
 }
 
+assert(!inboxPage.includes("listLeadMessages(lead.id)"), "/inbox must not load full message history for every chat.");
+assert(!inboxPage.includes("listAuditLogs({ entityType: \"lead\", entityId: lead.id })"), "/inbox must not load audit logs for every chat.");
+
 for (const phrase of [
   '"use client"',
+  "memo(function ChatRow",
+  "memo(function MessageBubble",
+  "function ReplyComposer",
   "WhatsApp Sales Inbox",
   "Conversations",
   "Search name, phone, message, property",
@@ -145,7 +154,9 @@ for (const phrase of [
   "Failed send",
   "window.setInterval(() => router.refresh(), 12000)",
   "selectConversation",
-  "window.history.replaceState",
+  "router.replace(`/inbox?lead=${encodeURIComponent(leadId)}`",
+  "Load earlier messages",
+  "fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeConversation.lead.id)}",
   "Ask property type/scope",
   "Ask floor plan/photos",
   "Ask appointment preference",
@@ -162,12 +173,16 @@ for (const phrase of [
   "event.key === \"Escape\"",
   "disabled={!canSend}",
   "optimisticReplies",
+  "onOptimisticReply",
   "Mark waiting for client",
   "Mark closed/lost/done",
   "Pause bot",
   "Resume bot",
   "WhatsApp Delivery Details",
   "Technical Audit",
+  "showDeliveryDetails ?",
+  "showTechnicalAudit ?",
+  "onToggle={(event) => setShowDeliveryDetails(event.currentTarget.open)}",
   "providerMessageId",
   "NEXT_REDIRECT",
   "messageStatus(message)"
@@ -179,6 +194,28 @@ assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(inboxPage), "/inbo
 assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(multiChatInbox), "multi-chat inbox must not reference WhatsApp server credentials.");
 assert(!multiChatInbox.includes("<details open"), "multi-chat technical panels must be collapsed by default.");
 assert(!multiChatInbox.includes("from $"), "multi-chat inbox must not include price/package quick replies.");
+
+for (const phrase of [
+  "export async function listLatestLeadMessagesForInbox",
+  ".in(\"lead_id\", uniqueLeadIds)",
+  ".limit(Math.max(uniqueLeadIds.length * perLead * 2, uniqueLeadIds.length))",
+  "export async function listLeadMessagesPage",
+  ".limit(limit + 1)",
+  "hasOlder",
+  "oldestCursor"
+]) {
+  assert(leadMessagesRepository.includes(phrase), `lead message repository missing performance helper ${phrase}`);
+}
+
+for (const phrase of [
+  "export async function GET",
+  "listLeadMessagesPage(leadId, 30, before)",
+  "hasOlder",
+  "oldestCursor",
+  "unauthorized"
+]) {
+  assert(inboxMessagesApi.includes(phrase), `inbox message API missing ${phrase}`);
+}
 
 for (const phrase of [
   'messaging_product: "whatsapp"',
