@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/ActionButton";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { WhatsAppSalesInbox, type InboxChatSummary } from "@/components/WhatsAppSalesInbox";
 import {
   approveAppointmentBookingAction,
   archiveLeadAction,
@@ -24,8 +25,6 @@ import {
   resumeBotForLeadAction,
   reviewAiDraftAction,
   saveLeadIntakeProfileAction,
-  sendManualWhatsAppReplyAction,
-  sendManualWhatsAppTestAction,
   softDeleteLeadAction,
   takeOverLeadAction,
   updateLeadStatusAction,
@@ -43,7 +42,7 @@ import {
   listLeadUploadLinks
 } from "@/lib/data/lead-files-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
-import { getLeadById } from "@/lib/data/leads-repository";
+import { getLeadById, listLeads } from "@/lib/data/leads-repository";
 import { getQuotationReadinessForLead } from "@/lib/data/quotation-repository";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
 import { buildLeadIntakePlan, MAX_INTAKE_QUESTIONS } from "@/lib/lead-intake";
@@ -53,7 +52,7 @@ import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
 import { inferLeadLocation } from "@/lib/singapore-location";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
-import type { AiDraftReviewStatus, AiDryRunRecommendation, LeadFileCategory, LeadStatus } from "@/lib/types";
+import type { AiDraftReviewStatus, AiDryRunRecommendation, Lead, LeadFileCategory, LeadMessage, LeadStatus } from "@/lib/types";
 
 const statuses: LeadStatus[] = [
   "New Enquiry",
@@ -120,6 +119,47 @@ function getValidationDisplay(recommendation: AiDryRunRecommendation) {
   };
 }
 
+function latestWhatsAppMessage(messages: LeadMessage[]) {
+  return [...messages]
+    .filter((message) => message.channel === "whatsapp")
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
+}
+
+function buildInboxChatSummary(lead: Lead, messages: LeadMessage[]): InboxChatSummary {
+  const latestMessage = latestWhatsAppMessage(messages);
+  const latestActivityAt = latestMessage?.createdAt ?? lead.updatedAt ?? lead.createdAt;
+  const lastInbound = [...messages]
+    .filter((message) => message.channel === "whatsapp" && message.direction === "inbound")
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  const lastReplyAt = lead.lastReplyAt ? new Date(lead.lastReplyAt).getTime() : 0;
+  const unread = lastInbound ? new Date(lastInbound.createdAt).getTime() > lastReplyAt : false;
+  const failedSend = messages.some((message) => (
+    message.channel === "whatsapp" &&
+    message.direction === "outbound" &&
+    message.whatsappStatus === "failed" &&
+    !message.providerMessageId &&
+    !/NEXT_REDIRECT/i.test(typeof message.metadata?.error === "string" ? message.metadata.error : "")
+  ));
+
+  return {
+    id: lead.id,
+    displayName: formatLeadDisplayName(lead),
+    phone: lead.phone,
+    status: lead.status,
+    botPaused: Boolean(lead.botPaused),
+    needsMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded),
+    propertyType: lead.propertyType,
+    scopeSummary: lead.scopeSummary,
+    lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
+    lastActivityAt: latestActivityAt,
+    unread,
+    failedSend,
+    waitingForClient: lead.status === "Awaiting Client",
+    waitingForMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded || unread),
+    source: lead.source
+  };
+}
+
 export default async function LeadDetailPage({
   params,
   searchParams
@@ -143,6 +183,16 @@ export default async function LeadDetailPage({
   const readiness = await getQuotationReadinessForLead(lead.id);
   const aiRecommendation = await getLatestAiRecommendationForLead(lead.id);
   const leadMessages = await listLeadMessages(lead.id);
+  const allInboxLeads = await listLeads();
+  const inboxSourceLeads = allInboxLeads.some((item) => item.id === lead.id)
+    ? allInboxLeads
+    : [lead, ...allInboxLeads];
+  const inboxChatSummaries = (await Promise.all(
+    inboxSourceLeads.slice(0, 80).map(async (item) => {
+      const messages = item.id === lead.id ? leadMessages : await listLeadMessages(item.id);
+      return buildInboxChatSummary(item, messages);
+    })
+  )).sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime());
   const leadFiles = await listLeadFiles(lead.id);
   const leadUploadLinks = await listLeadUploadLinks(lead.id);
   const signedFileUrls = new Map<string, string>(
@@ -226,7 +276,37 @@ export default async function LeadDetailPage({
           <ActionButton type="submit" tone="muted">Move to Quotation Review</ActionButton>
         </form>
       </PageHeader>
-      <section className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <WhatsAppSalesInbox
+        lead={lead}
+        displayName={displayName}
+        leadLevel={leadLevel}
+        chatSummaries={inboxChatSummaries}
+        messages={conversationMessages}
+        auditTrail={whatsappAuditTrail.map((entry) => ({
+          id: entry.id,
+          action: entry.action,
+          summary: entry.summary,
+          createdAt: entry.createdAt
+        }))}
+        context={{
+          budgetExpectation: intakeProfile.budgetExpectation || "Not collected yet",
+          floorPlanStatus: hasFloorPlanFile || intakeProfile.floorPlanStatus ? "Received / available" : "Not received yet",
+          sitePhotosStatus: hasSitePhotosFile || intakeProfile.sitePhotosStatus ? "Received / available" : "Not received yet",
+          appointmentPreference: intakeProfile.preferredMeetingTiming || lead.preferredContactTime || "Not provided yet",
+          addressOrArea: intakeProfile.propertyAreaOrAddress || lead.projectAddress || lead.propertyArea || leadLocation.area || "Not provided yet",
+          notes: lead.stageNotes || lead.conversationSummary || buildConversationSummary(lead),
+          nextAction: next.action,
+          nextReason: next.reason
+        }}
+        whatsappStatusLabel={whatsapp.statusLabel}
+        liveModeLabel={whatsapp.liveAutoReplyApproved ? "Marcus-approved live mode" : "Closed test mode available"}
+        publicAutoReplyLabel={whatsapp.publicAutoReplyEnabled ? "Public auto-reply enabled by Marcus" : "Public auto-reply disabled"}
+        manualReplyStatus={searchParams?.manualReplyStatus}
+        manualReplyError={searchParams?.manualReplyError}
+        manualTestStatus={searchParams?.manualTestStatus}
+        manualTestError={searchParams?.manualTestError}
+      />
+      <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
           <div className="flex flex-wrap gap-2">
             <StatusBadge label={lead.leadCategory} />
@@ -642,136 +722,6 @@ export default async function LeadDetailPage({
               No recent activity yet. New WhatsApp messages, bot replies, and audit events will appear here once recorded.
             </div>
           )}
-        </div>
-      </section>
-      <section className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">WhatsApp Conversation</p>
-            <h2 className="mt-1 text-xl font-semibold">Manual reply and message timeline</h2>
-            <p className="mt-2 max-w-3xl text-sm text-command-muted">
-              {whatsapp.statusLabel}. Messages are displayed oldest to newest. Manual replies pause the bot for human takeover after send.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs font-semibold">
-            {[
-              whatsapp.liveAutoReplyApproved ? "Marcus-approved live mode" : "Closed test mode available",
-              whatsapp.publicAutoReplyEnabled ? "Public auto-reply enabled by Marcus" : "Public auto-reply disabled",
-              lead.botPaused ? "Bot paused for this lead" : "Bot active until Marcus replies",
-              "No pricing / no Calendar booking / no voice transcription"
-            ].map((label) => (
-              <span key={label} className="rounded border border-command-line bg-command-panel2 px-3 py-1 text-command-muted">
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-        {searchParams?.manualReplyStatus === "sent" ? (
-          <div className="mt-5 rounded-lg border border-command-green/50 bg-command-green/10 p-4 text-sm text-command-green">
-            Manual WhatsApp reply sent. Meta message id: {searchParams.metaMessageId || "recorded"}. Bot takeover is now active for this lead.
-          </div>
-        ) : null}
-        {searchParams?.manualReplyStatus === "failed" ? (
-          <div className="mt-5 rounded-lg border border-command-red/50 bg-command-red/10 p-4 text-sm text-command-red">
-            Manual WhatsApp reply failed: {searchParams.manualReplyError || "Unknown send error."}
-          </div>
-        ) : null}
-        {searchParams?.manualTestStatus === "sent" ? (
-          <div className="mt-5 rounded-lg border border-command-green/50 bg-command-green/10 p-4 text-sm text-command-green">
-            Test WhatsApp message sent. Meta message id: {searchParams.manualTestMetaMessageId || "recorded"}.
-          </div>
-        ) : null}
-        {searchParams?.manualTestStatus === "failed" ? (
-          <div className="mt-5 rounded-lg border border-command-red/50 bg-command-red/10 p-4 text-sm text-command-red">
-            Test WhatsApp send failed: {searchParams.manualTestError || "Unknown send error."}
-          </div>
-        ) : null}
-        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-          <div className="space-y-3">
-            {conversationMessages.length ? conversationMessages.map((message) => (
-              <div
-                key={message.id}
-                className={`rounded border p-4 ${
-                  message.direction === "outbound"
-                    ? "border-command-cyan/35 bg-command-cyan/10"
-                    : "border-command-line bg-command-panel2"
-                }`}
-              >
-                <div className="flex flex-wrap justify-between gap-2 text-xs text-command-muted">
-                  <span>{message.direction === "inbound" ? "Client WhatsApp" : message.metadata?.manualReply ? "Marcus manual WhatsApp" : "System WhatsApp reply"}</span>
-                  <span>Status: {humanizeLabel(message.whatsappStatus || "recorded")}</span>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm">{message.body}</p>
-                <p className="mt-2 text-xs text-command-muted">
-                  Meta message id: {message.providerMessageId || "Not provided"} | {message.createdAt}
-                </p>
-                {message.whatsappStatus === "failed" ? (
-                  <p className="mt-2 rounded border border-command-red/40 bg-command-red/10 p-2 text-xs text-command-red">
-                    Failed send reason: {typeof message.metadata?.error === "string" ? message.metadata.error : "Check audit log for details."}
-                  </p>
-                ) : null}
-              </div>
-            )) : (
-              <p className="rounded border border-command-line bg-command-panel2 p-4 text-sm text-command-muted">
-                No WhatsApp messages saved for this lead yet.
-              </p>
-            )}
-          </div>
-          <aside className="space-y-4">
-            <form action={sendManualWhatsAppReplyAction} className="rounded border border-command-cyan/35 bg-command-panel2 p-4">
-              <input type="hidden" name="lead_id" value={lead.id} />
-              <p className="text-sm font-semibold text-command-text">Manual WhatsApp reply</p>
-              <p className="mt-1 text-xs text-command-muted">
-                Sends from the connected Meta WhatsApp number to {lead.phone || "this lead"}. This does not generate prices or book appointments.
-              </p>
-              <textarea
-                name="manual_reply_body"
-                rows={6}
-                required
-                placeholder="Type Marcus's WhatsApp reply here..."
-                className="mt-3 w-full rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-cyan"
-              />
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <span className="text-xs text-command-muted">Refresh-safe: the page redirects after send.</span>
-                <ActionButton type="submit">Send WhatsApp</ActionButton>
-              </div>
-            </form>
-            <form action={sendManualWhatsAppTestAction} className="rounded border border-command-line bg-command-panel2 p-4">
-              <input type="hidden" name="lead_id" value={lead.id} />
-              <p className="text-sm font-semibold text-command-text">Test send to Marcus first</p>
-              <p className="mt-1 text-xs text-command-muted">
-                Use Marcus&apos;s own WhatsApp number here before replying to a real lead. Tokens stay server-side.
-              </p>
-              <input
-                name="test_recipient_phone"
-                placeholder="Marcus test number, digits only"
-                className="mt-3 w-full rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-cyan"
-              />
-              <textarea
-                name="test_message_body"
-                rows={3}
-                defaultValue="LIMM Works manual WhatsApp test. Please ignore if this was not expected."
-                className="mt-3 w-full rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-cyan"
-              />
-              <div className="mt-3 flex justify-end">
-                <ActionButton type="submit" tone="muted">Send Test</ActionButton>
-              </div>
-            </form>
-            <div className="rounded border border-command-line bg-command-panel2 p-4">
-              <p className="text-sm font-semibold">WhatsApp audit trail</p>
-              <div className="mt-3 space-y-3">
-                {whatsappAuditTrail.length ? whatsappAuditTrail.map((entry) => (
-                  <div key={entry.id} className="border-b border-command-line pb-3 text-sm last:border-b-0">
-                    <p className="font-semibold">{entry.action}</p>
-                    <p className="text-command-muted">{entry.summary}</p>
-                    <p className="mt-1 text-xs text-command-muted">{entry.createdAt}</p>
-                  </div>
-                )) : (
-                  <p className="text-sm text-command-muted">No WhatsApp audit events for this lead yet.</p>
-                )}
-              </div>
-            </div>
-          </aside>
         </div>
       </section>
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_24rem]">

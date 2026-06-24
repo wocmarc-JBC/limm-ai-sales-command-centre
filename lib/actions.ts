@@ -82,6 +82,13 @@ function leadReplyRedirect(leadId: string, params: Record<string, string>): neve
   redirect(`/leads/${encodeURIComponent(leadId)}?${query.toString()}`);
 }
 
+function manualReplyRedirect(formData: FormData, leadId: string, params: Record<string, string>): never {
+  const query = new URLSearchParams(params);
+  const returnTo = text(formData, "return_to").trim();
+  if (returnTo === "inbox") redirect(`/inbox?lead=${encodeURIComponent(leadId)}&${query.toString()}`);
+  leadReplyRedirect(leadId, params);
+}
+
 function parseSlot(value: string, fallback: Array<{ start: string; end: string }>) {
   const slots = value
     .split(",")
@@ -289,14 +296,14 @@ export async function uploadClientFileByTokenAction(formData: FormData) {
 export async function sendManualWhatsAppReplyAction(formData: FormData) {
   const permission = await requirePermission("control_bot");
   const leadId = text(formData, "lead_id");
-  if (!permission.ok) leadReplyRedirect(leadId, { manualReplyStatus: "failed", manualReplyError: permission.error || "Permission denied." });
+  if (!permission.ok) manualReplyRedirect(formData, leadId, { manualReplyStatus: "failed", manualReplyError: permission.error || "Permission denied." });
 
   const body = text(formData, "manual_reply_body").trim();
   if (!leadId) redirect("/leads?manualReplyStatus=failed&manualReplyError=Missing%20lead%20id");
-  if (!body) leadReplyRedirect(leadId, { manualReplyStatus: "failed", manualReplyError: "Reply message is empty." });
+  if (!body) manualReplyRedirect(formData, leadId, { manualReplyStatus: "failed", manualReplyError: "Reply message is empty." });
 
   const lead = await getLeadById(leadId);
-  if (!lead) leadReplyRedirect(leadId, { manualReplyStatus: "failed", manualReplyError: "Lead was not found." });
+  if (!lead) manualReplyRedirect(formData, leadId, { manualReplyStatus: "failed", manualReplyError: "Lead was not found." });
 
   const actor = permission.auth.profile?.fullName ?? "Marcus";
   const actorEmail = permission.auth.profile?.email ?? "";
@@ -360,7 +367,7 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
       }
     });
     revalidateLeadPaths(leadId);
-    leadReplyRedirect(leadId, { manualReplyStatus: "sent", metaMessageId: sent.providerMessageId || "recorded" });
+    manualReplyRedirect(formData, leadId, { manualReplyStatus: "sent", metaMessageId: sent.providerMessageId || "recorded" });
   } catch (error) {
     const reason = safeWhatsAppError(error);
     console.error("whatsapp_manual_reply_failed", {
@@ -402,7 +409,7 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
       }
     }).catch(() => null);
     revalidateLeadPaths(leadId);
-    leadReplyRedirect(leadId, { manualReplyStatus: "failed", manualReplyError: reason.slice(0, 220) });
+    manualReplyRedirect(formData, leadId, { manualReplyStatus: "failed", manualReplyError: reason.slice(0, 220) });
   }
 }
 
@@ -659,6 +666,7 @@ export async function reviewAiDraftAction(formData: FormData) {
 
 function revalidateLeadPaths(leadId: string) {
   revalidatePath("/");
+  revalidatePath("/inbox");
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/settings");

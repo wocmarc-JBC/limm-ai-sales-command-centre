@@ -16,6 +16,9 @@ function assert(condition, message) {
 
 const actions = read("lib/actions.ts");
 const leadPage = read("app/leads/[id]/page.tsx");
+const salesInbox = read("components/WhatsAppSalesInbox.tsx");
+const multiChatInbox = read("components/inbox/MultiChatInbox.tsx");
+const inboxPage = read("app/inbox/page.tsx");
 const adapter = read("lib/adapters/whatsapp-adapter.ts");
 const health = read("app/api/whatsapp/health/route.ts");
 
@@ -34,7 +37,11 @@ for (const phrase of [
   "whatsapp_manual_reply_send_payload_summary",
   "whatsapp_manual_reply_sent",
   "whatsapp_manual_reply_failed",
-  "replaySafePostRedirect"
+  "replaySafePostRedirect",
+  "manualReplyRedirect(formData",
+  'returnTo === "inbox"',
+  'redirect(`/inbox?lead=${encodeURIComponent(leadId)}&${query.toString()}`)',
+  'revalidatePath("/inbox")'
 ]) {
   assert(actions.includes(phrase), `manual outbound action missing ${phrase}`);
 }
@@ -52,19 +59,126 @@ for (const phrase of [
 for (const phrase of [
   "conversationMessages",
   ".sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())",
+  "WhatsAppSalesInbox",
+  "inboxChatSummaries",
+  "listLeads()",
+  "buildInboxChatSummary"
+]) {
+  assert(leadPage.includes(phrase), `lead page missing inbox split phrase ${phrase}`);
+}
+
+for (const phrase of [
+  '"use client"',
+  "Sales Inbox",
+  "WhatsApp Leads",
+  "Search name, phone, message, property",
+  "Waiting for Marcus",
+  "Waiting for client",
+  "Human takeover",
+  "Failed send",
   'name="manual_reply_body"',
-  "Send WhatsApp",
+  "Type your WhatsApp reply...",
+  "Ask for floor plan/photos",
+  "Ask property type",
+  "Ask scope",
+  "Ask appointment preference",
+  "Instagram portfolio",
+  "Acknowledge and review",
+  "AI Draft Assist",
+  "Generate suggested reply",
+  "Draft only. Marcus must review, edit, and send manually.",
+  "Send",
   "Manual WhatsApp reply sent",
   "Manual WhatsApp reply failed",
   "Test send to Marcus first",
   "Send Test",
   "Bot takeover is now active",
-  "No pricing / no Calendar booking / no voice transcription"
+  "Developer Test Tools",
+  "Technical Audit",
+  "WhatsApp Delivery Details",
+  "scrollIntoView",
+  "bottomRef",
+  "sticky bottom-0",
+  "event.ctrlKey || event.metaKey",
+  "requestSubmit",
+  "disabled={!canSend}",
+  "isSending ? \"Sending...\" : \"Send\"",
+  "justify-end",
+  "justify-start",
+  "rounded-br-md",
+  "rounded-bl-md",
+  "NEXT_REDIRECT",
+  "displayMessageStatus",
+  "providerMessageId"
 ]) {
-  assert(leadPage.includes(phrase), `lead page missing manual conversation UI phrase ${phrase}`);
+  assert(salesInbox.includes(phrase), `sales inbox missing manual inbox UI phrase ${phrase}`);
 }
 
 assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(leadPage), "lead page must not reference WhatsApp server credentials.");
+assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(salesInbox), "sales inbox must not reference WhatsApp server credentials.");
+assert(!salesInbox.includes("<details open"), "developer tools, delivery details, and audit trail must be collapsed by default.");
+assert(!salesInbox.includes("from $"), "sales inbox must not include price/package quick replies.");
+
+for (const phrase of [
+  "WhatsAppInboxPage",
+  "MultiChatInbox",
+  "listLeads()",
+  "listLeadMessages(lead.id)",
+  "listAllLeadFiles()",
+  "slice(0, 30)",
+  "buildSummary",
+  "manualReplyStatus={searchParams?.manualReplyStatus}"
+]) {
+  assert(inboxPage.includes(phrase), `/inbox page missing ${phrase}`);
+}
+
+for (const phrase of [
+  '"use client"',
+  "WhatsApp Sales Inbox",
+  "Conversations",
+  "Search name, phone, message, property",
+  "Next waiting chat",
+  "Unread",
+  "Waiting for Marcus",
+  "Waiting for client",
+  "Human takeover",
+  "Failed send",
+  "window.setInterval(() => router.refresh(), 12000)",
+  "selectConversation",
+  "window.history.replaceState",
+  "Ask property type/scope",
+  "Ask floor plan/photos",
+  "Ask appointment preference",
+  "Instagram portfolio",
+  "Ask design/reference images",
+  "Team review handoff",
+  "May I know if this is for a condo, HDB, landed property, or commercial unit?",
+  "Generate AI Draft",
+  "Draft only. Marcus must review, edit, and send manually.",
+  'name="return_to"',
+  'value="inbox"',
+  'placeholder="Type WhatsApp reply..."',
+  "event.ctrlKey || event.metaKey",
+  "event.key === \"Escape\"",
+  "disabled={!canSend}",
+  "optimisticReplies",
+  "Mark waiting for client",
+  "Mark closed/lost/done",
+  "Pause bot",
+  "Resume bot",
+  "WhatsApp Delivery Details",
+  "Technical Audit",
+  "providerMessageId",
+  "NEXT_REDIRECT",
+  "messageStatus(message)"
+]) {
+  assert(multiChatInbox.includes(phrase), `multi-chat inbox missing ${phrase}`);
+}
+
+assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(inboxPage), "/inbox page must not reference WhatsApp server credentials.");
+assert(!/WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/.test(multiChatInbox), "multi-chat inbox must not reference WhatsApp server credentials.");
+assert(!multiChatInbox.includes("<details open"), "multi-chat technical panels must be collapsed by default.");
+assert(!multiChatInbox.includes("from $"), "multi-chat inbox must not include price/package quick replies.");
 
 for (const phrase of [
   'messaging_product: "whatsapp"',
