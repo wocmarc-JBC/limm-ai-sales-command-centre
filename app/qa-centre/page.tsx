@@ -167,10 +167,10 @@ export default async function QaCentrePage({
   const facts = buildLeadFacts(selectedLead, messages, leadFiles);
   const packResults: QaReplayResult[] = getString(searchParams?.pack) === "1"
     ? scenarioPack.map(([message, type, packScenario]) => {
-        const lead = packScenario === "human_takeover" ? { ...selectedLead, botPaused: true } : selectedLead;
+        const lead = packScenario === "human_takeover" ? { ...fallbackLead(), botPaused: true } : fallbackLead();
         return runWhatsAppQaReplay({
           lead,
-          previousMessages: [qaMessage(message, type, selectedLead.id), ...messages],
+          previousMessages: [qaMessage(message, type, lead.id)],
           clientMessage: message,
           messageType: type,
           scenario: packScenario

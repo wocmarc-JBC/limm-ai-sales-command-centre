@@ -192,17 +192,34 @@ const areYouThere = results.find((item) => item.id === "are_you_there");
 const chineseGreeting = results.find((item) => item.id === "chinese_greeting");
 const photoOnly = results.find((item) => item.id === "photo_only");
 const designResults = results.filter((item) => item.scenario === "design_question");
+const canDoRenovation = results.find((item) => item.id === "can_do_renovation");
+const kitchenScope = results.find((item) => item.id === "kitchen_scope");
+const condoKitchenToilets = results.find((item) => item.id === "condo_kitchen_toilets");
+const landedAa = results.find((item) => item.id === "landed_aa");
 const officeUbi = results.find((item) => item.id === "office_ubi");
 const alreadySentFloorPlan = results.find((item) => item.id === "already_sent_floor_plan");
 const whyAskAgain = results.find((item) => item.id === "why_ask_again");
 const canComeDown = results.find((item) => item.id === "can_come_down");
 const confirmApprove = results.find((item) => item.id === "confirm_approve");
 const startTomorrow = results.find((item) => item.id === "start_tomorrow");
+const DREAM_HOME = "We'd love to help create your dream home";
+const EXPECTED_CAN_DO_RENOVATION =
+  "Hi, yes we can help review renovation works. We'd love to help create your dream home. May I know what type of property this is and what works you're planning?";
+const EXPECTED_KITCHEN_SCOPE =
+  "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home, starting with the kitchen works. May I know if this is for a HDB, condo, landed property, or commercial unit?";
+const EXPECTED_CONDO_KITCHEN_TOILETS =
+  "Thanks for sharing. We'd love to help create your dream home. You may send us the floor plan, site photos, and any reference images here first, and we'll review the scope from there.";
+const EXPECTED_LANDED_AA =
+  "Thanks for contacting LIMM Works. We'd love to help create your dream home and review the landed/A&A works properly. May I know which areas you're planning to change?";
 check("Hi scores PASS >= 90 with dream-home first-touch reply", hi?.score.status === "PASS" && hi.score.overallScore >= 90 && hi.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hi?.proposedReply);
 check("Hello scores PASS >= 90 with dream-home first-touch reply", hello?.score.status === "PASS" && hello.score.overallScore >= 90 && hello.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hello?.proposedReply);
 check("Are you there scores PASS >= 90 with presence dream-home reply", areYouThere?.score.status === "PASS" && areYouThere.score.overallScore >= 90 && areYouThere.proposedReply === PRESENCE_FIRST_TOUCH_REPLY, areYouThere?.proposedReply);
 check("Chinese greeting scores PASS >= 90 with Chinese reply", chineseGreeting?.score.status === "PASS" && chineseGreeting.score.overallScore >= 90 && chineseGreeting.proposedReply === CHINESE_FIRST_TOUCH_REPLY, chineseGreeting?.proposedReply);
 check("Image-only scores PASS >= 90 with photo-first reply", photoOnly?.score.status === "PASS" && photoOnly.score.overallScore >= 90 && photoOnly.proposedReply === PHOTO_FIRST_REPLY, photoOnly?.proposedReply);
+check("Can do renovation gets exact dream-home reply", canDoRenovation?.score.status === "PASS" && canDoRenovation.score.overallScore >= 90 && canDoRenovation.proposedReply === EXPECTED_CAN_DO_RENOVATION && canDoRenovation.proposedReply.includes(DREAM_HOME), canDoRenovation?.proposedReply);
+check("Kitchen enquiry gets exact dream-home reply", kitchenScope?.score.status === "PASS" && kitchenScope.score.overallScore >= 90 && kitchenScope.proposedReply === EXPECTED_KITCHEN_SCOPE && kitchenScope.proposedReply.includes(DREAM_HOME), kitchenScope?.proposedReply);
+check("Condo kitchen and toilets gets exact dream-home reply", condoKitchenToilets?.score.status === "PASS" && condoKitchenToilets.score.overallScore >= 90 && condoKitchenToilets.proposedReply === EXPECTED_CONDO_KITCHEN_TOILETS && condoKitchenToilets.proposedReply.includes(DREAM_HOME), condoKitchenToilets?.proposedReply);
+check("Landed A&A gets exact dream-home reply", landedAa?.score.status === "PASS" && landedAa.score.overallScore >= 90 && landedAa.proposedReply === EXPECTED_LANDED_AA && landedAa.proposedReply.includes(DREAM_HOME), landedAa?.proposedReply);
 for (const design of designResults) {
   check(`${design.id} scores PASS >= 90 with approved design reply`, design.score.status === "PASS" && design.score.overallScore >= 90 && design.proposedReply === DESIGN_FIRST_TOUCH_REPLY, design.proposedReply);
   check(`${design.id} answers design question before collecting info`, /yes, we can help review the design direction/i.test(design.proposedReply), design.proposedReply);
@@ -383,6 +400,7 @@ const copyButton = read("components/CopySuggestedReplyButton.tsx");
 check("QA Centre route exists and states simulation only", qaPage.includes("Simulation only") && qaPage.includes("No WhatsApp message will be sent."), "Missing simulation copy.");
 check("QA Centre exposes required actions", ["Run Replay", "Run Scenario Pack", "Open Lead in Inbox", "View Source Conversation"].every((phrase) => qaPage.includes(phrase)) && copyButton.includes("Copy Suggested Reply"), "Missing QA action.");
 check("QA Centre does not expose live send button", !/Send WhatsApp|sendReply|adapter\.sendReply|\/api\/inbox\/send/.test(qaPage), "QA page must not send.");
+check("QA Centre scenario pack uses isolated QA lead", /const lead = packScenario === "human_takeover" \? \{ \.\.\.fallbackLead\(\), botPaused: true \} : fallbackLead\(\);/.test(qaPage) && /previousMessages: \[qaMessage\(message, type, lead\.id\)\]/.test(qaPage), "Scenario pack must not inherit selected live lead context.");
 
 const settings = read("app/settings/page.tsx");
 check("Settings links to QA Centre", settings.includes('["QA Centre", "/qa-centre"'), "Settings System Settings must link to /qa-centre.");
@@ -423,10 +441,19 @@ fs.writeFileSync(
 );
 
 const failed = checks.filter((item) => !item.passed);
+const failedScoreRows = reportRows.filter((row) => row.status !== "PASS" || row.failedRules.length);
 
 console.log("Reply quality scoreboard test");
 for (const item of checks) {
   console.log(`${item.passed ? "PASS" : "FAIL"} - ${item.name}${item.detail ? ` (${item.detail})` : ""}`);
+}
+if (failedScoreRows.length) {
+  console.error("\nGenerated replies for FAIL rows:");
+  for (const row of failedScoreRows) {
+    console.error(`- ${row.id} | ${row.clientMessage || `(${row.scenario})`} | ${row.status} ${row.score}`);
+    console.error(`  Failed checks: ${row.failedRules.join(", ") || "None"}`);
+    console.error(`  Generated reply: ${row.proposedReply}`);
+  }
 }
 console.log("Report: artifacts/reply-quality-report.md");
 console.log("Report JSON: artifacts/reply-quality-report.json");

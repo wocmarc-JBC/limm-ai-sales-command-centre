@@ -1,6 +1,6 @@
 # LIMM WhatsApp Reply Quality Report
 
-Generated: 2026-06-25T14:47:42.569Z
+Generated: 2026-06-25T15:07:32.220Z
 
 | Test case | Client message | Scenario | Score | Status | Failed rules |
 | --- | --- | --- | ---: | --- | --- |
