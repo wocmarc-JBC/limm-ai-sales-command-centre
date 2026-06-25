@@ -18,6 +18,10 @@ function assertIncludes(source, phrase, label) {
   assert(source.includes(phrase), `${label} missing ${phrase}`);
 }
 
+function assertNotIncludes(source, phrase, label) {
+  assert(!source.includes(phrase), `${label} must not include ${phrase}`);
+}
+
 const inboxPage = read("app/inbox/page.tsx");
 const inboxClient = read("components/inbox/MultiChatInbox.tsx");
 const sendApi = read("app/api/inbox/send/route.ts");
@@ -105,15 +109,24 @@ for (const phrase of [
 assert(!inboxClient.includes("<details open"), "technical panels must not render open by default.");
 
 for (const phrase of [
-  "showInternalTestLeads",
-  "Show internal/test leads",
-  "hiddenInternalCount",
-  "filter((chat) => !isInternalTestChat(chat))",
-  "internalTestSignals",
+  "isNonProductionChat",
+  "nonProductionSignals",
+  "chatSummaries.filter((chat) => !isNonProductionChat(chat))",
   "marcus",
   "fio"
 ]) {
-  assertIncludes(inboxClient, phrase, "internal/test lead hiding");
+  assertIncludes(inboxClient, phrase, "silent non-production lead hiding");
+}
+
+for (const phrase of [
+  "showInternalTestLeads",
+  "Show internal/test leads",
+  "hiddenInternalCount",
+  "internalTestSignals",
+  "isInternalTestChat",
+  " hidden)"
+]) {
+  assertNotIncludes(inboxClient, phrase, "live inbox cleanup");
 }
 
 for (const phrase of [

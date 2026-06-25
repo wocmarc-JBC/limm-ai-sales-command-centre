@@ -25,7 +25,8 @@ const dashboard = read("app/dashboard/page.tsx");
 const leadDetail = read("app/leads/[id]/page.tsx");
 
 for (const phrase of [
-  "const initialLeadId = selectedLeadId && conversations.some",
+  "const productionConversations = conversations.filter((item) => !isNonProductionChat(item.summary))",
+  "const initialLeadId = selectedLeadId && productionConversations.some",
   "const initialSelectedLeadIdRef = useRef(initialLeadId)",
   "const [activeLeadId, setActiveLeadId] = useState(() => initialSelectedLeadIdRef.current)",
   "const activeLeadStillListed = activeLeadId ? chatSummaries.some((summary) => summary.id === activeLeadId) : false",

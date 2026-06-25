@@ -147,7 +147,7 @@ const quickReplies = [
 
 const SEND_TIMEOUT_MS = 15000;
 
-const internalTestSignals = [
+const nonProductionSignals = [
   "marcus",
   "fio",
   "test lead",
@@ -166,7 +166,7 @@ const internalTestSignals = [
   "laminated wall cladding test"
 ];
 
-function isInternalTestChat(chat: MultiChatSummary) {
+function isNonProductionChat(chat: MultiChatSummary) {
   const haystack = [
     chat.displayName,
     chat.phone,
@@ -175,7 +175,7 @@ function isInternalTestChat(chat: MultiChatSummary) {
     chat.scopeSummary,
     chat.status
   ].join(" ").toLowerCase();
-  return internalTestSignals.some((signal) => haystack.includes(signal));
+  return nonProductionSignals.some((signal) => haystack.includes(signal));
 }
 
 function chatPriority(chat: MultiChatSummary) {
@@ -887,8 +887,9 @@ const LeadContextPanel = memo(function LeadContextPanel({
 });
 
 export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
-  const firstVisibleConversation = conversations.find((item) => !isInternalTestChat(item.summary)) ?? conversations[0];
-  const initialLeadId = selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)
+  const productionConversations = conversations.filter((item) => !isNonProductionChat(item.summary));
+  const firstVisibleConversation = productionConversations[0];
+  const initialLeadId = selectedLeadId && productionConversations.some((item) => item.lead.id === selectedLeadId)
     ? selectedLeadId
     : firstVisibleConversation?.lead.id ?? "";
   const initialSelectedLeadIdRef = useRef(initialLeadId);
@@ -903,7 +904,6 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
-  const [showInternalTestLeads, setShowInternalTestLeads] = useState(false);
   const [contextOpen, setContextOpen] = useState(true);
   const [optimisticReplies, setOptimisticReplies] = useState<Record<string, LeadMessage[]>>({});
   const [sendingByLeadId, setSendingByLeadId] = useState<Record<string, SendState>>({});
@@ -1094,13 +1094,8 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     stickToBottomRef.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 160;
   };
 
-  const visibleChatSummaries = useMemo(() => sortQueue(
-    showInternalTestLeads
-      ? chatSummaries
-      : chatSummaries.filter((chat) => !isInternalTestChat(chat))
-  ), [chatSummaries, showInternalTestLeads]);
-  const hiddenInternalCount = useMemo(
-    () => chatSummaries.filter((chat) => isInternalTestChat(chat)).length,
+  const visibleChatSummaries = useMemo(
+    () => sortQueue(chatSummaries.filter((chat) => !isNonProductionChat(chat))),
     [chatSummaries]
   );
   const queueCounters = useMemo(() => ({
@@ -1403,15 +1398,6 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
               placeholder="Search name, phone, message, property..."
               className="mt-4 w-full rounded-xl border border-command-line bg-command-bg/85 px-3 py-2.5 text-sm text-command-text outline-none transition placeholder:text-command-muted focus:border-command-gold/70"
             />
-            <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-command-line bg-command-bg/55 px-3 py-2 text-xs font-semibold text-command-muted">
-              <span>Show internal/test leads{hiddenInternalCount ? ` (${hiddenInternalCount} hidden)` : ""}</span>
-              <input
-                type="checkbox"
-                checked={showInternalTestLeads}
-                onChange={(event) => setShowInternalTestLeads(event.target.checked)}
-                className="h-4 w-4 accent-command-gold"
-              />
-            </label>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible">
               {filters.map((item) => (
                 <button

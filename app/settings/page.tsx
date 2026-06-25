@@ -178,7 +178,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
         ["Client Files", "/client-files", "Review file intake and upload-link status."],
         ["Cleanup", "/settings?cleanup=scan#test-lead-cleanup", "Dry-run cleanup before soft-deleting test data."],
         ["Developer Tools", "#developer-tools", "Safe command references only; no browser script execution."],
-        ["Archived / Test Leads", "/leads?view=all", "Review hidden, archived, spam, or test lead records."]
+        ["Archived / QA Leads", "/leads?view=all", "Review archived, spam, or non-production lead records."]
       ]
     }
   ];
