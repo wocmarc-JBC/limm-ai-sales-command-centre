@@ -1,6 +1,6 @@
 # Command Centre Button Audit
 
-- Started: 2026-06-25T13:01:24.367Z
+- Started: 2026-06-25T13:56:09.607Z
 - Files scanned: 12
 - Clickable elements scanned: 53
 - Navigation/API/local/disabled controls with outcome: 53
