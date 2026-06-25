@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-06-25T03:19:23.059Z",
+  "startedAt": "2026-06-25T13:01:24.367Z",
   "files": [
     "components/ShellChrome.tsx",
     "components/LeadCard.tsx",
@@ -293,7 +293,7 @@
       "label": "<button type=\"button\" onClick={loadEarlierMessages} disabled={loadingOlder} title={loading",
       "status": "ok",
       "actionType": "disabled_with_reason",
-      "snippet": "<button type=\"button\" onClick={loadEarlierMessages} disabled={loadingOlder} title={loadingOlder ? \"Loading earlier messages now.\" : \"Load earlier WhatsApp messages for this"
+      "snippet": "<button type=\"button\" onClick={loadEarlierMessages} disabled={loadingOlder} title={loadingOlder ? \"Loading older messages now.\" : \"Load older WhatsApp messages for this lea"
     },
     {
       "file": "app/command-core/page.tsx",
@@ -378,10 +378,10 @@
     {
       "file": "app/followups/page.tsx",
       "tag": "a",
-      "label": "<a href=\"/settings?cleanup=scan#test-lead-cleanup\" className=\"inline-flex min-h-11 items-c",
+      "label": "<a href=\"/inbox\" className=\"inline-flex min-h-11 items-center rounded-xl border border-com",
       "status": "ok",
       "actionType": "navigation",
-      "snippet": "<a href=\"/settings?cleanup=scan#test-lead-cleanup\" className=\"inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-text hover:border-command-cyan/70\""
+      "snippet": "<a href=\"/inbox\" className=\"inline-flex min-h-11 items-center rounded-xl border border-command-cyan/50 bg-command-cyan/10 px-4 py-2 text-base font-semibold text-command-cyan hover:bg-command-cyan/15\" > Open WhatsApp Inbox"
     },
     {
       "file": "app/followups/page.tsx",
@@ -394,26 +394,42 @@
     {
       "file": "app/followups/page.tsx",
       "tag": "a",
-      "label": "<a key={item.key} href={buildHref({ status: item.key === \"active\" ? undefined : item.key, ",
+      "label": "<a key={item.key} href={buildHref({ status: item.key === \"all\" ? undefined : item.key, q: ",
       "status": "ok",
       "actionType": "navigation",
-      "snippet": "<a key={item.key} href={buildHref({ status: item.key === \"active\" ? undefined : item.key, q: search, show_test: showTest ? \"true\" : undefined })} className={`inline-flex min-h-10 items-center rounded-xl border px-3 py-"
+      "snippet": "<a key={item.key} href={buildHref({ status: item.key === \"all\" ? undefined : item.key, q: search || undefined })} className={`inline-flex min-h-10 items-center rounded-xl border px-3 py-2 text-sm font-semibold transiti"
     },
     {
       "file": "app/followups/page.tsx",
       "tag": "a",
-      "label": "<a href={buildHref({ status: status === \"active\" ? undefined : status, q: search, show_tes",
+      "label": "<a href={`/inbox?lead=${encodeURIComponent(item.leadId)}`} className=\"inline-flex min-h-10",
       "status": "ok",
       "actionType": "navigation",
-      "snippet": "<a href={buildHref({ status: status === \"active\" ? undefined : status, q: search, show_test: showTest ? undefined : \"true\" })} className={`inline-flex min-h-10 items-center rounded-xl border px-3 py-2 text-sm font-semibold transition ${"
+      "snippet": "<a href={`/inbox?lead=${encodeURIComponent(item.leadId)}`} className=\"inline-flex min-h-10 items-center rounded-xl border border-command-gold bg-command-gold px-3 py-2 text-sm font-semibold text-black\"> Open WhatsApp Chat"
     },
     {
       "file": "app/followups/page.tsx",
       "tag": "a",
-      "label": "<a href={buildHref({ status: status === \"active\" ? undefined : status, q: search, show_tes",
+      "label": "<a href={`/leads/${encodeURIComponent(item.leadId)}`} className=\"inline-flex min-h-10 item",
       "status": "ok",
       "actionType": "navigation",
-      "snippet": "<a href={buildHref({ status: status === \"active\" ? undefined : status, q: search, show_test: showTest ? \"true\" : undefined, page: page + 1 })} className=\"inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command"
+      "snippet": "<a href={`/leads/${encodeURIComponent(item.leadId)}`} className=\"inline-flex min-h-10 items-center rounded-xl border border-command-line bg-command-card px-3 py-2 text-sm font-semibold text-command-text\"> View Lead Details"
+    },
+    {
+      "file": "app/quotation-readiness/page.tsx",
+      "tag": "a",
+      "label": "<a href={`/inbox?lead=${encodeURIComponent(row.leadId)}`} className=\"inline-flex min-h-10 ",
+      "status": "ok",
+      "actionType": "navigation",
+      "snippet": "<a href={`/inbox?lead=${encodeURIComponent(row.leadId)}`} className=\"inline-flex min-h-10 items-center rounded-xl border border-command-gold bg-command-gold px-3 py-2 text-sm font-semibold text-black\"> Open WhatsApp Chat"
+    },
+    {
+      "file": "app/quotation-readiness/page.tsx",
+      "tag": "a",
+      "label": "<a href={`/leads/${encodeURIComponent(row.leadId)}`} className=\"inline-flex min-h-10 items",
+      "status": "ok",
+      "actionType": "disabled_with_reason",
+      "snippet": "<a href={`/leads/${encodeURIComponent(row.leadId)}`} className=\"inline-flex min-h-10 items-center rounded-xl border border-command-line bg-command-card px-3 py-2 text-sm font-semibold text-command-text\"> View Lead Details"
     },
     {
       "file": "app/sales-pipeline/page.tsx",
@@ -425,8 +441,8 @@
     }
   ],
   "totals": {
-    "scanned": 51,
-    "ok": 51,
+    "scanned": 53,
+    "ok": 53,
     "likelyNoop": 0,
     "disabledMissingReason": 0,
     "destructiveMissingConfirmation": 0

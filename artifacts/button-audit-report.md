@@ -1,9 +1,9 @@
 # Command Centre Button Audit
 
-- Started: 2026-06-25T03:19:23.059Z
+- Started: 2026-06-25T13:01:24.367Z
 - Files scanned: 12
-- Clickable elements scanned: 51
-- Navigation/API/local/disabled controls with outcome: 51
+- Clickable elements scanned: 53
+- Navigation/API/local/disabled controls with outcome: 53
 - Likely no-op controls: 0
 - Disabled controls missing reason: 0
 - Destructive controls missing confirmation: 0

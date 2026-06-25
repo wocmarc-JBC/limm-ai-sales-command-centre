@@ -166,7 +166,8 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
       links: [
         ["WhatsApp / Bot Settings", "#bot-whatsapp-settings", "Review WhatsApp mode, bot posture, and live safety flags."],
         ["Health / Diagnostics", "/health", "Read-only system health page."],
-        ["QA Centre", "/reports", "Boss reports and QA output."],
+        ["QA Centre", "/qa-centre", "Replay WhatsApp replies safely without sending messages."],
+        ["Reports", "/reports", "Boss reports and QA output."],
         ["Audit Log", "/audit-log", "Trace important actions and safety decisions."]
       ]
     },
