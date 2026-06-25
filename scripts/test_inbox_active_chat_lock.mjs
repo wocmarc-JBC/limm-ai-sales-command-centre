@@ -20,7 +20,8 @@ function assertIncludes(source, phrase, label) {
 
 const inboxClient = read("components/inbox/MultiChatInbox.tsx");
 const inboxPage = read("app/inbox/page.tsx");
-const dashboard = read("app/page.tsx");
+const commandCore = read("app/command-core/page.tsx");
+const dashboard = read("app/dashboard/page.tsx");
 const leadDetail = read("app/leads/[id]/page.tsx");
 
 for (const phrase of [
@@ -67,7 +68,8 @@ assertIncludes(selectBlock, "window.history.replaceState", "URL update without f
 assert(!selectBlock.includes("window.location"), "manual chat switching must not force full navigation.");
 
 assertIncludes(inboxPage, "selectedLeadId={searchParams?.lead}", "/inbox deep-link prop");
-assertIncludes(dashboard, '<CompactLink href="/inbox">Open WhatsApp Inbox</CompactLink>', "dashboard WhatsApp inbox link");
+assertIncludes(dashboard, 'redirect("/command-core")', "dashboard redirect");
+assertIncludes(commandCore, 'href="/inbox"', "Command Core WhatsApp inbox link");
 assertIncludes(leadDetail, 'href={`/inbox?lead=${encodeURIComponent(lead.id)}`}', "lead detail reply link");
 assert(!leadDetail.includes("WhatsAppSalesInbox"), "lead detail must not render the old WhatsApp composer.");
 

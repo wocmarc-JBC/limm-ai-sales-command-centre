@@ -13,7 +13,7 @@ export function LoginForm({ mode }: { mode: "Mock Mode" | "Supabase Mode" }) {
   async function submit(formData: FormData) {
     setError("");
     if (mode === "Mock Mode") {
-      router.push("/");
+      router.push("/command-core");
       return;
     }
 
@@ -28,7 +28,7 @@ export function LoginForm({ mode }: { mode: "Mock Mode" | "Supabase Mode" }) {
       return;
     }
 
-    router.push("/");
+    router.push("/command-core");
     router.refresh();
   }
 
@@ -38,7 +38,7 @@ export function LoginForm({ mode }: { mode: "Mock Mode" | "Supabase Mode" }) {
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Mock Mode</p>
         <p className="mt-2 text-command-muted">Supabase env vars are missing, so Marcus demo boss access is available without real credentials.</p>
         <p className="mt-2 text-sm text-command-muted">To use real sign-in, create `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, then restart the app.</p>
-        <Link href="/" className="mt-5 inline-flex rounded border border-command-cyan bg-command-cyan px-4 py-2 text-sm font-semibold text-black">
+        <Link href="/command-core" className="mt-5 inline-flex rounded border border-command-cyan bg-command-cyan px-4 py-2 text-sm font-semibold text-black">
           Enter Command Centre
         </Link>
       </div>

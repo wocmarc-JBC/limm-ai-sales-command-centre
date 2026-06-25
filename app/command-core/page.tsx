@@ -214,16 +214,16 @@ function buildDecisionCards({
   const pausedBot = leads.find((lead) => lead.botPaused);
   const followUp = followUps.find((item) => item.status === "Due" || item.status === "Overdue");
 
-  if (appointment) cards.push({ title: "Confirm appointment request", priority: "high", why: `${formatLeadDisplayName(appointment)} asked about a slot. Check availability before confirming.`, href: `/leads/${appointment.id}`, actionLabel: "Check slot" });
-  if (floorPlan) cards.push({ title: "Review floor plan", priority: "high", why: `${formatLeadDisplayName(floorPlan)} has plan/photo context ready for review.`, href: `/leads/${floorPlan.id}`, actionLabel: "Open lead" });
-  if (quoteFollowUp) cards.push({ title: "Follow up quote", priority: "medium", why: `${formatLeadDisplayName(quoteFollowUp)} has a sent quotation needing manual follow-up.`, href: `/leads/${quoteFollowUp.id}`, actionLabel: "Review quote" });
+  if (appointment) cards.push({ title: "Confirm appointment request", priority: "high", why: `${formatLeadDisplayName(appointment)} asked about a slot. Check availability before confirming.`, href: `/inbox?lead=${appointment.id}`, actionLabel: "Open WhatsApp Chat" });
+  if (floorPlan) cards.push({ title: "Review floor plan", priority: "high", why: `${formatLeadDisplayName(floorPlan)} has plan/photo context ready for review.`, href: `/inbox?lead=${floorPlan.id}`, actionLabel: "Open WhatsApp Chat" });
+  if (quoteFollowUp) cards.push({ title: "Follow up quote", priority: "medium", why: `${formatLeadDisplayName(quoteFollowUp)} has a sent quotation needing manual follow-up.`, href: `/inbox?lead=${quoteFollowUp.id}`, actionLabel: "Open WhatsApp Chat" });
   if (overdueProject) cards.push({ title: "Check overdue collection", priority: "critical", why: `${overdueProject.clientName} has overdue collection attention needed.`, href: "/sales-collection", actionLabel: "Open collection" });
   if (risk || needsMarcus) {
     const lead = risk ?? needsMarcus!;
-    cards.push({ title: "Handle risk / complaint", priority: "critical", why: `${formatLeadDisplayName(lead)} needs Marcus review before any client-facing promise.`, href: `/leads/${lead.id}`, actionLabel: "Review risk" });
+    cards.push({ title: "Handle risk / complaint", priority: "critical", why: `${formatLeadDisplayName(lead)} needs Marcus review before any client-facing promise.`, href: `/inbox?lead=${lead.id}`, actionLabel: "Open WhatsApp Chat" });
   }
   if (testLeadCount > 0) cards.push({ title: "Clean test data", priority: "low", why: `${testLeadCount} test/data cleanup signal${testLeadCount === 1 ? "" : "s"} detected.`, href: "/settings#test-lead-cleanup", actionLabel: "Open cleanup" });
-  if (hotLead) cards.push({ title: "Review hot lead", priority: "high", why: `${formatLeadDisplayName(hotLead)} is one of the highest-priority live opportunities.`, href: `/leads/${hotLead.id}`, actionLabel: "Open lead" });
+  if (hotLead) cards.push({ title: "Review hot lead", priority: "high", why: `${formatLeadDisplayName(hotLead)} is one of the highest-priority live opportunities.`, href: `/inbox?lead=${hotLead.id}`, actionLabel: "Open WhatsApp Chat" });
   if (pausedBot) cards.push({ title: "Pause/resume bot", priority: "medium", why: `${formatLeadDisplayName(pausedBot)} has bot control paused.`, href: `/leads/${pausedBot.id}#bot-controls`, actionLabel: "Review bot" });
   if (followUp) cards.push({ title: "Follow up client", priority: followUp.status === "Overdue" ? "critical" : "medium", why: `${followUp.clientName} has a ${followUp.followupType} follow-up due.`, href: "/followups", actionLabel: "Open follow-ups" });
 
@@ -266,9 +266,9 @@ export default async function CommandCorePage() {
 
   return (
     <>
-      <PageHeader title="Strategic Command Core" eyebrow="Command Core Beta">
-        <a href="/" className="inline-flex min-h-10 items-center rounded-xl border border-command-cyan/35 bg-[#04101d]/90 px-3 py-2 text-sm font-semibold text-command-cyan transition hover:border-command-cyan/70 hover:bg-[#071827]">
-          Back to Dashboard
+      <PageHeader title="Strategic Command Core" eyebrow="Command Core">
+        <a href="/inbox" className="inline-flex min-h-10 items-center rounded-xl border border-command-cyan/35 bg-[#04101d]/90 px-3 py-2 text-sm font-semibold text-command-cyan transition hover:border-command-cyan/70 hover:bg-[#071827]">
+          Open WhatsApp Inbox
         </a>
       </PageHeader>
 
@@ -371,9 +371,14 @@ export default async function CommandCorePage() {
                 <p className="text-sm text-command-muted">Risk: <strong className="text-command-text">{topLead.riskFlags.length ? topLead.riskFlags.join(", ") : "No major risk"}</strong></p>
                 <p className="text-sm text-command-muted">Lead heat: <strong className="text-command-text">{topLead.leadScore}%</strong></p>
               </div>
-              <a href={`/leads/${topLead.id}`} className="command-press mt-5 inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
-                Open Lead
-              </a>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <a href={`/inbox?lead=${topLead.id}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
+                  Open WhatsApp Chat
+                </a>
+                <a href={`/leads/${topLead.id}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+                  View Lead Details
+                </a>
+              </div>
             </div>
           ) : (
             <div className="mt-4 rounded-2xl border border-command-line bg-command-bg/55 p-5 text-command-muted">

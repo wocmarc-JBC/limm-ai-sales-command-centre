@@ -406,8 +406,11 @@ assert(!/<h2[\s\S]{0,80}>Login<\/h2>/i.test(loginForm), "Login form must not dup
 assert(loginPage.includes("Sign in to Command Centre"), "Login page must have one clear sign-in title.");
 
 const dashboardPage = read("app/page.tsx");
-assert(!dashboardPage.includes("Quotation Needed"), "Dashboard must not use Quotation Needed wording.");
-assert(dashboardPage.includes("Ready for Quotation Review"), "Dashboard must use quotation review wording.");
+const commandCorePage = read("app/command-core/page.tsx");
+const quotationReadinessPage = read("app/quotation-readiness/page.tsx");
+assert(dashboardPage.includes('redirect("/command-core")'), "Old dashboard entry must redirect to Command Core.");
+assert(!commandCorePage.includes("Quotation Needed"), "Command Core must not use Quotation Needed wording.");
+assert(quotationReadinessPage.includes("Ready for Quotation Review"), "Quotation review route must use quotation review wording.");
 
 const mockData = read("lib/mock-data.ts");
 assert(/id:\s*"lead-003"[\s\S]{0,280}division:\s*"LIMM Works"[\s\S]{0,280}propertyType:\s*"Commercial clinic"/.test(mockData), "Commercial clinic mock lead must be classified under LIMM Works.");

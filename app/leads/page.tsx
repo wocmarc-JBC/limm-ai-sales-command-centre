@@ -1,5 +1,6 @@
 import { LeadCard } from "@/components/LeadCard";
 import { PageHeader } from "@/components/PageHeader";
+import { listLatestMeaningfulWhatsAppMessagesForLeads } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 
 const views = [
@@ -18,6 +19,7 @@ export default async function LeadInboxPage({ searchParams }: { searchParams?: {
     : view === "spam"
       ? rawLeads.filter((lead) => lead.isSpam)
       : rawLeads;
+  const latestWhatsAppMessages = await listLatestMeaningfulWhatsAppMessagesForLeads(leads.map((lead) => lead.id));
   return (
     <>
       <PageHeader title="AI Lead Inbox" eyebrow="Reply queue">
@@ -41,7 +43,7 @@ export default async function LeadInboxPage({ searchParams }: { searchParams?: {
       {leads.length ? (
         <div className="space-y-5">
           {leads.map((lead) => (
-          <LeadCard key={lead.id} lead={lead} />
+            <LeadCard key={lead.id} lead={lead} latestWhatsAppMessage={latestWhatsAppMessages.get(lead.id) ?? null} />
           ))}
         </div>
       ) : (

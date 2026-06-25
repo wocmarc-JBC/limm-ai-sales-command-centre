@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { evaluateBookingReadiness } from "@/lib/calendar-booking";
-import type { Lead } from "@/lib/types";
+import type { Lead, LeadMessage } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 import { formatFullPhoneForProtectedApp, formatLeadDisplayName } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
@@ -12,6 +12,29 @@ function snippet(text: string) {
   const clean = text.trim().replace(/\s+/g, " ");
   if (!clean) return "No recent message preview.";
   return clean.length > 150 ? `${clean.slice(0, 147)}...` : clean;
+}
+
+function compactTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-SG", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function senderLabel(message: LeadMessage) {
+  if (message.direction === "inbound") return "Client";
+  if (message.metadata?.manualReply === true || message.metadata?.manualTakeover === true) return "Marcus";
+  return "AI";
+}
+
+function latestWhatsAppPreview(message?: LeadMessage | null) {
+  if (!message?.body?.trim()) return "No WhatsApp message yet";
+  const time = compactTimestamp(message.createdAt);
+  return `${senderLabel(message)}: ${snippet(message.body)}${time ? ` · ${time}` : ""}`;
 }
 
 function chips(items: string[], fallback: string) {
@@ -75,7 +98,7 @@ function LeadHeatMeter({ lead }: { lead: Lead }) {
   );
 }
 
-export function LeadCard({ lead }: { lead: Lead }) {
+export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWhatsAppMessage?: LeadMessage | null }) {
   const next = getNextBestAction(lead);
   const booking = evaluateBookingReadiness({ lead, latestText: lead.lastClientMessage });
   const isWhatsapp = /whatsapp/i.test(lead.source);
@@ -85,6 +108,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
   const fullPhone = formatFullPhoneForProtectedApp(lead.phone) || "Phone pending";
   const scope = lead.scopeSummary || lead.serviceType || "Renovation scope pending";
   const stage = booking.appointmentIntent ? "Appointment requested" : lead.status;
+  const whatsAppPreview = latestWhatsAppPreview(latestWhatsAppMessage);
   const questionCategory = questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported"
     ? questionMatch.entry.category
     : undefined;
@@ -135,8 +159,8 @@ export function LeadCard({ lead }: { lead: Lead }) {
           <p className="mt-1 text-base leading-7 text-command-muted">{next.reason}</p>
         </div>
         <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">{isWhatsapp ? "Last WhatsApp message" : "Last Message"}</p>
-          <p className="mt-2 text-base leading-7 text-command-text">{snippet(lead.lastClientMessage)}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Last WhatsApp message</p>
+          <p className="mt-2 text-base leading-7 text-command-text">{whatsAppPreview}</p>
         </div>
       </div>
 
@@ -152,15 +176,24 @@ export function LeadCard({ lead }: { lead: Lead }) {
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link href={`/leads/${lead.id}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
-          Open Lead
+        <Link href={`/inbox?lead=${encodeURIComponent(lead.id)}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
+          Open WhatsApp Chat
+        </Link>
+        <Link href={`/leads/${lead.id}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+          View Lead Details
         </Link>
         <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
           Take Over
         </Link>
-        <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
-          Pause Bot
-        </Link>
+        {lead.botPaused ? (
+          <span className="inline-flex min-h-11 items-center rounded-xl border border-command-cyan/50 bg-command-cyan/10 px-4 py-2 text-base font-semibold text-command-cyan">
+            Bot Paused
+          </span>
+        ) : (
+          <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+            Pause Bot
+          </Link>
+        )}
       </div>
     </article>
   );

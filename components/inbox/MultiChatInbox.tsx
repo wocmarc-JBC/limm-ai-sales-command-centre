@@ -108,15 +108,19 @@ const filters = [
 
 const quickReplies = [
   {
-    label: "Ask property type/scope",
-    text: "Thanks for reaching out. May I know your property type and the main scope of works?"
+    label: "Ask property type",
+    text: "Thanks for reaching out. May I know what type of property this is?"
   },
   {
     label: "Ask floor plan/photos",
     text: "You may send us your floor plan, site photos, and any reference images here. We will review from there."
   },
   {
-    label: "Ask appointment preference",
+    label: "Ask scope",
+    text: "Could you share the main areas you are planning to renovate and what you would like to change?"
+  },
+  {
+    label: "Ask appointment",
     text: "We can help check a suitable time for an initial discussion. Could you share your preferred day and timing?"
   },
   {
@@ -124,7 +128,7 @@ const quickReplies = [
     text: "You can view some of our past works here: https://www.instagram.com/limmworks/"
   },
   {
-    label: "Acknowledge and review",
+    label: "Acknowledge & review",
     text: "Thanks, I will review this with the team and get back to you shortly."
   },
   {
@@ -276,10 +280,10 @@ function senderLabel(message: LeadMessage) {
 }
 
 function bubbleTone(message: LeadMessage) {
-  if (message.direction === "inbound") return "rounded-bl-md border-command-line bg-command-panel2 text-command-text";
+  if (message.direction === "inbound") return "rounded-bl-md border-command-line bg-command-panel2/95 text-command-text";
   if (message.direction === "internal") return "border-command-line bg-command-bg/70 text-command-muted";
-  if (message.metadata?.manualReply) return "rounded-br-md border-command-green/40 bg-command-green/12 text-command-text";
-  return "rounded-br-md border-command-cyan/40 bg-command-cyan/12 text-command-text";
+  if (message.metadata?.manualReply) return "rounded-br-md border-command-green/35 bg-command-green/12 text-command-text";
+  return "rounded-br-md border-command-cyan/35 bg-command-cyan/10 text-command-text";
 }
 
 function chatStatusLabel(chat: MultiChatSummary) {
@@ -294,6 +298,15 @@ function chatStatusTone(chat: MultiChatSummary) {
   if (label === "Human takeover") return "border-command-cyan/45 bg-command-cyan/10 text-command-cyan";
   if (label === "Closed / Done") return "border-command-line bg-command-bg/60 text-command-muted";
   return "border-command-green/45 bg-command-green/10 text-command-green";
+}
+
+function chatAccentTone(chat: MultiChatSummary) {
+  const label = chatStatusLabel(chat);
+  if (label === "Failed send") return "border-l-command-red";
+  if (label === "Waiting for Marcus") return "border-l-command-gold";
+  if (label === "Waiting for client") return "border-l-command-muted";
+  if (label === "Human takeover") return "border-l-command-bronze";
+  return "border-l-command-cyan";
 }
 
 function matchesFilter(chat: MultiChatSummary, filter: (typeof filters)[number]) {
@@ -386,29 +399,29 @@ const ChatRow = memo(function ChatRow({
     <button
       type="button"
       onClick={() => onSelect(chat.id)}
-      className={`block w-full rounded-2xl border p-4 text-left transition hover:border-command-cyan/60 ${
+      className={`block w-full rounded-xl border border-l-4 p-3.5 text-left transition hover:border-command-cyan/50 ${chatAccentTone(chat)} ${
         active
-          ? "border-command-gold/70 bg-command-gold/10"
-          : "border-command-line bg-command-bg/55"
+          ? "border-command-gold/70 bg-command-gold/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+          : "border-command-line bg-command-bg/50"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-base font-semibold text-command-text">{chat.displayName || chat.phone}</p>
+          <p className="truncate text-sm font-semibold text-command-text">{chat.displayName || chat.phone}</p>
           <p className="mt-1 text-xs text-command-muted">{chat.phone || "Phone pending"}</p>
         </div>
         {chat.unreadCount > 0 ? (
           <span className="rounded-full bg-command-gold px-2 py-0.5 text-xs font-bold text-black">{chat.unreadCount}</span>
         ) : null}
       </div>
-      <p className="mt-3 line-clamp-2 text-sm leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview)}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <p className="mt-2 line-clamp-2 text-sm leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview)}</p>
+      <div className="mt-3 flex items-center justify-between gap-2">
         <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>
           {chatStatusLabel(chat)}
         </span>
         {chat.floorPlanReceived || chat.sitePhotosReceived ? (
-          <span className="rounded-full border border-command-green/40 bg-command-green/10 px-2.5 py-1 text-[11px] text-command-green">
-            Files received
+          <span className="rounded-full border border-command-green/35 bg-command-green/10 px-2 py-0.5 text-[10px] text-command-green">
+            Files
           </span>
         ) : null}
       </div>
@@ -430,15 +443,15 @@ const MessageBubble = memo(function MessageBubble({
   const showFailure = messageStatus(message) === "Failed" && !isNextRedirectOnly(error);
   return (
     <article className={`flex ${internal ? "justify-center" : outbound ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[88%] rounded-2xl border px-4 py-3 text-base leading-7 shadow-sm md:max-w-[74%] ${internal ? "text-center text-sm" : ""} ${bubbleTone(message)}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-          <span className="font-semibold uppercase tracking-[0.16em] text-command-muted">{senderLabel(message)}</span>
-          <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusTone(message)}`}>
+      <div className={`max-w-[86%] rounded-2xl border px-3.5 py-2.5 text-sm leading-6 shadow-sm md:max-w-[68%] ${internal ? "text-center text-sm" : ""} ${bubbleTone(message)}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-[10px]">
+          <span className="font-semibold uppercase tracking-[0.14em] text-command-muted">{senderLabel(message)}</span>
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusTone(message)}`}>
             {messageStatus(message)}
           </span>
         </div>
-        <p className="mt-2 whitespace-pre-wrap break-words">{message.body || "Message body not available."}</p>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-command-muted">
+        <p className="mt-1.5 whitespace-pre-wrap break-words">{message.body || "Message body not available."}</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-[11px] text-command-muted">
           <time dateTime={message.createdAt}>{formatTimestamp(message.createdAt)}</time>
           {message.metadata?.manualReply ? <span>Manual reply</span> : outbound ? <span>AI/system reply</span> : null}
         </div>
@@ -621,69 +634,65 @@ function ReplyComposer({
   };
 
   return (
-    <div className="sticky bottom-0 border-t border-command-cyan/25 bg-command-card/95 p-5 backdrop-blur">
-      <div className="mb-4 flex flex-wrap gap-2">
+    <div className="sticky bottom-0 border-t border-command-line bg-command-panel/95 p-4 shadow-[0_-18px_45px_rgba(0,0,0,0.32)] backdrop-blur">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         {quickReplies.map((item) => (
           <button
             key={item.label}
             type="button"
             onClick={() => insertQuickReply(item.text)}
-            className="rounded-full border border-command-line bg-command-panel2 px-3 py-1.5 text-xs font-semibold text-command-muted transition hover:border-command-gold/60 hover:text-command-text"
+            className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-xs font-semibold text-command-muted transition hover:border-command-gold/60 hover:bg-command-gold/10 hover:text-command-text"
           >
             {item.label}
           </button>
         ))}
       </div>
-      <div className="mb-4 rounded-2xl border border-command-cyan/25 bg-command-cyan/8 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-command-text">AI Draft Assist</p>
-            <p className="text-xs leading-5 text-command-muted">Draft only. Marcus must review, edit, and send manually.</p>
-          </div>
-          <div className="flex gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-command-cyan/20 bg-command-bg/55 px-3 py-2">
+        <p className="text-xs leading-5 text-command-muted">Draft only. Marcus must review, edit, and send manually.</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setAiDraft(buildAiDraft(conversation))}
+            className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-3 py-1.5 text-xs font-semibold text-command-cyan transition hover:bg-command-cyan/15"
+          >
+            Generate AI Draft
+          </button>
+          {aiDraft ? (
             <button
               type="button"
-              onClick={() => setAiDraft(buildAiDraft(conversation))}
-              className="rounded-md border border-command-cyan/40 bg-command-cyan/10 px-3 py-2 text-sm font-semibold text-command-cyan transition hover:bg-command-cyan/15"
+              onClick={() => setReply(aiDraft)}
+              className="rounded-full border border-command-gold/60 bg-command-gold/12 px-3 py-1.5 text-xs font-semibold text-command-gold transition hover:bg-command-gold/18"
             >
-              Generate AI Draft
+              Use draft
             </button>
-            {aiDraft ? (
-              <button
-                type="button"
-                onClick={() => setReply(aiDraft)}
-                className="rounded-md border border-command-gold/60 bg-command-gold/12 px-3 py-2 text-sm font-semibold text-command-gold transition hover:bg-command-gold/18"
-              >
-                Use draft
-              </button>
-            ) : null}
-          </div>
+          ) : null}
         </div>
-        {aiDraft ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-command-muted">{aiDraft}</p> : null}
       </div>
+      {aiDraft ? <p className="mb-3 max-h-24 overflow-y-auto rounded-xl border border-command-line bg-command-bg/55 p-3 text-sm leading-6 text-command-muted">{aiDraft}</p> : null}
       <form ref={formRef} onSubmit={handleSubmit}>
         <label htmlFor="manual_reply_body" className="sr-only">Type WhatsApp reply</label>
         <div className="flex gap-3">
           <textarea
             id="manual_reply_body"
             name="manual_reply_body"
-            rows={5}
+            rows={4}
             required
             value={reply}
             onChange={(event) => setReply(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type WhatsApp reply..."
-            className="min-h-32 flex-1 resize-y rounded-2xl border border-command-line bg-command-bg px-4 py-3 text-base leading-7 text-command-text outline-none transition placeholder:text-command-muted focus:border-command-cyan"
+            className="max-h-52 min-h-[88px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-4 py-3 text-base leading-7 text-command-text outline-none transition placeholder:text-command-muted focus:border-command-gold/70"
           />
-          <div className="flex min-w-32 flex-col justify-between gap-3">
+          <div className="flex min-w-28 flex-col justify-between gap-3">
             <button
               type="submit"
               disabled={!canSend}
-              className="inline-flex min-h-11 items-center justify-center rounded-md border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:opacity-55"
+              title={!reply.trim() ? "Type a WhatsApp reply before sending." : isSending ? "Sending WhatsApp reply now." : "Send WhatsApp reply"}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:border-command-line disabled:bg-command-panel2 disabled:text-command-muted"
             >
               {isSending ? "Sending..." : "Send"}
             </button>
-            <p className="text-xs leading-5 text-command-muted">
+            <p className="text-[11px] leading-5 text-command-muted">
               Ctrl+Enter or Cmd+Enter sends. Esc clears focus.
             </p>
             {sendError ? (
@@ -716,8 +725,8 @@ const LeadContextPanel = memo(function LeadContextPanel({
   }, [conversation.lead.id]);
 
   return (
-    <aside className="border-t border-command-line bg-command-panel2/90 xl:border-l xl:border-t-0">
-      <div className="flex items-center justify-between border-b border-command-line p-4">
+    <aside className="border-t border-command-line bg-command-panel2/95 xl:border-l xl:border-t-0">
+      <div className="flex items-center justify-between border-b border-command-line px-4 py-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Lead Context</p>
           <p className="mt-1 text-base font-semibold text-command-text">Sales details</p>
@@ -731,29 +740,51 @@ const LeadContextPanel = memo(function LeadContextPanel({
         </button>
       </div>
       <div className="max-h-[calc(100vh-14rem)] overflow-y-auto p-4">
-        <div className="flex flex-wrap gap-2">
-          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${chatStatusTone(chat)}`}>{chatStatusLabel(chat)}</span>
-          <span className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1 text-xs font-semibold text-command-muted">
-            {conversation.lead.botPaused ? "Manual takeover" : "Bot active"}
-          </span>
+        <div className="rounded-2xl border border-command-line bg-command-bg/65 p-4">
+          <div className="flex flex-wrap gap-2">
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${chatStatusTone(chat)}`}>{chatStatusLabel(chat)}</span>
+            <span className="rounded-full border border-command-line bg-command-panel2 px-3 py-1 text-xs font-semibold text-command-muted">
+              {conversation.lead.botPaused ? "Manual takeover" : "Bot active"}
+            </span>
+          </div>
+          <p className="mt-3 text-lg font-semibold text-command-text">{chat.displayName}</p>
+          <p className="mt-1 text-sm text-command-muted">{chat.phone || "Phone pending"}</p>
         </div>
-        <dl className="mt-5 space-y-4 text-sm">
-          <div><dt className="text-command-muted">Client</dt><dd className="mt-1 text-command-text">{chat.displayName}</dd></div>
-          <div><dt className="text-command-muted">Phone</dt><dd className="mt-1 text-command-text">{chat.phone || "Not provided"}</dd></div>
-          <div><dt className="text-command-muted">Lead status</dt><dd className="mt-1 text-command-text">{conversation.lead.status}</dd></div>
-          <div><dt className="text-command-muted">Property type</dt><dd className="mt-1 text-command-text">{conversation.lead.propertyType || "Not provided"}</dd></div>
-          <div><dt className="text-command-muted">Address / area</dt><dd className="mt-1 text-command-text">{context.addressOrArea}</dd></div>
-          <div><dt className="text-command-muted">Scope</dt><dd className="mt-1 leading-6 text-command-text">{conversation.lead.scopeSummary || "Scope pending"}</dd></div>
-          <div><dt className="text-command-muted">Budget expectation</dt><dd className="mt-1 text-command-text">{context.budgetExpectation}</dd></div>
-          <div><dt className="text-command-muted">Floor plan</dt><dd className="mt-1 text-command-text">{context.floorPlanStatus}</dd></div>
-          <div><dt className="text-command-muted">Photos</dt><dd className="mt-1 text-command-text">{context.sitePhotosStatus}</dd></div>
-          <div><dt className="text-command-muted">Appointment preference</dt><dd className="mt-1 text-command-text">{context.appointmentPreference}</dd></div>
-          <div><dt className="text-command-muted">Notes</dt><dd className="mt-1 leading-6 text-command-text">{context.notes}</dd></div>
-        </dl>
-        <div className="mt-5 rounded-2xl border border-command-gold/35 bg-command-gold/10 p-4">
+
+        <div className="mt-4 rounded-2xl border border-command-gold/35 bg-command-gold/10 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-gold">Next action</p>
           <p className="mt-2 text-base font-semibold text-command-text">{context.nextAction}</p>
           <p className="mt-2 text-sm leading-6 text-command-muted">{context.nextReason}</p>
+        </div>
+
+        <div className="mt-4 grid gap-3">
+          <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Project basics</p>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Status</dt><dd className="text-right text-command-text">{conversation.lead.status}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Property</dt><dd className="text-right text-command-text">{conversation.lead.propertyType || "Not provided"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Area</dt><dd className="text-right text-command-text">{context.addressOrArea}</dd></div>
+            </dl>
+            <p className="mt-3 text-sm leading-6 text-command-text">{conversation.lead.scopeSummary || "Scope pending"}</p>
+          </section>
+
+          <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Files / photos</p>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Floor plan</dt><dd className="text-right text-command-text">{context.floorPlanStatus}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Photos</dt><dd className="text-right text-command-text">{context.sitePhotosStatus}</dd></div>
+            </dl>
+          </section>
+
+          <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Appointment</p>
+            <p className="mt-2 text-sm leading-6 text-command-text">{context.appointmentPreference}</p>
+          </section>
+
+          <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Notes</p>
+            <p className="mt-2 text-sm leading-6 text-command-text">{context.notes}</p>
+          </section>
         </div>
 
         <details className="mt-4 rounded-xl border border-command-line bg-command-bg/55 p-4">
@@ -1321,26 +1352,26 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const chat = activeConversation.summary;
   const conversationLoading = loadingConversationId === activeConversation.lead.id;
   const counterItems = [
-    { label: "Waiting for Marcus", value: queueCounters.waitingForMarcus, tone: "text-command-gold" },
-    { label: "New leads", value: queueCounters.newLeads, tone: "text-command-cyan" },
-    { label: "Bot active", value: queueCounters.botActive, tone: "text-command-green" },
-    { label: "Human takeover", value: queueCounters.humanTakeover, tone: "text-command-amber" },
-    { label: "Failed sends", value: queueCounters.failedSends, tone: "text-command-red" }
+    { label: "Waiting", value: queueCounters.waitingForMarcus, tone: "text-command-gold" },
+    { label: "New", value: queueCounters.newLeads, tone: "text-command-cyan" },
+    { label: "Bot Active", value: queueCounters.botActive, tone: "text-command-green" },
+    { label: "Human Takeover", value: queueCounters.humanTakeover, tone: "text-command-amber" },
+    { label: "Failed", value: queueCounters.failedSends, tone: "text-command-red" }
   ];
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-command-cyan/20 bg-command-card shadow-premium">
-      <div className="border-b border-command-cyan/20 bg-command-panel2/90 px-5 py-4">
+    <section className="overflow-hidden rounded-2xl border border-command-line bg-command-panel shadow-premium">
+      <div className="border-b border-command-line bg-command-panel2/90 px-5 py-3.5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-command-gold">Daily WhatsApp command screen</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Daily WhatsApp Sales Inbox</p>
             <h1 className="mt-1 text-2xl font-semibold text-command-text">LIMM WhatsApp Inbox</h1>
           </div>
           <div className="flex flex-wrap gap-2">
             {counterItems.map((item) => (
-              <div key={item.label} className="rounded-2xl border border-command-line bg-command-bg/65 px-3 py-2">
-                <p className={`text-lg font-semibold ${item.tone}`}>{item.value}</p>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-command-muted">{item.label}</p>
+              <div key={item.label} className="min-w-20 rounded-xl border border-command-line bg-command-bg/65 px-3 py-2">
+                <p className={`text-lg font-semibold leading-none ${item.tone}`}>{item.value}</p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-command-muted">{item.label}</p>
               </div>
             ))}
           </div>
@@ -1348,15 +1379,15 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
       </div>
       <div className={`grid min-h-[calc(100vh-9rem)] grid-cols-1 ${
         contextOpen
-          ? "xl:grid-cols-[21rem_minmax(34rem,1fr)_minmax(18rem,0.38fr)]"
-          : "xl:grid-cols-[21rem_minmax(44rem,1fr)]"
+          ? "xl:grid-cols-[20rem_minmax(0,1fr)_19rem] 2xl:grid-cols-[20rem_minmax(40rem,1fr)_20rem]"
+          : "xl:grid-cols-[20rem_minmax(0,1fr)]"
       }`}>
-        <aside className="border-b border-command-line bg-command-panel2/90 xl:border-b-0 xl:border-r">
+        <aside className="border-b border-command-line bg-command-panel2/95 xl:border-b-0 xl:border-r">
           <div className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-command-gold">WhatsApp Sales Inbox</p>
-                <h2 className="mt-1 text-2xl font-semibold text-command-text">Queue</h2>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Queue</p>
+                <h2 className="mt-1 text-xl font-semibold text-command-text">Conversations</h2>
               </div>
               <button
                 type="button"
@@ -1370,7 +1401,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search name, phone, message, property..."
-              className="mt-4 w-full rounded-xl border border-command-line bg-command-bg px-3 py-2.5 text-sm text-command-text outline-none transition placeholder:text-command-muted focus:border-command-cyan"
+              className="mt-4 w-full rounded-xl border border-command-line bg-command-bg/85 px-3 py-2.5 text-sm text-command-text outline-none transition placeholder:text-command-muted focus:border-command-gold/70"
             />
             <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-command-line bg-command-bg/55 px-3 py-2 text-xs font-semibold text-command-muted">
               <span>Show internal/test leads{hiddenInternalCount ? ` (${hiddenInternalCount} hidden)` : ""}</span>
@@ -1415,15 +1446,27 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
           </div>
         </aside>
 
-        <main className="flex min-h-[calc(100vh-9rem)] flex-col bg-[radial-gradient(circle_at_top_left,rgba(78,195,255,0.08),transparent_30%),linear-gradient(180deg,rgba(10,18,32,0.96),rgba(6,10,20,0.98))]">
-          <header className="border-b border-command-line bg-command-panel2/85 px-5 py-4">
+        <main className="flex min-h-[calc(100vh-9rem)] flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.08),transparent_28%),linear-gradient(180deg,rgba(9,13,18,0.98),rgba(5,7,10,0.99))]">
+          <header className="border-b border-command-line bg-command-panel/95 px-5 py-3.5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-command-gold">Active WhatsApp Chat</p>
-                <h2 className="mt-1 text-2xl font-semibold text-command-text">{chat.displayName}</h2>
-                <p className="mt-1 text-sm text-command-muted">{chat.phone} | {chatStatusLabel(chat)}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Active WhatsApp Chat</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <h2 className="text-2xl font-semibold text-command-text">{chat.displayName}</h2>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>{chatStatusLabel(chat)}</span>
+                  <span className="rounded-full border border-command-line bg-command-bg/70 px-2.5 py-1 text-[11px] font-semibold text-command-muted">
+                    {activeConversation.lead.botPaused ? "Bot paused" : "Bot active"}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-command-muted">{chat.phone}</p>
               </div>
               <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                <Link
+                  href={`/leads/${activeConversation.lead.id}`}
+                  className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-command-muted transition hover:border-command-gold/60 hover:text-command-text"
+                >
+                  View full lead
+                </Link>
                 {!contextOpen ? (
                   <button
                     type="button"
@@ -1453,7 +1496,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             </div>
           ) : null}
 
-          <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="flex-1 overflow-y-auto px-5 py-6">
+          <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="flex-1 overflow-y-auto px-5 py-5">
             {activeMessages.length ? (
               <div className="space-y-4">
                 {activeOlderState.hasOlder ? (
@@ -1462,6 +1505,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
                       type="button"
                       onClick={loadEarlierMessages}
                       disabled={loadingOlder}
+                      title={loadingOlder ? "Loading earlier messages now." : "Load earlier WhatsApp messages for this lead."}
                       className="rounded-full border border-command-line bg-command-panel2 px-4 py-2 text-sm font-semibold text-command-muted transition hover:border-command-gold/60 disabled:cursor-wait disabled:opacity-60"
                     >
                       {loadingOlder ? "Loading earlier messages..." : "Load earlier messages"}

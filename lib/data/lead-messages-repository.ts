@@ -238,6 +238,26 @@ export async function listLatestLeadMessagesForInbox(leadIds: string[], perLead 
   return grouped;
 }
 
+export function isMeaningfulWhatsAppMessage(message: LeadMessage) {
+  if (message.channel !== "whatsapp") return false;
+  if (message.direction !== "inbound" && message.direction !== "outbound") return false;
+  const body = message.body.trim();
+  if (!body) return false;
+  const metadataType = typeof message.metadata?.type === "string" ? message.metadata.type : "";
+  const metadataEvent = typeof message.metadata?.event === "string" ? message.metadata.event : "";
+  return !/audit|debug|webhook|technical|log|internal/i.test(`${metadataType} ${metadataEvent} ${body}`);
+}
+
+export async function listLatestMeaningfulWhatsAppMessagesForLeads(leadIds: string[]) {
+  const grouped = await listLatestLeadMessagesForInbox(leadIds, 6);
+  const latestByLead = new Map<string, LeadMessage>();
+  for (const leadId of leadIds) {
+    const latest = (grouped.get(leadId) ?? []).find(isMeaningfulWhatsAppMessage);
+    if (latest) latestByLead.set(leadId, latest);
+  }
+  return latestByLead;
+}
+
 export async function listLeadMessagesPage(leadId: string, limit = 30, before?: string) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseServerClient();

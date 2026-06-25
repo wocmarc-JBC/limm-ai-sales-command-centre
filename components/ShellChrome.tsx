@@ -13,45 +13,24 @@ const appNavGroups = [
   {
     title: "Command",
     items: [
-      { href: "/", label: "Dashboard" },
-      { href: "/command-core", label: "Command Core Beta" },
-      { href: "/leads", label: "AI Lead Inbox" },
-      { label: "Mission Queue", disabled: true }
+      { href: "/command-core", label: "Command Core" },
+      { href: "/inbox", label: "WhatsApp Inbox" }
     ]
   },
   {
     title: "Sales",
     items: [
-      { href: "/sales-pipeline", label: "Sales Pipeline" },
-      { href: "/quotation-readiness", label: "Quotation Readiness" },
       { href: "/followups", label: "Follow-Ups" },
       { href: "/appointments", label: "Appointments" },
-      { href: "/appointment-settings", label: "Appointment Settings" },
-      { href: "/approvals", label: "Boss Approval" }
-    ]
-  },
-  {
-    title: "Accounts",
-    items: [
-      { href: "/sales-collection", label: "Sales & Collection" },
-      { href: "/targets", label: "Targets" },
+      { href: "/quotation-readiness", label: "Quotation Review" },
+      { href: "/sales-pipeline", label: "Sales Pipeline" },
       { href: "/reports", label: "Boss Report" }
     ]
   },
   {
-    title: "Operations",
+    title: "Admin",
     items: [
-      { href: "/client-files", label: "Client Files" },
-      { href: "/settings#test-lead-cleanup", label: "Cleanup" },
-      { href: "/audit-log", label: "Audit Log" }
-    ]
-  },
-  {
-    title: "System",
-    items: [
-      { href: "/settings", label: "Settings" },
-      { href: "/reports", label: "QA Centre" },
-      { href: "/settings", label: "Health / Diagnostics" }
+      { href: "/settings", label: "Settings" }
     ]
   }
 ] as const;
@@ -178,8 +157,11 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
                   <p className="hidden px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-command-subtle md:block">{group.title}</p>
                   {group.items.map((item) => {
                     const itemKey = `${group.title}-${item.label}`;
-                    const active = "href" in item && item.href
-                      ? item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("#")[0])
+                    const hrefBase = "href" in item && item.href ? item.href.split("#")[0] : "";
+                    const active = hrefBase
+                      ? hrefBase === "/command-core"
+                        ? pathname === "/" || pathname.startsWith("/command-core") || pathname.startsWith("/dashboard")
+                        : pathname.startsWith(hrefBase)
                       : false;
                     const className = `block whitespace-nowrap rounded-xl border px-3 py-2.5 text-[15px] transition ${
                       active

@@ -148,13 +148,71 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
       ]
     }
   ];
+  const adminHubSections = [
+    {
+      title: "Business Settings",
+      id: "business-settings",
+      detail: "Business operating controls that are not needed in the daily sidebar.",
+      links: [
+        ["Appointment Settings", "/appointment-settings", "Control allowed days, Sunday setting, notice, buffers, and appointment types."],
+        ["Targets", "/targets", "Monthly target and operating goal setup."],
+        ["Sales & Collection", "/sales-collection", "Collection and payment status workspace."]
+      ]
+    },
+    {
+      title: "System Settings",
+      id: "system-settings",
+      detail: "System proof, QA, audit trail, and bot controls.",
+      links: [
+        ["WhatsApp / Bot Settings", "#bot-whatsapp-settings", "Review WhatsApp mode, bot posture, and live safety flags."],
+        ["Health / Diagnostics", "/health", "Read-only system health page."],
+        ["QA Centre", "/reports", "Boss reports and QA output."],
+        ["Audit Log", "/audit-log", "Trace important actions and safety decisions."]
+      ]
+    },
+    {
+      title: "Data & Admin",
+      id: "data-admin",
+      detail: "Data cleanup, files, developer tools, and hidden lead views.",
+      links: [
+        ["Client Files", "/client-files", "Review file intake and upload-link status."],
+        ["Cleanup", "/settings?cleanup=scan#test-lead-cleanup", "Dry-run cleanup before soft-deleting test data."],
+        ["Developer Tools", "#developer-tools", "Safe command references only; no browser script execution."],
+        ["Archived / Test Leads", "/leads?view=all", "Review hidden, archived, spam, or test lead records."]
+      ]
+    }
+  ];
 
   return (
     <>
-      <PageHeader title="Settings" eyebrow="System controls" />
+      <PageHeader title="Settings" eyebrow="Admin hub" />
+      <section className="mb-6 grid gap-5 xl:grid-cols-3">
+        {adminHubSections.map((section) => (
+          <div key={section.title} id={section.id} className="mission-panel rounded-2xl p-5 shadow-premium">
+            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">{section.title}</p>
+            <p className="mt-2 text-sm leading-6 text-command-muted">{section.detail}</p>
+            <div className="mt-5 grid gap-3">
+              {section.links.map(([label, href, detail]) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="block rounded-xl border border-command-line bg-command-bg/55 p-3 transition hover:border-command-cyan/70 hover:bg-command-cyan/10"
+                >
+                  <span className="font-semibold text-command-text">{label}</span>
+                  <span className="mt-1 block text-sm leading-5 text-command-muted">{detail}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
       <div className="grid gap-5 xl:grid-cols-2">
         {settingGroups.map((group) => (
-          <section key={group.title} className="rounded-lg border border-command-line bg-command-card p-5 shadow-premium">
+          <section
+            key={group.title}
+            id={group.title === "Bot / WhatsApp" ? "bot-whatsapp-settings" : undefined}
+            className="rounded-lg border border-command-line bg-command-card p-5 shadow-premium"
+          >
             <p className="text-xs uppercase tracking-[0.24em] text-command-gold">{group.title}</p>
             <p className="mt-2 text-base text-command-muted">{group.detail}</p>
             <div className="mt-5 divide-y divide-command-line">
@@ -168,7 +226,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
           </section>
         ))}
       </div>
-      <section className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
+      <section id="developer-tools" className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
         <p className="text-xs uppercase tracking-[0.24em] text-command-gold">In-App QA Centre</p>
         <h2 className="mt-1 text-2xl font-semibold">Boss QA report viewer</h2>
         <p className="mt-2 text-base text-command-muted">
