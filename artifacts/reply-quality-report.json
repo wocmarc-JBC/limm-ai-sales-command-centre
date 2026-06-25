@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-25T14:13:48.399Z",
+  "generatedAt": "2026-06-25T14:46:42.061Z",
   "rows": [
     {
       "id": "first_hi",
@@ -197,11 +197,11 @@
       "id": "office_ubi",
       "clientMessage": "Office renovation at Ubi",
       "scenario": "property_type",
-      "proposedReply": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know which areas of the commercial you're planning to renovate?",
+      "proposedReply": "Yes, we can help review office renovation works. May I know what areas of the office you're planning to renovate or fit out?",
       "score": 96,
       "status": "PASS",
       "failedRules": [],
-      "suggestedCorrection": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know which areas of the commercial you're planning to renovate?",
+      "suggestedCorrection": "Yes, we can help review office renovation works. May I know what areas of the office you're planning to renovate or fit out?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -282,7 +282,7 @@
       "clientMessage": "floor plan attached",
       "scenario": "media_received",
       "proposedReply": "Hi, thanks for sending the floor plan. May I know the main areas you're planning to renovate?",
-      "score": 94,
+      "score": 96,
       "status": "PASS",
       "failedRules": [],
       "suggestedCorrection": "Hi, thanks for sending the floor plan. May I know the main areas you're planning to renovate?",
@@ -293,13 +293,11 @@
       "id": "already_sent_floor_plan",
       "clientMessage": "I sent the floor plan already",
       "scenario": "frustrated_client",
-      "proposedReply": "Thanks, noted. We'll treat the floor plan as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
-      "score": 74,
-      "status": "FAIL",
-      "failedRules": [
-        "brand_score_below_threshold"
-      ],
-      "suggestedCorrection": "Sorry about that. Let me check this properly from here. May I know which areas you want to prioritise?",
+      "proposedReply": "Sorry about that. Yes, we've received the floor plan. May I know which areas you want to prioritise?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Sorry about that. Yes, we've received the floor plan. May I know which areas you want to prioritise?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -307,11 +305,11 @@
       "id": "can_come_down",
       "clientMessage": "Can come down?",
       "scenario": "appointment_request",
-      "proposedReply": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+      "proposedReply": "We can check a suitable time for a project review. May I know the property type, rough location, and main scope first?",
       "score": 96,
       "status": "PASS",
       "failedRules": [],
-      "suggestedCorrection": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+      "suggestedCorrection": "We can check a suitable time for a project review. May I know the property type, rough location, and main scope first?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -343,13 +341,11 @@
       "id": "already_sent_plan",
       "clientMessage": "I already sent you the plan",
       "scenario": "frustrated_client",
-      "proposedReply": "Thanks, noted. We'll treat the files as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
-      "score": 74,
-      "status": "FAIL",
-      "failedRules": [
-        "brand_score_below_threshold"
-      ],
-      "suggestedCorrection": "Sorry about that. Let me check this properly from here. May I know which areas you want to prioritise?",
+      "proposedReply": "Sorry about that. Yes, we've noted the files. May I know which areas you want to prioritise?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Sorry about that. Yes, we've noted the files. May I know which areas you want to prioritise?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -357,11 +353,11 @@
       "id": "why_ask_again",
       "clientMessage": "Why ask again?",
       "scenario": "frustrated_client",
-      "proposedReply": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
-      "score": 96,
+      "proposedReply": "Sorry about that. Let me check this properly so we don't repeat the same questions.",
+      "score": 94,
       "status": "PASS",
       "failedRules": [],
-      "suggestedCorrection": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+      "suggestedCorrection": "Sorry about that. Let me check this properly so we don't repeat the same questions.",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -381,10 +377,12 @@
       "id": "confirm_approve",
       "clientMessage": "Confirm can approve?",
       "scenario": "safety_risk",
-      "proposedReply": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
-      "score": 96,
-      "status": "PASS",
-      "failedRules": [],
+      "proposedReply": "It depends on the exact project details and property type. Some works may require proper checking or submission, so the team should review the drawings, site condition and proposed changes before advising.",
+      "score": 74,
+      "status": "FAIL",
+      "failedRules": [
+        "tone_score_below_threshold"
+      ],
       "suggestedCorrection": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
       "simulationOnly": true,
       "whatsappSendCalled": false
@@ -393,11 +391,11 @@
       "id": "start_tomorrow",
       "clientMessage": "Can start tomorrow?",
       "scenario": "appointment_request",
-      "proposedReply": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+      "proposedReply": "We can check the timeline, but it depends on the scope, site condition, and team availability. May I know what works you need done?",
       "score": 96,
       "status": "PASS",
       "failedRules": [],
-      "suggestedCorrection": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+      "suggestedCorrection": "We can check the timeline, but it depends on the scope, site condition, and team availability. May I know what works you need done?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -417,13 +415,11 @@
       "id": "known_floor_plan_not_reasked",
       "clientMessage": "I already sent you the plan",
       "scenario": "frustrated_client",
-      "proposedReply": "Thanks, noted. We'll treat the floor plan as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
-      "score": 74,
-      "status": "FAIL",
-      "failedRules": [
-        "brand_score_below_threshold"
-      ],
-      "suggestedCorrection": "Sorry about that. Let me check this properly from here. May I know which areas you want to prioritise?",
+      "proposedReply": "Sorry about that. Yes, we've received the floor plan. May I know which areas you want to prioritise?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Sorry about that. Yes, we've received the floor plan. May I know which areas you want to prioritise?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     }

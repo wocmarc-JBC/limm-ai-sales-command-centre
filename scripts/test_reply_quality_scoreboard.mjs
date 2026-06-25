@@ -180,6 +180,7 @@ results.push({ id: "known_floor_plan_not_reasked", ...floorPlanKnownResult });
 for (const result of results) {
   check(`${result.id}: simulation only`, result.simulationOnly && !result.whatsappSendCalled, "QA replay must never send WhatsApp.");
   check(`${result.id}: reply is non-empty unless human takeover disabled send`, result.proposedReply.trim().length > 0, result.proposedReply);
+  check(`${result.id}: scores PASS >= 90`, result.score.status === "PASS" && result.score.overallScore >= 90, JSON.stringify({ reply: result.proposedReply, score: result.score.overallScore, status: result.score.status, failedRules: result.score.failedRules }));
   check(`${result.id}: no banned phrases`, result.score.bannedPhrasesDetected.length === 0, result.score.bannedPhrasesDetected.join(", "));
   check(`${result.id}: no price or package amount`, !/\bS\$|\bSGD|\$|from \$|around \$|package price|price range|quote range/i.test(result.proposedReply), result.proposedReply);
   check(`${result.id}: no unsafe booking/approval promise`, !/appointment confirmed|booked for you|guaranteed approval|approval sure pass|no approval needed|confirm can/i.test(result.proposedReply), result.proposedReply);
@@ -191,6 +192,12 @@ const areYouThere = results.find((item) => item.id === "are_you_there");
 const chineseGreeting = results.find((item) => item.id === "chinese_greeting");
 const photoOnly = results.find((item) => item.id === "photo_only");
 const designResults = results.filter((item) => item.scenario === "design_question");
+const officeUbi = results.find((item) => item.id === "office_ubi");
+const alreadySentFloorPlan = results.find((item) => item.id === "already_sent_floor_plan");
+const whyAskAgain = results.find((item) => item.id === "why_ask_again");
+const canComeDown = results.find((item) => item.id === "can_come_down");
+const confirmApprove = results.find((item) => item.id === "confirm_approve");
+const startTomorrow = results.find((item) => item.id === "start_tomorrow");
 check("Hi scores PASS >= 90 with dream-home first-touch reply", hi?.score.status === "PASS" && hi.score.overallScore >= 90 && hi.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hi?.proposedReply);
 check("Hello scores PASS >= 90 with dream-home first-touch reply", hello?.score.status === "PASS" && hello.score.overallScore >= 90 && hello.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hello?.proposedReply);
 check("Are you there scores PASS >= 90 with presence dream-home reply", areYouThere?.score.status === "PASS" && areYouThere.score.overallScore >= 90 && areYouThere.proposedReply === PRESENCE_FIRST_TOUCH_REPLY, areYouThere?.proposedReply);
@@ -206,6 +213,55 @@ for (const design of designResults) {
 
 const howMuch = results.find((item) => item.id === "price_blank");
 check("How much stays no-price and scope-first", /cost depends on the property type, size, and actual scope/i.test(howMuch?.proposedReply ?? ""), howMuch?.proposedReply);
+
+check(
+  "Office renovation does not require dream-home phrasing",
+  officeUbi?.score.status === "PASS" &&
+    !/dream home/i.test(officeUbi.proposedReply) &&
+    /office renovation works/i.test(officeUbi.proposedReply) &&
+    /renovate or fit out/i.test(officeUbi.proposedReply),
+  officeUbi?.proposedReply
+);
+check(
+  "Already-sent floor plan recovery acknowledges received plan",
+  alreadySentFloorPlan?.score.status === "PASS" &&
+    /sorry about that/i.test(alreadySentFloorPlan.proposedReply) &&
+    /received the floor plan/i.test(alreadySentFloorPlan.proposedReply) &&
+    !/send.{0,25}floor plan|share.{0,25}floor plan|provide.{0,25}floor plan/i.test(alreadySentFloorPlan.proposedReply),
+  alreadySentFloorPlan?.proposedReply
+);
+check(
+  "Why ask again recovery does not require dream-home",
+  whyAskAgain?.score.status === "PASS" &&
+    /sorry about that/i.test(whyAskAgain.proposedReply) &&
+    /don't repeat the same questions/i.test(whyAskAgain.proposedReply) &&
+    !/dream home/i.test(whyAskAgain.proposedReply),
+  whyAskAgain?.proposedReply
+);
+check(
+  "Can come down remains appointment logistics",
+  canComeDown?.score.status === "PASS" &&
+    /project review/i.test(canComeDown.proposedReply) &&
+    /property type, rough location, and main scope/i.test(canComeDown.proposedReply) &&
+    !/dream home/i.test(canComeDown.proposedReply),
+  canComeDown?.proposedReply
+);
+check(
+  "Approval risk reply does not require dream-home",
+  confirmApprove?.score.status === "PASS" &&
+    /approval|requirements|property type|actual works/i.test(confirmApprove.proposedReply) &&
+    !/approval sure pass|confirm can|no approval needed/i.test(confirmApprove.proposedReply) &&
+    !/dream home/i.test(confirmApprove.proposedReply),
+  confirmApprove?.proposedReply
+);
+check(
+  "Can start tomorrow gets timeline-safe reply",
+  startTomorrow?.score.status === "PASS" &&
+    /check the timeline/i.test(startTomorrow.proposedReply) &&
+    /scope, site condition, and team availability/i.test(startTomorrow.proposedReply) &&
+    !/dream home/i.test(startTomorrow.proposedReply),
+  startTomorrow?.proposedReply
+);
 
 const kitchenPrice = results.find((item) => item.id === "price_kitchen");
 check("Kitchen how much names cost drivers without pricing", /carpentry.*hacking.*tiling.*plumbing.*electrical.*countertop/i.test(kitchenPrice?.proposedReply ?? ""), kitchenPrice?.proposedReply);
@@ -242,6 +298,51 @@ check(
   "Brand score below 85 cannot pass",
   weakBrandDesignScore.status !== "PASS" && weakBrandDesignScore.failedRules.includes("brand_score_below_threshold"),
   JSON.stringify(weakBrandDesignScore)
+);
+
+const unsafeApprovalScore = scoreWhatsAppReplyQuality({
+  clientMessage: "Confirm can approve?",
+  reply: "Confirm can approve.",
+  scenario: "safety_risk"
+});
+check(
+  "Safety question with approval certainty fails",
+  unsafeApprovalScore.status === "FAIL" && unsafeApprovalScore.failedRules.includes("unsafe_confirmation_or_guarantee"),
+  JSON.stringify(unsafeApprovalScore)
+);
+
+const unsafePriceScore = scoreWhatsAppReplyQuality({
+  clientMessage: "How much?",
+  reply: "Package price from $5000.",
+  scenario: "price_question"
+});
+check(
+  "Price question with from-dollar package fails",
+  unsafePriceScore.status === "FAIL" && unsafePriceScore.failedRules.includes("price_or_range_detected"),
+  JSON.stringify(unsafePriceScore)
+);
+
+const greetingWithoutDreamScore = scoreWhatsAppReplyQuality({
+  clientMessage: "Hi",
+  reply: "Hi, thanks for contacting LIMM Works. May I know what renovation works you're planning?",
+  scenario: "greeting_only"
+});
+check(
+  "Greeting without dream-home phrase fails",
+  greetingWithoutDreamScore.status === "FAIL" && greetingWithoutDreamScore.failedRules.includes("first_touch_missing_dream_home"),
+  JSON.stringify(greetingWithoutDreamScore)
+);
+
+const takeoverWithAutoReplyScore = scoreWhatsAppReplyQuality({
+  clientMessage: "Marcus has replied already",
+  reply: "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+  decision: { shouldReply: true, calendarEventId: "" },
+  scenario: "human_takeover"
+});
+check(
+  "Human takeover with auto-reply fails",
+  takeoverWithAutoReplyScore.status === "FAIL" && takeoverWithAutoReplyScore.failedRules.includes("human_takeover_not_respected"),
+  JSON.stringify(takeoverWithAutoReplyScore)
 );
 
 const staleHandoffDesignDecision = buildWhatsAppReplyDecision({

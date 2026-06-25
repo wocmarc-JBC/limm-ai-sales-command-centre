@@ -95,7 +95,7 @@ const TEAM_FOLLOW_UP =
   "I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.";
 
 const HANDOFF_HOLDING_REPLY =
-  "Sorry about that. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.";
+  "Sorry about that. Let me check this properly so we don't repeat the same questions.";
 
 const DREAM_HOME_PHRASE = "We'd love to help create your dream home.";
 
@@ -362,7 +362,7 @@ function titleCaseTiming(text: string) {
 }
 
 function detectFrustration(normalized: string) {
-  return has(normalized, /\bwtf\b|\bstupid\b|\bwhy you keep repeating\b|\bare you blind\b|\bnonsense\b|\byou asked already\b|\balready told you\b|\bshit\b|\?\?\?/);
+  return has(normalized, /\bwtf\b|\bstupid\b|\bwhy you keep repeating\b|\bwhy ask again\b|\bare you blind\b|\bnonsense\b|\byou asked already\b|\balready told you\b|\bshit\b|\?\?\?/);
 }
 
 function deriveMemory(input: V9WhatsAppSalesBrainInput) {
@@ -406,12 +406,12 @@ function detectIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
   if (has(text, /\bfloor\s*plan already\b|\bfloorplan already\b|\bfloor.{0,20}sent\b|\bphotos? already\b|\bphotos?.{0,25}(?:sent|been sent)\b|\balready sent\b|\bi sent\b/)) return "file_correction";
   if (has(text, /\bhow much\b|\bprice\b|\bbudget how\b|\bquotation\b|\bquote\b|\bestimate\b|\brough cost\b|\broughly\b|\bpackage\b|多少钱/)) return "price_question";
   if (has(text, /\bso .*cannot finish\b|\bcannot finish\b/)) return "timeline_followup";
-  if (has(text, /\bfinish\b|\bcomplete\b|\btimeline\b|\bhow long\b|\b\d+\s*months?\b|\b\d+\s*weeks?\b/)) {
+  if (has(text, /\bstart\s+(?:tomorrow|tmr|tonight|this week|next week)\b|\bfinish\b|\bcomplete\b|\btimeline\b|\bhow long\b|\b\d+\s*months?\b|\b\d+\s*weeks?\b/)) {
     if (has(text, /\bcondo\b/) && memory.property_type && memory.property_type !== "condo") return "hypothetical_timeline";
     return "timeline_question";
   }
   if (has(text, /\bgo (?:your )?office\b|\byour office\b|\boffice for meeting\b/)) return "office_visit_request";
-  if (has(text, /\bappt\b|\bappointment\b|\bmeeting\b|\bmeet\b|\bsite visit\b|\bavailable slot\b|\bnext available\b|\bbook\b|\bconfirm .*(?:am|pm|slot)\b|预约/)) return "appointment_request";
+  if (has(text, /\bappt\b|\bappointment\b|\bmeeting\b|\bmeet\b|\bsite visit\b|\bcome down\b|\bavailable slot\b|\bnext available\b|\bbook\b|\bconfirm .*(?:am|pm|slot)\b|预约/)) return "appointment_request";
   if (has(text, /\bpast work\b|\bproject photos?\b|\bportfolio\b|\bbefore after\b|\bbefore-and-after\b|\bshow me your work\b|\brenovation photos?\b|\bcompleted project\b|作品/)) return "portfolio_request";
   if (has(text, /\bpromo\b|\bdiscount\b|\boffer\b/)) return "promotion_question";
   if (has(text, /\bfree\b|\bdo for free\b/)) return "free_work_request";
@@ -419,7 +419,7 @@ function detectIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
   if (has(text, /\bresort style\b|\bmodern luxury\b|\bjapandi\b|\bminimalist\b|\bcontemporary\b/)) return "design_direction_statement";
   if (has(text, /\bdesign\b|\btheme\b|\bconcept\b|\bstyle\b|\binterior design\b|\bdesign direction\b|\bdesign ideas?\b|\blayout ideas?\b|\bpropose concept\b/)) return "design_question";
   if (has(text, /\bhack\b|\bhacking\b|\bwall\b|\bstructural\b/)) return "hacking_wall";
-  if (has(text, /\bapproval\b|\bpermit\b|\bsubmission\b|\bura\b|\bbca\b|申请/)) return "approval_submission";
+  if (has(text, /\bapproval\b|\bapprove\b|\bpermit\b|\bsubmission\b|\bura\b|\bbca\b|申请/)) return "approval_submission";
   if (has(text, /\ba&a\b|\baa\b|\blanded\b|\brenovate\b|\breno\b|\bextension\b|\bextend\b/)) return "serious_project_enquiry";
   if (has(text, /\bhello\b|\bhi\b|\bare you there\b|\bcan reply\b|\bany update\b|你好/)) return "follow_up_ping";
   if (["image", "document"].includes(type)) return "media_received";
@@ -590,6 +590,9 @@ function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9
   }
 
   if (memory.property_type && hasSpecificScope(memory)) {
+    if (memory.property_type === "commercial") {
+      return "Yes, we can help review office renovation works. May I know what areas of the office you're planning to renovate or fit out?";
+    }
     if (
       ["received", "client_claimed_sent"].includes(memory.floor_plan_status) ||
       ["received", "client_claimed_sent"].includes(memory.site_photo_status) ||
@@ -601,6 +604,9 @@ function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9
   }
 
   if (memory.property_type && !hasSpecificScope(memory)) {
+    if (memory.property_type === "commercial") {
+      return "Yes, we can help review office renovation works. May I know what areas of the office you're planning to renovate or fit out?";
+    }
     return `Hi, thanks for contacting LIMM Works. ${DREAM_HOME_PHRASE} May I know which areas of the ${memory.property_type} you're planning to renovate?`;
   }
 
@@ -649,7 +655,7 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return handoffAppend(composePriceReply(memory, input), memory);
   }
   if (intent === "timeline_question") {
-    return handoffAppend("We can't confirm 3 months before reviewing the full project details, site condition, material lead times and work sequence. The team can check whether that timeline is realistic after reviewing the details.", memory);
+    return handoffAppend("We can check the timeline, but it depends on the scope, site condition, and team availability. May I know what works you need done?", memory);
   }
   if (intent === "timeline_followup") {
     return handoffAppend("We can't say it cannot finish without reviewing the confirmed project details, but we also shouldn't promise 3 months before checking the site details and work sequence.", memory);
@@ -677,7 +683,10 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
       memory.site_photo_status === "received" || memory.site_photo_status === "client_claimed_sent" ? "site photos" : ""
     ].filter(Boolean);
     const itemText = items.length ? joinList(items) : "files";
-    return `Thanks, noted. We'll treat the ${itemText} as already sent and avoid asking for it again. ${TEAM_FOLLOW_UP}`;
+    if (floorReceived) {
+      return "Sorry about that. Yes, we've received the floor plan. May I know which areas you want to prioritise?";
+    }
+    return `Sorry about that. Yes, we've noted the ${itemText}. May I know which areas you want to prioritise?`;
   }
   if (intent === "hacking_wall") {
     if (memory.property_type === "condo") {
@@ -695,7 +704,7 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return handoffAppend("We'll need to check the drawings and site condition first. Whether wall work is possible depends on the wall type, structure, services, property rules and approval or submission requirements if applicable.", memory);
   }
   if (intent === "approval_submission") {
-    return handoffAppend("It depends on the exact project details and property type. Some works may require proper checking or submission, so the team should review the drawings, site condition and proposed changes before advising.", memory);
+    return handoffAppend("We can help review the scope and approval requirements first. Approval depends on the property type, authorities or management rules, and the actual works involved.", memory);
   }
   if (intent === "portfolio_request") {
     return handoffAppend("Yes, you can view some of our renovation works, design references and project-related content on Instagram here: https://www.instagram.com/limmworks/ If you're looking for a specific reference type, let us know whether it is landed A&A, full house renovation, kitchen, bathroom, carpentry, hacking works, design works or commercial renovation.", memory);

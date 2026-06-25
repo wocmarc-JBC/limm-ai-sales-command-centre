@@ -127,6 +127,23 @@ function hasRiskyConfirmation(reply: string) {
   return /\bappointment confirmed\b|\bbooked for you\b|\bwe have booked\b|\bconfirm can\b|\bsure can\b|\bapproval sure pass\b|\bno approval needed\b|\bguarantee(?:d)?\b/i.test(reply);
 }
 
+function isCommercialContext(text: string) {
+  return /\boffice\b|\bcommercial\b|\bshop\b|\bretail\b|\bfit\s*out\b/i.test(text);
+}
+
+function isHomeBrandMoment(scenario: ReplyQualityScenario, clientMessage: string, hasKnownDesignContext: boolean) {
+  if (["greeting_only", "general", "kitchen_enquiry", "toilet_enquiry", "whole_house_renovation", "landed_aa"].includes(scenario)) {
+    return true;
+  }
+  if (scenario === "design_question") return !hasKnownDesignContext;
+  if (scenario === "property_type") return !isCommercialContext(clientMessage);
+  return false;
+}
+
+function hasProfessionalLimmContext(reply: string) {
+  return /limm works|review|scope|project review|site condition|approval requirements|property type|works|renovation|office|commercial|fit out|timeline|availability|team|floor plan|photos|drawing|location|prioritise|装修|理想的家/i.test(reply);
+}
+
 export function detectReplyQualityScenario(message: string, messageType = "text", lead?: Lead): ReplyQualityScenario {
   const text = normalize(message);
   const type = normalize(messageType);
@@ -221,6 +238,8 @@ export function scoreWhatsAppReplyQuality(input: {
       input.lead?.intakeProfile?.scopeOfWork ||
       input.previousMessages?.some((message) => /property|hdb|condo|landed|commercial|kitchen|toilet|bathroom|scope|floor\s*plan|site photos?/i.test(`${message.body} ${JSON.stringify(message.metadata ?? {})}`))
   );
+  const dreamHomeExpected = isHomeBrandMoment(scenario, input.clientMessage, designHasKnownContext);
+  const hasDreamHomePhrase = normalizedReply.includes("dream home") || normalizedReply.includes("理想的家");
 
   const toneReasons: string[] = [];
   let toneScore = 100;
@@ -235,17 +254,29 @@ export function scoreWhatsAppReplyQuality(input: {
 
   const brandReasons: string[] = [];
   let brandScore = 85;
-  if (approvedPhrasesDetected.length) {
-    brandScore = 100;
+  if (dreamHomeExpected) {
+    if (hasDreamHomePhrase) {
+      brandScore = 95;
+      brandReasons.push("Dream-home enthusiasm used appropriately for this scenario.");
+    } else {
+      brandScore = 60;
+      brandReasons.push("Dream-home enthusiasm is missing for a home/design first-touch scenario.");
+      failedRules.push("missing_contextual_dream_home_phrase");
+    }
+  } else if (hasProfessionalLimmContext(reply)) {
+    brandScore = 90;
+    brandReasons.push("Professional scenario-specific LIMM tone present.");
+  } else {
+    brandScore = 70;
+    brandReasons.push("Reply needs clearer LIMM/project review context.");
+  }
+  if (approvedPhrasesDetected.length && (!dreamHomeExpected || hasDreamHomePhrase)) {
+    brandScore = Math.max(brandScore, 95);
     brandReasons.push("Approved LIMM phrasing detected.");
   }
-  if (["greeting_only", "general", "property_type", "landed_aa", "design_question"].includes(scenario) && normalizedReply.includes("dream home")) {
-    brandScore = Math.max(brandScore, 95);
-    brandReasons.push("Dream-home enthusiasm used appropriately.");
-  }
-  if (!/renovation|kitchen|toilet|landed|condo|hdb|commercial|scope|works|design|装修|理想的家/i.test(reply)) {
-    brandScore -= 15;
-    brandReasons.push("Reply could be more renovation-aware.");
+  if (!hasProfessionalLimmContext(reply)) {
+    brandScore -= 10;
+    brandReasons.push("Reply could be more project-aware.");
   }
 
   const salesReasons: string[] = [];
@@ -277,7 +308,7 @@ export function scoreWhatsAppReplyQuality(input: {
       salesScore -= 35;
       failedRules.push("inappropriate_recovery_reply");
     }
-    if (!designHasKnownContext && !normalizedReply.includes("dream home")) {
+    if (!designHasKnownContext && !hasDreamHomePhrase) {
       brandScore -= 25;
       failedRules.push("missing_limm_dream_home_when_design_context");
     }

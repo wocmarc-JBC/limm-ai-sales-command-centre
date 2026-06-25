@@ -1,6 +1,6 @@
 # LIMM WhatsApp Reply Quality Report
 
-Generated: 2026-06-25T14:13:48.400Z
+Generated: 2026-06-25T14:46:42.062Z
 
 | Test case | Client message | Scenario | Score | Status | Failed rules |
 | --- | --- | --- | ---: | --- | --- |
@@ -27,17 +27,17 @@ Generated: 2026-06-25T14:13:48.400Z
 | price_whole_house | Whole house how much? | price_question | 96 | PASS | None |
 | package_question | Any package? | price_question | 96 | PASS | None |
 | photo_only | (media_received) | media_received | 96 | PASS | None |
-| floor_plan_only | floor plan attached | media_received | 94 | PASS | None |
-| already_sent_floor_plan | I sent the floor plan already | frustrated_client | 74 | FAIL | brand_score_below_threshold |
+| floor_plan_only | floor plan attached | media_received | 96 | PASS | None |
+| already_sent_floor_plan | I sent the floor plan already | frustrated_client | 96 | PASS | None |
 | can_come_down | Can come down? | appointment_request | 96 | PASS | None |
 | meet_tomorrow | Can meet tomorrow? | appointment_request | 96 | PASS | None |
 | site_visit | Can site visit? | appointment_request | 96 | PASS | None |
-| already_sent_plan | I already sent you the plan | frustrated_client | 74 | FAIL | brand_score_below_threshold |
-| why_ask_again | Why ask again? | frustrated_client | 96 | PASS | None |
+| already_sent_plan | I already sent you the plan | frustrated_client | 96 | PASS | None |
+| why_ask_again | Why ask again? | frustrated_client | 94 | PASS | None |
 | hack_wall | Can hack wall? | safety_risk | 96 | PASS | None |
-| confirm_approve | Confirm can approve? | safety_risk | 96 | PASS | None |
+| confirm_approve | Confirm can approve? | safety_risk | 74 | FAIL | tone_score_below_threshold |
 | start_tomorrow | Can start tomorrow? | appointment_request | 96 | PASS | None |
 | human_takeover | Hi | human_takeover | 96 | PASS | None |
-| known_floor_plan_not_reasked | I already sent you the plan | frustrated_client | 74 | FAIL | brand_score_below_threshold |
+| known_floor_plan_not_reasked | I already sent you the plan | frustrated_client | 96 | PASS | None |
 
 Simulation only. No WhatsApp messages were sent.
