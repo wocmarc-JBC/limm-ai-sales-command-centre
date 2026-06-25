@@ -26,6 +26,7 @@ const inboxClient = read("components/inbox/MultiChatInbox.tsx");
 const inboxPage = read("app/inbox/page.tsx");
 const conversationsApi = read("app/api/inbox/conversations/route.ts");
 const leadsRepo = read("lib/data/leads-repository.ts");
+const lifecycle = read("lib/production-lead-lifecycle.ts");
 
 for (const [source, label] of [
   [inboxClient, "inbox client"],
@@ -62,6 +63,7 @@ for (const [source, label] of [
   assertIncludes(source, "listLeads({ includeTest: true })", label);
   assertNotIncludes(source, "includeInactive: true", label);
   assertIncludes(source, "hasWhatsAppContactOrMessages", label);
+  assertIncludes(source, "isActiveProductionLeadForDailyScreens", label);
   assertIncludes(source, "Boolean(lead.phone?.trim()) || messages.length > 0", label);
   assertIncludes(source, "listLatestLeadMessagesForInbox", label);
 }
@@ -69,6 +71,9 @@ for (const [source, label] of [
 assertIncludes(leadsRepo, "if (!options?.includeInactive && (lead.deletedAt || lead.archivedAt || lead.isSpam)) return false;", "inactive lead exclusion");
 assertIncludes(leadsRepo, "if (!options?.includeTest && lead.isTest) return false;", "default test flag filter outside inbox");
 assertIncludes(leadsRepo, "if (!options?.includeTest && scoreTestLead(lead).clearlyTest) return false;", "default score filter outside inbox");
+assertIncludes(lifecycle, "phone equals +65_TEST_ONLY", "explicit QA seed lifecycle filter");
+assertIncludes(lifecycle, "Test-only marker", "explicit QA seed lifecycle filter");
+assertIncludes(lifecycle, "browser QA scope", "explicit QA seed lifecycle filter");
 
 assertIncludes(inboxClient, 'activeLeadId ? "Conversation unavailable." : "No active conversations yet."', "empty-state behavior");
 assertIncludes(inboxClient, "filteredConversations.length === 0", "filtered empty-state behavior");

@@ -8,6 +8,7 @@ import { getInboxQueueState, inboxQueuePriority, latestMeaningfulWhatsAppMessage
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadIntakePlan } from "@/lib/lead-intake";
 import { getNextBestAction } from "@/lib/next-best-action";
+import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import { inferLeadLocation } from "@/lib/singapore-location";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 
@@ -67,7 +68,7 @@ export default async function WhatsAppInboxPage({
   const activeLeadPool = leads.filter((lead) => hasWhatsAppContactOrMessages(
     lead,
     summaryMessagesByLead.get(lead.id) ?? []
-  ));
+  ) && isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? []));
   const selectedLeadFromQuery = searchParams?.lead
     ? activeLeadPool.find((lead) => lead.id === searchParams.lead)
     : undefined;

@@ -5,6 +5,7 @@ import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-reposit
 import { listLeads } from "@/lib/data/leads-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { getInboxQueueState, inboxQueuePriority, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
+import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
@@ -55,7 +56,10 @@ export async function GET() {
   const leadIds = leads.map((lead) => lead.id);
   const summaryMessagesByLead = await listLatestLeadMessagesForInbox(leadIds, 3);
   const activeLeads = leads
-    .filter((lead) => hasWhatsAppContactOrMessages(lead, summaryMessagesByLead.get(lead.id) ?? []))
+    .filter((lead) => hasWhatsAppContactOrMessages(
+      lead,
+      summaryMessagesByLead.get(lead.id) ?? []
+    ) && isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? []))
     .slice(0, 30);
   const conversations = activeLeads
     .map((lead) => buildSummary(

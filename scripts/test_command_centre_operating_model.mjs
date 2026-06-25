@@ -48,7 +48,7 @@ for (const phrase of [
   "Client Files",
   "Cleanup",
   "Developer Tools",
-  "Archived / Test Leads"
+  "Archived / QA Leads"
 ]) {
   assert(settings.includes(phrase), `Settings admin hub missing ${phrase}.`);
 }

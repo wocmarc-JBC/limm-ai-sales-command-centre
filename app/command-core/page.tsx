@@ -2,11 +2,13 @@ import { PageHeader } from "@/components/PageHeader";
 import { SingaporeMissionMap } from "@/components/SingaporeMissionMap";
 import { StatusBadge } from "@/components/StatusBadge";
 import { listFollowUps } from "@/lib/data/followups-repository";
+import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { listPaymentRecords, listProjectAccounts } from "@/lib/data/sales-collection-repository";
 import { formatFullPhoneForProtectedApp, formatLeadDisplayName, leadSubtitle } from "@/lib/lead-display";
 import { buildSingaporeMissionMapData } from "@/lib/mission-map";
 import { getNextBestAction } from "@/lib/next-best-action";
+import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import {
   activePayments,
   overdueAmountForProject,
@@ -194,14 +196,12 @@ function buildDecisionCards({
   leads,
   followUps,
   projects,
-  payments,
-  testLeadCount
+  payments
 }: {
   leads: Lead[];
   followUps: FollowUp[];
   projects: ProjectAccount[];
   payments: PaymentRecord[];
-  testLeadCount: number;
 }) {
   const cards: DecisionCard[] = [];
   const needsMarcus = leads.find((lead) => lead.needsMarcus || lead.bossApprovalNeeded);
@@ -222,7 +222,6 @@ function buildDecisionCards({
     const lead = risk ?? needsMarcus!;
     cards.push({ title: "Handle risk / complaint", priority: "critical", why: `${formatLeadDisplayName(lead)} needs Marcus review before any client-facing promise.`, href: `/inbox?lead=${lead.id}`, actionLabel: "Open WhatsApp Chat" });
   }
-  if (testLeadCount > 0) cards.push({ title: "Clean test data", priority: "low", why: `${testLeadCount} test/data cleanup signal${testLeadCount === 1 ? "" : "s"} detected.`, href: "/settings#test-lead-cleanup", actionLabel: "Open cleanup" });
   if (hotLead) cards.push({ title: "Review hot lead", priority: "high", why: `${formatLeadDisplayName(hotLead)} is one of the highest-priority live opportunities.`, href: `/inbox?lead=${hotLead.id}`, actionLabel: "Open WhatsApp Chat" });
   if (pausedBot) cards.push({ title: "Pause/resume bot", priority: "medium", why: `${formatLeadDisplayName(pausedBot)} has bot control paused.`, href: `/leads/${pausedBot.id}#bot-controls`, actionLabel: "Review bot" });
   if (followUp) cards.push({ title: "Follow up client", priority: followUp.status === "Overdue" ? "critical" : "medium", why: `${followUp.clientName} has a ${followUp.followupType} follow-up due.`, href: "/followups", actionLabel: "Open follow-ups" });
@@ -231,13 +230,17 @@ function buildDecisionCards({
 }
 
 export default async function CommandCorePage() {
-  const [leads, leadsWithTest, followUps, projects, payments] = await Promise.all([
-    listLeads(),
+  const [rawLeads, followUps, projects, payments] = await Promise.all([
     listLeads({ includeTest: true }),
     listFollowUps({ status: "active", pageSize: 30 }),
     listProjectAccounts(),
     listPaymentRecords()
   ]);
+  const messagesByLead = await listLatestLeadMessagesForInbox(rawLeads.map((lead) => lead.id), 6);
+  const leads = rawLeads.filter((lead) => isActiveProductionLeadForDailyScreens(
+    lead,
+    messagesByLead.get(lead.id) ?? []
+  ));
 
   const hotLeads = leads.filter((lead) => lead.leadCategory === "Hot" || lead.leadScore >= 70);
   const appointments = leads.filter((lead) => lead.status === "Ready To Book" || lead.status === "Appointment Pending" || /appointment|site visit|meet|slot/i.test(lead.lastClientMessage));
@@ -248,9 +251,8 @@ export default async function CommandCorePage() {
   const collectionsDue = projects.filter((project) => outstandingForProject(project, activePaymentRows) > 0).length;
   const overdue = projects.filter((project) => overdueAmountForProject(project, activePaymentRows) > 0).length;
   const botPaused = leads.filter((lead) => lead.botPaused);
-  const testLeadCount = leadsWithTest.filter((lead) => lead.isTest).length;
   const missionMap = buildSingaporeMissionMapData({ leads, followUps, projects, payments, activeFilter: "all" });
-  const decisions = buildDecisionCards({ leads, followUps: followUpsDue, projects, payments, testLeadCount });
+  const decisions = buildDecisionCards({ leads, followUps: followUpsDue, projects, payments });
   const timelineItems = buildTimelineItems({ leads, followUps: followUpsDue, projects, payments });
   const topLead = [...leads].sort((a, b) => b.leadScore - a.leadScore || Number(Boolean(b.needsMarcus || b.bossApprovalNeeded)) - Number(Boolean(a.needsMarcus || a.bossApprovalNeeded)))[0] ?? null;
   const topLeadAction = topLead ? getNextBestAction(topLead) : null;
