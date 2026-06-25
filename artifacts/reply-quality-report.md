@@ -1,12 +1,12 @@
 # LIMM WhatsApp Reply Quality Report
 
-Generated: 2026-06-25T13:01:10.588Z
+Generated: 2026-06-25T13:16:47.721Z
 
 | Test case | Client message | Scenario | Score | Status | Failed rules |
 | --- | --- | --- | ---: | --- | --- |
 | first_hi | Hi | greeting_only | 96 | PASS | None |
 | first_hello | Hello | greeting_only | 96 | PASS | None |
-| are_you_there | Are you there? | greeting_only | 74 | FAIL | first_touch_missing_dream_home, first_touch_missing_property_or_scope_question |
+| are_you_there | Are you there? | greeting_only | 96 | PASS | None |
 | can_do_renovation | Can do renovation? | general | 96 | PASS | None |
 | chinese_greeting | 你好 | chinese_message | 91 | PASS | None |
 | kitchen_scope | Hi, I want renovate kitchen | kitchen_enquiry | 96 | PASS | None |
@@ -18,7 +18,7 @@ Generated: 2026-06-25T13:01:10.588Z
 | price_toilet | Toilet how much? | price_question | 96 | PASS | None |
 | price_whole_house | Whole house how much? | price_question | 96 | PASS | None |
 | package_question | Any package? | price_question | 96 | PASS | None |
-| photo_only | (media_received) | media_received | 74 | FAIL | did_not_answer_latest_question |
+| photo_only | (media_received) | media_received | 96 | PASS | None |
 | floor_plan_only | floor plan attached | media_received | 94 | PASS | None |
 | already_sent_floor_plan | I sent the floor plan already | frustrated_client | 92 | PASS | None |
 | can_come_down | Can come down? | appointment_request | 96 | PASS | None |

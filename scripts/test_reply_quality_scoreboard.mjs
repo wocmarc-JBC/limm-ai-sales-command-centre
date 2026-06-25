@@ -35,7 +35,10 @@ require.extensions[".ts"] = function compileTs(module, filename) {
 
 const {
   BANNED_REPLY_PHRASES,
+  CHINESE_FIRST_TOUCH_REPLY,
   DEFAULT_FIRST_TOUCH_REPLY,
+  PHOTO_FIRST_REPLY,
+  PRESENCE_FIRST_TOUCH_REPLY,
   runWhatsAppQaReplay,
   scoreWhatsAppReplyQuality
 } = require(path.join(ROOT, "lib/whatsapp-reply-quality-scoreboard.ts"));
@@ -172,7 +175,15 @@ for (const result of results) {
 }
 
 const hi = results.find((item) => item.id === "first_hi");
-check("Hi scores PASS with dream-home first-touch reply", hi?.score.status === "PASS" && hi.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hi?.proposedReply);
+const hello = results.find((item) => item.id === "first_hello");
+const areYouThere = results.find((item) => item.id === "are_you_there");
+const chineseGreeting = results.find((item) => item.id === "chinese_greeting");
+const photoOnly = results.find((item) => item.id === "photo_only");
+check("Hi scores PASS >= 90 with dream-home first-touch reply", hi?.score.status === "PASS" && hi.score.overallScore >= 90 && hi.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hi?.proposedReply);
+check("Hello scores PASS >= 90 with dream-home first-touch reply", hello?.score.status === "PASS" && hello.score.overallScore >= 90 && hello.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hello?.proposedReply);
+check("Are you there scores PASS >= 90 with presence dream-home reply", areYouThere?.score.status === "PASS" && areYouThere.score.overallScore >= 90 && areYouThere.proposedReply === PRESENCE_FIRST_TOUCH_REPLY, areYouThere?.proposedReply);
+check("Chinese greeting scores PASS >= 90 with Chinese reply", chineseGreeting?.score.status === "PASS" && chineseGreeting.score.overallScore >= 90 && chineseGreeting.proposedReply === CHINESE_FIRST_TOUCH_REPLY, chineseGreeting?.proposedReply);
+check("Image-only scores PASS >= 90 with photo-first reply", photoOnly?.score.status === "PASS" && photoOnly.score.overallScore >= 90 && photoOnly.proposedReply === PHOTO_FIRST_REPLY, photoOnly?.proposedReply);
 
 const howMuch = results.find((item) => item.id === "price_blank");
 check("How much stays no-price and scope-first", /cost depends on the property type, size, and actual scope/i.test(howMuch?.proposedReply ?? ""), howMuch?.proposedReply);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-25T13:01:10.587Z",
+  "generatedAt": "2026-06-25T13:16:47.720Z",
   "rows": [
     {
       "id": "first_hi",
@@ -29,14 +29,11 @@
       "id": "are_you_there",
       "clientMessage": "Are you there?",
       "scenario": "greeting_only",
-      "proposedReply": "Hi, yes we're here. Thanks for contacting LIMM Works. May I know what renovation works you're planning?",
-      "score": 74,
-      "status": "FAIL",
-      "failedRules": [
-        "first_touch_missing_dream_home",
-        "first_touch_missing_property_or_scope_question"
-      ],
-      "suggestedCorrection": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+      "proposedReply": "Hi, yes we're here. Thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Hi, yes we're here. Thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -176,13 +173,11 @@
       "id": "photo_only",
       "clientMessage": "",
       "scenario": "media_received",
-      "proposedReply": "Thanks for sending this over. We can help review the image or floor plan. May I know what renovation works you're planning?",
-      "score": 74,
-      "status": "FAIL",
-      "failedRules": [
-        "did_not_answer_latest_question"
-      ],
-      "suggestedCorrection": "Thanks for sending this over. We can help review the image or floor plan. May I know what renovation works you're planning?",
+      "proposedReply": "Hi, thanks for sending the photos. May I know what works you're planning for this area?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Hi, thanks for sending the photos. May I know what works you're planning for this area?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
