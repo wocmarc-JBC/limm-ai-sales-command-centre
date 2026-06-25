@@ -860,6 +860,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const initialLeadId = selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)
     ? selectedLeadId
     : firstVisibleConversation?.lead.id ?? "";
+  const initialSelectedLeadIdRef = useRef(initialLeadId);
   const [conversationMap, setConversationMap] = useState<Record<string, MultiChatConversation>>(() => Object.fromEntries(
     conversations.map((conversation) => [conversation.lead.id, conversation])
   ));
@@ -867,7 +868,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const [conversationCache, setConversationCache] = useState<Record<string, { fetchedAt: string }>>(() => initialLeadId
     ? { [initialLeadId]: { fetchedAt: new Date().toISOString() } }
     : {});
-  const [activeLeadId, setActiveLeadId] = useState(initialLeadId);
+  const [activeLeadId, setActiveLeadId] = useState(() => initialSelectedLeadIdRef.current);
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
@@ -965,14 +966,8 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (selectedLeadId && chatSummaries.some((item) => item.id === selectedLeadId)) {
-      setActiveLeadId(selectedLeadId);
-      if (!conversationCacheRef.current[selectedLeadId]) void loadConversation(selectedLeadId);
-    }
-  }, [chatSummaries, loadConversation, selectedLeadId]);
-
-  const activeConversation = conversationMap[activeLeadId] ?? conversations[0];
+  const activeLeadStillListed = activeLeadId ? chatSummaries.some((summary) => summary.id === activeLeadId) : false;
+  const activeConversation = activeLeadStillListed ? conversationMap[activeLeadId] : undefined;
   const activeOlderState = activeConversation
     ? olderState[activeConversation.lead.id] ?? {
       hasOlder: activeConversation.hasOlderMessages,
@@ -1311,8 +1306,14 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     return (
       <section className="mission-panel rounded-3xl p-8 shadow-premium">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">WhatsApp Sales Inbox</p>
-        <h1 className="mt-2 text-3xl font-semibold text-command-text">No active conversations yet.</h1>
-        <p className="mt-3 text-command-muted">New WhatsApp leads will appear here once inbound messages are saved.</p>
+        <h1 className="mt-2 text-3xl font-semibold text-command-text">
+          {activeLeadId ? "Conversation unavailable." : "No active conversations yet."}
+        </h1>
+        <p className="mt-3 text-command-muted">
+          {activeLeadId
+            ? "The selected conversation is no longer in the active inbox. Choose another chat from the queue when ready."
+            : "New WhatsApp leads will appear here once inbound messages are saved."}
+        </p>
       </section>
     );
   }

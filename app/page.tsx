@@ -404,7 +404,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Main Action Queue</p>
               <h3 className="mt-1 text-2xl font-semibold text-command-text">Action-first lead list</h3>
             </div>
-            <CompactLink href="/leads">Open Inbox</CompactLink>
+            <CompactLink href="/inbox">Open WhatsApp Inbox</CompactLink>
           </div>
 
           <div className="mt-5 space-y-3">
