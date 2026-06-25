@@ -1,6 +1,6 @@
 # LIMM WhatsApp Reply Quality Report
 
-Generated: 2026-06-25T14:46:42.062Z
+Generated: 2026-06-25T14:47:42.569Z
 
 | Test case | Client message | Scenario | Score | Status | Failed rules |
 | --- | --- | --- | ---: | --- | --- |
@@ -35,7 +35,7 @@ Generated: 2026-06-25T14:46:42.062Z
 | already_sent_plan | I already sent you the plan | frustrated_client | 96 | PASS | None |
 | why_ask_again | Why ask again? | frustrated_client | 94 | PASS | None |
 | hack_wall | Can hack wall? | safety_risk | 96 | PASS | None |
-| confirm_approve | Confirm can approve? | safety_risk | 74 | FAIL | tone_score_below_threshold |
+| confirm_approve | Confirm can approve? | safety_risk | 95 | PASS | None |
 | start_tomorrow | Can start tomorrow? | appointment_request | 96 | PASS | None |
 | human_takeover | Hi | human_takeover | 96 | PASS | None |
 | known_floor_plan_not_reasked | I already sent you the plan | frustrated_client | 96 | PASS | None |

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-25T14:46:42.061Z",
+  "generatedAt": "2026-06-25T14:47:42.569Z",
   "rows": [
     {
       "id": "first_hi",
@@ -377,13 +377,11 @@
       "id": "confirm_approve",
       "clientMessage": "Confirm can approve?",
       "scenario": "safety_risk",
-      "proposedReply": "It depends on the exact project details and property type. Some works may require proper checking or submission, so the team should review the drawings, site condition and proposed changes before advising.",
-      "score": 74,
-      "status": "FAIL",
-      "failedRules": [
-        "tone_score_below_threshold"
-      ],
-      "suggestedCorrection": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?",
+      "proposedReply": "We can help review the scope and approval requirements first. Approval depends on the property type, authorities or management rules, and the actual works involved.",
+      "score": 95,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "We can help review the scope and approval requirements first. Approval depends on the property type, authorities or management rules, and the actual works involved.",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
