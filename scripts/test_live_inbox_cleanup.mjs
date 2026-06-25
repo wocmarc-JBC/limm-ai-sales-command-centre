@@ -36,6 +36,8 @@ for (const phrase of [
   "setShowInternalTestLeads",
   "internalTestSignals",
   "isInternalTestChat",
+  "isNonProductionChat",
+  "nonProductionSignals",
   " hidden)"
 ]) {
   assertNotIncludes(inboxClient, phrase, "daily inbox live-mode copy");
@@ -53,15 +55,10 @@ for (const phrase of [
   "Human takeover",
   "Failed send",
   "filteredConversations.map",
-  "visibleChatSummaries",
-  "isNonProductionChat",
-  "const productionConversations = conversations.filter((item) => !isNonProductionChat(item.summary))",
-  "chatSummaries.filter((chat) => !isNonProductionChat(chat))"
+  "visibleChatSummaries"
 ]) {
   assertIncludes(inboxClient, phrase, "production inbox queue");
 }
-
-assert(!inboxClient.includes("?? conversations[0]"), "daily inbox must not fall back to a non-production conversation.");
 
 assertIncludes(inboxPage, "selectedLeadId={searchParams?.lead}", "active chat deep-link preservation");
 assertIncludes(settingsPage, "Archived / QA Leads", "admin-only QA lead access");

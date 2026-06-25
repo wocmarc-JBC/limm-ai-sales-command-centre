@@ -68,9 +68,11 @@ assert(!sendApi.includes("redirect("), "JSON inbox send API must not redirect.")
 assert(!sendApi.includes("revalidatePath"), "JSON inbox send API must not revalidate the whole route.");
 
 for (const phrase of [
+  "listLeads({ includeTest: true })",
   "listLatestLeadMessagesForInbox(leadIds, 3)",
   "listLeadMessagesPage(selectedLead.id, 30)",
-  "activeLeads = leads.slice(0, 30)"
+  "hasWhatsAppContactOrMessages",
+  "firstThirtyActiveLeads = activeLeadPool.slice(0, 30)"
 ]) {
   assertIncludes(inboxPage, phrase, "lightweight initial inbox load");
 }
@@ -109,21 +111,13 @@ for (const phrase of [
 assert(!inboxClient.includes("<details open"), "technical panels must not render open by default.");
 
 for (const phrase of [
-  "isNonProductionChat",
-  "nonProductionSignals",
-  "chatSummaries.filter((chat) => !isNonProductionChat(chat))",
-  "marcus",
-  "fio"
-]) {
-  assertIncludes(inboxClient, phrase, "silent non-production lead hiding");
-}
-
-for (const phrase of [
   "showInternalTestLeads",
   "Show internal/test leads",
   "hiddenInternalCount",
   "internalTestSignals",
   "isInternalTestChat",
+  "isNonProductionChat",
+  "nonProductionSignals",
   " hidden)"
 ]) {
   assertNotIncludes(inboxClient, phrase, "live inbox cleanup");

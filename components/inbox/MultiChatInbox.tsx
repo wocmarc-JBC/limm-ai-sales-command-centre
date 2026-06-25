@@ -147,37 +147,6 @@ const quickReplies = [
 
 const SEND_TIMEOUT_MS = 15000;
 
-const nonProductionSignals = [
-  "marcus",
-  "fio",
-  "test lead",
-  "qa lead",
-  "demo lead",
-  "sample lead",
-  "sandbox",
-  "hello...can help me do my kitchen",
-  "do kitchen and demo 2 wall",
-  "how much ah",
-  "can make appt wed 2pm",
-  "can see your past works",
-  "got landed project photo",
-  "voice test",
-  "floor plan test",
-  "laminated wall cladding test"
-];
-
-function isNonProductionChat(chat: MultiChatSummary) {
-  const haystack = [
-    chat.displayName,
-    chat.phone,
-    chat.lastMessagePreview,
-    chat.propertyType,
-    chat.scopeSummary,
-    chat.status
-  ].join(" ").toLowerCase();
-  return nonProductionSignals.some((signal) => haystack.includes(signal));
-}
-
 function chatPriority(chat: MultiChatSummary) {
   return inboxQueuePriority(chat);
 }
@@ -887,9 +856,8 @@ const LeadContextPanel = memo(function LeadContextPanel({
 });
 
 export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
-  const productionConversations = conversations.filter((item) => !isNonProductionChat(item.summary));
-  const firstVisibleConversation = productionConversations[0];
-  const initialLeadId = selectedLeadId && productionConversations.some((item) => item.lead.id === selectedLeadId)
+  const firstVisibleConversation = conversations[0];
+  const initialLeadId = selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)
     ? selectedLeadId
     : firstVisibleConversation?.lead.id ?? "";
   const initialSelectedLeadIdRef = useRef(initialLeadId);
@@ -1095,7 +1063,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   };
 
   const visibleChatSummaries = useMemo(
-    () => sortQueue(chatSummaries.filter((chat) => !isNonProductionChat(chat))),
+    () => sortQueue(chatSummaries),
     [chatSummaries]
   );
   const queueCounters = useMemo(() => ({

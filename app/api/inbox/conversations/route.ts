@@ -11,6 +11,10 @@ function latestWhatsAppMessage(messages: LeadMessage[]) {
   return latestMeaningfulWhatsAppMessage(messages);
 }
 
+function hasWhatsAppContactOrMessages(lead: Lead, messages: LeadMessage[]) {
+  return Boolean(lead.phone?.trim()) || messages.length > 0;
+}
+
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
   const latestMessage = latestWhatsAppMessage(messages);
   const queue = getInboxQueueState(lead, messages);
@@ -45,12 +49,14 @@ export async function GET() {
   }
 
   const [leads, allFiles] = await Promise.all([
-    listLeads(),
+    listLeads({ includeTest: true }),
     listAllLeadFiles()
   ]);
-  const activeLeads = leads.slice(0, 30);
-  const leadIds = activeLeads.map((lead) => lead.id);
+  const leadIds = leads.map((lead) => lead.id);
   const summaryMessagesByLead = await listLatestLeadMessagesForInbox(leadIds, 3);
+  const activeLeads = leads
+    .filter((lead) => hasWhatsAppContactOrMessages(lead, summaryMessagesByLead.get(lead.id) ?? []))
+    .slice(0, 30);
   const conversations = activeLeads
     .map((lead) => buildSummary(
       lead,

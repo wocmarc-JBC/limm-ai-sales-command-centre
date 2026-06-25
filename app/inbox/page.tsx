@@ -15,6 +15,10 @@ function latestWhatsAppMessage(messages: LeadMessage[]) {
   return latestMeaningfulWhatsAppMessage(messages);
 }
 
+function hasWhatsAppContactOrMessages(lead: Lead, messages: LeadMessage[]) {
+  return Boolean(lead.phone?.trim()) || messages.length > 0;
+}
+
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): MultiChatSummary {
   const latestMessage = latestWhatsAppMessage(messages);
   const queue = getInboxQueueState(lead, messages);
@@ -55,12 +59,22 @@ export default async function WhatsAppInboxPage({
   if (!auth.authenticated) return null;
 
   const [leads, allFiles] = await Promise.all([
-    listLeads(),
+    listLeads({ includeTest: true }),
     listAllLeadFiles()
   ]);
-  const activeLeads = leads.slice(0, 30);
-  const leadIds = activeLeads.map((lead) => lead.id);
+  const leadIds = leads.map((lead) => lead.id);
   const summaryMessagesByLead = await listLatestLeadMessagesForInbox(leadIds, 3);
+  const activeLeadPool = leads.filter((lead) => hasWhatsAppContactOrMessages(
+    lead,
+    summaryMessagesByLead.get(lead.id) ?? []
+  ));
+  const selectedLeadFromQuery = searchParams?.lead
+    ? activeLeadPool.find((lead) => lead.id === searchParams.lead)
+    : undefined;
+  const firstThirtyActiveLeads = activeLeadPool.slice(0, 30);
+  const activeLeads = selectedLeadFromQuery && !firstThirtyActiveLeads.some((lead) => lead.id === selectedLeadFromQuery.id)
+    ? [selectedLeadFromQuery, ...firstThirtyActiveLeads.slice(0, 29)]
+    : firstThirtyActiveLeads;
   const defaultSelectedLeadId = searchParams?.lead && activeLeads.some((lead) => lead.id === searchParams.lead)
     ? searchParams.lead
     : activeLeads[0]?.id;
