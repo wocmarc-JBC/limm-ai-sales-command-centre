@@ -310,6 +310,10 @@ function sortMessages(messages: LeadMessage[]) {
   return [...messages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+function sortMessagesNewestFirst(messages: LeadMessage[]) {
+  return [...messages].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
 function normalizedOutboundBody(message: LeadMessage) {
   return message.body.trim().replace(/\s+/g, " ").toLowerCase();
 }
@@ -603,7 +607,7 @@ function ReplyComposer({
   };
 
   return (
-    <div className="sticky bottom-0 border-t border-command-line bg-command-panel/95 p-4 shadow-[0_-18px_45px_rgba(0,0,0,0.32)] backdrop-blur">
+    <div className="border-b border-command-line bg-command-panel/95 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {quickReplies.map((item) => (
           <button
@@ -882,8 +886,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [loadingConversationId, setLoadingConversationId] = useState("");
   const messagePaneRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const stickToBottomRef = useRef(true);
+  const stickToLatestRef = useRef(true);
   const conversationCacheRef = useRef(conversationCache);
 
   useEffect(() => {
@@ -978,6 +981,8 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     ...(activeConversation?.messages ?? []),
     ...(activeConversation ? optimisticReplies[activeConversation.lead.id] ?? [] : [])
   ]), [activeConversation, olderMessages, optimisticReplies]);
+  const activeMessagesNewestFirst = useMemo(() => sortMessagesNewestFirst(activeMessages), [activeMessages]);
+  const latestVisibleMessageId = activeMessagesNewestFirst[0]?.id ?? "";
   const latestPersistedCursor = useMemo(() => {
     const persisted = activeConversation?.messages.filter((message) => !message.id.startsWith("optimistic-")) ?? [];
     return newestMessage(persisted)?.createdAt ?? "";
@@ -1053,13 +1058,13 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   }, [activeLeadId, conversationMap, latestPersistedCursor, loadConversation, patchSummary]);
 
   useEffect(() => {
-    if (stickToBottomRef.current) bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [activeLeadId, activeMessages.length]);
+    if (stickToLatestRef.current) messagePaneRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [activeLeadId, latestVisibleMessageId]);
 
   const handleMessagePaneScroll = () => {
     const pane = messagePaneRef.current;
     if (!pane) return;
-    stickToBottomRef.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 160;
+    stickToLatestRef.current = pane.scrollTop < 160;
   };
 
   const visibleChatSummaries = useMemo(
@@ -1096,7 +1101,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
 
   const selectConversation = useCallback((leadId: string) => {
     setActiveLeadId(leadId);
-    stickToBottomRef.current = true;
+    stickToLatestRef.current = true;
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `/inbox?lead=${encodeURIComponent(leadId)}`);
     }
@@ -1450,38 +1455,6 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             </div>
           ) : null}
 
-          <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="flex-1 overflow-y-auto px-5 py-5">
-            {activeMessages.length ? (
-              <div className="space-y-4">
-                {activeOlderState.hasOlder ? (
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={loadEarlierMessages}
-                      disabled={loadingOlder}
-                      title={loadingOlder ? "Loading earlier messages now." : "Load earlier WhatsApp messages for this lead."}
-                      className="rounded-full border border-command-line bg-command-panel2 px-4 py-2 text-sm font-semibold text-command-muted transition hover:border-command-gold/60 disabled:cursor-wait disabled:opacity-60"
-                    >
-                      {loadingOlder ? "Loading earlier messages..." : "Load earlier messages"}
-                    </button>
-                  </div>
-                ) : null}
-                {activeMessages.map((message) => (
-                  <MessageBubble
-                    key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`}
-                    message={message}
-                    onRetry={handleRetryDraft}
-                  />
-                ))}
-                <div ref={bottomRef} />
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-command-line bg-command-panel2/80 p-5 text-sm text-command-muted">
-                No WhatsApp messages saved for this lead yet.
-              </div>
-            )}
-          </div>
-
           <ReplyComposer
             conversation={activeConversation}
             draftSeed={draftSeeds[activeConversation.lead.id]}
@@ -1493,6 +1466,46 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             onOptimisticReply={handleOptimisticReply}
             onSendSettled={handleSendSettled}
           />
+
+          <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="flex-1 overflow-y-auto px-5 py-5">
+            {activeMessagesNewestFirst.length ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Latest messages</p>
+                    <p className="mt-1 text-sm text-command-muted">Newest first. Older messages continue below.</p>
+                  </div>
+                  <span className="rounded-full border border-command-line bg-command-panel2 px-3 py-1 text-xs font-semibold text-command-muted">
+                    {activeMessagesNewestFirst.length} shown
+                  </span>
+                </div>
+                {activeMessagesNewestFirst.map((message) => (
+                  <MessageBubble
+                    key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`}
+                    message={message}
+                    onRetry={handleRetryDraft}
+                  />
+                ))}
+                {activeOlderState.hasOlder ? (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      type="button"
+                      onClick={loadEarlierMessages}
+                      disabled={loadingOlder}
+                      title={loadingOlder ? "Loading older messages now." : "Load older WhatsApp messages for this lead."}
+                      className="rounded-full border border-command-line bg-command-panel2 px-4 py-2 text-sm font-semibold text-command-muted transition hover:border-command-gold/60 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {loadingOlder ? "Loading older messages..." : "Load older messages"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-command-line bg-command-panel2/80 p-5 text-sm text-command-muted">
+                No WhatsApp messages saved for this lead yet.
+              </div>
+            )}
+          </div>
         </main>
 
         {contextOpen ? (
