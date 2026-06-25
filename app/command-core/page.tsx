@@ -2,12 +2,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { SingaporeMissionMap } from "@/components/SingaporeMissionMap";
 import { StatusBadge } from "@/components/StatusBadge";
 import { listFollowUps } from "@/lib/data/followups-repository";
+import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { listPaymentRecords, listProjectAccounts } from "@/lib/data/sales-collection-repository";
 import { formatFullPhoneForProtectedApp, formatLeadDisplayName, leadSubtitle } from "@/lib/lead-display";
 import { buildLeadFacts } from "@/lib/lead-facts";
 import { buildSingaporeMissionMapData } from "@/lib/mission-map";
+import { buildCommandCoreLeadSummary, phase3SummarySort, type CommandCoreLeadSummary } from "@/lib/phase3-read-models";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import {
   activePayments,
@@ -16,7 +18,7 @@ import {
   salesStageForLead,
   outstandingForProject
 } from "@/lib/sales-collection";
-import type { FollowUp, Lead, PaymentRecord, ProjectAccount } from "@/lib/types";
+import type { FollowUp, Lead, LeadFile, PaymentRecord, ProjectAccount } from "@/lib/types";
 
 type Tone = "gold" | "cyan" | "amber" | "red" | "green" | "slate";
 type DecisionPriority = "critical" | "high" | "medium" | "low";
@@ -194,16 +196,22 @@ function buildTimelineItems({
 
 function buildDecisionCards({
   leads,
+  summaries,
   followUps,
   projects,
   payments
 }: {
   leads: Lead[];
+  summaries: CommandCoreLeadSummary[];
   followUps: FollowUp[];
   projects: ProjectAccount[];
   payments: PaymentRecord[];
 }) {
   const cards: DecisionCard[] = [];
+  const leadById = new Map(leads.map((lead) => [lead.id, lead]));
+  const failedSummary = summaries.find((summary) => summary.failedSend);
+  const followUpSummary = summaries.find((summary) => ["Failed send unresolved", "Needs Marcus reply", "Overdue follow-up", "Follow-up due", "High-intent idle"].includes(summary.followUpStatus));
+  const quoteReadySummary = summaries.find((summary) => summary.quotationReadinessStatus === "Ready for Quotation Review");
   const needsMarcus = leads.find((lead) => lead.needsMarcus || lead.bossApprovalNeeded);
   const appointment = leads.find((lead) => lead.status === "Ready To Book" || lead.status === "Appointment Pending" || /appointment|site visit|meet|slot/i.test(lead.lastClientMessage));
   const floorPlan = leads.find((lead) => /floor plan|drawing|layout|photo|image|document/i.test(lead.lastClientMessage));
@@ -214,6 +222,9 @@ function buildDecisionCards({
   const pausedBot = leads.find((lead) => lead.botPaused);
   const followUp = followUps.find((item) => item.status === "Due" || item.status === "Overdue");
 
+  if (failedSummary) cards.push({ title: "Resolve failed WhatsApp send", priority: "critical", why: `${failedSummary.displayName} has an unresolved failed send.`, href: `/inbox?lead=${failedSummary.leadId}`, actionLabel: "Open WhatsApp Chat" });
+  if (followUpSummary) cards.push({ title: "Protect follow-up queue", priority: followUpSummary.followUpStatus === "Overdue follow-up" ? "critical" : "high", why: `${followUpSummary.displayName}: ${followUpSummary.followUpStatus}.`, href: `/inbox?lead=${followUpSummary.leadId}`, actionLabel: "Open WhatsApp Chat" });
+  if (quoteReadySummary) cards.push({ title: "Quotation-ready lead", priority: "high", why: `${quoteReadySummary.displayName} is ready for quotation review gate.`, href: "/quotation-readiness", actionLabel: "Open quotation readiness" });
   if (appointment) cards.push({ title: "Confirm appointment request", priority: "high", why: `${formatLeadDisplayName(appointment)} asked about a slot. Check availability before confirming.`, href: `/inbox?lead=${appointment.id}`, actionLabel: "Open WhatsApp Chat" });
   if (floorPlan) cards.push({ title: "Review floor plan", priority: "high", why: `${formatLeadDisplayName(floorPlan)} has plan/photo context ready for review.`, href: `/inbox?lead=${floorPlan.id}`, actionLabel: "Open WhatsApp Chat" });
   if (quoteFollowUp) cards.push({ title: "Follow up quote", priority: "medium", why: `${formatLeadDisplayName(quoteFollowUp)} has a sent quotation needing manual follow-up.`, href: `/inbox?lead=${quoteFollowUp.id}`, actionLabel: "Open WhatsApp Chat" });
@@ -225,6 +236,10 @@ function buildDecisionCards({
   if (hotLead) cards.push({ title: "Review hot lead", priority: "high", why: `${formatLeadDisplayName(hotLead)} is one of the highest-priority live opportunities.`, href: `/inbox?lead=${hotLead.id}`, actionLabel: "Open WhatsApp Chat" });
   if (pausedBot) cards.push({ title: "Pause/resume bot", priority: "medium", why: `${formatLeadDisplayName(pausedBot)} has bot control paused.`, href: `/leads/${pausedBot.id}#bot-controls`, actionLabel: "Review bot" });
   if (followUp) cards.push({ title: "Follow up client", priority: followUp.status === "Overdue" ? "critical" : "medium", why: `${followUp.clientName} has a ${followUp.followupType} follow-up due.`, href: "/followups", actionLabel: "Open follow-ups" });
+  if (!failedSummary && !followUpSummary && quoteReadySummary) {
+    const lead = leadById.get(quoteReadySummary.leadId);
+    if (lead) cards.push({ title: "Review quotation readiness", priority: "medium", why: `${formatLeadDisplayName(lead)} has enough facts for a readiness review.`, href: "/quotation-readiness", actionLabel: "Open quotation readiness" });
+  }
 
   return cards.slice(0, 7);
 }
@@ -236,11 +251,21 @@ export default async function CommandCorePage() {
     listProjectAccounts(),
     listPaymentRecords()
   ]);
+  const allFiles = await listAllLeadFiles();
   const messagesByLead = await listLatestLeadMessagesForInbox(rawLeads.map((lead) => lead.id), 6);
+  const filesByLead = new Map<string, LeadFile[]>();
+  for (const file of allFiles) {
+    const current = filesByLead.get(file.leadId) ?? [];
+    current.push(file);
+    filesByLead.set(file.leadId, current);
+  }
   const leads = rawLeads.filter((lead) => isActiveProductionLeadForDailyScreens(
     lead,
     messagesByLead.get(lead.id) ?? []
   ));
+  const commandCoreLeadSummaries = leads
+    .map((lead) => buildCommandCoreLeadSummary(lead, messagesByLead.get(lead.id) ?? [], filesByLead.get(lead.id) ?? []))
+    .sort(phase3SummarySort);
 
   const hotLeads = leads.filter((lead) => lead.leadCategory === "Hot" || lead.leadScore >= 70);
   const appointments = leads.filter((lead) => lead.status === "Ready To Book" || lead.status === "Appointment Pending" || /appointment|site visit|meet|slot/i.test(lead.lastClientMessage));
@@ -252,11 +277,14 @@ export default async function CommandCorePage() {
   const overdue = projects.filter((project) => overdueAmountForProject(project, activePaymentRows) > 0).length;
   const botPaused = leads.filter((lead) => lead.botPaused);
   const missionMap = buildSingaporeMissionMapData({ leads, followUps, projects, payments, activeFilter: "all" });
-  const decisions = buildDecisionCards({ leads, followUps: followUpsDue, projects, payments });
+  const decisions = buildDecisionCards({ leads, summaries: commandCoreLeadSummaries, followUps: followUpsDue, projects, payments });
   const timelineItems = buildTimelineItems({ leads, followUps: followUpsDue, projects, payments });
-  const topLead = [...leads].sort((a, b) => b.leadScore - a.leadScore || Number(Boolean(b.needsMarcus || b.bossApprovalNeeded)) - Number(Boolean(a.needsMarcus || a.bossApprovalNeeded)))[0] ?? null;
+  const topLeadSummary = commandCoreLeadSummaries[0] ?? null;
+  const topLead = topLeadSummary ? leads.find((lead) => lead.id === topLeadSummary.leadId) ?? null : null;
   const topLeadFacts = topLead ? buildLeadFacts(topLead, messagesByLead.get(topLead.id) ?? []) : null;
-  const topLeadAction = topLeadFacts ? { action: topLeadFacts.nextAction, reason: topLeadFacts.nextActionReason } : null;
+  const topLeadAction = topLeadSummary
+    ? { action: topLeadSummary.nextAction, reason: `${topLeadSummary.followUpStatus} | ${topLeadSummary.quotationReadinessStatus}` }
+    : topLeadFacts ? { action: topLeadFacts.nextAction, reason: topLeadFacts.nextActionReason } : null;
   const riskCount = leads.filter((lead) => lead.riskFlags.length > 0 || /hack|approval|submission|permit|wall|complaint|refund|lawyer/i.test(lead.lastClientMessage)).length;
   const radarItems = [
     { label: "Hot Leads", count: hotLeads.length, tone: "gold" as const },
@@ -373,6 +401,13 @@ export default async function CommandCorePage() {
                 <p className="text-sm text-command-muted">Missing info: <strong className="text-command-text">{topLeadFacts?.missingFields.length ? topLeadFacts.missingFields.join(", ") : "None flagged"}</strong></p>
                 <p className="text-sm text-command-muted">Risk: <strong className="text-command-text">{topLead.riskFlags.length ? topLead.riskFlags.join(", ") : "No major risk"}</strong></p>
                 <p className="text-sm text-command-muted">Lead heat: <strong className="text-command-text">{topLead.leadScore}%</strong></p>
+                {topLeadSummary ? (
+                  <>
+                    <p className="text-sm text-command-muted">Follow-up status: <strong className="text-command-text">{topLeadSummary.followUpStatus}</strong></p>
+                    <p className="text-sm text-command-muted">Quotation readiness: <strong className="text-command-text">{topLeadSummary.quotationReadinessStatus}</strong></p>
+                    <p className="text-sm text-command-muted">Seriousness: <strong className="text-command-text">{topLeadSummary.seriousnessLevel}</strong></p>
+                  </>
+                ) : null}
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
                 <a href={`/inbox?lead=${topLead.id}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">

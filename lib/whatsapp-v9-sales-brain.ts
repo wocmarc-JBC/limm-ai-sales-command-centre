@@ -97,8 +97,16 @@ const TEAM_FOLLOW_UP =
 const HANDOFF_HOLDING_REPLY =
   "Sorry about that. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.";
 
+const DREAM_HOME_PHRASE = "We'd love to help create your dream home.";
+
+const FIRST_TOUCH_GREETING_REPLY =
+  "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?";
+
+const CHINESE_FIRST_TOUCH_REPLY =
+  "你好，感谢联系 LIMM Works。我们很期待帮您打造理想的家。请问这是 HDB、公寓、landed 还是商业单位？主要想装修哪些部分？";
+
 const ULTRA_SAFE_V9_FALLBACK =
-  "Thanks, noted. I'll get the team to review the details and follow up directly.";
+  FIRST_TOUCH_GREETING_REPLY;
 
 const LEGACY_REPLY_TEMPLATE_PATTERNS = [
   /Giving a rough figure too early can be misleading/i,
@@ -108,6 +116,22 @@ const LEGACY_REPLY_TEMPLATE_PATTERNS = [
   /WhatsApp renovation enquiry pending review/i,
   /This is a at/i,
   /This is with/i
+];
+
+const BANNED_TONE_PATTERNS = [
+  /\bdear\b/i,
+  /\bkindly furnish\b/i,
+  /\brevert accordingly\b/i,
+  /\bcheap package\b/i,
+  /\bbest price\b/i,
+  /\bfrom\s*\$/i,
+  /\baround\s*\$/i,
+  /\bcontinue sending project details\b/i,
+  /\bteam will review the next step properly\b/i,
+  /\bno problem confirm can\b/i,
+  /\bguaranteed approval\b/i,
+  /\bwow exciting\b/i,
+  /\bhii dear\b/i
 ];
 
 function normalize(text: string) {
@@ -153,6 +177,30 @@ function messageText(message: LeadMessage) {
 
 function previousInbound(messages: LeadMessage[]) {
   return messages.filter((message) => message.direction === "inbound").map(messageText);
+}
+
+function previousInboundBeforeCurrent(input: V9WhatsAppSalesBrainInput) {
+  const current = normalize(input.inboundMessageText);
+  const currentType = normalize(input.inboundMessageType);
+  let currentRemoved = false;
+  return previousInbound(input.previousMessages)
+    .map((text) => normalize(text))
+    .filter((text) => {
+      if (!text) return false;
+      if (current && !currentRemoved && (text === current || text.startsWith(`${current} `))) {
+        currentRemoved = true;
+        return false;
+      }
+      if (!current && currentType && !currentRemoved && text.includes(currentType)) {
+        currentRemoved = true;
+        return false;
+      }
+      return true;
+    });
+}
+
+function isFirstTouch(input: V9WhatsAppSalesBrainInput) {
+  return previousInboundBeforeCurrent(input).length === 0;
 }
 
 function previousOutbound(messages: LeadMessage[]) {
@@ -218,6 +266,7 @@ function applyTextFacts(memory: V9SalesMemory, text: string, source: "current" |
   if (!normalized) return;
 
   if (has(normalized, /\blanded\b|\bterrace\b|\bsemi d\b|\bbungalow\b/)) memory.property_type = "landed";
+  if (has(normalized, /\bhdb\b|\bbto\b/)) memory.property_type ||= "HDB";
   if (has(normalized, /\bcondo\b|\bapartment\b/)) memory.property_type ||= "condo";
   if (has(normalized, /\bcommercial\b|\boffice\b|\bshop\b/) && !has(normalized, /\byour office\b|\bgo office\b/)) memory.property_type ||= "commercial";
   if (has(normalized, /\ba\s*&\s*a\b|\baa\b|\baddition\b|\balteration\b|\bextension\b|\bextend\b/)) memory.project_type = "landed A&A";
@@ -322,6 +371,14 @@ function deriveMemory(input: V9WhatsAppSalesBrainInput) {
   for (const text of previousInbound(input.previousMessages)) applyTextFacts(memory, text, "previous");
   applyTextFacts(memory, currentText, "current");
   const currentType = input.inboundMessageType.toLowerCase();
+  if (currentType === "image") {
+    memory.site_photo_status = "received";
+    markDoNotAsk(memory, "site_photos");
+  }
+  if (currentType === "document" && has(normalize(input.inboundMessageText), /\bfloor\s*plan\b|\bfloorplan\b|\blayout\b|\bdrawing\b|\bplan\b|\battached\b/)) {
+    memory.floor_plan_status = "received";
+    markDoNotAsk(memory, "floor_plan");
+  }
   if (["image", "document"].includes(currentType) && has(normalize(input.inboundMessageText), /\bdesign\b|\blayout\b|\bfloor\s*plan\b|\bfloorplan\b|\bdrawing\b|\bplan\b|\battached\b/)) {
     memory.floor_plan_status = "received";
     memory.design_reference_status = "provided";
@@ -347,7 +404,7 @@ function detectIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
   if (!text && !["image", "document"].includes(type)) return "unsupported";
   if (detectFrustration(text)) return "frustration_or_correction";
   if (has(text, /\bfloor\s*plan already\b|\bfloorplan already\b|\bfloor.{0,20}sent\b|\bphotos? already\b|\bphotos?.{0,25}(?:sent|been sent)\b|\balready sent\b|\bi sent\b/)) return "file_correction";
-  if (has(text, /\bhow much\b|\bprice\b|\bbudget how\b|\bquotation\b|\bquote\b|\bestimate\b|\brough cost\b|\broughly\b|多少钱/)) return "price_question";
+  if (has(text, /\bhow much\b|\bprice\b|\bbudget how\b|\bquotation\b|\bquote\b|\bestimate\b|\brough cost\b|\broughly\b|\bpackage\b|多少钱/)) return "price_question";
   if (has(text, /\bso .*cannot finish\b|\bcannot finish\b/)) return "timeline_followup";
   if (has(text, /\bfinish\b|\bcomplete\b|\btimeline\b|\bhow long\b|\b\d+\s*months?\b|\b\d+\s*weeks?\b/)) {
     if (has(text, /\bcondo\b/) && memory.property_type && memory.property_type !== "condo") return "hypothetical_timeline";
@@ -419,6 +476,141 @@ function nextUsefulInfoSentence(memory: V9SalesMemory, options: { allowQuestion?
   return options.allowQuestion ? ask.replace(/\.$/, "?") : ask;
 }
 
+function hasSpecificScope(memory: V9SalesMemory) {
+  const normalizedScope = normalize(`${memory.scope_summary} ${memory.project_type}`);
+  if (!normalizedScope) return false;
+  return !["renovation enquiry", "reno", "renovation"].includes(normalizedScope);
+}
+
+function scopePhrase(memory: V9SalesMemory) {
+  const normalizedScope = normalize(`${memory.scope_summary} ${memory.project_type}`);
+  if (normalizedScope.includes("kitchen")) return "kitchen works";
+  if (normalizedScope.includes("toilet") || normalizedScope.includes("bathroom")) return "toilet works";
+  if (normalizedScope.includes("wall") || normalizedScope.includes("hacking")) return "wall/hacking works";
+  if (normalizedScope.includes("a a") || normalizedScope.includes("landed")) return "landed/A&A works";
+  return "renovation works";
+}
+
+function hasAreaScope(memory: V9SalesMemory) {
+  return has(normalize(memory.scope_summary), /\bkitchen\b|\btoilet\b|\bbathroom\b|\bwall\b|\bhacking\b|\bcarpentry\b|\bwhole\b|\bfull\b|\bextension\b|\bextend\b/);
+}
+
+function firstTouchGreetingKind(text: string) {
+  if (has(text, /^你好$/)) return "chinese_greeting";
+  if (has(text, /^(hi|hello|hi there|hey)$/)) return "english_greeting";
+  if (has(text, /\bare you there\b|\banyone there\b|\bcan reply\b/)) return "are_you_there";
+  return "";
+}
+
+function composePriceReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  const text = normalize(input.inboundMessageText);
+  const seriousAa = memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type);
+  const floorReceived = memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent";
+
+  if (has(text, /\bpackage\b/)) {
+    return "We usually review based on the actual scope rather than fixed packages, so the proposal can match the property and works needed. May I know what type of property this is and which areas you're planning to renovate?";
+  }
+
+  if (has(text, /\bkitchen\b/)) {
+    return "We can help review the kitchen works. The cost depends on whether it includes carpentry only, or also hacking, tiling, plumbing, electrical and countertop works. May I know what you're planning for the kitchen?";
+  }
+
+  if (has(text, /\btoilet\b|\bbathroom\b/)) {
+    return "We can help review the toilet works. The cost depends on whether it includes hacking, waterproofing, tiling, plumbing, sanitary fittings and electrical works. May I know what works you're planning to include?";
+  }
+
+  if (has(text, /\bwhole house\b|\bwhole-house\b|\bfull house\b|\bfull renovation\b/)) {
+    return "We can help review a whole-house renovation. The cost depends on the property type, size, existing condition and scope. May I know if this is for a HDB, condo, landed property or commercial unit?";
+  }
+
+  if (seriousAa && floorReceived) {
+    const next = nextUsefulInfoSentence(memory);
+    return `I understand you'd like a rough idea. For landed A&A works, the team should review the floor plan, site photos, site condition and material direction first before advising. ${next}`;
+  }
+
+  if (!hasSpecificScope(memory)) {
+    return "We can help review this, but the cost depends on the property type, size, and actual scope. May I know what renovation works you're planning?";
+  }
+
+  if (hasSpecificScope(memory) || memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent") {
+    const known = floorReceived ? " We've received the floor plan." : "";
+    const next = nextUsefulInfoSentence(memory);
+    return `We can help review this, but the cost depends on the property type, size, and actual scope.${known} ${next}`;
+  }
+
+  return "We can help review this, but the cost depends on the property type, size, and actual scope. May I know what renovation works you're planning?";
+}
+
+function composeAppointmentReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  const timing = memory.appointment_preference || extractAppointmentPreference(input.inboundMessageText);
+  const timingPrefix = timing ? `${timing} noted. ` : "";
+  const hasProperty = Boolean(memory.property_type);
+  const hasScope = hasSpecificScope(memory);
+  const hasLocation = Boolean(memory.address || memory.postal_code);
+
+  if (!hasProperty || !hasScope) {
+    return `${timingPrefix}We can check a suitable time for a project review. May I know the property type, rough location, and main scope first?`;
+  }
+
+  if (!hasLocation) {
+    return `${timingPrefix}Sure, we can check a suitable timing. May I have the property address or postal code so we can review the location first?`;
+  }
+
+  return `${timingPrefix}Sure, we can check a suitable timing. The appointment is not confirmed yet, and the team will review availability before confirming.`;
+}
+
+function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  if (!isFirstTouch(input)) return "";
+  const text = normalize(input.inboundMessageText);
+  const type = input.inboundMessageType.toLowerCase();
+  const greetingKind = firstTouchGreetingKind(text);
+
+  if (greetingKind === "chinese_greeting") return CHINESE_FIRST_TOUCH_REPLY;
+  if (greetingKind === "english_greeting") return FIRST_TOUCH_GREETING_REPLY;
+  if (greetingKind === "are_you_there") {
+    return "Hi, yes we're here. Thanks for contacting LIMM Works. May I know what renovation works you're planning?";
+  }
+
+  if (intent === "price_question") return composePriceReply(memory, input);
+  if (intent === "appointment_request" || intent === "office_visit_request") return composeAppointmentReply(memory, input);
+
+  if (["image", "document"].includes(type)) {
+    if (memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent") {
+      return "Hi, thanks for sending the floor plan. May I know the main areas you're planning to renovate?";
+    }
+    return "Hi, thanks for sending the photos. May I know what works you're planning for this area?";
+  }
+
+  if (has(text, /\bcan do renovation\b|\bdo renovation\b|\bhelp.*renovation\b/)) {
+    return `Hi, yes we can help review renovation works. ${DREAM_HOME_PHRASE} May I know what type of property this is and what works you're planning?`;
+  }
+
+  if ((memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type)) && !hasAreaScope(memory)) {
+    return "Thanks for contacting LIMM Works. We'd love to help create your dream home and review the landed/A&A works properly. May I know which areas you're planning to change?";
+  }
+
+  if (memory.property_type && hasSpecificScope(memory)) {
+    if (
+      ["received", "client_claimed_sent"].includes(memory.floor_plan_status) ||
+      ["received", "client_claimed_sent"].includes(memory.site_photo_status) ||
+      ["provided", "received", "client_claimed_sent"].includes(memory.design_reference_status)
+    ) {
+      return `Thanks for sharing. ${DREAM_HOME_PHRASE} ${nextUsefulInfoSentence(memory)}`;
+    }
+    return `Thanks for sharing. ${DREAM_HOME_PHRASE} You may send us the floor plan, site photos, and any reference images here first, and we'll review the scope from there.`;
+  }
+
+  if (memory.property_type && !hasSpecificScope(memory)) {
+    return `Hi, thanks for contacting LIMM Works. ${DREAM_HOME_PHRASE} May I know which areas of the ${memory.property_type} you're planning to renovate?`;
+  }
+
+  if (!memory.property_type && hasSpecificScope(memory)) {
+    return `Hi, thanks for contacting LIMM Works. We'd love to help create your dream home, starting with the ${scopePhrase(memory)}. May I know if this is for a HDB, condo, landed property, or commercial unit?`;
+  }
+
+  return "";
+}
+
 function joinList(items: string[]) {
   if (items.length <= 1) return items[0] ?? "";
   if (items.length === 2) return `${items[0]} and ${items[1]}`;
@@ -443,14 +635,11 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
   if (intent === "voice_message") {
     return "Sorry, we're not able to listen to voice messages here. Could you type the key details instead, such as your property type, renovation scope, and preferred appointment timing?";
   }
+  const firstTouchReply = composeFirstTouchReply(intent, memory, input);
+  if (firstTouchReply) return firstTouchReply;
+
   if (intent === "price_question") {
-    const reviewLine = seriousAa
-      ? "For landed A&A works, the team should review the floor plan, site photos, site condition and material direction first before advising."
-      : "The team should review the property type, project details, site condition and material direction first before advising.";
-    const next = seriousAa && floorReceived
-      ? nextUsefulInfoSentence(memory)
-      : "Could you share the property type, basic project details and any available drawings or site photos?";
-    return handoffAppend(`I understand you'd like a rough idea. ${reviewLine} ${next}`, memory);
+    return handoffAppend(composePriceReply(memory, input), memory);
   }
   if (intent === "timeline_question") {
     return handoffAppend("We can't confirm 3 months before reviewing the full project details, site condition, material lead times and work sequence. The team can check whether that timeline is realistic after reviewing the details.", memory);
@@ -466,11 +655,7 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return handoffAppend(`${timeText} noted as your preferred office visit timing. The team will check availability before confirming.`, memory);
   }
   if (intent === "appointment_request") {
-    const timeText = timing || "your preferred meeting timing";
-    const contextLine = memory.handoff_lock || missingInfo(memory).length === 0
-      ? "The team will review availability before confirming."
-      : `${nextUsefulInfoSentence(memory)} The team will review availability before confirming.`;
-    return handoffAppend(`${timeText} noted. We can help check availability, but the appointment is not confirmed yet. ${contextLine}`, memory);
+    return handoffAppend(composeAppointmentReply(memory, input), memory);
   }
   if (intent === "design_direction_statement") {
     const direction = memory.design_direction || "your preferred design direction";
@@ -488,6 +673,18 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return `Thanks, noted. We'll treat the ${itemText} as already sent and avoid asking for it again. ${TEAM_FOLLOW_UP}`;
   }
   if (intent === "hacking_wall") {
+    if (memory.property_type === "condo") {
+      return handoffAppend("Possible, but it depends on the wall type, structure, services and condo management renovation guidelines. May I know which wall or area you're looking at?", memory);
+    }
+    if (memory.property_type === "HDB") {
+      return handoffAppend("Possible, but hacking and wet works will depend on HDB rules and approval where applicable. May I know which wall or area you're looking at?", memory);
+    }
+    if (seriousAa) {
+      return handoffAppend("Possible, but for landed/A&A works, it's better for us to review the existing layout and site photos first before advising on wall work.", memory);
+    }
+    if (!memory.property_type) {
+      return handoffAppend("Possible, but it depends on whether the wall is structural and the approval requirements. May I know if this is HDB, condo, or landed?", memory);
+    }
     return handoffAppend("We'll need to check the drawings and site condition first. Whether wall work is possible depends on the wall type, structure, services, property rules and approval or submission requirements if applicable.", memory);
   }
   if (intent === "approval_submission") {
@@ -506,7 +703,8 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return "This WhatsApp chat is assisted by LIMM's enquiry assistant. Important project details are routed to the team for review.";
   }
   if (intent === "media_received") {
-    return handoffAppend("Thanks, we've received the file. The team can review it together with the project details and advise the next step.", memory);
+    if (floorReceived) return handoffAppend("Hi, thanks for sending the floor plan. May I know the main areas you're planning to renovate?", memory);
+    return handoffAppend("Hi, thanks for sending the photos. May I know what works you're planning for this area?", memory);
   }
   if (intent === "serious_project_enquiry") {
     const project = seriousAa ? "landed A&A or landed renovation" : "renovation";
@@ -514,9 +712,9 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return handoffAppend(`Thanks for sharing. We can help review the ${project} properly. ${next}`, memory);
   }
   if (intent === "follow_up_ping") {
-    return handoffAppend("Yes, we're here. You can continue sending the project details here, and the team will review the next step properly.", memory);
+    return handoffAppend("Hi, yes we're here. Thanks for contacting LIMM Works. May I know what renovation works you're planning?", memory);
   }
-  return handoffAppend("Thanks for your message. The team can review the project details and advise the next step properly.", memory);
+  return handoffAppend(FIRST_TOUCH_GREETING_REPLY, memory);
 }
 
 function capitalize(value: string) {
@@ -566,10 +764,19 @@ function v9QualityProblems(reply: string, intent: string, memory: V9SalesMemory)
   const problems: string[] = [];
   if (!reply.trim()) problems.push("empty_reply");
   if (legacyTemplateBlocked(reply)) problems.push("legacy_template_phrase");
-  if ((memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent") && has(normalizedReply, /\b(?:send|share|provide).{0,25}floor\s*plan\b|\bfloor\s*plan.{0,20}(?:needed|required)\b/)) {
+  if (BANNED_TONE_PATTERNS.some((pattern) => pattern.test(reply))) problems.push("banned_tone_phrase");
+  if (
+    (memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent") &&
+    has(normalizedReply, /\b(?:send|share|provide).{0,25}floor\s*plan\b|\bfloor\s*plan.{0,20}(?:needed|required)\b/) &&
+    !has(normalizedReply, /\bthanks for sending (?:the )?floor\s*plan\b|\bwe(?:'| )?ve received.{0,20}floor\s*plan\b/)
+  ) {
     problems.push("asked_received_floor_plan");
   }
-  if ((memory.site_photo_status === "received" || memory.site_photo_status === "client_claimed_sent") && has(normalizedReply, /\b(?:send|share|provide).{0,25}(?:site )?photos?\b/)) {
+  if (
+    (memory.site_photo_status === "received" || memory.site_photo_status === "client_claimed_sent") &&
+    has(normalizedReply, /\b(?:send|share|provide).{0,25}(?:site )?photos?\b/) &&
+    !has(normalizedReply, /\bthanks for sending (?:the )?photos?\b|\bwe(?:'| )?ve received.{0,20}(?:site )?photos?\b/)
+  ) {
     problems.push("asked_received_site_photos");
   }
   if (memory.handoff_lock && has(normalizedReply, /\bproperty type\b|\bfloor\s*plan\b|\bsite photos?\b|\bscope\b|\bdesign references?\b|\bpreferred timing\b/) && !normalizedReply.includes(normalize(TEAM_FOLLOW_UP))) {
@@ -577,7 +784,19 @@ function v9QualityProblems(reply: string, intent: string, memory: V9SalesMemory)
   }
   const prior = memory.last_bot_replies.map(normalize);
   if (prior.includes(normalizedReply)) problems.push("exact_repeat");
-  if (intent === "price_question" && !normalizedReply.startsWith(normalize("I understand you'd like a rough idea"))) problems.push("price_reply_missing_approved_opening");
+  if (intent === "price_question") {
+    const allowedPriceOpenings = [
+      "I understand you'd like a rough idea",
+      "We can help review this",
+      "We can help review the kitchen works",
+      "We can help review the toilet works",
+      "We can help review a whole-house renovation",
+      "We usually review based on the actual scope"
+    ].map(normalize);
+    if (!allowedPriceOpenings.some((opening) => normalizedReply.startsWith(opening))) {
+      problems.push("price_reply_missing_approved_opening");
+    }
+  }
   return problems;
 }
 

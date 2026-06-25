@@ -3,16 +3,18 @@ import { PageHeader } from "@/components/PageHeader";
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
 import { listFollowUps } from "@/lib/data/followups-repository";
 import { listLeads } from "@/lib/data/leads-repository";
-import { listQuotationReadinessRows } from "@/lib/data/quotation-repository";
+import { listCommandCoreLeadSummaries, listFollowUpProtectionSummaries, listQuotationReadinessSummaries } from "@/lib/data/phase3-summaries-repository";
 import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import { buildBossMonthlyReport, money, nonGstNote } from "@/lib/sales-collection";
 import { buildWeeklyBossReportDraft } from "@/lib/sales-learning";
 
 export default async function ReportsPage() {
-  const [leads, approvals, quotationRows, followUps, salesCollection] = await Promise.all([
+  const [leads, approvals, commandSummaries, followUpSummaries, quotationSummaries, followUps, salesCollection] = await Promise.all([
     listLeads(),
     listApprovalRequests(),
-    listQuotationReadinessRows(),
+    listCommandCoreLeadSummaries(80),
+    listFollowUpProtectionSummaries(80),
+    listQuotationReadinessSummaries(80),
     listFollowUps(),
     getSalesCollectionData()
   ]);
@@ -26,7 +28,31 @@ export default async function ReportsPage() {
         <MetricCard label="Leads This Month" value={leads.length} />
         <MetricCard label="Hot Lead Ratio" value={`${hotRatio}%`} tone="warn" />
         <MetricCard label="Approval Queue" value={approvals.filter((item) => item.status === "pending").length} />
-        <MetricCard label="Quotation Ready" value={quotationRows.filter((row) => row.readiness.bossReviewRequired).length} />
+        <MetricCard label="Quotation Ready" value={quotationSummaries.filter((row) => row.readinessStatus === "Ready for Quotation Review").length} />
+      </section>
+      <section className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
+        <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Phase 3 Boss Report</p>
+        <h3 className="mt-1 text-2xl font-semibold">Daily operating guardrails</h3>
+        <dl className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["New leads today", leads.filter((lead) => new Date(lead.createdAt).toDateString() === new Date().toDateString()).length],
+            ["Waiting for Marcus", followUpSummaries.filter((item) => item.status === "Needs Marcus reply").length],
+            ["Waiting for client", followUpSummaries.filter((item) => item.status === "Waiting for client").length],
+            ["Follow-ups due", followUpSummaries.filter((item) => item.status === "Follow-up due").length],
+            ["Overdue follow-ups", followUpSummaries.filter((item) => item.status === "Overdue follow-up").length],
+            ["High-intent leads", commandSummaries.filter((item) => item.seriousnessLevel === "High Intent" || item.seriousnessLevel === "Quote Ready").length],
+            ["Quotation-ready leads", quotationSummaries.filter((item) => item.readinessStatus === "Ready for Quotation Review").length],
+            ["Failed sends", commandSummaries.filter((item) => item.failedSend).length],
+            ["Bot paused leads", commandSummaries.filter((item) => item.botStatus === "Bot paused").length],
+            ["Missing address", quotationSummaries.filter((item) => item.readinessStatus === "Location Needed").length],
+            ["Missing floor plan/photos", quotationSummaries.filter((item) => item.readinessStatus === "Files Needed").length]
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-command-line bg-command-elevated p-4">
+              <dt className="text-sm text-command-muted">{label}</dt>
+              <dd className="mt-1 text-xl font-semibold text-command-text">{String(value)}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
       <div className="mt-6 rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
         <h3 className="text-2xl font-semibold">Pipeline Notes</h3>

@@ -7,7 +7,10 @@ export const WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY =
 const blockedPatterns = [
   { pattern: /\bS\$\s*\d{2,}|\bSGD\s*\d{2,}|\$\s*\d{2,}|\b\d{2,}\s*k\b|\b\d{5,}\b/i, code: "pricing_amount", reason: "pricing amount" },
   { pattern: /\bquote range\b|\bprice range\b|\brough estimate\b|\bestimated price\b|\bprice estimate\b|\bpackage price\b/i, code: "pricing_wording", reason: "pricing wording" },
+  { pattern: /\bfrom\s*\$|\baround\s*\$|\bcheap package\b|\bbest price\b/i, code: "pricing_sales_tone", reason: "unsafe pricing or sales wording" },
   { pattern: /\bfree consultation\b/i, code: "forbidden_consultation_wording", reason: "forbidden consultation wording" },
+  { pattern: /\bdear\b|\bkindly furnish\b|\brevert accordingly\b|\bhii dear\b|\bwow exciting\b/i, code: "bad_sales_tone", reason: "bad sales tone" },
+  { pattern: /\bcontinue sending project details\b|\bteam will review the next step properly\b|\bno problem confirm can\b/i, code: "legacy_or_unsafe_reply_phrase", reason: "legacy or unsafe reply phrase" },
   { pattern: /\bguarantee(?:d)? approval\b|\bapproval (?:is )?(?:confirmed|guaranteed)\b|\bapproved\b/i, code: "approval_promise", reason: "approval promise" },
   // Blocks unsafe permit certainty such as "confirmed no permit".
   { pattern: /\bno permit (?:is )?(?:needed|required)\b|\bpermit (?:is )?(?:not needed|not required|confirmed)\b|\bconfirmed no permit\b/i, code: "permit_certainty", reason: "permit certainty" },
