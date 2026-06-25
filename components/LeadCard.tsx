@@ -3,7 +3,7 @@ import { evaluateBookingReadiness } from "@/lib/calendar-booking";
 import type { Lead, LeadMessage } from "@/lib/types";
 import { humanizeLabel } from "@/lib/labels";
 import { formatFullPhoneForProtectedApp, formatLeadDisplayName } from "@/lib/lead-display";
-import { getNextBestAction } from "@/lib/next-best-action";
+import { buildLeadFacts } from "@/lib/lead-facts";
 import { calculateLeadLevel } from "@/lib/sales-control";
 import { matchQuestionBankIntent } from "@/lib/whatsapp-question-bank";
 import { StatusBadge } from "./StatusBadge";
@@ -99,14 +99,14 @@ function LeadHeatMeter({ lead }: { lead: Lead }) {
 }
 
 export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWhatsAppMessage?: LeadMessage | null }) {
-  const next = getNextBestAction(lead);
+  const facts = buildLeadFacts(lead, latestWhatsAppMessage ? [latestWhatsAppMessage] : []);
   const booking = evaluateBookingReadiness({ lead, latestText: lead.lastClientMessage });
   const isWhatsapp = /whatsapp/i.test(lead.source);
   const questionMatch = isWhatsapp ? matchQuestionBankIntent(lead.lastClientMessage) : null;
   const leadLevel = lead.leadLevel ?? calculateLeadLevel(lead);
   const displayName = formatLeadDisplayName(lead);
   const fullPhone = formatFullPhoneForProtectedApp(lead.phone) || "Phone pending";
-  const scope = lead.scopeSummary || lead.serviceType || "Renovation scope pending";
+  const scope = facts.scopeSummary.value || lead.serviceType || "Renovation scope pending";
   const stage = booking.appointmentIntent ? "Appointment requested" : lead.status;
   const whatsAppPreview = latestWhatsAppPreview(latestWhatsAppMessage);
   const questionCategory = questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported"
@@ -132,7 +132,7 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
           <p className="mt-1 text-base font-semibold text-command-cyan">{fullPhone}</p>
           <p className="mt-2 text-xl font-semibold text-command-text">{scope}</p>
           <p className="mt-1 text-base text-command-muted">
-            Stage: {humanizeLabel(stage)} | {lead.propertyType || "Property type pending"}
+            Stage: {humanizeLabel(stage)} | {facts.propertyType.value || "Property type pending"}
           </p>
           <p className="mt-1 text-sm text-command-subtle">Booking readiness: {humanizeLabel(booking.status)}</p>
           {questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported" ? (
@@ -155,8 +155,9 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Next Action</p>
-          <p className="mt-2 text-lg font-semibold text-command-text">{next.action}</p>
-          <p className="mt-1 text-base leading-7 text-command-muted">{next.reason}</p>
+          <p className="mt-2 text-lg font-semibold text-command-text">{facts.nextAction}</p>
+          <p className="mt-1 text-base leading-7 text-command-muted">{facts.nextActionReason}</p>
+          <p className="mt-2 text-sm font-semibold text-command-subtle">Lead facts completeness: {facts.infoCompletenessScore}%</p>
         </div>
         <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Last WhatsApp message</p>
@@ -171,7 +172,7 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
         </div>
         <div>
           <p className="text-sm font-semibold text-command-muted">Missing</p>
-          <div className="mt-2 flex flex-wrap gap-2">{chips(lead.missingInfo, "No key missing info")}</div>
+          <div className="mt-2 flex flex-wrap gap-2">{chips(facts.missingFields, "No key missing info")}</div>
         </div>
       </div>
 

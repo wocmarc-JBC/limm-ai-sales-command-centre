@@ -1,3 +1,4 @@
+import { buildLeadFacts } from "./lead-facts";
 import type { Lead } from "./types";
 
 const checklistItems = [
@@ -12,15 +13,16 @@ const checklistItems = [
 ];
 
 export function buildQuotationReadiness(lead: Lead) {
+  const facts = buildLeadFacts(lead);
   const complete = new Set<string>();
-  if (lead.propertyType) complete.add("Property type confirmed");
-  if (lead.scopeSummary) complete.add("Main renovation scope captured");
-  if (!lead.missingInfo.includes("floor_plan")) complete.add("Floor plan or drawings received");
-  if (!lead.missingInfo.includes("site_photos")) complete.add("Site photos received");
-  if (!lead.missingInfo.includes("design_direction")) complete.add("Design or material direction captured");
-  if (!lead.missingInfo.includes("timeline")) complete.add("Timeline captured");
-  if (!lead.missingInfo.includes("budget_range")) complete.add("Budget direction captured if comfortable");
-  if (lead.preferredContactTime) complete.add("Preferred contact time captured");
+  if (facts.propertyType.value) complete.add("Property type confirmed");
+  if (facts.scopeSummary.value) complete.add("Main renovation scope captured");
+  if (facts.floorPlanReceived.value) complete.add("Floor plan or drawings received");
+  if (facts.sitePhotosReceived.value) complete.add("Site photos received");
+  if (facts.referenceImagesReceived.value || !facts.missingFields.includes("design_direction")) complete.add("Design or material direction captured");
+  if (!facts.missingFields.includes("timeline")) complete.add("Timeline captured");
+  if (facts.budgetExpectation.value) complete.add("Budget direction captured if comfortable");
+  if (facts.appointmentPreference.value || lead.preferredContactTime) complete.add("Preferred contact time captured");
 
   const quote_preparation_checklist = checklistItems.map((item) => ({
     item,

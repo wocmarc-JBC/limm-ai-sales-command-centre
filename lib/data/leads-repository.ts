@@ -2,9 +2,11 @@ import { createAuditLog } from "./audit-repository";
 import { getDataMode } from "./data-source";
 import { mapLeadRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
+import { getSupabaseAdminClient } from "./supabase-admin";
 import { getSupabaseServerClient } from "./supabase-server";
+import { buildLeadFacts, leadFactsToLeadPatch } from "@/lib/lead-facts";
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
-import type { Lead, LeadIntakeProfile, LeadStatus } from "@/lib/types";
+import type { Lead, LeadFile, LeadIntakeProfile, LeadMessage, LeadStatus } from "@/lib/types";
 
 type ListLeadsOptions = { includeInactive?: boolean; includeTest?: boolean };
 
@@ -121,7 +123,7 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
   const now = new Date().toISOString();
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = getSupabaseAdminClient() ?? getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("leads")
       .update(leadPatchToRow(patch, now))
@@ -213,6 +215,40 @@ export async function updateLeadIntakeProfile(
       suggestedQuestionCount: suggestedQuestions.length,
       noPriceReplyRule: true,
       noCalendarBookingRule: true,
+      ...metadata
+    }
+  );
+}
+
+export async function updateLeadFactsFromEvidence(
+  lead: Lead,
+  messages: LeadMessage[] = [],
+  files: LeadFile[] = [],
+  metadata: Record<string, unknown> = {}
+) {
+  const facts = buildLeadFacts(lead, messages, files);
+  const patch = leadFactsToLeadPatch(lead, facts);
+  const changedFields = Object.entries(patch)
+    .filter(([key, value]) => {
+      if (key === "intakeProfile") return true;
+      return JSON.stringify((lead as unknown as Record<string, unknown>)[key]) !== JSON.stringify(value);
+    })
+    .map(([key]) => key);
+
+  if (!changedFields.length) return lead;
+
+  return updateLead(
+    lead.id,
+    patch,
+    "lead_facts_updated",
+    "Lead facts updated from WhatsApp evidence.",
+    {
+      leadFactsTruthLayer: true,
+      changedFields,
+      locationStatus: facts.locationStatus,
+      infoCompletenessScore: facts.infoCompletenessScore,
+      missingFields: facts.missingFields,
+      conflictFields: facts.conflictFields,
       ...metadata
     }
   );

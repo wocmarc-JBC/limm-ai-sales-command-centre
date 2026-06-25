@@ -5,6 +5,7 @@ import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-reposit
 import { listLeads } from "@/lib/data/leads-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { getInboxQueueState, inboxQueuePriority, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
+import { buildLeadFacts } from "@/lib/lead-facts";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 
@@ -19,8 +20,7 @@ function hasWhatsAppContactOrMessages(lead: Lead, messages: LeadMessage[]) {
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
   const latestMessage = latestWhatsAppMessage(messages);
   const queue = getInboxQueueState(lead, messages);
-  const floorPlanReceived = files.some((file) => file.fileStatus !== "voided" && file.fileCategory === "floor_plan");
-  const sitePhotosReceived = files.some((file) => file.fileStatus !== "voided" && file.fileCategory === "site_photos");
+  const facts = buildLeadFacts(lead, messages, files);
   return {
     id: lead.id,
     displayName: formatLeadDisplayName(lead),
@@ -28,8 +28,8 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
     status: lead.status,
     botPaused: Boolean(lead.botPaused),
     needsMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded),
-    propertyType: lead.propertyType,
-    scopeSummary: lead.scopeSummary,
+    propertyType: facts.propertyType.value || lead.propertyType,
+    scopeSummary: facts.scopeSummary.value || lead.scopeSummary,
     lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
     lastActivityAt: latestMessage?.createdAt ?? lead.updatedAt ?? lead.createdAt,
     primaryStatus: queue.primaryStatus,
@@ -38,8 +38,8 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
     waitingForClient: queue.waitingForClient,
     waitingForMarcus: queue.waitingForMarcus,
     closedOrDone: queue.closedOrDone,
-    floorPlanReceived,
-    sitePhotosReceived
+    floorPlanReceived: facts.floorPlanReceived.value,
+    sitePhotosReceived: facts.sitePhotosReceived.value
   };
 }
 

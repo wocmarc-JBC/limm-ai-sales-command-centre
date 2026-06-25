@@ -6,10 +6,8 @@ import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data
 import { listLeads } from "@/lib/data/leads-repository";
 import { getInboxQueueState, inboxQueuePriority, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { formatLeadDisplayName } from "@/lib/lead-display";
-import { buildLeadIntakePlan } from "@/lib/lead-intake";
-import { getNextBestAction } from "@/lib/next-best-action";
+import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
-import { inferLeadLocation } from "@/lib/singapore-location";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
@@ -91,25 +89,36 @@ export default async function WhatsAppInboxPage({
       ? selectedPage.messages
       : [...summaryMessages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const leadFiles = allFiles.filter((file) => file.leadId === lead.id);
-    const summary = buildSummary(lead, summaryMessages, leadFiles);
-    const intakePlan = buildLeadIntakePlan(lead, orderedMessages);
-    const intakeProfile = intakePlan.profile;
-    const location = inferLeadLocation(lead);
-    const next = getNextBestAction(lead);
+    const facts = buildLeadFacts(lead, orderedMessages, leadFiles);
+    const summary = {
+      ...buildSummary(lead, summaryMessages, leadFiles),
+      propertyType: facts.propertyType.value || lead.propertyType,
+      scopeSummary: facts.scopeSummary.value || lead.scopeSummary,
+      floorPlanReceived: facts.floorPlanReceived.value,
+      sitePhotosReceived: facts.sitePhotosReceived.value
+    };
 
     return {
       lead,
       summary,
       messages: orderedMessages,
       context: {
-        budgetExpectation: intakeProfile.budgetExpectation || "Not collected yet",
-        floorPlanStatus: summary.floorPlanReceived || intakeProfile.floorPlanStatus ? "Received / available" : "Not received yet",
-        sitePhotosStatus: summary.sitePhotosReceived || intakeProfile.sitePhotosStatus ? "Received / available" : "Not received yet",
-        appointmentPreference: intakeProfile.preferredMeetingTiming || lead.preferredContactTime || "Not provided yet",
-        addressOrArea: intakeProfile.propertyAreaOrAddress || lead.projectAddress || lead.propertyArea || location.area || "Not provided yet",
-        notes: lead.stageNotes || lead.conversationSummary || lead.scopeSummary || "No extra notes yet.",
-        nextAction: next.action,
-        nextReason: next.reason
+        propertyType: facts.propertyType.value || "Not provided yet",
+        scopeSummary: facts.scopeSummary.value || "Scope pending",
+        budgetExpectation: facts.budgetExpectation.value || "Not collected yet",
+        floorPlanStatus: facts.floorPlanReceived.value ? "Received / available" : "Not received yet",
+        sitePhotosStatus: facts.sitePhotosReceived.value ? "Received / available" : "Not received yet",
+        referenceImagesStatus: facts.referenceImagesReceived.value ? "Received / available" : "Not received yet",
+        appointmentPreference: facts.appointmentPreference.value || "Not provided yet",
+        addressOrArea: facts.addressRaw.value || facts.area.value || "Not provided yet",
+        postalCode: facts.postalCode.value,
+        locationStatus: leadFactsLocationLabel(facts.locationStatus),
+        infoCompletenessScore: facts.infoCompletenessScore,
+        missingFields: facts.missingFields,
+        conflictFields: facts.conflictFields,
+        notes: lead.stageNotes || lead.conversationSummary || facts.scopeSummary.value || "No extra notes yet.",
+        nextAction: facts.nextAction,
+        nextReason: facts.nextActionReason
       },
       hasOlderMessages: selected ? selectedPage.hasOlder : false,
       oldestMessageCursor: selected ? selectedPage.oldestCursor : null,

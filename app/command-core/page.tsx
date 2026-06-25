@@ -6,8 +6,8 @@ import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-reposit
 import { listLeads } from "@/lib/data/leads-repository";
 import { listPaymentRecords, listProjectAccounts } from "@/lib/data/sales-collection-repository";
 import { formatFullPhoneForProtectedApp, formatLeadDisplayName, leadSubtitle } from "@/lib/lead-display";
+import { buildLeadFacts } from "@/lib/lead-facts";
 import { buildSingaporeMissionMapData } from "@/lib/mission-map";
-import { getNextBestAction } from "@/lib/next-best-action";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import {
   activePayments,
@@ -255,7 +255,8 @@ export default async function CommandCorePage() {
   const decisions = buildDecisionCards({ leads, followUps: followUpsDue, projects, payments });
   const timelineItems = buildTimelineItems({ leads, followUps: followUpsDue, projects, payments });
   const topLead = [...leads].sort((a, b) => b.leadScore - a.leadScore || Number(Boolean(b.needsMarcus || b.bossApprovalNeeded)) - Number(Boolean(a.needsMarcus || a.bossApprovalNeeded)))[0] ?? null;
-  const topLeadAction = topLead ? getNextBestAction(topLead) : null;
+  const topLeadFacts = topLead ? buildLeadFacts(topLead, messagesByLead.get(topLead.id) ?? []) : null;
+  const topLeadAction = topLeadFacts ? { action: topLeadFacts.nextAction, reason: topLeadFacts.nextActionReason } : null;
   const riskCount = leads.filter((lead) => lead.riskFlags.length > 0 || /hack|approval|submission|permit|wall|complaint|refund|lawyer/i.test(lead.lastClientMessage)).length;
   const radarItems = [
     { label: "Hot Leads", count: hotLeads.length, tone: "gold" as const },
@@ -369,7 +370,7 @@ export default async function CommandCorePage() {
                 <p className="mt-2 text-sm leading-6 text-command-muted">{topLeadAction.reason}</p>
               </div>
               <div className="mt-4 grid gap-3">
-                <p className="text-sm text-command-muted">Missing info: <strong className="text-command-text">{topLead.missingInfo.length ? topLead.missingInfo.join(", ") : "None flagged"}</strong></p>
+                <p className="text-sm text-command-muted">Missing info: <strong className="text-command-text">{topLeadFacts?.missingFields.length ? topLeadFacts.missingFields.join(", ") : "None flagged"}</strong></p>
                 <p className="text-sm text-command-muted">Risk: <strong className="text-command-text">{topLead.riskFlags.length ? topLead.riskFlags.join(", ") : "No major risk"}</strong></p>
                 <p className="text-sm text-command-muted">Lead heat: <strong className="text-command-text">{topLead.leadScore}%</strong></p>
               </div>

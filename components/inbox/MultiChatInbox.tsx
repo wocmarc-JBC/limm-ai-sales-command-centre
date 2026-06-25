@@ -45,11 +45,19 @@ export type MultiChatSummary = {
 };
 
 export type MultiChatContext = {
+  propertyType: string;
+  scopeSummary: string;
   budgetExpectation: string;
   floorPlanStatus: string;
   sitePhotosStatus: string;
+  referenceImagesStatus: string;
   appointmentPreference: string;
   addressOrArea: string;
+  postalCode: string;
+  locationStatus: string;
+  infoCompletenessScore: number;
+  missingFields: string[];
+  conflictFields: string[];
   notes: string;
   nextAction: string;
   nextReason: string;
@@ -735,10 +743,13 @@ const LeadContextPanel = memo(function LeadContextPanel({
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Project basics</p>
             <dl className="mt-3 space-y-3 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Status</dt><dd className="text-right text-command-text">{conversation.lead.status}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-command-muted">Property</dt><dd className="text-right text-command-text">{conversation.lead.propertyType || "Not provided"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Property</dt><dd className="text-right text-command-text">{context.propertyType || "Not provided"}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Area</dt><dd className="text-right text-command-text">{context.addressOrArea}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Postal</dt><dd className="text-right text-command-text">{context.postalCode || "Not captured"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Location truth</dt><dd className="text-right text-command-text">{context.locationStatus}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">Completeness</dt><dd className="text-right text-command-text">{context.infoCompletenessScore}%</dd></div>
             </dl>
-            <p className="mt-3 text-sm leading-6 text-command-text">{conversation.lead.scopeSummary || "Scope pending"}</p>
+            <p className="mt-3 text-sm leading-6 text-command-text">{context.scopeSummary || "Scope pending"}</p>
           </section>
 
           <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
@@ -746,8 +757,21 @@ const LeadContextPanel = memo(function LeadContextPanel({
             <dl className="mt-3 space-y-3 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Floor plan</dt><dd className="text-right text-command-text">{context.floorPlanStatus}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Photos</dt><dd className="text-right text-command-text">{context.sitePhotosStatus}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-command-muted">References</dt><dd className="text-right text-command-text">{context.referenceImagesStatus}</dd></div>
             </dl>
           </section>
+
+          {context.missingFields.length || context.conflictFields.length ? (
+            <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Lead Facts</p>
+              {context.missingFields.length ? (
+                <p className="mt-2 text-sm leading-6 text-command-muted">Missing: {context.missingFields.join(", ")}</p>
+              ) : null}
+              {context.conflictFields.length ? (
+                <p className="mt-2 text-sm leading-6 text-command-amber">Conflicts: {context.conflictFields.join(", ")}</p>
+              ) : null}
+            </section>
+          ) : null}
 
           <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Appointment</p>

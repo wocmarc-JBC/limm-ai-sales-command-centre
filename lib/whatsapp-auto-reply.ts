@@ -14,6 +14,7 @@ import {
   saveLeadMessage,
   upsertWhatsAppLead
 } from "@/lib/data/lead-messages-repository";
+import { updateLeadFactsFromEvidence } from "@/lib/data/leads-repository";
 import { getWhatsAppRuntime, normalizeWhatsAppPhone } from "@/lib/whatsapp-config";
 import { processWhatsAppHandoffEmail } from "@/lib/handoff-email";
 import { storeWhatsAppMediaForLead } from "@/lib/whatsapp-media-storage";
@@ -244,7 +245,7 @@ export async function handleWhatsAppInboundMessage(
 
   try {
     logWhatsApp("whatsapp_inbound_message_save_started", { providerMessageId, leadId: lead.id });
-    await saveLeadMessage({
+    const savedInboundMessage = await saveLeadMessage({
       leadId: lead.id,
       direction: "inbound",
       body: inboundBody,
@@ -264,6 +265,17 @@ export async function handleWhatsAppInboundMessage(
       }
     });
     logWhatsApp("whatsapp_inbound_message_saved", { providerMessageId, leadId: lead.id });
+    try {
+      const updatedLead = await updateLeadFactsFromEvidence(lead, [savedInboundMessage], [], {
+        providerMessageId,
+        source: "whatsapp_inbound",
+        liveExtraction: true
+      });
+      if (updatedLead) lead = updatedLead;
+      logWhatsApp("lead_facts_extracted", { providerMessageId, leadId: lead.id });
+    } catch (factsError) {
+      logWhatsAppError("lead_facts_extract", { providerMessageId, leadId: lead.id, reason: safeError(factsError) });
+    }
   } catch (error) {
     logWhatsAppError("inbound_message_save", { providerMessageId, leadId: lead.id, reason: safeError(error) });
     throw error;

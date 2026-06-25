@@ -1,4 +1,5 @@
 import { formatLeadDisplayName } from "@/lib/lead-display";
+import { buildLeadFacts, type LeadFactsLocationStatus } from "@/lib/lead-facts";
 import { inferLeadLocation, inferProjectLocation } from "@/lib/singapore-location";
 import { amountCollected, overdueAmountForProject, outstandingForProject, salesStageForLead } from "@/lib/sales-collection";
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
@@ -20,6 +21,9 @@ export type MissionMapPin = {
   colorCategory: MissionMapColorCategory;
   href: string;
   confidence: LocationConfidence;
+  locationStatus?: LeadFactsLocationStatus;
+  nextAction?: string;
+  infoCompletenessScore?: number;
 };
 
 export type MissionMapAreaSummary = {
@@ -120,7 +124,15 @@ export function buildSingaporeMissionMapData({
   let unknownLocationCount = 0;
 
   for (const lead of activeLeads) {
-    const location = inferLeadLocation(lead);
+    const facts = buildLeadFacts(lead);
+    const location = inferLeadLocation({
+      ...lead,
+      propertyArea: facts.area.value || lead.propertyArea,
+      postalCode: facts.postalCode.value || lead.postalCode,
+      projectAddress: facts.addressRaw.value || lead.projectAddress,
+      scopeSummary: facts.scopeSummary.value || lead.scopeSummary,
+      propertyType: facts.propertyType.value || lead.propertyType
+    });
     if (!location.lat || !location.lng || location.area === "Unknown area") {
       unknownLocationCount += 1;
       continue;
@@ -130,14 +142,17 @@ export function buildSingaporeMissionMapData({
       id: `lead-${lead.id}`,
       type,
       label: formatLeadDisplayName(lead),
-      description: lead.scopeSummary || lead.lastClientMessage || "Active lead",
+      description: facts.scopeSummary.value || facts.nextAction || "Active lead",
       area: location.area,
       region: location.region,
       lat: location.lat,
       lng: location.lng,
       colorCategory: leadColor(lead),
       href: `/leads/${lead.id}`,
-      confidence: location.confidence
+      confidence: location.confidence,
+      locationStatus: facts.locationStatus,
+      nextAction: facts.nextAction,
+      infoCompletenessScore: facts.infoCompletenessScore
     };
     allPins.push(pin);
     addArea(areas, pin, {
@@ -151,7 +166,13 @@ export function buildSingaporeMissionMapData({
   for (const followUp of followUps.filter((item) => item.status === "Due" || item.status === "Overdue")) {
     const lead = leadById.get(followUp.leadId) || followUp.lead || null;
     if (!lead || !isActiveRealLead(lead)) continue;
-    const location = inferLeadLocation(lead);
+    const facts = buildLeadFacts(lead);
+    const location = inferLeadLocation({
+      ...lead,
+      propertyArea: facts.area.value || lead.propertyArea,
+      postalCode: facts.postalCode.value || lead.postalCode,
+      projectAddress: facts.addressRaw.value || lead.projectAddress
+    });
     if (!location.lat || !location.lng || location.area === "Unknown area") continue;
     const pin: MissionMapPin = {
       id: `followup-${followUp.id}`,
