@@ -417,7 +417,7 @@ function detectIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
   if (has(text, /\bfree\b|\bdo for free\b/)) return "free_work_request";
   if (has(text, /\bare you ai\b|\bare you human\b|\bchatbot\b|\bbot\b/)) return "identity_question";
   if (has(text, /\bresort style\b|\bmodern luxury\b|\bjapandi\b|\bminimalist\b|\bcontemporary\b/)) return "design_direction_statement";
-  if (has(text, /\bdesign\b|\btheme\b|\bconcept\b|\bstyle\b/)) return "design_question";
+  if (has(text, /\bdesign\b|\btheme\b|\bconcept\b|\bstyle\b|\binterior design\b|\bdesign direction\b|\bdesign ideas?\b|\blayout ideas?\b|\bpropose concept\b/)) return "design_question";
   if (has(text, /\bhack\b|\bhacking\b|\bwall\b|\bstructural\b/)) return "hacking_wall";
   if (has(text, /\bapproval\b|\bpermit\b|\bsubmission\b|\bura\b|\bbca\b|申请/)) return "approval_submission";
   if (has(text, /\ba&a\b|\baa\b|\blanded\b|\brenovate\b|\breno\b|\bextension\b|\bextend\b/)) return "serious_project_enquiry";
@@ -623,6 +623,13 @@ function handoffAppend(reply: string, memory: V9SalesMemory) {
   return `${reply} ${TEAM_FOLLOW_UP}`;
 }
 
+function composeDesignQuestionReply(memory: V9SalesMemory) {
+  if (memory.property_type || hasSpecificScope(memory)) {
+    return "Yes, we can help review the design direction. You may send us your floor plan, site photos, and any reference images here first, and we'll review from there.";
+  }
+  return `Yes, we can help review the design direction. ${DREAM_HOME_PHRASE} May I know what type of property this is and which areas you're planning to renovate?`;
+}
+
 function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
   const timing = memory.appointment_preference || extractAppointmentPreference(input.inboundMessageText);
   const seriousAa = memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type);
@@ -662,7 +669,7 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return handoffAppend(`${capitalize(direction)} noted. If you have reference images later, you can send them, but the team can already use this as the starting design direction.`, memory);
   }
   if (intent === "design_question") {
-    return handoffAppend("Yes, the team can help propose a suitable design direction after reviewing your layout, lighting, storage needs and preferred style. If you already have reference images, you can send them, but the design direction will still depend on the site condition and project details.", memory);
+    return composeDesignQuestionReply(memory);
   }
   if (intent === "file_correction") {
     const items = [
@@ -740,6 +747,7 @@ function salesMoveFor(intent: string): V9SalesMove {
 }
 
 function stageFor(intent: string, memory: V9SalesMemory) {
+  if (intent === "design_question") return memory.lead_seriousness === "high" ? "design_discussion" : "discovery";
   if (memory.handoff_lock || intent === "frustration_or_correction") return "handoff_required";
   if (intent === "price_question") return "price_question";
   if (intent === "appointment_request" || intent === "office_visit_request") return "appointment_pending";
@@ -779,7 +787,7 @@ function v9QualityProblems(reply: string, intent: string, memory: V9SalesMemory)
   ) {
     problems.push("asked_received_site_photos");
   }
-  if (memory.handoff_lock && has(normalizedReply, /\bproperty type\b|\bfloor\s*plan\b|\bsite photos?\b|\bscope\b|\bdesign references?\b|\bpreferred timing\b/) && !normalizedReply.includes(normalize(TEAM_FOLLOW_UP))) {
+  if (intent !== "design_question" && memory.handoff_lock && has(normalizedReply, /\bproperty type\b|\bfloor\s*plan\b|\bsite photos?\b|\bscope\b|\bdesign references?\b|\bpreferred timing\b/) && !normalizedReply.includes(normalize(TEAM_FOLLOW_UP))) {
     problems.push("generic_intake_after_handoff_lock");
   }
   const prior = memory.last_bot_replies.map(normalize);
@@ -860,9 +868,9 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
   const final = finalV9Reply(input, intent, memory);
   const shouldReply = input.autoReplyEnabled && intent !== "unsupported" && Boolean(final.reply.trim());
   const handoffRequired =
-    memory.handoff_lock ||
+    (intent !== "design_question" && memory.handoff_lock) ||
     ["frustration_or_correction", "file_correction", "price_question", "appointment_request", "office_visit_request", "hacking_wall", "approval_submission", "free_work_request", "promotion_question"].includes(intent);
-  const confidence = memory.handoff_lock ? 95 : ["general_enquiry", "media_received"].includes(intent) ? 82 : 96;
+  const confidence = memory.handoff_lock && intent !== "design_question" ? 95 : ["general_enquiry", "media_received"].includes(intent) ? 82 : 96;
   const patch = memoryPatch(before, memory);
   const correctionApplied = memory.correction_history.length > 0 || memory.handoff_lock;
   const blockedLegacyTemplate = legacyTemplateBlocked(final.reply);
@@ -898,6 +906,7 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     handoffRequired,
     handoff_required: handoffRequired,
     handoffLockActive: memory.handoff_lock,
+    currentIntentBypassesRecoveryHandoff: intent === "design_question" && memory.handoff_lock,
     durableCorrectionMemoryAvailable: true,
     correctionApplied,
     correctionHistory: memory.correction_history,
@@ -936,7 +945,7 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     intent,
     stage,
     confidence,
-    replySource: memory.handoff_lock ? "handoff_holding" : "v9_clean_core",
+    replySource: memory.handoff_lock && intent !== "design_question" ? "handoff_holding" : "v9_clean_core",
     salesMove,
     answeredClientQuestion: true,
     askedNextBestQuestion: /\?/.test(final.reply),

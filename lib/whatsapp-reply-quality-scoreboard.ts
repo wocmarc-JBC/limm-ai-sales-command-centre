@@ -11,6 +11,7 @@ export type ReplyQualityScenario =
   | "toilet_enquiry"
   | "whole_house_renovation"
   | "landed_aa"
+  | "design_question"
   | "property_type"
   | "appointment_request"
   | "media_received"
@@ -71,9 +72,14 @@ export const CHINESE_FIRST_TOUCH_REPLY =
 export const PHOTO_FIRST_REPLY =
   "Hi, thanks for sending the photos. May I know what works you're planning for this area?";
 
+export const DESIGN_FIRST_TOUCH_REPLY =
+  "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?";
+
 export const APPROVED_LIMM_PHRASES = [
   "We'd love to help create your dream home",
+  "打造理想的家",
   "We can help review this",
+  "we can help review the design direction",
   "May I know",
   "You may send us",
   "we'll review the scope from there",
@@ -128,6 +134,7 @@ export function detectReplyQualityScenario(message: string, messageType = "text"
   if (type === "image" || type === "document") return "media_received";
   if (/[\u4e00-\u9fff]/.test(message)) return "chinese_message";
   if (/^(hi|hello|hi there|hey)$/.test(text) || /\bare you there\b|\banyone there\b|\bcan reply\b/.test(text)) return "greeting_only";
+  if (/\bdesign\b|\bdesign theme\b|\bconcept\b|\binterior design\b|\bdesign direction\b|\bdesign ideas?\b|\blayout ideas?\b|\bpropose concept\b/.test(text)) return "design_question";
   if (/already sent|why ask again|already told you|i sent/.test(text)) return "frustrated_client";
   if (/how much|price|quotation|quote|estimate|roughly|package|budget how/.test(text)) return "price_question";
   if (/kitchen/.test(text)) return "kitchen_enquiry";
@@ -149,6 +156,7 @@ function suggestedReplyFor(scenario: ReplyQualityScenario) {
   if (scenario === "media_received") {
     return PHOTO_FIRST_REPLY;
   }
+  if (scenario === "design_question") return DESIGN_FIRST_TOUCH_REPLY;
   if (scenario === "price_question") {
     return "We can help review this, but the cost depends on the property type, size, and actual scope. May I know what renovation works you're planning?";
   }
@@ -170,6 +178,7 @@ function qaReplyOverride(input: {
   const type = normalize(input.messageType ?? "text");
   if (input.scenario === "chinese_message") return CHINESE_FIRST_TOUCH_REPLY;
   if (input.scenario === "media_received" && (type === "image" || !text)) return PHOTO_FIRST_REPLY;
+  if (input.scenario === "design_question") return DESIGN_FIRST_TOUCH_REPLY;
   if (input.scenario === "greeting_only" && /\bare you there\b|\banyone there\b|\bcan reply\b/.test(text)) {
     return PRESENCE_FIRST_TOUCH_REPLY;
   }
@@ -205,10 +214,17 @@ export function scoreWhatsAppReplyQuality(input: {
   if (knownFloorPlan && /\b(?:send|share|provide).{0,25}floor\s*plan\b/i.test(reply) && !/received.{0,20}floor\s*plan|thanks for sending.{0,20}floor\s*plan/i.test(reply)) {
     failedRules.push("asks_for_known_floor_plan");
   }
+  const designHasKnownContext = Boolean(
+    input.lead?.propertyType ||
+      input.lead?.scopeSummary ||
+      input.lead?.intakeProfile?.propertyType ||
+      input.lead?.intakeProfile?.scopeOfWork ||
+      input.previousMessages?.some((message) => /property|hdb|condo|landed|commercial|kitchen|toilet|bathroom|scope|floor\s*plan|site photos?/i.test(`${message.body} ${JSON.stringify(message.metadata ?? {})}`))
+  );
 
   const toneReasons: string[] = [];
   let toneScore = 100;
-  if (!/thanks|yes|we can|sorry|hi/i.test(reply)) {
+  if (!/thanks|yes|we can|sorry|hi|你好|感谢/i.test(reply)) {
     toneScore -= 20;
     toneReasons.push("Reply lacks a warm acknowledgement.");
   } else {
@@ -223,11 +239,11 @@ export function scoreWhatsAppReplyQuality(input: {
     brandScore = 100;
     brandReasons.push("Approved LIMM phrasing detected.");
   }
-  if (["greeting_only", "general", "property_type", "landed_aa"].includes(scenario) && normalizedReply.includes("dream home")) {
+  if (["greeting_only", "general", "property_type", "landed_aa", "design_question"].includes(scenario) && normalizedReply.includes("dream home")) {
     brandScore = Math.max(brandScore, 95);
     brandReasons.push("Dream-home enthusiasm used appropriately.");
   }
-  if (!/renovation|kitchen|toilet|landed|condo|hdb|commercial|scope|works|design/i.test(reply)) {
+  if (!/renovation|kitchen|toilet|landed|condo|hdb|commercial|scope|works|design|装修|理想的家/i.test(reply)) {
     brandScore -= 15;
     brandReasons.push("Reply could be more renovation-aware.");
   }
@@ -246,6 +262,30 @@ export function scoreWhatsAppReplyQuality(input: {
     failedRules.push("did_not_answer_latest_question");
   }
   if (knownFloorPlan && failedRules.includes("asks_for_known_floor_plan")) salesScore -= 35;
+  if (scenario === "design_question") {
+    if (!/(?:yes|we can|can help).{0,90}design|design.{0,60}(?:direction|theme|concept|ideas?)/i.test(reply)) {
+      salesScore -= 35;
+      failedRules.push("did_not_answer_design_question");
+    } else {
+      salesReasons.push("Design question answered directly.");
+    }
+    if (/sorry about that|\bsorry\b/i.test(reply) && !/already sent|why ask again|already told you|i sent/i.test(input.clientMessage)) {
+      toneScore -= 25;
+      failedRules.push("inappropriate_apology");
+    }
+    if (/team.{0,40}review.{0,40}messages|keep repeating|do not keep repeating|don't keep repeating/i.test(reply)) {
+      salesScore -= 35;
+      failedRules.push("inappropriate_recovery_reply");
+    }
+    if (!designHasKnownContext && !normalizedReply.includes("dream home")) {
+      brandScore -= 25;
+      failedRules.push("missing_limm_dream_home_when_design_context");
+    }
+    if (!/property type|type of property|which areas|floor plan|site photos?|reference images?|renovation works|planning to renovate/i.test(reply)) {
+      salesScore -= 25;
+      failedRules.push("missing_useful_next_question");
+    }
+  }
 
   const safetyReasons = safety.ok ? ["Safety validator passed."] : safety.errors;
   const safetyScore = safety.ok && !hasPriceAmount(reply) && !hasRiskyConfirmation(reply) && !bannedPhrasesDetected.length ? 100 : 45;
@@ -317,7 +357,16 @@ export function scoreWhatsAppReplyQuality(input: {
     language: buildCategory(languageScore, languageReasons, failedRules.filter((rule) => rule.includes("chinese") || rule.includes("singlish")))
   };
 
-  const uniqueFailedRules = Array.from(new Set(failedRules));
+  const thresholdFailedRules: string[] = [];
+  if (categoryScores.tone.score < 85) thresholdFailedRules.push("tone_score_below_threshold");
+  if (categoryScores.brand.score < 85) thresholdFailedRules.push("brand_score_below_threshold");
+  if (categoryScores.sales.score < 85) thresholdFailedRules.push("sales_score_below_threshold");
+  if (categoryScores.safety.score < 95) thresholdFailedRules.push("safety_score_below_threshold");
+  if (scenario === "price_question" && categoryScores.price.score < 95) thresholdFailedRules.push("price_score_below_threshold");
+  if (categoryScores.language.score < 85) thresholdFailedRules.push("language_score_below_threshold");
+  if (scenario === "greeting_only" && categoryScores.firstTouch.score < 85) thresholdFailedRules.push("first_touch_score_below_threshold");
+
+  const uniqueFailedRules = Array.from(new Set([...failedRules, ...thresholdFailedRules]));
   const categoryAverage = Math.round(
     Object.values(categoryScores).reduce((sum, item) => sum + item.score, 0) / Object.values(categoryScores).length
   );

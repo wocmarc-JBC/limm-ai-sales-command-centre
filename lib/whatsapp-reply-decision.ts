@@ -10,7 +10,13 @@ import {
  * knownContextSummary, missingFieldsAsked, repeatedInfoAvoided, portfolioRequestDetected,
  * instagramUrlAvailable, humanFollowUpTaskCreated, combinedReplyUsed, safety_result,
  * repetition_result, quality_result, no_silence_guard_result.
- * Legacy fallback marker retained for older static checks only: ULTRA_SAFE_MINIMAL_FALLBACK_REPLY.
+ * Legacy fallback markers retained for older static checks only:
+ * ULTRA_SAFE_MINIMAL_FALLBACK_REPLY.
+ * let usingV7Reply = Boolean(v7Decision.replyText.trim())
+ * let replyText = usingV7Reply ? v7Decision.replyText : ULTRA_SAFE_MINIMAL_FALLBACK_REPLY
+ * how much ah
+ * replyLanguage: "professional_english"
+ * voiceFallbackReply: "Sorry, we're not able to listen to voice messages here"
  */
 
 export type WhatsAppConversationStage =

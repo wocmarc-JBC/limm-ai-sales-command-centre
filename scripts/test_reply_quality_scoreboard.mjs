@@ -37,11 +37,14 @@ const {
   BANNED_REPLY_PHRASES,
   CHINESE_FIRST_TOUCH_REPLY,
   DEFAULT_FIRST_TOUCH_REPLY,
+  DESIGN_FIRST_TOUCH_REPLY,
   PHOTO_FIRST_REPLY,
   PRESENCE_FIRST_TOUCH_REPLY,
   runWhatsAppQaReplay,
   scoreWhatsAppReplyQuality
 } = require(path.join(ROOT, "lib/whatsapp-reply-quality-scoreboard.ts"));
+
+const { buildWhatsAppReplyDecision } = require(path.join(ROOT, "lib/whatsapp-reply-decision.ts"));
 
 const checks = [];
 
@@ -103,6 +106,14 @@ const scenarios = [
   ["first_hello", "Hello", "text", "greeting_only"],
   ["are_you_there", "Are you there?", "text", "greeting_only"],
   ["can_do_renovation", "Can do renovation?", "text", "general"],
+  ["design_for_me", "can you do design for me", "text", "design_question"],
+  ["do_you_do_design", "do you do design", "text", "design_question"],
+  ["design_theme", "can help with design theme", "text", "design_question"],
+  ["propose_concept", "can propose concept", "text", "design_question"],
+  ["interior_design", "can do interior design", "text", "design_question"],
+  ["design_direction", "can you come up with design direction", "text", "design_question"],
+  ["design_ideas", "need design ideas", "text", "design_question"],
+  ["layout_ideas", "need layout ideas", "text", "design_question"],
   ["chinese_greeting", "你好", "text", "chinese_message"],
   ["kitchen_scope", "Hi, I want renovate kitchen", "text", "kitchen_enquiry"],
   ["condo_kitchen_toilets", "Condo kitchen and 2 toilets", "text", "kitchen_enquiry"],
@@ -179,11 +190,19 @@ const hello = results.find((item) => item.id === "first_hello");
 const areYouThere = results.find((item) => item.id === "are_you_there");
 const chineseGreeting = results.find((item) => item.id === "chinese_greeting");
 const photoOnly = results.find((item) => item.id === "photo_only");
+const designResults = results.filter((item) => item.scenario === "design_question");
 check("Hi scores PASS >= 90 with dream-home first-touch reply", hi?.score.status === "PASS" && hi.score.overallScore >= 90 && hi.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hi?.proposedReply);
 check("Hello scores PASS >= 90 with dream-home first-touch reply", hello?.score.status === "PASS" && hello.score.overallScore >= 90 && hello.proposedReply === DEFAULT_FIRST_TOUCH_REPLY, hello?.proposedReply);
 check("Are you there scores PASS >= 90 with presence dream-home reply", areYouThere?.score.status === "PASS" && areYouThere.score.overallScore >= 90 && areYouThere.proposedReply === PRESENCE_FIRST_TOUCH_REPLY, areYouThere?.proposedReply);
 check("Chinese greeting scores PASS >= 90 with Chinese reply", chineseGreeting?.score.status === "PASS" && chineseGreeting.score.overallScore >= 90 && chineseGreeting.proposedReply === CHINESE_FIRST_TOUCH_REPLY, chineseGreeting?.proposedReply);
 check("Image-only scores PASS >= 90 with photo-first reply", photoOnly?.score.status === "PASS" && photoOnly.score.overallScore >= 90 && photoOnly.proposedReply === PHOTO_FIRST_REPLY, photoOnly?.proposedReply);
+for (const design of designResults) {
+  check(`${design.id} scores PASS >= 90 with approved design reply`, design.score.status === "PASS" && design.score.overallScore >= 90 && design.proposedReply === DESIGN_FIRST_TOUCH_REPLY, design.proposedReply);
+  check(`${design.id} answers design question before collecting info`, /yes, we can help review the design direction/i.test(design.proposedReply), design.proposedReply);
+  check(`${design.id} includes LIMM dream-home line`, /dream home/i.test(design.proposedReply), design.proposedReply);
+  check(`${design.id} asks property type and renovation areas`, /type of property/i.test(design.proposedReply) && /which areas/i.test(design.proposedReply), design.proposedReply);
+  check(`${design.id} has no apology or recovery handoff wording`, !/sorry about that|team.{0,40}review.{0,40}messages|keep repeating/i.test(design.proposedReply), design.proposedReply);
+}
 
 const howMuch = results.find((item) => item.id === "price_blank");
 check("How much stays no-price and scope-first", /cost depends on the property type, size, and actual scope/i.test(howMuch?.proposedReply ?? ""), howMuch?.proposedReply);
@@ -200,6 +219,63 @@ const bannedScore = scoreWhatsAppReplyQuality({
   scenario: "greeting_only"
 });
 check("Banned phrases are detected", bannedScore.status === "FAIL" && bannedScore.bannedPhrasesDetected.length >= 3, JSON.stringify(bannedScore));
+
+const oldBadDesignReply = "Sorry about that. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.";
+const oldBadDesignScore = scoreWhatsAppReplyQuality({
+  clientMessage: "can you do design for me",
+  reply: oldBadDesignReply,
+  scenario: "design_question"
+});
+check(
+  "Old design recovery handoff reply fails QA",
+  oldBadDesignScore.status === "FAIL" &&
+    ["did_not_answer_design_question", "inappropriate_apology", "inappropriate_recovery_reply", "missing_limm_dream_home_when_design_context"].every((rule) => oldBadDesignScore.failedRules.includes(rule)),
+  JSON.stringify(oldBadDesignScore)
+);
+
+const weakBrandDesignScore = scoreWhatsAppReplyQuality({
+  clientMessage: "can you do design for me",
+  reply: "Yes, we can help.",
+  scenario: "design_question"
+});
+check(
+  "Brand score below 85 cannot pass",
+  weakBrandDesignScore.status !== "PASS" && weakBrandDesignScore.failedRules.includes("brand_score_below_threshold"),
+  JSON.stringify(weakBrandDesignScore)
+);
+
+const staleHandoffDesignDecision = buildWhatsAppReplyDecision({
+  inboundMessageText: "can you do design for me",
+  inboundMessageType: "text",
+  lead: baseLead({
+    intakeProfile: {
+      trace: {
+        v9Memory: {
+          handoff_lock: true,
+          client_patience: "annoyed",
+          correction_history: ["client_frustration_detected"]
+        }
+      }
+    }
+  }),
+  previousMessages: [inbound("you asked already")],
+  autoReplyEnabled: true,
+  openAiEnabled: false,
+  calendarEventId: "",
+  providerMessageId: "qa-design-handoff-lock"
+});
+check(
+  "Live v9 decision answers design even with stale handoff lock",
+  staleHandoffDesignDecision.intent === "design_question" &&
+    /yes, we can help review the design direction/i.test(staleHandoffDesignDecision.replyText) &&
+    !/sorry about that|team.{0,40}review.{0,40}messages|keep repeating/i.test(staleHandoffDesignDecision.replyText),
+  JSON.stringify({
+    intent: staleHandoffDesignDecision.intent,
+    stage: staleHandoffDesignDecision.stage,
+    replySource: staleHandoffDesignDecision.replySource,
+    replyText: staleHandoffDesignDecision.replyText
+  })
+);
 
 const qaPage = read("app/qa-centre/page.tsx");
 const copyButton = read("components/CopySuggestedReplyButton.tsx");

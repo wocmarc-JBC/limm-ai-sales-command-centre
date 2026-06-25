@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-25T13:56:09.945Z",
+  "generatedAt": "2026-06-25T14:13:48.399Z",
   "rows": [
     {
       "id": "first_hi",
@@ -50,11 +50,107 @@
       "whatsappSendCalled": false
     },
     {
+      "id": "design_for_me",
+      "clientMessage": "can you do design for me",
+      "scenario": "design_question",
+      "proposedReply": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "simulationOnly": true,
+      "whatsappSendCalled": false
+    },
+    {
+      "id": "do_you_do_design",
+      "clientMessage": "do you do design",
+      "scenario": "design_question",
+      "proposedReply": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "simulationOnly": true,
+      "whatsappSendCalled": false
+    },
+    {
+      "id": "design_theme",
+      "clientMessage": "can help with design theme",
+      "scenario": "design_question",
+      "proposedReply": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "simulationOnly": true,
+      "whatsappSendCalled": false
+    },
+    {
+      "id": "propose_concept",
+      "clientMessage": "can propose concept",
+      "scenario": "design_question",
+      "proposedReply": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "simulationOnly": true,
+      "whatsappSendCalled": false
+    },
+    {
+      "id": "interior_design",
+      "clientMessage": "can do interior design",
+      "scenario": "design_question",
+      "proposedReply": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "simulationOnly": true,
+      "whatsappSendCalled": false
+    },
+    {
+      "id": "design_direction",
+      "clientMessage": "can you come up with design direction",
+      "scenario": "design_question",
+      "proposedReply": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "simulationOnly": true,
+      "whatsappSendCalled": false
+    },
+    {
+      "id": "design_ideas",
+      "clientMessage": "need design ideas",
+      "scenario": "design_question",
+      "proposedReply": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "simulationOnly": true,
+      "whatsappSendCalled": false
+    },
+    {
+      "id": "layout_ideas",
+      "clientMessage": "need layout ideas",
+      "scenario": "design_question",
+      "proposedReply": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "score": 96,
+      "status": "PASS",
+      "failedRules": [],
+      "suggestedCorrection": "Yes, we can help review the design direction. We'd love to help create your dream home. May I know what type of property this is and which areas you're planning to renovate?",
+      "simulationOnly": true,
+      "whatsappSendCalled": false
+    },
+    {
       "id": "chinese_greeting",
       "clientMessage": "你好",
       "scenario": "chinese_message",
       "proposedReply": "你好，感谢联系 LIMM Works。我们很期待帮您打造理想的家。请问这是 HDB、公寓、landed 还是商业单位？主要想装修哪些部分？",
-      "score": 91,
+      "score": 96,
       "status": "PASS",
       "failedRules": [],
       "suggestedCorrection": "你好，感谢联系 LIMM Works。我们很期待帮您打造理想的家。请问这是 HDB、公寓、landed 还是商业单位？主要想装修哪些部分？",
@@ -198,10 +294,12 @@
       "clientMessage": "I sent the floor plan already",
       "scenario": "frustrated_client",
       "proposedReply": "Thanks, noted. We'll treat the floor plan as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
-      "score": 92,
-      "status": "PASS",
-      "failedRules": [],
-      "suggestedCorrection": "Thanks, noted. We'll treat the floor plan as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
+      "score": 74,
+      "status": "FAIL",
+      "failedRules": [
+        "brand_score_below_threshold"
+      ],
+      "suggestedCorrection": "Sorry about that. Let me check this properly from here. May I know which areas you want to prioritise?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -246,10 +344,12 @@
       "clientMessage": "I already sent you the plan",
       "scenario": "frustrated_client",
       "proposedReply": "Thanks, noted. We'll treat the files as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
-      "score": 92,
-      "status": "PASS",
-      "failedRules": [],
-      "suggestedCorrection": "Thanks, noted. We'll treat the files as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
+      "score": 74,
+      "status": "FAIL",
+      "failedRules": [
+        "brand_score_below_threshold"
+      ],
+      "suggestedCorrection": "Sorry about that. Let me check this properly from here. May I know which areas you want to prioritise?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },
@@ -318,10 +418,12 @@
       "clientMessage": "I already sent you the plan",
       "scenario": "frustrated_client",
       "proposedReply": "Thanks, noted. We'll treat the floor plan as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
-      "score": 92,
-      "status": "PASS",
-      "failedRules": [],
-      "suggestedCorrection": "Thanks, noted. We'll treat the floor plan as already sent and avoid asking for it again. I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.",
+      "score": 74,
+      "status": "FAIL",
+      "failedRules": [
+        "brand_score_below_threshold"
+      ],
+      "suggestedCorrection": "Sorry about that. Let me check this properly from here. May I know which areas you want to prioritise?",
       "simulationOnly": true,
       "whatsappSendCalled": false
     }
