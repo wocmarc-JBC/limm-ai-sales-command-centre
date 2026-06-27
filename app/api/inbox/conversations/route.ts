@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
@@ -49,8 +50,9 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
   const [leads, allFiles] = await Promise.all([
-    listLeads({ includeTest: true }),
+    listLeads({ includeTest: showTestDemoRecords }),
     listAllLeadFiles()
   ]);
   const leadIds = leads.map((lead) => lead.id);

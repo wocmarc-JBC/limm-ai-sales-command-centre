@@ -1,7 +1,7 @@
 import { addSingaporeDays, daysBetweenSingaporeDates, isDueOnOrBeforeSingaporeDate, overdueDaysSingapore, safeSingaporeDateLabel, singaporeDateKey } from "@/lib/date-safety";
 import { activePayments, amountCollected, money, quotationStatusForLead, salesStageForLead } from "@/lib/sales-collection";
 import { getLeadRiskBadges, HIGH_VALUE_JOB_THRESHOLD } from "@/lib/risk-badges";
-import type { ApprovalRequest, AuditLog, FollowUp, Lead, PaymentRecord, ProjectAccount } from "@/lib/types";
+import type { ApprovalRequest, AuditLog, FollowUp, Lead, PaymentRecord, ProjectAccount, QuotationPackage } from "@/lib/types";
 
 export type BossReviewActionKey =
   | "approve_quote"
@@ -251,6 +251,7 @@ export function buildBossDailyBrief({
   leads,
   followUps,
   approvalRequests,
+  quotationPackages = [],
   projects,
   payments,
   auditLogs
@@ -258,6 +259,7 @@ export function buildBossDailyBrief({
   leads: Lead[];
   followUps: FollowUp[];
   approvalRequests: ApprovalRequest[];
+  quotationPackages?: QuotationPackage[];
   projects: ProjectAccount[];
   payments: PaymentRecord[];
   auditLogs: AuditLog[];
@@ -273,6 +275,7 @@ export function buildBossDailyBrief({
   const projectStartGates = projects.map((project) => buildDoNotStartGate(project, leadById.get(project.leadId), payments, logsByLead.get(project.leadId) ?? []));
   const collectionQueue = buildCollectionQueue(projects, payments);
   const pendingApprovals = approvalRequests.filter((request) => request.status === "pending");
+  const pendingQuotationPackages = quotationPackages.filter((quotation) => quotation.status === "Submitted for Boss Review");
   const humanReply = leads.filter((lead) => lead.needsMarcus || lead.botPaused || lead.lastReplyAt === null);
   const angry = leads.filter((lead) => /angry|upset|confused|don't understand|dont understand|why|complaint|refund|lawyer|wtf|unhappy/i.test(lead.lastClientMessage));
   const hotNotFollowed = leads.filter((lead) => (lead.leadCategory === "Hot" || lead.leadScore >= 70) && !lead.followedUpAt && salesStageForLead(lead) !== "Won");
@@ -285,7 +288,7 @@ export function buildBossDailyBrief({
   const todaysAppointments = leads.filter((lead) => lead.status === "Appointment Pending" || lead.status === "Ready To Book" || /today|appointment|site visit|meet|slot/i.test(lead.lastClientMessage));
   const botPaused = leads.filter((lead) => lead.botPaused || lead.needsMarcus);
 
-  const item = (key: string, title: string, rows: Array<Lead | FollowUp | ProjectAccount | CollectionQueueItem | ApprovalRequest>, href: string, tone: BossBriefItem["tone"], detail: string, examples: string[]): BossBriefItem => ({
+  const item = (key: string, title: string, rows: Array<Lead | FollowUp | ProjectAccount | CollectionQueueItem | ApprovalRequest | QuotationPackage>, href: string, tone: BossBriefItem["tone"], detail: string, examples: string[]): BossBriefItem => ({
     key,
     title,
     count: rows.length,
@@ -300,7 +303,7 @@ export function buildBossDailyBrief({
     item("angry_confused_clients", "Angry/confused clients", angry, "/inbox", "red", "Complaint, confusion, refund, legal, or upset-language detected.", angry.map((lead) => lead.clientName)),
     item("hot_leads_not_followed", "Hot leads not followed up", hotNotFollowed, "/sales-pipeline", "gold", "High-score or hot leads without a recorded manual follow-up.", hotNotFollowed.map((lead) => lead.clientName)),
     item("followups_overdue", "Follow-ups overdue", overdueFollowUps, "/followups", "amber", "Follow-up due date is today or already overdue in Singapore time.", overdueFollowUps.map((followUp) => followUp.clientName)),
-    item("quotations_awaiting_boss", "Quotations awaiting boss approval", [...pendingApprovals, ...quoteGated], "/approvals", "gold", "High-risk/high-value quote gate is waiting for boss decision.", [...pendingApprovals.map((approval) => approval.title), ...quoteGated.map((lead) => lead.clientName)]),
+    item("quotations_awaiting_boss", "Quotations awaiting boss approval", [...pendingApprovals, ...pendingQuotationPackages, ...quoteGated], "/approvals", "gold", "High-risk/high-value quote gate is waiting for boss decision.", [...pendingQuotationPackages.map((quotation) => `${quotation.clientName} v${quotation.versionNumber}`), ...pendingApprovals.map((approval) => approval.title), ...quoteGated.map((lead) => lead.clientName)]),
     item("high_risk_leads", "High-risk leads", highRisk, "/sales-pipeline", "red", "Risk badges include landed, A&A, structural, hacking, MCST, timeline, or margin flags.", highRisk.map((lead) => lead.clientName)),
     item("jobs_blocked_from_starting", "Jobs blocked from starting", jobsBlocked as unknown as ProjectAccount[], "/delivery", "red", "Won jobs are missing start-gate requirements.", projects.filter((_, index) => !projectStartGates[index].canStart).map((project) => project.clientName)),
     item("deposits_unpaid", "Deposits unpaid", depositsUnpaid, "/sales-collection", "amber", "Deposit collection is missing or not received.", depositsUnpaid.map((row) => row.clientName)),

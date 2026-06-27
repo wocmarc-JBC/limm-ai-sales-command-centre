@@ -1,7 +1,7 @@
 import { ActionButton } from "@/components/ActionButton";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
-import { recordJobStartChecklistAction } from "@/lib/actions";
+import { recordJobStartChecklistAction, recordPaymentReceivedAction } from "@/lib/actions";
 import { buildCollectionQueue, buildDoNotStartGate, buildJbcDefaultPaymentSchedule, jobStartChecklistActions } from "@/lib/boss-ops";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listAuditLogs } from "@/lib/data/audit-repository";
@@ -187,6 +187,14 @@ export default async function SalesCollectionPage() {
                 </div>
                 <p className="mt-1 text-command-muted">Status: {payment.status} | Due: {payment.dueDate || "Not set"} | Received: {payment.receivedDate || "Not received"}</p>
                 <p className="mt-1 text-command-subtle">Void instead of delete if this entry is wrong.</p>
+                {!payment.receivedDate ? (
+                  <form action={recordPaymentReceivedAction} className="mt-3">
+                    <input type="hidden" name="payment_id" value={payment.id} />
+                    <ActionButton type="submit" tone="muted" data-testid={`record-${payment.paymentType}-received-${payment.id}`}>
+                      Record {payment.paymentType} Received
+                    </ActionButton>
+                  </form>
+                ) : null}
               </div>
             )) : (
               <p className="rounded-xl border border-command-line bg-command-bg/55 p-4 text-command-muted">

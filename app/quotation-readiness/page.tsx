@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/PageHeader";
 import { QuotationReadinessGateActions } from "@/components/QuotationReadinessGateActions";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listQuotationReadinessSummaries } from "@/lib/data/phase3-summaries-repository";
 import { groupQuotationSummaries, type QuotationGateStatus } from "@/lib/phase3-read-models";
 
@@ -21,7 +22,8 @@ function tone(status: QuotationGateStatus) {
 }
 
 export default async function QuotationReadinessPage() {
-  const quotationRows = await listQuotationReadinessSummaries(80);
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const quotationRows = await listQuotationReadinessSummaries(80, { includeTestDemo: showTestDemoRecords });
   const groups = groupQuotationSummaries(quotationRows);
 
   return (

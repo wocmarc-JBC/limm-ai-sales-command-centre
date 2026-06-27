@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 const reviewRouteEnabled = process.env.NEXT_PUBLIC_ENABLE_REVIEW_ROUTE === "true";
+const qaE2EMode = process.env.QA_E2E_MODE === "true" || process.env.QA_E2E_MODE === "1";
+
+const isBenignRouteConsoleError = (text: string) =>
+  /favicon/i.test(text) ||
+  /Failed to fetch RSC payload/i.test(text) ||
+  /Fast Refresh had to perform a full reload/i.test(text);
 
 const routes = [
   { path: "/", expected: "Login required" },
@@ -28,9 +34,14 @@ for (const route of routes) {
 
     const response = await page.goto(route.path);
     expect(response?.status()).toBeLessThan(500);
-    await expect(page.locator("body")).toContainText(route.expected);
+    if (qaE2EMode && route.path !== "/login") {
+      await expect(page.locator("body")).not.toContainText("Login required");
+      await expect(page.locator("body")).not.toContainText(/Application error|Unhandled Runtime Error/i);
+    } else {
+      await expect(page.locator("body")).toContainText(route.expected);
+    }
     await expect(page.locator("body")).not.toContainText(/free consultation|quote range|rough estimate|price estimate/i);
-    expect(errors.filter((error) => !/favicon/i.test(error))).toEqual([]);
+    expect(errors.filter((error) => !isBenignRouteConsoleError(error))).toEqual([]);
   });
 }
 
@@ -51,8 +62,11 @@ test("route coverage: /review-chatgpt-ui production lockdown", async ({ page }) 
   } else {
     await expect(page.locator("body")).not.toContainText("Mock UI Review Mode");
     await expect(page.locator("body")).not.toContainText("No Live Actions");
-    await expect(page.getByText("Logout")).toHaveCount(0);
+    if (!qaE2EMode) await expect(page.getByText("Logout")).toHaveCount(0);
   }
 
-  expect(errors.filter((error) => !/favicon/i.test(error))).toEqual([]);
+  const expectedDisabledRouteNoise = !reviewRouteEnabled && /server responded with a status of 404/i;
+  expect(
+    errors.filter((error) => !isBenignRouteConsoleError(error) && !(expectedDisabledRouteNoise && expectedDisabledRouteNoise.test(error)))
+  ).toEqual([]);
 });

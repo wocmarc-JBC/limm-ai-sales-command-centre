@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import {
   approveAppointmentBookingAction,
   archiveLeadAction,
+  createQuotationPackageAction,
   createLeadUploadLinkAction,
   generateAiDryRunRecommendationAction,
   hardDeleteLeadAction,
@@ -43,12 +44,14 @@ import {
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
 import { getQuotationReadinessForLead } from "@/lib/data/quotation-repository";
+import { listQuotationPackagesForLead } from "@/lib/data/quotation-repository";
 import { humanizeLabel, humanizeList } from "@/lib/labels";
 import { buildLeadIntakePlan, MAX_INTAKE_QUESTIONS } from "@/lib/lead-intake";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
+import { money } from "@/lib/sales-collection";
 import { inferLeadLocation } from "@/lib/singapore-location";
 import type { AiDraftReviewStatus, AiDryRunRecommendation, LeadFileCategory, LeadMessage, LeadStatus } from "@/lib/types";
 
@@ -84,6 +87,8 @@ const aiReviewActions: Array<{
   { status: "rejected_unsafe", label: "Reject unsafe", tone: "danger" },
   { status: "copied", label: "Copy draft reply", tone: "muted" }
 ];
+
+const quotationInputClass = "rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text";
 
 function getAiStatus(openAi: ReturnType<typeof getOpenAiBrainRuntime>) {
   if (!openAi.dryRunEnabled) return "Off";
@@ -133,6 +138,8 @@ export default async function LeadDetailPage({
   const lead = (await getLeadById(params.id)) ?? (await getLeadById("lead-001"));
   if (!lead) return null;
   const readiness = await getQuotationReadinessForLead(lead.id);
+  const quotationPackages = await listQuotationPackagesForLead(lead.id, { includeTestDemo: true });
+  const latestQuotation = quotationPackages[0] ?? null;
   const aiRecommendation = await getLatestAiRecommendationForLead(lead.id);
   const leadMessages = await listLeadMessages(lead.id);
   const leadFiles = await listLeadFiles(lead.id);
@@ -251,6 +258,84 @@ export default async function LeadDetailPage({
             </p>
           ) : null}
         </div>
+      </section>
+
+      <section className="mt-6 mission-panel rounded-2xl p-5" id="quotation-package">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Quotation Package Workflow</p>
+            <h2 className="mt-1 text-2xl font-semibold text-command-text">
+              {latestQuotation ? `${latestQuotation.quotationNumber} / v${latestQuotation.versionNumber}` : "Create quotation package"}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
+              Upload the actual quotation document, submit it for boss review, then manually mark sent and accepted from the quotation detail page. No automated pricing is generated here.
+            </p>
+          </div>
+          {latestQuotation ? (
+            <a href={`/quotations/${latestQuotation.id}`} className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black">
+              Open Latest Quotation
+            </a>
+          ) : null}
+        </div>
+
+        {latestQuotation ? (
+          <div className="mt-5 grid gap-3 text-sm md:grid-cols-4">
+            <div className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <p className="text-command-muted">Status</p>
+              <p className="mt-1 font-semibold text-command-text">{latestQuotation.status}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <p className="text-command-muted">Amount</p>
+              <p className="mt-1 font-semibold text-command-text">{money(latestQuotation.quotationAmount)}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <p className="text-command-muted">File</p>
+              <p className="mt-1 font-semibold text-command-text">{latestQuotation.originalFileName || "No file uploaded"}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <p className="text-command-muted">Sent</p>
+              <p className="mt-1 font-semibold text-command-text">{latestQuotation.sentAt || "Not sent"}</p>
+            </div>
+          </div>
+        ) : null}
+
+        <form action={createQuotationPackageAction} className="mt-5 grid gap-4 md:grid-cols-2" data-testid="create-quotation-package-form">
+          <input type="hidden" name="lead_id" value={lead.id} />
+          <label className="grid gap-1 text-sm text-command-muted">
+            <span>Quotation number</span>
+            <input name="quotation_number" placeholder="LIMM-Q-YYYY-###" className={quotationInputClass} />
+          </label>
+          <label className="grid gap-1 text-sm text-command-muted">
+            <span>Quotation amount</span>
+            <input name="quotation_amount" type="number" min="0" step="1" defaultValue={lead.quotedAmount || lead.potentialValue || 0} className={quotationInputClass} />
+          </label>
+          <label className="grid gap-1 text-sm text-command-muted md:col-span-2">
+            <span>Scope summary</span>
+            <textarea name="scope_summary" defaultValue={lead.scopeSummary} rows={3} className={quotationInputClass} />
+          </label>
+          <label className="grid gap-1 text-sm text-command-muted">
+            <span>Prepared by</span>
+            <input name="prepared_by" defaultValue={auth.profile?.fullName ?? "Marcus"} className={quotationInputClass} />
+          </label>
+          <label className="grid gap-1 text-sm text-command-muted">
+            <span>Expiry date</span>
+            <input name="expiry_date" type="date" defaultValue={lead.quoteExpiryDate?.slice(0, 10) ?? ""} className={quotationInputClass} />
+          </label>
+          <label className="grid gap-1 text-sm text-command-muted md:col-span-2">
+            <span>Notes to boss</span>
+            <textarea name="boss_notes" placeholder="Risk, scope assumptions, missing info, or revision notes" rows={3} className={quotationInputClass} />
+          </label>
+          <label className="grid gap-1 text-sm text-command-muted md:col-span-2">
+            <span>Upload draft quotation</span>
+            <input name="file" type="file" accept=".pdf,.xls,.xlsx,.doc,.docx,image/jpeg,image/png,image/webp" className={quotationInputClass} />
+          </label>
+          <div className="flex flex-wrap gap-2 md:col-span-2">
+            <ActionButton type="submit" data-testid="create-quotation-package">Create Quotation Package</ActionButton>
+            <a href="/quotations" className="inline-flex min-h-11 items-center rounded-md border border-command-line bg-command-elevated px-4 py-2 text-base font-semibold text-command-text">
+              View Quotation History
+            </a>
+          </div>
+        </form>
       </section>
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="rounded-lg border border-command-line bg-command-card p-6 shadow-premium">

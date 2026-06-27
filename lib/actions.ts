@@ -24,9 +24,11 @@ import {
   LEAD_FILE_CATEGORIES,
   createLeadUploadLink,
   getUploadLinkByToken,
+  listAllLeadFiles,
   listLeadFiles,
   markLeadFileReviewed,
   markUploadLinkUsed,
+  restoreLeadFile,
   uploadLeadFile,
   voidLeadFile
 } from "@/lib/data/lead-files-repository";
@@ -57,11 +59,33 @@ import {
   updateLeadIntakeProfile,
   updateLeadStatus
 } from "@/lib/data/leads-repository";
-import { updateQuotationReadinessStatus } from "@/lib/data/quotation-repository";
-import { saveMonthlySalesTarget } from "@/lib/data/sales-collection-repository";
+import {
+  buildQuotationSendGate,
+  createQuotationPackage,
+  getLatestActiveQuotationForLead,
+  getQuotationPackageById,
+  markQuotationClientAccepted,
+  markQuotationClientRejected,
+  markQuotationSent,
+  recordQuotationBossDecision,
+  submitQuotationForBossReview,
+  updateQuotationReadinessStatus,
+  uploadDraftQuotation,
+  voidQuotationPackage
+} from "@/lib/data/quotation-repository";
+import {
+  createDefaultPaymentScheduleForProject,
+  createProjectFromWonLead,
+  listPaymentRecords,
+  markPaymentRecordReceived,
+  restoreVoidedPaymentRecord,
+  saveMonthlySalesTarget,
+  voidPaymentRecord
+} from "@/lib/data/sales-collection-repository";
 import { listLeadMessages, saveLeadMessage } from "@/lib/data/lead-messages-repository";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildLeadIntakePlan } from "@/lib/lead-intake";
+import { isQaE2EMode, qaE2eSafetyMetadata } from "@/lib/qa-e2e-mode";
 import { currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
 import { setShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { getProductionLeadVisibilityReasons } from "@/lib/production-visibility";
@@ -73,6 +97,11 @@ const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturd
 
 function text(formData: FormData, key: string, fallback = "") {
   return String(formData.get(key) ?? fallback);
+}
+
+function numberValue(formData: FormData, key: string, fallback = 0) {
+  const value = Number(text(formData, key, String(fallback)));
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function safeWhatsAppError(error: unknown) {
@@ -341,8 +370,42 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
   const actor = permission.auth.profile?.fullName ?? "Marcus";
   const actorEmail = permission.auth.profile?.email ?? "";
   const actorId = permission.auth.profile?.id ?? null;
-  const adapter = new WhatsAppCloudApiAdapter();
   const payloadSummary = getWhatsAppSendPayloadSummary(lead.phone, body);
+  if (isQaE2EMode()) {
+    await saveLeadMessage({
+      leadId,
+      direction: "outbound",
+      body,
+      safeToSend: false,
+      whatsappStatus: "disabled",
+      metadata: {
+        manualReply: true,
+        manualTakeover: true,
+        replaySafePostRedirect: true,
+        ...qaE2eSafetyMetadata()
+      }
+    });
+    await takeOverLead(leadId, actor);
+    await createAuditLog({
+      actorName: actor,
+      actorEmail,
+      actorId,
+      action: "whatsapp_manual_reply_qa_dry_run",
+      entityType: "lead",
+      entityId: leadId,
+      summary: "QA_E2E_MODE recorded manual WhatsApp reply without external send.",
+      metadata: {
+        toDigitsLength: payloadSummary.toDigitsLength,
+        bodyLength: payloadSummary.bodyLength,
+        manualTakeover: true,
+        ...qaE2eSafetyMetadata()
+      }
+    });
+    revalidateLeadPaths(leadId);
+    manualReplyRedirect(formData, leadId, { manualReplyStatus: "sent", metaMessageId: "qa-dry-run" });
+  }
+
+  const adapter = new WhatsAppCloudApiAdapter();
   console.info("whatsapp_manual_reply_send_payload_summary", {
     leadId,
     phoneNumberIdPresent: payloadSummary.phoneNumberIdPresent,
@@ -464,8 +527,26 @@ export async function sendManualWhatsAppTestAction(formData: FormData) {
   const actor = permission.auth.profile?.fullName ?? "Marcus";
   const actorEmail = permission.auth.profile?.email ?? "";
   const actorId = permission.auth.profile?.id ?? null;
-  const adapter = new WhatsAppCloudApiAdapter();
   const payloadSummary = getWhatsAppSendPayloadSummary(to, body);
+  if (isQaE2EMode()) {
+    await createAuditLog({
+      actorName: actor,
+      actorEmail,
+      actorId,
+      action: "whatsapp_manual_test_qa_dry_run",
+      entityType: "system",
+      entityId: "whatsapp_manual_test",
+      summary: "QA_E2E_MODE recorded manual WhatsApp test without external send.",
+      metadata: {
+        toDigitsLength: payloadSummary.toDigitsLength,
+        bodyLength: payloadSummary.bodyLength,
+        ...qaE2eSafetyMetadata()
+      }
+    });
+    leadReplyRedirect(returnLeadId, { manualTestStatus: "sent", metaMessageId: "qa-dry-run" });
+  }
+
+  const adapter = new WhatsAppCloudApiAdapter();
   console.info("whatsapp_manual_test_send_payload_summary", {
     phoneNumberIdPresent: payloadSummary.phoneNumberIdPresent,
     toDigitsLength: payloadSummary.toDigitsLength,
@@ -723,23 +804,49 @@ export async function recordBossReviewAction(formData: FormData) {
 }
 
 export async function markQuotationSentAction(formData: FormData) {
-  const permission = await requirePermission("update_quotation_readiness");
+  const permission = await requirePermission("update_leads");
   if (!permission.ok) return;
 
   const leadId = text(formData, "lead_id");
+  const quotationId = text(formData, "quotation_id");
   const lead = await getLeadById(leadId);
   if (!lead) return;
+
+  const quotation = quotationId
+    ? await getQuotationPackageById(quotationId)
+    : await getLatestActiveQuotationForLead(leadId, { includeTestDemo: true });
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const gate = buildQuotationSendGate(quotation, lead);
+  if (!quotation || !gate.canMarkSent) {
+    await markQuotationSent(quotation?.id ?? quotationId, lead, actor);
+    revalidateLeadPaths(leadId);
+    revalidatePath("/quotations");
+    revalidatePath("/approvals");
+    revalidatePath("/audit-log");
+    return;
+  }
+
+  const sent = await markQuotationSent(quotation.id, lead, actor);
+  if (!sent.ok) {
+    revalidateLeadPaths(leadId);
+    revalidatePath("/quotations");
+    revalidatePath(`/quotations/${quotation.id}`);
+    revalidatePath("/audit-log");
+    return;
+  }
 
   const result = await updateLeadSalesTracking(
     leadId,
     {
       salesStage: "Quotation Sent",
       quotationStatus: "Sent",
+      quotedAmount: quotation.quotationAmount,
+      quoteExpiryDate: quotation.expiryDate,
       quoteSentDate: `${singaporeDateKey()}T10:00:00+08:00`,
       quoteFollowUpDate: suggestedQuoteFollowUpDate(),
       salesNextAction: "Follow up quotation manually. Do not auto-send WhatsApp."
     },
-    "Lead marked Quotation Sent manually after boss gate check."
+    "Lead marked Quotation Sent manually after boss-approved quotation package check."
   );
   if (!result) {
     revalidatePath("/sales-pipeline");
@@ -751,6 +858,8 @@ export async function markQuotationSentAction(formData: FormData) {
   revalidateLeadPaths(leadId);
   revalidatePath("/sales-pipeline");
   revalidatePath("/sales-collection");
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotation.id}`);
   revalidatePath("/audit-log");
 }
 
@@ -815,6 +924,239 @@ export async function updateQuotationReadinessAction(formData: FormData) {
     text(formData, "status") as QuotationReadinessRecord["status"]
   );
   revalidatePath("/quotation-readiness");
+  revalidatePath("/audit-log");
+}
+
+export async function createQuotationPackageAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+
+  const leadId = text(formData, "lead_id");
+  const lead = await getLeadById(leadId);
+  if (!lead) return;
+
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const role = permission.auth.profile?.role ?? "sales";
+  const internalCostEstimate = role === "boss" || role === "admin" ? numberValue(formData, "internal_cost_estimate", 0) : null;
+  const marginEstimate = role === "boss" || role === "admin" ? numberValue(formData, "margin_estimate", 0) : null;
+  const baseInput = {
+    lead,
+    quotationNumber: text(formData, "quotation_number"),
+    quotationAmount: numberValue(formData, "quotation_amount", lead.quotedAmount ?? lead.potentialValue ?? 0),
+    scopeSummary: text(formData, "scope_summary", lead.scopeSummary),
+    preparedBy: text(formData, "prepared_by", actor),
+    expiryDate: text(formData, "expiry_date") || null,
+    bossNotes: text(formData, "boss_notes"),
+    internalCostEstimate,
+    marginEstimate,
+    actorName: actor
+  };
+
+  const file = formData.get("file");
+  const quotation = file instanceof File && file.name
+    ? await uploadDraftQuotation({
+        ...baseInput,
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        bytes: Buffer.from(await file.arrayBuffer())
+      })
+    : await createQuotationPackage(baseInput);
+
+  await updateLeadSalesTracking(
+    leadId,
+    {
+      quotationStatus: "Preparing",
+      quotedAmount: quotation.quotationAmount,
+      quoteExpiryDate: quotation.expiryDate,
+      quoteRevisionCount: quotation.versionNumber - 1,
+      quoteNotes: quotation.bossNotes,
+      salesNextAction: "Submit quotation package for boss review before any manual send."
+    },
+    "Quotation package prepared manually without price generation."
+  );
+
+  revalidateLeadPaths(leadId);
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotation.id}`);
+  revalidatePath("/approvals");
+  revalidatePath("/audit-log");
+  redirect(`/quotations/${quotation.id}?created=1`);
+}
+
+export async function submitQuotationForBossReviewAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  const quotationId = text(formData, "quotation_id");
+  const quotation = await submitQuotationForBossReview(
+    quotationId,
+    permission.auth.profile?.fullName ?? "Marcus",
+    text(formData, "note")
+  );
+  if (!quotation) return;
+  await updateLeadSalesTracking(
+    quotation.leadId,
+    {
+      bossApprovalNeeded: true,
+      quotationStatus: "Preparing",
+      salesNextAction: "Boss review pending for uploaded quotation package."
+    },
+    "Quotation package submitted for boss review."
+  );
+  revalidateLeadPaths(quotation.leadId);
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotation.id}`);
+  revalidatePath("/approvals");
+  revalidatePath("/audit-log");
+}
+
+export async function recordQuotationBossAction(formData: FormData) {
+  const permission = await requirePermission("approve_requests");
+  if (!permission.ok) return;
+
+  const quotationId = text(formData, "quotation_id");
+  const actionKey = text(formData, "action_key");
+  const note = text(formData, "note", "Boss reviewed without extra note.").trim();
+  const quotation = await getQuotationPackageById(quotationId);
+  if (!quotation) return;
+
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const role = permission.auth.profile?.role ?? "boss";
+  const saved = await recordQuotationBossDecision({
+    quotationId,
+    actionKey,
+    actorName: actor,
+    actorRole: role,
+    note
+  });
+  if (!saved) return;
+
+  if (actionKey === "approve_quote") {
+    await updateLeadSalesTracking(
+      quotation.leadId,
+      {
+        bossApprovalNeeded: false,
+        quotationStatus: "Preparing",
+        quotedAmount: saved.quotationAmount,
+        quoteExpiryDate: saved.expiryDate,
+        salesNextAction: "Boss approved quote package. Mark sent manually only after final check."
+      },
+      "Boss approved a specific quotation package version. No send happened."
+    );
+  } else if (["request_revision", "ask_for_more_info", "need_site_visit_first", "reject_quote", "reject_hold"].includes(actionKey)) {
+    await updateLeadSalesTracking(
+      quotation.leadId,
+      {
+        bossApprovalNeeded: true,
+        quotationStatus: "Revision Requested",
+        salesNextAction: actionKey === "need_site_visit_first"
+          ? "Arrange site visit before revising quotation."
+          : "Revise quotation package before any client-facing send."
+      },
+      "Boss requested quotation revision, more info, site visit, or hold."
+    );
+  } else if (actionKey === "pause_bot") {
+    await pauseBotForLead(quotation.leadId, note || "Boss paused bot from quotation package.", actor);
+  } else if (actionKey === "human_takeover") {
+    await takeOverLead(quotation.leadId, actor);
+  }
+
+  revalidateLeadPaths(quotation.leadId);
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotation.id}`);
+  revalidatePath("/approvals");
+  revalidatePath("/audit-log");
+}
+
+export async function markQuoteAcceptedAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  const quotationId = text(formData, "quotation_id");
+  const quotation = await markQuotationClientAccepted(
+    quotationId,
+    permission.auth.profile?.fullName ?? "Marcus",
+    text(formData, "client_notes")
+  );
+  if (!quotation) return;
+  const lead = await getLeadById(quotation.leadId);
+  if (!lead) return;
+
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const updatedLead = await updateLeadSalesTracking(
+    lead.id,
+    {
+      salesStage: "Won",
+      quotationStatus: "Accepted",
+      quotedAmount: quotation.quotationAmount,
+      confirmedValue: quotation.quotationAmount,
+      wonDate: new Date().toISOString(),
+      salesNextAction: "Create project, collect deposit, and clear Do Not Start Gate before work starts."
+    },
+    "Client accepted quotation manually. Project/payment creation is audited and non-GST."
+  );
+  const project = updatedLead ? await createProjectFromWonLead(updatedLead, actor) : null;
+  if (project && updatedLead) {
+    await updateLeadSalesTracking(updatedLead.id, { projectId: project.id }, "Project/account linked after quote acceptance.");
+    await createDefaultPaymentScheduleForProject(project, updatedLead, actor);
+  }
+
+  revalidateLeadPaths(quotation.leadId);
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotation.id}`);
+  revalidatePath("/sales-collection");
+  revalidatePath("/delivery");
+  revalidatePath("/audit-log");
+}
+
+export async function markQuoteRejectedAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  const quotation = await markQuotationClientRejected(
+    text(formData, "quotation_id"),
+    permission.auth.profile?.fullName ?? "Marcus",
+    text(formData, "client_notes")
+  );
+  if (!quotation) return;
+  await updateLeadSalesTracking(
+    quotation.leadId,
+    {
+      quotationStatus: "Rejected",
+      salesStage: "Lost",
+      lostDate: new Date().toISOString(),
+      wonLostReason: text(formData, "client_notes", "Client rejected quotation."),
+      salesNextAction: "Review lost reason before reactivation."
+    },
+    "Client rejected quotation manually."
+  );
+  revalidateLeadPaths(quotation.leadId);
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotation.id}`);
+  revalidatePath("/sales-pipeline");
+  revalidatePath("/audit-log");
+}
+
+export async function voidQuotationPackageAction(formData: FormData) {
+  const permission = await requirePermission("approve_requests");
+  if (!permission.ok) return;
+  const quotation = await voidQuotationPackage(
+    text(formData, "quotation_id"),
+    permission.auth.profile?.fullName ?? "Marcus",
+    text(formData, "void_reason", "Voided from quotation workflow.")
+  );
+  if (!quotation) return;
+  revalidateLeadPaths(quotation.leadId);
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotation.id}`);
+  revalidatePath("/approvals");
+  revalidatePath("/audit-log");
+}
+
+export async function recordPaymentReceivedAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  await markPaymentRecordReceived(text(formData, "payment_id"), permission.auth.profile?.fullName ?? "Marcus");
+  revalidatePath("/sales-collection");
+  revalidatePath("/delivery");
   revalidatePath("/audit-log");
 }
 
@@ -1077,4 +1419,101 @@ export async function softArchiveProductionNoiseRecordsAction(formData: FormData
   revalidatePath("/sales-collection");
   revalidatePath("/audit-log");
   redirect(`/settings/production-data-cleanup?archived=${archived}`);
+}
+
+export async function dataHygieneCleanupAction(formData: FormData) {
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) return;
+
+  const selectedRefs = formData.getAll("record_ref").map((value) => String(value));
+  const cleanupAction = text(formData, "cleanup_action", "hide");
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  if (!selectedRefs.length) redirect("/data-hygiene?changed=0");
+
+  const leads = await listLeads({ includeInactive: true, includeTest: true });
+  const payments = await listPaymentRecords({ includeTestDemo: true });
+  const files = await listAllLeadFiles();
+  const leadById = new Map(leads.map((lead) => [lead.id, lead]));
+  const paymentById = new Map(payments.map((payment) => [payment.id, payment]));
+  const fileById = new Map(files.map((file) => [file.id, file]));
+  let changed = 0;
+
+  for (const ref of selectedRefs) {
+    const [type, id] = ref.split(":");
+    if (!type || !id) continue;
+
+    if (type === "lead") {
+      const lead = leadById.get(id);
+      if (!lead) continue;
+      if (cleanupAction === "restore") {
+        await restoreLead(id, actor);
+      } else {
+        await markLeadAsTest(id);
+        if (!lead.archivedAt && !lead.deletedAt) {
+          await archiveLead(id, `Data Hygiene ${cleanupAction}: soft archive only.`, actor);
+        }
+      }
+      changed += 1;
+      continue;
+    }
+
+    if (type === "payment") {
+      const payment = paymentById.get(id);
+      if (!payment) continue;
+      if (cleanupAction === "restore") {
+        await restoreVoidedPaymentRecord(id, actor);
+      } else if (!payment.voidedAt) {
+        await voidPaymentRecord(payment, `Data Hygiene ${cleanupAction}: soft hidden from dashboards.`, actor);
+      }
+      changed += 1;
+      continue;
+    }
+
+    if (type === "client_file") {
+      const file = fileById.get(id);
+      if (!file) continue;
+      if (cleanupAction === "restore") {
+        await restoreLeadFile({ fileId: id, restoredBy: actor });
+      } else if (file.fileStatus !== "voided") {
+        await voidLeadFile({ fileId: id, voidedBy: actor, reason: `Data Hygiene ${cleanupAction}: soft hidden from dashboards.` });
+      }
+      changed += 1;
+      continue;
+    }
+
+    await createAuditLog({
+      actorType: "admin",
+      actorName: actor,
+      actorEmail: permission.auth.profile?.email ?? "",
+      actorId: permission.auth.profile?.id ?? null,
+      action: cleanupAction === "restore" ? "data_hygiene_restore_reviewed" : "data_hygiene_dashboard_hide_recorded",
+      entityType: type,
+      entityId: id,
+      summary: cleanupAction === "restore"
+        ? "Record reviewed for restore. No hard delete was performed."
+        : "Record confirmed as hidden from production dashboards by strict visibility filters.",
+      beforeData: null,
+      afterData: null,
+      metadata: {
+        recordRef: ref,
+        cleanupAction,
+        noHardDelete: true,
+        softArchiveOnly: true
+      }
+    });
+    changed += 1;
+  }
+
+  revalidatePath("/");
+  revalidatePath("/data-hygiene");
+  revalidatePath("/settings");
+  revalidatePath("/sales-pipeline");
+  revalidatePath("/approvals");
+  revalidatePath("/delivery");
+  revalidatePath("/sales-collection");
+  revalidatePath("/client-files");
+  revalidatePath("/reports");
+  revalidatePath("/targets");
+  revalidatePath("/audit-log");
+  redirect(`/data-hygiene?changed=${changed}`);
 }

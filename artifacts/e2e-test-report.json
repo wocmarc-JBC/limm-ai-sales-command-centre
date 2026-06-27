@@ -1,0 +1,71 @@
+{
+  "qaRunId": "QA_RUN_boss_ops_quotation_data_hygiene",
+  "routesTested": [
+    "/",
+    "/command-core",
+    "/inbox",
+    "/followups",
+    "/appointments",
+    "/sales-pipeline",
+    "/leads",
+    "/quotation-readiness",
+    "/quotations",
+    "/approvals",
+    "/delivery",
+    "/client-files",
+    "/sales-collection",
+    "/targets",
+    "/reports",
+    "/settings",
+    "/install",
+    "/audit-log",
+    "/data-hygiene",
+    "mobile responsive bottom nav",
+    "/manifest.webmanifest",
+    "/api/whatsapp/health"
+  ],
+  "buttonsTested": [
+    "Create Quotation Package",
+    "Upload Draft Quotation",
+    "Submit Quotation for Boss Review",
+    "Approve Quote",
+    "Mark Quotation Sent",
+    "Mark Quote Accepted",
+    "Record Deposit Received",
+    "Data Hygiene preview suspected records",
+    "Soft archive QA/test records"
+  ],
+  "workflows": [
+    {
+      "name": "Normal renovation quotation accepted creates collection queue milestone",
+      "status": "PASS",
+      "notes": [
+        "Project/payment schedule appears after manual acceptance."
+      ]
+    },
+    {
+      "name": "Do Not Start Gate shows blockers clearly",
+      "status": "PASS",
+      "notes": [
+        "Start blockers are visible after quote acceptance."
+      ]
+    },
+    {
+      "name": "Cannot mark quote sent before boss approval",
+      "status": "PASS",
+      "notes": []
+    }
+  ],
+  "safetyChecks": [
+    "QA/STAGING banner visible in QA_E2E_MODE.",
+    "WhatsApp health confirms no public auto-reply recommendation, no calendar auto-booking, and no price-guide automation.",
+    "No hard delete action was used during data hygiene cleanup."
+  ],
+  "dirtyDataChecks": [
+    "Dirty QA records are visible in Data Hygiene preview.",
+    "Dirty QA records remain hidden from Boss Daily Brief by default.",
+    "Cleanup action appears in audit log."
+  ],
+  "screenshots": [],
+  "knownTodos": []
+}

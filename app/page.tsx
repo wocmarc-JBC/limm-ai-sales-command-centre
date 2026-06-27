@@ -5,6 +5,7 @@ import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preferen
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 import { listFollowUps } from "@/lib/data/followups-repository";
+import { listQuotationPackages } from "@/lib/data/quotation-repository";
 import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import { safeSingaporeDateLabel, singaporeNow } from "@/lib/date-safety";
 
@@ -71,8 +72,11 @@ export default async function BossDailyBriefPage() {
     listAuditLogs()
   ]);
   const visibleLeadIds = new Set(leads.map((lead) => lead.id));
-  const approvalRequests = await listApprovalRequests({ includeTestDemo: showTestDemoRecords, visibleLeadIds });
-  const briefItems = buildBossDailyBrief({ leads, followUps, approvalRequests, projects, payments, auditLogs });
+  const [approvalRequests, quotationPackages] = await Promise.all([
+    listApprovalRequests({ includeTestDemo: showTestDemoRecords, visibleLeadIds }),
+    listQuotationPackages({ includeTestDemo: showTestDemoRecords, visibleLeadIds })
+  ]);
+  const briefItems = buildBossDailyBrief({ leads, followUps, approvalRequests, quotationPackages, projects, payments, auditLogs });
   const itemByKey = new Map(briefItems.map((item) => [item.key, item]));
   const mustHandleNow = sortAttentionItems(mustHandleNowKeys.map((key) => itemByKey.get(key)).filter(Boolean) as typeof briefItems);
   const salesToPush = sortAttentionItems(salesToPushKeys.map((key) => itemByKey.get(key)).filter(Boolean) as typeof briefItems);

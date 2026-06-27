@@ -49,6 +49,7 @@
     "test:v6.5.1": "node scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs",
     "test:v6.7": "node scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs",
     "test:boss-ops": "node scripts/test_boss_ops_date_safety.mjs",
+    "test:quotation-workflow": "node scripts/test_quotation_workflow_data_hygiene.mjs",
     "test:generated-guard": "node scripts/test_generated_folder_guard.mjs",
     "test:v6-ui-100": "node scripts/test_v6_ui_100_command_centre_polish.mjs",
     "test:v6.6": "node scripts/test_v6_6_strategic_command_core_layout.mjs",

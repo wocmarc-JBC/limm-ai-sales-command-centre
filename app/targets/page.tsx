@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { saveMonthlySalesTargetAction } from "@/lib/actions";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import { currentMonthKey, money, nonGstNote } from "@/lib/sales-collection";
 
@@ -13,7 +14,8 @@ export default async function TargetsPage({
   searchParams?: { month?: string };
 }) {
   const selectedMonth = searchParams?.month || currentMonthKey();
-  const { summary, target } = await getSalesCollectionData(selectedMonth);
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const { summary, target } = await getSalesCollectionData(selectedMonth, { includeTestDemo: showTestDemoRecords });
 
   return (
     <>

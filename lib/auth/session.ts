@@ -1,5 +1,6 @@
 import { getDataMode, hasSupabaseEnv } from "@/lib/data/data-source";
 import { getSupabaseServerClient } from "@/lib/data/supabase-server";
+import { isQaE2EMode, QA_E2E_RUN_ID } from "@/lib/qa-e2e-mode";
 import { can, type Permission, type UserRole } from "./roles";
 
 export type CurrentProfile = {
@@ -20,6 +21,16 @@ export type AuthContext = {
 };
 
 export function getMockProfile(): CurrentProfile {
+  if (isQaE2EMode()) {
+    return {
+      id: `qa-boss-${QA_E2E_RUN_ID}`,
+      email: "qa.boss@limm.local",
+      fullName: "QA Boss",
+      role: "boss",
+      active: true
+    };
+  }
+
   return {
     id: "mock-marcus",
     email: "marcus.mock@limm.local",
@@ -38,7 +49,9 @@ export async function getCurrentProfile(): Promise<AuthContext> {
       profile: getMockProfile(),
       authEnabled: false,
       rlsExpected: false,
-      rlsNotes: "Mock Mode uses demo boss access. Supabase Auth/RLS is not active without env vars."
+      rlsNotes: isQaE2EMode()
+        ? "QA_E2E_MODE uses dedicated mock boss access and never mutates production data."
+        : "Mock Mode uses demo boss access. Supabase Auth/RLS is not active without env vars."
     };
   }
 

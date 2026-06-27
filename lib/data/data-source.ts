@@ -1,6 +1,7 @@
 import type { SystemHealth } from "@/lib/types";
 import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
+import { isQaE2EMode } from "@/lib/qa-e2e-mode";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 
 export function hasSupabaseEnv() {
@@ -8,6 +9,7 @@ export function hasSupabaseEnv() {
 }
 
 export function getDataMode(): SystemHealth["mode"] {
+  if (isQaE2EMode()) return "Mock Mode";
   return hasSupabaseEnv() ? "Supabase Mode" : "Mock Mode";
 }
 

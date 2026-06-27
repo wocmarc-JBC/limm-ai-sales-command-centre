@@ -547,6 +547,54 @@ export async function voidLeadFile(input: { fileId: string; voidedBy?: string; r
   return mockClone(store.leadFiles[index]);
 }
 
+export async function restoreLeadFile(input: { fileId: string; restoredBy?: string }) {
+  const now = new Date().toISOString();
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = adminClient();
+    const { data, error } = await supabase
+      .from("lead_files")
+      .update({
+        file_status: "received",
+        voided_at: null,
+        voided_by: "",
+        void_reason: "",
+        updated_at: now
+      })
+      .eq("id", input.fileId)
+      .select("*")
+      .maybeSingle();
+    if (error) throw new Error(`File restore update failed: ${error.message}`);
+    const file = mapLeadFileRow(data);
+    await auditFileAction({
+      action: "client_file_restored",
+      leadId: file.leadId,
+      fileId: file.id,
+      summary: "Client file restored after data hygiene review.",
+      metadata: { restoredBy: input.restoredBy ?? "Marcus", hardDelete: false }
+    });
+    return file;
+  }
+  const store = getMockStore();
+  const index = store.leadFiles.findIndex((file) => file.id === input.fileId);
+  if (index < 0) return null;
+  store.leadFiles[index] = {
+    ...store.leadFiles[index],
+    fileStatus: "received",
+    voidedAt: null,
+    voidedBy: "",
+    voidReason: "",
+    updatedAt: now
+  };
+  await auditFileAction({
+    action: "client_file_restored",
+    leadId: store.leadFiles[index].leadId,
+    fileId: store.leadFiles[index].id,
+    summary: "Client file restored after data hygiene review.",
+    metadata: { restoredBy: input.restoredBy ?? "Marcus", hardDelete: false, mockMode: true }
+  });
+  return mockClone(store.leadFiles[index]);
+}
+
 export async function markUploadLinkUsed(uploadLinkId: string) {
   const now = new Date().toISOString();
   if (getDataMode() === "Supabase Mode") {

@@ -1,6 +1,7 @@
 import { MultiChatInbox, type MultiChatConversation, type MultiChatSummary } from "@/components/inbox/MultiChatInbox";
 import { PageHeader } from "@/components/PageHeader";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
@@ -57,8 +58,9 @@ export default async function WhatsAppInboxPage({
   const auth = await getCurrentProfile();
   if (!auth.authenticated) return null;
 
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
   const [leads, allFiles] = await Promise.all([
-    listLeads({ includeTest: true }),
+    listLeads({ includeTest: showTestDemoRecords }),
     listAllLeadFiles()
   ]);
   const leadIds = leads.map((lead) => lead.id);

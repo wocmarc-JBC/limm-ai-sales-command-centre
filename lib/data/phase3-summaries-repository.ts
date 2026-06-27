@@ -19,9 +19,13 @@ type SummaryBundle = {
   messagesByLead: Map<string, LeadMessage[]>;
 };
 
-async function loadLightweightLeadSummaryBundle(messageLimit = 8): Promise<SummaryBundle> {
+type SummaryOptions = {
+  includeTestDemo?: boolean;
+};
+
+async function loadLightweightLeadSummaryBundle(messageLimit = 8, options: SummaryOptions = {}): Promise<SummaryBundle> {
   const [rawLeads, allFiles] = await Promise.all([
-    listLeads({ includeTest: true }),
+    listLeads({ includeTest: options.includeTestDemo }),
     listAllLeadFiles()
   ]);
   const messagesByLead = await listLatestLeadMessagesForInbox(rawLeads.map((lead) => lead.id), messageLimit);
@@ -38,8 +42,8 @@ async function loadLightweightLeadSummaryBundle(messageLimit = 8): Promise<Summa
   return { leads, filesByLead, messagesByLead };
 }
 
-export async function listCommandCoreLeadSummaries(limit = 50): Promise<CommandCoreLeadSummary[]> {
-  const { leads, filesByLead, messagesByLead } = await loadLightweightLeadSummaryBundle(8);
+export async function listCommandCoreLeadSummaries(limit = 50, options: SummaryOptions = {}): Promise<CommandCoreLeadSummary[]> {
+  const { leads, filesByLead, messagesByLead } = await loadLightweightLeadSummaryBundle(8, options);
   return leads
     .map((lead) => buildCommandCoreLeadSummary(
       lead,
@@ -50,8 +54,8 @@ export async function listCommandCoreLeadSummaries(limit = 50): Promise<CommandC
     .slice(0, limit);
 }
 
-export async function listFollowUpProtectionSummaries(limit = 80): Promise<FollowUpProtectionSummary[]> {
-  const { leads, filesByLead, messagesByLead } = await loadLightweightLeadSummaryBundle(8);
+export async function listFollowUpProtectionSummaries(limit = 80, options: SummaryOptions = {}): Promise<FollowUpProtectionSummary[]> {
+  const { leads, filesByLead, messagesByLead } = await loadLightweightLeadSummaryBundle(8, options);
   return leads
     .map((lead) => buildFollowUpProtectionSummary(
       lead,
@@ -75,8 +79,8 @@ export async function listFollowUpProtectionSummaries(limit = 80): Promise<Follo
     .slice(0, limit);
 }
 
-export async function listQuotationReadinessSummaries(limit = 80): Promise<QuotationReadinessSummary[]> {
-  const { leads, filesByLead, messagesByLead } = await loadLightweightLeadSummaryBundle(8);
+export async function listQuotationReadinessSummaries(limit = 80, options: SummaryOptions = {}): Promise<QuotationReadinessSummary[]> {
+  const { leads, filesByLead, messagesByLead } = await loadLightweightLeadSummaryBundle(8, options);
   return leads
     .map((lead) => buildQuotationReadinessGate(
       lead,

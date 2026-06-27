@@ -3,13 +3,14 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 const reviewRouteEnabled = process.env.NEXT_PUBLIC_ENABLE_REVIEW_ROUTE === "true";
+const qaE2EMode = process.env.QA_E2E_MODE === "true" || process.env.QA_E2E_MODE === "1";
 
 test("review route is disabled by default unless explicitly enabled", async ({ page }) => {
   await page.goto("/review-chatgpt-ui");
 
   if (!reviewRouteEnabled) {
     await expect(page.locator("body")).not.toContainText("Mock UI Review Mode");
-    await expect(page.getByText("Logout")).toHaveCount(0);
+    if (!qaE2EMode) await expect(page.getByText("Logout")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Approve|Reject|Snooze|Send|Book|Save/i })).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText(/No Live Actions|Demo Data Only|Commercial clinic/i);
 

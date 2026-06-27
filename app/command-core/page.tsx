@@ -1,11 +1,11 @@
 import { PageHeader } from "@/components/PageHeader";
 import { SingaporeMissionMap } from "@/components/SingaporeMissionMap";
 import { StatusBadge } from "@/components/StatusBadge";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listFollowUps } from "@/lib/data/followups-repository";
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-repository";
-import { listLeads } from "@/lib/data/leads-repository";
-import { listPaymentRecords, listProjectAccounts } from "@/lib/data/sales-collection-repository";
+import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import { daysBetweenSingaporeDates } from "@/lib/date-safety";
 import { formatFullPhoneForProtectedApp, formatLeadDisplayName, leadSubtitle } from "@/lib/lead-display";
 import { buildLeadFacts } from "@/lib/lead-facts";
@@ -237,12 +237,14 @@ function buildDecisionCards({
 }
 
 export default async function CommandCorePage() {
-  const [rawLeads, followUps, projects, payments] = await Promise.all([
-    listLeads({ includeTest: true }),
-    listFollowUps({ status: "active", pageSize: 30 }),
-    listProjectAccounts(),
-    listPaymentRecords()
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const [salesCollection, followUps] = await Promise.all([
+    getSalesCollectionData(undefined, { includeTestDemo: showTestDemoRecords }),
+    listFollowUps({ status: "active", pageSize: 30, includeTest: showTestDemoRecords })
   ]);
+  const rawLeads = salesCollection.leads;
+  const projects = salesCollection.projects;
+  const payments = salesCollection.payments;
   const allFiles = await listAllLeadFiles();
   const messagesByLead = await listLatestLeadMessagesForInbox(rawLeads.map((lead) => lead.id), 6);
   const filesByLead = new Map<string, LeadFile[]>();

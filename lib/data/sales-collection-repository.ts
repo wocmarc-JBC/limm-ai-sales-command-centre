@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createAuditLog } from "./audit-repository";
 import { getDataMode } from "./data-source";
 import { listLeads } from "./leads-repository";
@@ -9,11 +10,41 @@ import {
   filterProjectsForProductionVisibility,
   type ProductionVisibilityOptions
 } from "@/lib/production-visibility";
-import { buildSalesCollectionSummary, currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
+import {
+  buildSalesCollectionSummary,
+  currentMonthKey,
+  defaultMonthlyTarget,
+  quotationStatusForLead,
+  salesStageForLead
+} from "@/lib/sales-collection";
 import type { Lead, MonthlySalesTarget, PaymentRecord, ProjectAccount } from "@/lib/types";
 
 function auditPayload<T extends object>(value: T) {
   return value as unknown as Record<string, unknown>;
+}
+
+function leadIsAcceptedOrWon(lead: Lead | undefined) {
+  if (!lead) return false;
+  return salesStageForLead(lead) === "Won" || quotationStatusForLead(lead) === "Accepted";
+}
+
+function projectIsLinkedToAcceptedWonLead(project: ProjectAccount, leadById: Map<string, Lead>) {
+  const lead = leadById.get(project.leadId) ?? leadById.get(project.sourceLeadId);
+  if (!leadIsAcceptedOrWon(lead)) return false;
+  if (project.deletedAt || project.archivedAt || project.isTest) return false;
+  if (project.status === "Cancelled") return false;
+  return true;
+}
+
+function defaultFiftyFortyTenSchedule(confirmedValue: number) {
+  const value = Math.max(0, confirmedValue || 0);
+  const deposit = Math.round(value * 0.5);
+  const progress = Math.round(value * 0.4);
+  return [
+    { label: "Deposit 50%", amount: deposit },
+    { label: "Progress 40%", amount: progress },
+    { label: "Final 10%", amount: Math.max(0, value - deposit - progress) }
+  ];
 }
 
 function targetToRow(target: MonthlySalesTarget) {
@@ -250,6 +281,62 @@ export async function addPaymentRecord(payment: PaymentRecord, actorName = "Marc
   return payment;
 }
 
+export async function markPaymentRecordReceived(paymentId: string, actorName = "Marcus") {
+  const before = (await listPaymentRecords({ includeTestDemo: true })).find((payment) => payment.id === paymentId) ?? null;
+  if (!before) return null;
+  const now = new Date().toISOString();
+  const status = before.paymentType === "deposit"
+    ? "Deposit Received"
+    : before.paymentType === "progress"
+      ? "Progress Payment Received"
+      : before.paymentType === "final"
+        ? "Fully Paid"
+        : "Fully Paid";
+
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase!
+      .from("payment_records")
+      .update({ received_date: now, status, updated_at: now })
+      .eq("id", paymentId)
+      .select("*")
+      .maybeSingle();
+    if (!error && data) {
+      const saved = mapPaymentRow(data);
+      await createAuditLog({
+        actorType: "boss",
+        actorName,
+        action: "payment_received_recorded",
+        entityType: "payment_record",
+        entityId: saved.id,
+        summary: `${saved.paymentType} payment marked received manually.`,
+        beforeData: auditPayload(before),
+        afterData: auditPayload(saved),
+        metadata: { moneyChangeAudit: true, manualOnly: true, nonGst: true }
+      });
+      return saved;
+    }
+  }
+
+  const store = getMockStore();
+  const index = store.paymentRecords.findIndex((payment) => payment.id === paymentId);
+  if (index < 0) return null;
+  store.paymentRecords[index] = { ...store.paymentRecords[index], receivedDate: now, status, updatedAt: now };
+  const after = store.paymentRecords[index];
+  await createAuditLog({
+    actorType: "boss",
+    actorName,
+    action: "payment_received_recorded",
+    entityType: "payment_record",
+    entityId: after.id,
+    summary: `${after.paymentType} payment marked received manually.`,
+    beforeData: auditPayload(before),
+    afterData: auditPayload(after),
+    metadata: { moneyChangeAudit: true, manualOnly: true, nonGst: true }
+  });
+  return mockClone(after);
+}
+
 export async function voidPaymentRecord(payment: PaymentRecord, reason: string, actorName = "Marcus") {
   const after = { ...payment, voidedAt: new Date().toISOString(), voidedBy: actorName, voidReason: reason };
   if (getDataMode() === "Supabase Mode") {
@@ -293,17 +380,109 @@ export async function voidPaymentRecord(payment: PaymentRecord, reason: string, 
   return after;
 }
 
+export async function restoreVoidedPaymentRecord(paymentId: string, actorName = "Marcus") {
+  const before = (await listPaymentRecords({ includeTestDemo: true })).find((payment) => payment.id === paymentId) ?? null;
+  if (!before) return null;
+  const now = new Date().toISOString();
+
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase!
+      .from("payment_records")
+      .update({ voided_at: null, voided_by: "", void_reason: "", updated_at: now })
+      .eq("id", paymentId)
+      .select("*")
+      .maybeSingle();
+    if (!error && data) {
+      const saved = mapPaymentRow(data);
+      await createAuditLog({
+        actorType: "boss",
+        actorName,
+        action: "payment_restored_from_void",
+        entityType: "payment_record",
+        entityId: saved.id,
+        summary: "Payment record restored after data hygiene review.",
+        beforeData: auditPayload(before),
+        afterData: auditPayload(saved),
+        metadata: { restoreInsteadOfHardDelete: true }
+      });
+      return saved;
+    }
+  }
+
+  const store = getMockStore();
+  const index = store.paymentRecords.findIndex((payment) => payment.id === paymentId);
+  if (index < 0) return null;
+  store.paymentRecords[index] = { ...store.paymentRecords[index], voidedAt: null, voidedBy: "", voidReason: "", updatedAt: now };
+  const after = store.paymentRecords[index];
+  await createAuditLog({
+    actorType: "boss",
+    actorName,
+    action: "payment_restored_from_void",
+    entityType: "payment_record",
+    entityId: after.id,
+    summary: "Payment record restored after data hygiene review.",
+    beforeData: auditPayload(before),
+    afterData: auditPayload(after),
+    metadata: { restoreInsteadOfHardDelete: true }
+  });
+  return mockClone(after);
+}
+
+export async function createDefaultPaymentScheduleForProject(project: ProjectAccount, lead: Lead, actorName = "Marcus") {
+  const existing = (await listPaymentRecords({ includeTestDemo: true })).filter((payment) => payment.projectId === project.id && !payment.voidedAt);
+  if (existing.length) return existing;
+
+  const now = new Date().toISOString();
+  const dueDates = [
+    now,
+    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  ];
+  const types: PaymentRecord["paymentType"][] = ["deposit", "progress", "final"];
+  const schedule = defaultFiftyFortyTenSchedule(project.confirmedValue || lead.confirmedValue || lead.quotedAmount || 0);
+  const records: PaymentRecord[] = schedule.map((milestone, index) => ({
+    id: `payment-${project.id}-${types[index]}-${randomUUID()}`,
+    projectId: project.id,
+    leadId: lead.id,
+    paymentType: types[index],
+    amount: milestone.amount,
+    dueDate: dueDates[index],
+    receivedDate: null,
+    status: index === 0 ? "Deposit Requested" : index === 1 ? "Progress Payment Due" : "Final Payment Due",
+    notes: `${lead.division === "Carpentry Works" ? "JBC default 50/40/10" : "LIMM Works editable non-GST"} milestone: ${milestone.label}.`,
+    createdAt: now,
+    updatedAt: now
+  }));
+
+  const saved: PaymentRecord[] = [];
+  for (const record of records) {
+    const payment = await addPaymentRecord(record, actorName);
+    if (payment) saved.push(payment);
+  }
+  return saved;
+}
+
 export async function getSalesCollectionData(month = currentMonthKey(), options: ProductionVisibilityOptions = {}) {
   const [leads, rawProjects, rawPayments, target] = await Promise.all([
     listLeads({ includeTest: options.includeTestDemo }),
-    listProjectAccounts({ includeTestDemo: options.includeTestDemo }),
-    listPaymentRecords({ includeTestDemo: options.includeTestDemo }),
+    listProjectAccounts({ includeTestDemo: true }),
+    listPaymentRecords({ includeTestDemo: true }),
     getMonthlySalesTarget(month)
   ]);
   const visibleLeadIds = new Set(leads.map((lead) => lead.id));
-  const projects = filterProjectsForProductionVisibility(rawProjects, { ...options, visibleLeadIds });
+  const leadById = new Map(leads.map((lead) => [lead.id, lead]));
+  const projects = filterProjectsForProductionVisibility(rawProjects, { ...options, visibleLeadIds })
+    .filter((project) => options.includeTestDemo || projectIsLinkedToAcceptedWonLead(project, leadById));
   const visibleProjectIds = new Set(projects.map((project) => project.id));
-  const payments = filterPaymentsForProductionVisibility(rawPayments, { ...options, visibleLeadIds, visibleProjectIds });
+  const payments = filterPaymentsForProductionVisibility(rawPayments, { ...options, visibleLeadIds, visibleProjectIds })
+    .filter((payment) => options.includeTestDemo || (
+      payment.amount > 0 &&
+      !payment.voidedAt &&
+      payment.status !== "Disputed" &&
+      visibleProjectIds.has(payment.projectId) &&
+      visibleLeadIds.has(payment.leadId)
+    ));
   return {
     leads,
     projects,

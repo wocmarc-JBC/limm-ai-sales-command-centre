@@ -181,7 +181,8 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
       detail: "Data cleanup, files, developer tools, and hidden lead views.",
       links: [
         ["Client Files", "/client-files", "Review file intake and upload-link status."],
-        ["Production Data Cleanup", "/settings/production-data-cleanup", "Preview test/demo records and soft-archive selected lead records only."],
+        ["Data Hygiene", "/data-hygiene", "Preview suspected leads, approvals, projects, payments, and files; soft archive or restore without hard delete."],
+        ["Production Data Cleanup", "/settings/production-data-cleanup", "Legacy lead-only cleanup preview for soft-archive actions."],
         ["Cleanup", "/settings?cleanup=scan#test-lead-cleanup", "Dry-run cleanup before soft-deleting test data."],
         ["Developer Tools", "#developer-tools", "Safe command references only; no browser script execution."],
         ["Archived / QA Leads", "/leads?view=all", "Review archived, spam, or non-production lead records."]
