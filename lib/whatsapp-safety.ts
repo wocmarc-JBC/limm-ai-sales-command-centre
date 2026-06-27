@@ -11,7 +11,7 @@ const blockedPatterns = [
   { pattern: /\bfree consultation\b/i, code: "forbidden_consultation_wording", reason: "forbidden consultation wording" },
   { pattern: /\bdear\b|\bkindly furnish\b|\brevert accordingly\b|\bhii dear\b|\bwow exciting\b/i, code: "bad_sales_tone", reason: "bad sales tone" },
   { pattern: /\bcontinue sending project details\b|\bteam will review the next step properly\b|\bno problem confirm can\b/i, code: "legacy_or_unsafe_reply_phrase", reason: "legacy or unsafe reply phrase" },
-  { pattern: /\bguarantee(?:d)? approval\b|\bapproval (?:is )?(?:confirmed|guaranteed)\b|\bapproved\b/i, code: "approval_promise", reason: "approval promise" },
+  { pattern: /\bguarantee(?:d)? approval\b|\bapproval (?:is )?(?:confirmed|guaranteed|sure pass)\b|\bapproval sure pass\b|\bsure pass approval\b|\bconfirmed approval\b|\bapproved by (?:hdb|bca|ura|mcst|management|authority)\b/i, code: "approval_promise", reason: "approval promise" },
   // Blocks unsafe permit certainty such as "confirmed no permit".
   { pattern: /\bno permit (?:is )?(?:needed|required)\b|\bpermit (?:is )?(?:not needed|not required|confirmed)\b|\bconfirmed no permit\b/i, code: "permit_certainty", reason: "permit certainty" },
   { pattern: /\bguarantee(?:d)? completion\b|\bcompletion date (?:is )?(?:confirmed|guaranteed)\b/i, code: "completion_guarantee", reason: "completion guarantee" },

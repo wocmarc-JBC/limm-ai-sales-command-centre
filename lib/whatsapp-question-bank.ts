@@ -1,3 +1,5 @@
+import { limmCarpentryDemoQaModule } from "@/lib/knowledge/limm-carpentry-demo-qa";
+
 export type QuestionBankIntentKey =
   | "general_enquiry"
   | "landed_renovation"
@@ -10,6 +12,7 @@ export type QuestionBankIntentKey =
   | "floorplan_or_photos_sent"
   | "condo_renovation"
   | "commercial_renovation"
+  | "carpentry_demo_common_questions"
   | "hacking_demo"
   | "carpentry"
   | "timeline_question"
@@ -54,7 +57,7 @@ export interface QuestionBankMatch {
 }
 
 function normalise(text: string) {
-  return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  return text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function includesPhrase(text: string, phrase: string) {
@@ -267,6 +270,34 @@ export const whatsappQuestionBank: QuestionBankEntry[] = [
     ],
     follow_up_question: "Could you share the layout, usage of the space, and any landlord requirements?",
     audit_tag: "qb_commercial"
+  },
+  {
+    intent_key: "carpentry_demo_common_questions",
+    category: limmCarpentryDemoQaModule.moduleName,
+    example_questions: [
+      "How much roughly for wardrobe and kitchen cabinet?",
+      "Can hack this wall? I send photo.",
+      "Can hack bomb shelter wall to make bigger?",
+      "Your hacking price include disposal?",
+      "Can modify existing cabinet to fit bigger fridge?",
+      "拆柜多少钱？可以明天做吗？"
+    ],
+    classification_keywords: [
+      ...limmCarpentryDemoQaModule.triggerKeywordsEn,
+      ...limmCarpentryDemoQaModule.triggerKeywordsZh
+    ],
+    safe_answer_strategy: "Use the carpentry/demo Q&A module: answer the exact question, avoid prices, avoid hacking certainty, and ask only for missing property type, photos/video, measurements, scope or preferred start date.",
+    required_missing_info: ["property_type", "site_photos", "measurements", "scope", "preferred_start_date"],
+    risk_flags: ["carpentry_demo_review", "hacking_approval_review"],
+    escalation_rule: "auto_safe_with_boss_review",
+    forbidden_claims: ["pricing", "quote range", "rough estimate", "package price", "hacking certainty", "approval certainty"],
+    reply_variations: [
+      limmCarpentryDemoQaModule.standardFirstReplyEn,
+      limmCarpentryDemoQaModule.receivedInfoVariants.photosReceived,
+      "For carpentry or demo works, we can help review the details first. Please send the property type, photos or video, rough measurements, what you want to build/remove/modify/hack, and preferred start date so we can advise the next step more accurately."
+    ],
+    follow_up_question: "Could you send the property type, photos/video, rough measurements, scope and preferred start date?",
+    audit_tag: "qb_carpentry_demo_common_questions"
   },
   {
     intent_key: "hacking_demo",
@@ -507,6 +538,7 @@ export const whatsappQuestionBank: QuestionBankEntry[] = [
 const priority: QuestionBankIntentKey[] = [
   "complaint_or_risk",
   "price_question",
+  "carpentry_demo_common_questions",
   "submission_approval",
   "structural_wall",
   "aa_works",

@@ -6,6 +6,16 @@ import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
 import { formatLeadDisplayName } from "@/lib/lead-display";
+import {
+  limmQaExpansionPackMetadata,
+  limmQaScenarios,
+  limmQaScenarioStats
+} from "@/lib/knowledge/limm-qa-scenarios";
+import {
+  carpentryDemoQaItems,
+  carpentryDemoQaStats,
+  limmCarpentryDemoQaModule
+} from "@/lib/knowledge/limm-carpentry-demo-qa";
 import type { Lead, LeadMessage } from "@/lib/types";
 import {
   detectReplyQualityScenario,
@@ -165,6 +175,10 @@ export default async function QaCentrePage({
   });
   const leadFiles = files.filter((file) => file.leadId === selectedLead.id);
   const facts = buildLeadFacts(selectedLead, messages, leadFiles);
+  const showExpansionPack = getString(searchParams?.expansion) === "1";
+  const showCarpentryDemoPack = getString(searchParams?.carpentryDemo) === "1";
+  const expansionCategoryRows = Object.entries(limmQaScenarioStats.categoryCounts);
+  const carpentryDemoStats = carpentryDemoQaStats();
   const packResults: QaReplayResult[] = getString(searchParams?.pack) === "1"
     ? scenarioPack.map(([message, type, packScenario]) => {
         const lead = packScenario === "human_takeover" ? { ...fallbackLead(), botPaused: true } : fallbackLead();
@@ -202,6 +216,24 @@ export default async function QaCentrePage({
           This page replays the same reply decision builder used by the live agent, then scores the proposed reply for tone, brand fit,
           safety, first-touch behavior, price handling, and language. It never calls the Meta send adapter.
         </p>
+        <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-command-line bg-command-bg/50 p-3">
+            <p className="text-command-muted">Q&A Expansion Pack</p>
+            <p className="mt-1 text-xl font-semibold text-command-text">{limmQaScenarioStats.scenarioCount} scenarios</p>
+          </div>
+          <div className="rounded-xl border border-command-line bg-command-bg/50 p-3">
+            <p className="text-command-muted">Mandarin / mixed</p>
+            <p className="mt-1 text-xl font-semibold text-command-text">{limmQaScenarioStats.mandarinOrMixedCount}</p>
+          </div>
+          <div className="rounded-xl border border-command-line bg-command-bg/50 p-3">
+            <p className="text-command-muted">Live automation safety</p>
+            <p className="mt-1 text-xl font-semibold text-emerald-200">Off</p>
+          </div>
+          <div className="rounded-xl border border-command-line bg-command-bg/50 p-3">
+            <p className="text-command-muted">Carpentry / demo Q&A</p>
+            <p className="mt-1 text-xl font-semibold text-command-text">{carpentryDemoStats.qaItems} policies</p>
+          </div>
+        </div>
       </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(320px,0.9fr)_minmax(520px,1.3fr)]">
@@ -262,6 +294,18 @@ export default async function QaCentrePage({
                 className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-elevated px-4 py-2 text-sm font-semibold text-command-text transition hover:border-command-cyan/70"
               >
                 Run Scenario Pack
+              </a>
+              <a
+                href={`/qa-centre?lead=${encodeURIComponent(selectedLead.id)}&expansion=1`}
+                className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-elevated px-4 py-2 text-sm font-semibold text-command-text transition hover:border-command-cyan/70"
+              >
+                Open Q&A Expansion Pack
+              </a>
+              <a
+                href={`/qa-centre?lead=${encodeURIComponent(selectedLead.id)}&carpentryDemo=1`}
+                className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-elevated px-4 py-2 text-sm font-semibold text-command-text transition hover:border-command-cyan/70"
+              >
+                Open Carpentry / Demo Pack
               </a>
               <a
                 href={`/inbox?lead=${encodeURIComponent(selectedLead.id)}`}
@@ -373,6 +417,143 @@ export default async function QaCentrePage({
                     <td className="p-3 font-semibold text-command-text">{item.score.overallScore}</td>
                     <td className="p-3 text-command-muted">{item.score.status}</td>
                     <td className="p-3 text-command-muted">{item.score.failedRules.join(", ") || "None"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {showExpansionPack ? (
+        <section className="mt-6 rounded-2xl border border-command-line bg-command-card p-5 shadow-premium">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Q&A Expansion Pack</p>
+              <h2 className="mt-2 text-2xl font-semibold text-command-text">{limmQaExpansionPackMetadata.title}</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
+                Simulation-only knowledge pack for reply QA coverage. It contains approved answer points and ideal replies, and it does not send WhatsApp messages or activate pricing, booking, or audio processing.
+              </p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-bg/60 p-4 text-right">
+              <p className="text-sm text-command-muted">Pack ID</p>
+              <p className="mt-1 font-mono text-sm text-command-text">{limmQaExpansionPackMetadata.packId}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-4">
+            <div className="rounded-xl border border-command-line bg-command-elevated p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-command-muted">Scenarios</p>
+              <p className="mt-1 text-2xl font-semibold text-command-text">{limmQaScenarioStats.scenarioCount}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-elevated p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-command-muted">Categories</p>
+              <p className="mt-1 text-2xl font-semibold text-command-text">{expansionCategoryRows.length}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-elevated p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-command-muted">Mandarin / mixed</p>
+              <p className="mt-1 text-2xl font-semibold text-command-text">{limmQaScenarioStats.mandarinOrMixedCount}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-elevated p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-command-muted">Dream-home cases</p>
+              <p className="mt-1 text-2xl font-semibold text-command-text">{limmQaScenarioStats.dreamHomePhraseCount}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {expansionCategoryRows.map(([category, count]) => (
+              <div key={category} className="flex items-center justify-between gap-3 rounded-xl border border-command-line bg-command-bg/50 px-4 py-3 text-sm">
+                <span className="text-command-muted">{category}</span>
+                <span className="font-semibold text-command-text">{count}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-command-muted">
+                <tr>
+                  <th className="p-3">ID</th>
+                  <th className="p-3">Category</th>
+                  <th className="p-3">Client examples</th>
+                  <th className="p-3">Intent</th>
+                  <th className="p-3">Ideal reply</th>
+                  <th className="p-3">Safety</th>
+                </tr>
+              </thead>
+              <tbody>
+                {limmQaScenarios.map((scenario) => (
+                  <tr key={scenario.id} className="border-t border-command-line align-top">
+                    <td className="whitespace-nowrap p-3 font-mono text-command-text">{scenario.id}</td>
+                    <td className="min-w-56 p-3 text-command-muted">{scenario.category}</td>
+                    <td className="min-w-64 p-3 text-command-text">{scenario.client_examples.join(" / ")}</td>
+                    <td className="min-w-48 p-3 text-command-muted">{scenario.detected_intent}</td>
+                    <td className="min-w-96 p-3 text-command-text">{scenario.ideal_reply_zh || scenario.ideal_reply_en}</td>
+                    <td className="min-w-64 p-3 text-command-muted">
+                      No pricing: {scenario.should_auto_price ? "FAIL" : "OK"}; booking: {scenario.should_auto_book ? "FAIL" : "Off"}; audio: {scenario.should_enable_voice_transcription ? "FAIL" : "Off"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {showCarpentryDemoPack ? (
+        <section className="mt-6 rounded-2xl border border-command-line bg-command-card p-5 shadow-premium">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Carpentry / Demo Works Q&A</p>
+              <h2 className="mt-2 text-2xl font-semibold text-command-text">{limmCarpentryDemoQaModule.moduleName}</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
+                Simulation-only safe-response knowledge for common questions clients usually ask about carpentry, dismantling, wall review, disposal, protection and approval checks.
+              </p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-bg/60 p-4 text-right">
+              <p className="text-sm text-command-muted">Module ID</p>
+              <p className="mt-1 font-mono text-sm text-command-text">{limmCarpentryDemoQaModule.moduleId}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-4">
+            <div className="rounded-xl border border-command-line bg-command-elevated p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-command-muted">Q&A policies</p>
+              <p className="mt-1 text-2xl font-semibold text-command-text">{carpentryDemoStats.qaItems}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-elevated p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-command-muted">English triggers</p>
+              <p className="mt-1 text-2xl font-semibold text-command-text">{carpentryDemoStats.englishTriggers}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-elevated p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-command-muted">Mandarin triggers</p>
+              <p className="mt-1 text-2xl font-semibold text-command-text">{carpentryDemoStats.mandarinTriggers}</p>
+            </div>
+            <div className="rounded-xl border border-command-line bg-command-elevated p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-command-muted">Safety mode</p>
+              <p className="mt-1 text-2xl font-semibold text-emerald-200">Simulation</p>
+            </div>
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-command-muted">
+                <tr>
+                  <th className="p-3">ID</th>
+                  <th className="p-3">Question patterns</th>
+                  <th className="p-3">Response policy</th>
+                  <th className="p-3">WhatsApp template</th>
+                  <th className="p-3">Safety</th>
+                </tr>
+              </thead>
+              <tbody>
+                {carpentryDemoQaItems.map((item) => (
+                  <tr key={item.id} className="border-t border-command-line align-top">
+                    <td className="whitespace-nowrap p-3 font-mono text-command-text">{item.id}</td>
+                    <td className="min-w-64 p-3 text-command-text">{item.questionPatterns.join(" / ")}</td>
+                    <td className="min-w-64 p-3 text-command-muted">{item.answerPolicy}</td>
+                    <td className="min-w-96 whitespace-pre-wrap p-3 text-command-text">{item.templateEn}</td>
+                    <td className="min-w-52 p-3 text-command-muted">No amounts: OK; booking: Off; audio: Off</td>
                   </tr>
                 ))}
               </tbody>

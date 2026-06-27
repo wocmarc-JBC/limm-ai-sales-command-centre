@@ -1,4 +1,10 @@
 import type { Lead, LeadMessage } from "@/lib/types";
+import {
+  findCarpentryDemoQaItem,
+  isCarpentryDemoKnowledgeTrigger,
+  matchCarpentryDemoQaItem,
+  type CarpentryDemoQaMatch
+} from "@/lib/knowledge/limm-carpentry-demo-qa";
 import { validateWhatsAppAutoReply } from "@/lib/whatsapp-safety";
 
 export const V9_CLEAN_WHATSAPP_SALES_BRAIN_VERSION = "v9_0_clean_whatsapp_sales_brain";
@@ -20,6 +26,7 @@ export type V9SalesMove =
   | "portfolio_route"
   | "promo_deflection"
   | "free_work_deflection"
+  | "carpentry_demo_review"
   | "human_identity_answer"
   | "handoff_to_team"
   | "voice_or_unsupported_fallback";
@@ -273,7 +280,13 @@ function applyTextFacts(memory: V9SalesMemory, text: string, source: "current" |
   if (has(normalized, /\bfull reno|\bfull renovation|\brenovate\b|\breno\b/)) memory.scope_summary ||= "renovation enquiry";
   if (has(normalized, /\bkitchen\b/)) memory.scope_summary = appendUnique(memory.scope_summary, "kitchen");
   if (has(normalized, /\bbathroom\b|\btoilet\b/)) memory.scope_summary = appendUnique(memory.scope_summary, "bathroom");
-  if (has(normalized, /\bwall\b|\bhack\b|\bhacking\b/)) memory.scope_summary = appendUnique(memory.scope_summary, "wall/hacking review");
+  if (has(normalized, /\bcarpentry\b|\bcabinet\b|\bcabinets\b|\bwardrobe\b|\btv console\b|\bfeature wall\b|\blaminate\b|木工|橱柜|衣柜|电视柜|修改柜|加层板/)) {
+    memory.scope_summary = appendUnique(memory.scope_summary, "carpentry/cabinet works");
+  }
+  if (has(normalized, /\bdemo\b|\bdemolition\b|\bdismantle\b|\bdismantling\b|\bremove cabinet\b|\bremove built in\b|\bremove tiles\b|\btile hacking\b|\bfloor hacking\b|拆柜|拆除|拆地砖|拆墙砖/)) {
+    memory.scope_summary = appendUnique(memory.scope_summary, "demo/dismantling works");
+  }
+  if (has(normalized, /\bwall\b|\bhack\b|\bhacking\b|敲墙|打墙|拆墙/)) memory.scope_summary = appendUnique(memory.scope_summary, "wall/hacking review");
 
   const addressMatch = text.match(/\b(?:\d{1,4}\s+[A-Za-z][A-Za-z\s.'-]{2,}\s+(?:Road|Rd|Street|St|Avenue|Ave|Drive|Dr|Lane|Ln|Crescent|Close|Way|Place|Terrace|Walk))\b/i);
   if (addressMatch) memory.address = addressMatch[0].trim();
@@ -285,7 +298,7 @@ function applyTextFacts(memory: V9SalesMemory, text: string, source: "current" |
     markDoNotAsk(memory, "floor_plan");
     memory.correction_history = appendArrayUnique(memory.correction_history, "floor_plan_received_or_claimed");
   }
-  if (has(normalized, /\bsite photo\b|\bsite photos\b|\bphoto already\b|\bphotos already\b|\bphotos?.{0,25}(?:sent|been sent)\b|\bi sent the photos\b|\bimage attached\b|\bsite picture\b/)) {
+  if (has(normalized, /\bsite photo\b|\bsite photos\b|\bphoto already\b|\bphotos already\b|\bphotos?.{0,25}(?:sent|been sent|attached)\b|\bi sent the photos\b|\bimage attached\b|\bsite picture\b|\bpicture\b|\bimage\b/)) {
     memory.site_photo_status = source === "current" && has(normalized, /\balready\b|\bsent\b/) ? "client_claimed_sent" : "received";
     markDoNotAsk(memory, "site_photos");
     memory.correction_history = appendArrayUnique(memory.correction_history, "site_photos_received_or_claimed");
@@ -404,6 +417,7 @@ function detectIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
   if (!text && !["image", "document"].includes(type)) return "unsupported";
   if (detectFrustration(text)) return "frustration_or_correction";
   if (has(text, /\bfloor\s*plan already\b|\bfloorplan already\b|\bfloor.{0,20}sent\b|\bphotos? already\b|\bphotos?.{0,25}(?:sent|been sent)\b|\balready sent\b|\bi sent\b/)) return "file_correction";
+  if (carpentryDemoMatch(input, memory)) return "carpentry_demo_qa";
   if (has(text, /\bhow much\b|\bprice\b|\bbudget how\b|\bquotation\b|\bquote\b|\bestimate\b|\brough cost\b|\broughly\b|\bpackage\b|多少钱/)) return "price_question";
   if (has(text, /\bso .*cannot finish\b|\bcannot finish\b/)) return "timeline_followup";
   if (has(text, /\bstart\s+(?:tomorrow|tmr|tonight|this week|next week)\b|\bfinish\b|\bcomplete\b|\btimeline\b|\bhow long\b|\b\d+\s*months?\b|\b\d+\s*weeks?\b/)) {
@@ -431,6 +445,7 @@ function riskFlags(intent: string, memory: V9SalesMemory) {
     intent === "price_question" ? "pricing_request" : "",
     intent === "timeline_question" || intent === "timeline_followup" || intent === "hypothetical_timeline" ? "timeline_expectation" : "",
     intent === "appointment_request" || intent === "office_visit_request" ? "appointment_request" : "",
+    intent === "carpentry_demo_qa" ? "carpentry_demo_knowledge_review" : "",
     intent === "hacking_wall" ? "hacking_or_structural_review" : "",
     intent === "approval_submission" ? "approval_or_submission_review" : "",
     memory.handoff_lock ? "client_frustration_handoff_lock" : "",
@@ -495,6 +510,130 @@ function hasAreaScope(memory: V9SalesMemory) {
   return has(normalize(memory.scope_summary), /\bkitchen\b|\btoilet\b|\bbathroom\b|\bwall\b|\bhacking\b|\bcarpentry\b|\bwhole\b|\bfull\b|\bextension\b|\bextend\b/);
 }
 
+function combinedCarpentryDemoContext(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
+  return [
+    input.inboundMessageText,
+    ...previousInbound(input.previousMessages),
+    memory.scope_summary,
+    memory.project_type
+  ].join(" ");
+}
+
+function carpentryDemoMatch(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory): CarpentryDemoQaMatch | null {
+  const match = matchCarpentryDemoQaItem(input.inboundMessageText);
+  if (!match) return null;
+  const context = combinedCarpentryDemoContext(input, memory);
+  if (isCarpentryDemoKnowledgeTrigger(input.inboundMessageText) || isCarpentryDemoKnowledgeTrigger(context)) {
+    return match;
+  }
+  return null;
+}
+
+function hasReceivedSitePhotos(memory: V9SalesMemory) {
+  return memory.site_photo_status === "received" || memory.site_photo_status === "client_claimed_sent";
+}
+
+function hasReceivedFloorPlan(memory: V9SalesMemory) {
+  return memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent";
+}
+
+function hasMeasurements(input: V9WhatsAppSalesBrainInput) {
+  const context = normalize([input.inboundMessageText, ...previousInbound(input.previousMessages)].join(" "));
+  return /\bmeasurement\b|\bmeasurements\b|\bdimension\b|\bdimensions\b|\b\d+\s*(?:mm|cm|m|metre|meter|ft|feet)\b|\b\d+\s*[x×]\s*\d+\b/.test(context);
+}
+
+function hasPreferredStartDate(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  const context = normalize([input.inboundMessageText, ...previousInbound(input.previousMessages), memory.timeline_expectation].join(" "));
+  return Boolean(memory.timeline_expectation || /\btomorrow\b|\btmr\b|\btonight\b|\bnext week\b|\bthis week\b|\bpreferred start\b|\bstart date\b|\bcan start\b/.test(context));
+}
+
+function missingCarpentryDemoDetails(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput, options: { includeFloorPlan?: boolean } = {}) {
+  const missing: string[] = [];
+  if (!memory.property_type) missing.push("property type");
+  if (!hasReceivedSitePhotos(memory) && !memory.do_not_ask_again.site_photos) missing.push("photos/video of the area");
+  if (options.includeFloorPlan && !hasReceivedFloorPlan(memory) && !memory.do_not_ask_again.floor_plan) missing.push("floor plan");
+  if (!hasMeasurements(input)) missing.push("rough measurements");
+  if (!hasSpecificScope(memory)) missing.push("what you want to build, remove, modify or hack");
+  if (!hasPreferredStartDate(memory, input)) missing.push("preferred start date");
+  return missing;
+}
+
+function receivedCarpentryDemoAcknowledgement(memory: V9SalesMemory) {
+  const received = [
+    hasReceivedSitePhotos(memory) ? "photos" : "",
+    memory.property_type ? "property type" : "",
+    hasReceivedFloorPlan(memory) ? "floor plan" : ""
+  ].filter(Boolean);
+  if (!received.length) return "";
+  return `Thanks, I've received the ${joinList(received)}. `;
+}
+
+function askMissingCarpentryDemoDetails(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput, options: { includeFloorPlan?: boolean } = {}) {
+  const missing = missingCarpentryDemoDetails(memory, input, options);
+  if (!missing.length) return "The team can review the details already shared and advise the next step for an initial review.";
+  return `May I check ${joinList(missing)}?`;
+}
+
+function isMandarinMessage(text: string) {
+  return /[\u4e00-\u9fff]/.test(text);
+}
+
+function hasCarpentryDemoPriceQuestion(text: string) {
+  const normalized = normalize(text);
+  return /\bhow much\b|\bprice\b|\bquote\b|\bquotation\b|\broughly\b|\bcost\b|多少钱/.test(normalized);
+}
+
+function composeCarpentryDemoPriceReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  if (isMandarinMessage(input.inboundMessageText)) {
+    return "可以，我们可以先帮您 review。木工或拆除工程需要看 property type、照片/视频、rough measurements、实际范围、现场情况、保护/垃圾清理，以及是否需要批准。明天能不能做也要看 scope、现场条件、团队 availability 和 approval 情况。请先把这些资料发来，我们再 advise next step。";
+  }
+  const acknowledgement = receivedCarpentryDemoAcknowledgement(memory);
+  const missingAsk = askMissingCarpentryDemoDetails(memory, input);
+  if (acknowledgement) {
+    return `${acknowledgement}Sure, we can help review this. For carpentry or demo works, pricing depends on the actual scope, size, site condition, access, disposal/protection, material choice, and whether approval is needed. ${missingAsk}`;
+  }
+  return findCarpentryDemoQaItem("CDQ01_PRICE_FIRST").templateEn;
+}
+
+function composeCondoWeekendHackingReply() {
+  return "For condo works, hacking must follow MCST or building management rules and approved working hours. Please share the management renovation rules or form if available, together with the wall location, photos and floor plan. We should not promise Saturday works before the scope, approval and allowed hours are checked.";
+}
+
+function composeCarpentryDemoMultiIntentReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  const missingAsk = askMissingCarpentryDemoDetails(memory, input, { includeFloorPlan: true });
+  return `We can help review the kitchen wall request, disposal scope and target start timing together. For wall hacking, we'll need to check the property type, floor plan, wall location, whether the wall is structural/restricted, hidden services, and any approval requirements first. Disposal should also be reviewed and itemised clearly after we understand the dismantling or hacking scope. Start timing depends on scope, access, disposal/protection, approval and team availability. ${missingAsk}`;
+}
+
+function composeCarpentryDemoKnowledgeReply(match: CarpentryDemoQaMatch, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  const text = normalize(input.inboundMessageText);
+  if (/bomb shelter|household shelter|防空|避难所/.test(text)) return findCarpentryDemoQaItem("CDQ06_HOUSEHOLD_SHELTER").templateEn;
+  if (/condo|mcst|management|saturday|weekend/.test(text) && /hack|hacking|wall|敲墙|打墙|拆墙/.test(text)) return composeCondoWeekendHackingReply();
+  if (/hack|hacking|wall|敲墙|打墙|拆墙/.test(text) && /disposal|debris|haulage|rubbish|垃圾|清走/.test(text) && /start|next week|tomorrow|timeline/.test(text)) {
+    return composeCarpentryDemoMultiIntentReply(memory, input);
+  }
+  if (/disposal|debris|haulage|rubbish|垃圾|清走/.test(text)) return findCarpentryDemoQaItem("CDQ07_DISPOSAL").templateEn;
+  if (hasCarpentryDemoPriceQuestion(input.inboundMessageText)) return composeCarpentryDemoPriceReply(memory, input);
+  if (/dust|noisy|noise|protection|lift protection|corridor protection|灰尘|噪音|保护/.test(text)) return findCarpentryDemoQaItem("CDQ08_DUST_PROTECTION").templateEn;
+  if (/approval|permit|mcst|management|批准|管理处/.test(text)) return findCarpentryDemoQaItem("CDQ05_APPROVAL").templateEn;
+  if (/hack|hacking|remove wall|wall removal|wall|敲墙|打墙|拆墙/.test(text)) return findCarpentryDemoQaItem("CDQ04_WALL_HACKING").templateEn;
+  if (/modify|cabinet|fridge|shelf|replace door|修改柜|加层板/.test(text)) {
+    const ask = hasMeasurements(input) ? "" : " Could you send photos, rough dimensions and the fridge size or item size?";
+    return `${findCarpentryDemoQaItem("CDQ10_CABINET_MODIFICATION").templateEn}${ask}`;
+  }
+  if (/match|same colour|laminate colour/.test(text)) return findCarpentryDemoQaItem("CDQ11_LAMINATE_MATCH").templateEn;
+  if (/material|plywood|mdf|hinge|drawer track|soft closing|laminate/.test(text)) return findCarpentryDemoQaItem("CDQ12_MATERIALS").templateEn;
+  if (/hidden pipe|hidden wire|wires inside|damage pipes|conduit/.test(text)) return findCarpentryDemoQaItem("CDQ13_HIDDEN_SERVICES").templateEn;
+  if (/how long|start tomorrow|can start|timeline/.test(text)) return findCarpentryDemoQaItem("CDQ09_TIMELINE").templateEn;
+  if (match.item.id === "CDQ02_SMALL_JOBS" || /small job|small hacking|only remove/.test(text)) return findCarpentryDemoQaItem("CDQ02_SMALL_JOBS").templateEn;
+  if (match.item.id === "CDQ03_SITE_VISIT") return match.item.templateEn;
+
+  const acknowledgement = receivedCarpentryDemoAcknowledgement(memory);
+  if (acknowledgement) {
+    return `${acknowledgement}We can help review this. ${askMissingCarpentryDemoDetails(memory, input)}`;
+  }
+  return findCarpentryDemoQaItem("CDQ02_SMALL_JOBS").templateEn;
+}
+
 function firstTouchGreetingKind(text: string) {
   if (has(text, /^你好$/)) return "chinese_greeting";
   if (has(text, /^(hi|hello|hi there|hey)$/)) return "english_greeting";
@@ -506,6 +645,11 @@ function composePriceReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInp
   const text = normalize(input.inboundMessageText);
   const seriousAa = memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type);
   const floorReceived = memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent";
+  const carpentryMatch = carpentryDemoMatch(input, memory);
+
+  if (carpentryMatch) {
+    return composeCarpentryDemoKnowledgeReply(carpentryMatch, memory, input);
+  }
 
   if (has(text, /\bpackage\b/)) {
     return "We usually review based on the actual scope rather than fixed packages, so the proposal can match the property and works needed. May I know what type of property this is and which areas you're planning to renovate?";
@@ -561,6 +705,7 @@ function composeAppointmentReply(memory: V9SalesMemory, input: V9WhatsAppSalesBr
 
 function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
   if (!isFirstTouch(input)) return "";
+  if (["carpentry_demo_qa", "hacking_wall", "approval_submission"].includes(intent)) return "";
   const text = normalize(input.inboundMessageText);
   const type = input.inboundMessageType.toLowerCase();
   const greetingKind = firstTouchGreetingKind(text);
@@ -651,6 +796,10 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
   const firstTouchReply = composeFirstTouchReply(intent, memory, input);
   if (firstTouchReply) return firstTouchReply;
 
+  if (intent === "carpentry_demo_qa") {
+    const match = carpentryDemoMatch(input, memory);
+    if (match) return handoffAppend(composeCarpentryDemoKnowledgeReply(match, memory, input), memory);
+  }
   if (intent === "price_question") {
     return handoffAppend(composePriceReply(memory, input), memory);
   }
@@ -739,6 +888,7 @@ function capitalize(value: string) {
 
 function salesMoveFor(intent: string): V9SalesMove {
   if (intent === "price_question") return "safe_price_review";
+  if (intent === "carpentry_demo_qa") return "carpentry_demo_review";
   if (intent === "timeline_question" || intent === "timeline_followup") return "timeline_reality_check";
   if (intent === "hypothetical_timeline") return "hypothetical_answer_without_context_overwrite";
   if (intent === "appointment_request") return "appointment_preference_pending_confirmation";
@@ -759,6 +909,7 @@ function stageFor(intent: string, memory: V9SalesMemory) {
   if (intent === "design_question") return memory.lead_seriousness === "high" ? "design_discussion" : "discovery";
   if (memory.handoff_lock || intent === "frustration_or_correction") return "handoff_required";
   if (intent === "price_question") return "price_question";
+  if (intent === "carpentry_demo_qa") return "technical_or_authority_risk";
   if (intent === "appointment_request" || intent === "office_visit_request") return "appointment_pending";
   if (intent === "timeline_question" || intent === "timeline_followup" || intent === "hypothetical_timeline") return "timeline_discussion";
   if (intent === "hacking_wall" || intent === "approval_submission") return "technical_or_authority_risk";
@@ -870,6 +1021,7 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
   const before = initialMemory(input);
   const memory = deriveMemory(input);
   const intent = detectIntent(input, memory);
+  const carpentryDemoKnowledge = carpentryDemoMatch(input, memory);
   const salesMove = salesMoveFor(intent);
   const stage = stageFor(intent, memory);
   const moveRisks = riskFlags(intent, memory);
@@ -878,7 +1030,7 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
   const shouldReply = input.autoReplyEnabled && intent !== "unsupported" && Boolean(final.reply.trim());
   const handoffRequired =
     (intent !== "design_question" && memory.handoff_lock) ||
-    ["frustration_or_correction", "file_correction", "price_question", "appointment_request", "office_visit_request", "hacking_wall", "approval_submission", "free_work_request", "promotion_question"].includes(intent);
+    ["frustration_or_correction", "file_correction", "price_question", "appointment_request", "office_visit_request", "hacking_wall", "approval_submission", "carpentry_demo_qa", "free_work_request", "promotion_question"].includes(intent);
   const confidence = memory.handoff_lock && intent !== "design_question" ? 95 : ["general_enquiry", "media_received"].includes(intent) ? 82 : 96;
   const patch = memoryPatch(before, memory);
   const correctionApplied = memory.correction_history.length > 0 || memory.handoff_lock;
@@ -905,6 +1057,11 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     primaryMove: salesMove,
     selected_sales_move: salesMove,
     templateId: `v9:${salesMove}`,
+    knowledgeModule: carpentryDemoKnowledge ? "limm_carpentry_demo_common_questions_sg" : "",
+    knowledgeModuleName: carpentryDemoKnowledge ? "Carpentry & Demo Works - Common Client Questions Singapore" : "",
+    carpentryDemoQaItem: carpentryDemoKnowledge?.item.id ?? "",
+    carpentryDemoMatchedKeywords: carpentryDemoKnowledge?.matchedKeywords ?? [],
+    carpentryDemoMatchedPatterns: carpentryDemoKnowledge?.matchedPatterns ?? [],
     reply_source: "v9_clean_core",
     final_reply_text: final.reply,
     finalReplyHash: hashReply(final.reply),
