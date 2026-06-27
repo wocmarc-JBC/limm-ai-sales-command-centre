@@ -1,6 +1,6 @@
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
-import { buildBossDailyBrief } from "@/lib/boss-ops";
+import { buildBossDailyBrief, type BossBriefItem } from "@/lib/boss-ops";
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 import { listFollowUps } from "@/lib/data/followups-repository";
@@ -21,6 +21,48 @@ function briefTone(tone: keyof typeof toneClasses) {
   return toneClasses[tone];
 }
 
+const mustHandleNowKeys = [
+  "human_reply_needed",
+  "angry_confused_clients",
+  "followups_overdue",
+  "quotations_awaiting_boss",
+  "bot_paused_takeover"
+];
+
+const salesToPushKeys = [
+  "hot_leads_not_followed",
+  "high_risk_leads",
+  "todays_appointments"
+];
+
+const monitoringKeys = [
+  "jobs_blocked_from_starting",
+  "deposits_unpaid",
+  "overdue_collections"
+];
+
+const tonePriority = {
+  red: 0,
+  amber: 1,
+  gold: 2,
+  cyan: 3,
+  green: 4,
+  slate: 5
+} as const;
+
+function sortAttentionItems(items: BossBriefItem[]) {
+  return [...items].sort((a, b) => {
+    if (a.count === 0 && b.count > 0) return 1;
+    if (a.count > 0 && b.count === 0) return -1;
+    if (tonePriority[a.tone] !== tonePriority[b.tone]) return tonePriority[a.tone] - tonePriority[b.tone];
+    return b.count - a.count;
+  });
+}
+
+function groupCount(items: BossBriefItem[]) {
+  return items.reduce((sum, item) => sum + item.count, 0);
+}
+
 export default async function BossDailyBriefPage() {
   const [leads, followUps, approvalRequests, projects, payments, auditLogs] = await Promise.all([
     listLeads(),
@@ -31,10 +73,17 @@ export default async function BossDailyBriefPage() {
     listAuditLogs()
   ]);
   const briefItems = buildBossDailyBrief({ leads, followUps, approvalRequests, projects, payments, auditLogs });
-  const urgentCount = briefItems
-    .filter((item) => item.tone === "red" || item.tone === "amber" || item.tone === "gold")
-    .reduce((sum, item) => sum + item.count, 0);
-  const clearCount = briefItems.filter((item) => item.count === 0).length;
+  const itemByKey = new Map(briefItems.map((item) => [item.key, item]));
+  const mustHandleNow = sortAttentionItems(mustHandleNowKeys.map((key) => itemByKey.get(key)).filter(Boolean) as typeof briefItems);
+  const salesToPush = sortAttentionItems(salesToPushKeys.map((key) => itemByKey.get(key)).filter(Boolean) as typeof briefItems);
+  const monitoring = sortAttentionItems(monitoringKeys.map((key) => itemByKey.get(key)).filter(Boolean) as typeof briefItems);
+  const activeGroups = [
+    { title: "Must Handle Now", href: "/inbox", items: mustHandleNow, detail: "Human takeover, complaints, overdue follow-ups, and boss quote decisions." },
+    { title: "Sales To Push", href: "/sales-pipeline", items: salesToPush, detail: "Hot leads, high-risk opportunities, and appointment pressure." },
+    { title: "Monitoring", href: "/delivery", items: monitoring, detail: "Start blockers, deposits, and collections that can affect delivery or cash." }
+  ];
+  const clearItems = briefItems.filter((item) => item.count === 0);
+  const deliveryMoneyRiskCount = groupCount(monitoring);
 
   return (
     <>
@@ -47,35 +96,85 @@ export default async function BossDailyBriefPage() {
         </a>
       </PageHeader>
 
-      <section className="command-grid">
-        <MetricCard label="Needs Attention" value={urgentCount} tone={urgentCount ? "danger" : "good"} detail="Combined boss, sales, delivery, and collection pressure." />
-        <MetricCard label="Live Leads" value={leads.length} detail="Active non-test leads from the repository." />
-        <MetricCard label="Won Jobs" value={projects.length} tone="good" detail="Project/account records being tracked." />
-        <MetricCard label="Queues Clear" value={clearCount} tone={clearCount > 5 ? "good" : "neutral"} detail="Brief modules with no current pressure." />
+      <section className="grid gap-4 lg:grid-cols-3">
+        <MetricCard
+          label="Must Handle Now"
+          value={groupCount(mustHandleNow)}
+          tone={groupCount(mustHandleNow) ? "danger" : "good"}
+          detail="Reply, complaint, takeover, overdue follow-up, and quote approval pressure."
+        />
+        <MetricCard
+          label="Sales To Push"
+          value={groupCount(salesToPush)}
+          tone={groupCount(salesToPush) ? "warn" : "good"}
+          detail="Hot leads, risky deals, and appointment momentum to move today."
+        />
+        <MetricCard
+          label="Delivery / Money Risk"
+          value={deliveryMoneyRiskCount}
+          tone={deliveryMoneyRiskCount ? "danger" : "good"}
+          detail="Start blockers, unpaid deposits, and overdue collection pressure."
+        />
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-2">
-        {briefItems.map((item) => (
-          <a
-            key={item.key}
-            href={item.href}
-            className="mission-panel command-hover-lift block rounded-2xl p-5 transition hover:border-command-cyan/70 hover:shadow-glow"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0">
-                <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${briefTone(item.tone)}`}>
-                  {item.count ? "Attention" : "Clear"}
-                </span>
-                <h2 className="mt-3 text-xl font-semibold text-command-text">{item.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-command-muted">{item.detail}</p>
+      <section className="mt-6 grid gap-5 xl:grid-cols-3">
+        {activeGroups.map((group) => {
+          const visibleItems = group.items.filter((item) => item.count > 0);
+          return (
+            <section key={group.title} className="mission-panel rounded-2xl p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">{group.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-command-muted">{group.detail}</p>
+                </div>
+                <p className="text-3xl font-semibold tabular-nums text-command-text">{groupCount(group.items)}</p>
               </div>
-              <p className="text-4xl font-semibold tabular-nums text-command-text">{item.count}</p>
-            </div>
-            <div className="mt-4 min-h-[3.5rem] rounded-xl border border-command-line bg-command-bg/55 p-3 text-sm text-command-muted">
-              {item.examples.length ? item.examples.join(" | ") : "No cases right now."}
-            </div>
-          </a>
-        ))}
+              <div className="mt-4 space-y-3">
+                {visibleItems.length ? visibleItems.map((item) => (
+                  <a
+                    key={item.key}
+                    href={item.href}
+                    className="block rounded-xl border border-command-line bg-command-bg/55 p-4 transition hover:border-command-cyan/70"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${briefTone(item.tone)}`}>
+                          {item.count ? "Attention" : "Clear"}
+                        </span>
+                        <h2 className="mt-2 text-lg font-semibold text-command-text">{item.title}</h2>
+                        <p className="mt-1 text-sm leading-6 text-command-muted">{item.detail}</p>
+                      </div>
+                      <p className="text-2xl font-semibold tabular-nums text-command-text">{item.count}</p>
+                    </div>
+                    {item.examples.length ? (
+                      <p className="mt-3 text-sm text-command-subtle">{item.examples.join(" | ")}</p>
+                    ) : null}
+                  </a>
+                )) : (
+                  <a href={group.href} className="block rounded-xl border border-command-green/35 bg-command-green/10 p-4 text-sm text-command-green">
+                    All clear: no active pressure in this group.
+                  </a>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </section>
+
+      <section className="mt-6 mission-panel rounded-2xl p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-green">All clear summary</p>
+            <p className="mt-2 text-sm leading-6 text-command-muted">
+              {clearItems.length
+                ? `${clearItems.length} clear module${clearItems.length === 1 ? "" : "s"} hidden from the main queue.`
+                : "No clear modules are hidden right now; everything visible above needs attention."}
+            </p>
+          </div>
+          <p className="text-sm text-command-subtle">
+            {clearItems.length ? clearItems.map((item) => item.title).join(" | ") : "Action queue is fully visible."}
+          </p>
+        </div>
       </section>
 
       <section className="mt-6 mission-panel rounded-2xl p-5">

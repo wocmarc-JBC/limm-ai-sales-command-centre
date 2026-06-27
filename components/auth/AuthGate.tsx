@@ -37,7 +37,7 @@ export function AuthGate({
 
   if (mode === "Supabase Mode" && !authenticated && pathname !== "/login" && !isTemporaryReviewRoute && !isTokenUploadRoute) {
     return (
-      <main className="px-4 pb-10 pt-36 md:ml-64 md:px-8 md:pt-8">
+      <main className="px-4 pb-10 pt-28 md:ml-64 md:px-8 md:pt-8">
         <div className="rounded border border-command-line bg-command-panel p-6 shadow-command">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Supabase Mode</p>
           <h2 className="mt-2 text-2xl font-semibold">Login required</h2>

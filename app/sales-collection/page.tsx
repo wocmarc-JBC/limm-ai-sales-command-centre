@@ -65,7 +65,7 @@ export default async function SalesCollectionPage() {
               Check start gates
             </a>
           </div>
-          <div className="mt-5 overflow-x-auto">
+          <div className="mt-5 hidden overflow-x-auto md:block">
             <table className="w-full min-w-[54rem] border-separate border-spacing-y-2 text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.14em] text-command-muted">
                 <tr>
@@ -100,6 +100,41 @@ export default async function SalesCollectionPage() {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="mt-5 space-y-3 md:hidden">
+            {collectionQueue.length ? collectionQueue.map((item) => (
+              <article key={item.id} className="rounded-xl border border-command-line bg-command-bg/55 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-cyan">Client</p>
+                    <h3 className="mt-1 text-lg font-semibold text-command-text">{item.clientName}</h3>
+                  </div>
+                  <p className="text-right text-lg font-semibold text-command-text">{money(item.amountDue)}</p>
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-command-muted">Overdue days</dt>
+                    <dd className={item.overdueDays > 0 ? "font-semibold text-command-red" : "font-semibold text-command-green"}>{item.overdueDays}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-command-muted">Milestone</dt>
+                    <dd className="font-semibold text-command-text">{item.paymentMilestone}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-command-muted">Warning</dt>
+                    <dd className="font-semibold text-command-amber">{item.stopWorkWarning || item.scheduleSource}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-command-muted">Next chase</dt>
+                    <dd className="font-semibold text-command-text">{item.nextChaseDate}</dd>
+                  </div>
+                </dl>
+              </article>
+            )) : (
+              <p className="rounded-xl border border-command-line bg-command-bg/55 p-4 text-command-muted">
+                No open collection milestones right now.
+              </p>
+            )}
           </div>
         </article>
       </section>

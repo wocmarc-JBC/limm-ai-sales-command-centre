@@ -32,6 +32,9 @@ export default function InstallPage() {
           <div className="mt-5 rounded-xl border border-command-line bg-command-bg/55 p-4 text-sm leading-6 text-command-muted">
             Camera/photo upload is available through secure client upload links. Native iOS and Android apps are intentionally not built yet.
           </div>
+          <div className="mt-4 rounded-xl border border-command-gold/50 bg-command-gold/10 p-4 text-sm font-semibold leading-6 text-command-gold">
+            Install this on your phone only after opening the Vercel production URL, not localhost.
+          </div>
         </section>
       </div>
     </>

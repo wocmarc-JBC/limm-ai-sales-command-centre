@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/ActionButton";
+import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { buildDoNotStartGate, jobStartChecklistActions } from "@/lib/boss-ops";
 import { recordJobStartChecklistAction } from "@/lib/actions";
@@ -22,6 +23,21 @@ export default async function DeliveryPage() {
     current.push(log);
     logsByLead.set(log.entityId, current);
   }
+  const gateRows = projects
+    .map((project) => {
+      const lead = leadById.get(project.leadId) ?? null;
+      return {
+        project,
+        lead,
+        gate: buildDoNotStartGate(project, lead, payments, logsByLead.get(project.leadId) ?? [])
+      };
+    })
+    .sort((a, b) => {
+      if (a.gate.canStart !== b.gate.canStart) return a.gate.canStart ? 1 : -1;
+      return b.project.confirmedValue - a.project.confirmedValue;
+    });
+  const cannotStartRows = gateRows.filter((row) => !row.gate.canStart);
+  const valueBlocked = cannotStartRows.reduce((sum, row) => sum + row.project.confirmedValue, 0);
 
   return (
     <>
@@ -32,12 +48,16 @@ export default async function DeliveryPage() {
         </p>
       </section>
 
+      <section className="mb-6 grid gap-4 md:grid-cols-3">
+        <MetricCard label="Cannot Start" value={cannotStartRows.length} tone={cannotStartRows.length ? "danger" : "good"} detail="Jobs with at least one start blocker." />
+        <MetricCard label="Can Start" value={gateRows.length - cannotStartRows.length} tone="good" detail="Won jobs with every start gate cleared." />
+        <MetricCard label="Value Blocked" value={money(valueBlocked)} tone={valueBlocked ? "warn" : "good"} detail="Confirmed value held by start blockers." />
+      </section>
+
       <div className="space-y-5">
-        {projects.length ? projects.map((project) => {
-          const lead = leadById.get(project.leadId) ?? null;
-          const gate = buildDoNotStartGate(project, lead, payments, logsByLead.get(project.leadId) ?? []);
+        {gateRows.length ? gateRows.map(({ project, gate }) => {
           return (
-            <article key={project.id} className="mission-panel rounded-2xl p-5">
+            <article key={project.id} className={`mission-panel rounded-2xl p-5 ${gate.canStart ? "border-command-green/25 bg-command-panel/70" : "border-command-red/45"}`}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${

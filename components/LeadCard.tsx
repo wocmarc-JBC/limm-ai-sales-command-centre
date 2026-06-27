@@ -117,16 +117,18 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
     : undefined;
   const { visibleBadges, hiddenBadgeCount } = compactPriorityBadges(lead, stage, leadLevel, isWhatsapp, questionCategory);
   const riskBadges = getLeadRiskBadges(lead);
+  const topSignals = [...visibleBadges, ...riskBadges.map((badge) => badge.label)].slice(0, 3);
+  const hiddenSignalCount = Math.max(0, visibleBadges.length + hiddenBadgeCount + riskBadges.length - topSignals.length);
 
   return (
     <article className="mission-panel command-hover-lift rounded-2xl p-5 transition hover:border-command-cyan/70 hover:shadow-glow">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            {visibleBadges.map((badge) => <StatusBadge key={badge} label={badge} />)}
-            {hiddenBadgeCount > 0 ? (
+            {topSignals.map((badge) => <StatusBadge key={badge} label={badge} />)}
+            {hiddenSignalCount > 0 ? (
               <span className="rounded-full border border-command-line bg-command-bg/55 px-2.5 py-1 text-xs font-semibold text-command-subtle">
-                +{hiddenBadgeCount} more signals
+                +{hiddenSignalCount} more signals
               </span>
             ) : null}
           </div>
@@ -134,34 +136,26 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
             {displayName}
           </Link>
           <p className="mt-1 text-base font-semibold text-command-cyan">{fullPhone}</p>
-          <p className="mt-2 text-xl font-semibold text-command-text">{scope}</p>
-          <p className="mt-1 text-base text-command-muted">
-            Stage: {humanizeLabel(stage)} | {facts.propertyType.value || "Property type pending"}
-          </p>
-          <p className="mt-1 text-sm text-command-subtle">Booking readiness: {humanizeLabel(booking.status)}</p>
-          {questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported" ? (
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-command-subtle">
-              Question category: {questionMatch.entry.category} | Reply strategy: {questionMatch.entry.safe_answer_strategy}
-            </p>
-          ) : null}
+          <p className="mt-2 text-lg font-semibold text-command-text">{scope}</p>
           {displayName !== lead.clientName ? (
             <p className="mt-1 text-sm text-command-subtle">Generated CRM title cleaned for display.</p>
           ) : null}
         </div>
-        <div className="rounded-2xl border border-command-line bg-command-bg/55 px-4 py-3 text-left lg:text-right">
-          <p className="text-sm text-command-muted">Lead score</p>
-          <p className="text-3xl font-semibold text-command-text">{lead.leadScore}</p>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/inbox?lead=${encodeURIComponent(lead.id)}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
+            Open WhatsApp Chat
+          </Link>
+          <Link href={`/leads/${lead.id}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-sm font-semibold text-command-text transition hover:border-command-gold/60">
+            View Details
+          </Link>
         </div>
       </div>
-
-      <LeadHeatMeter lead={lead} />
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Next Action</p>
           <p className="mt-2 text-lg font-semibold text-command-text">{facts.nextAction}</p>
           <p className="mt-1 text-base leading-7 text-command-muted">{facts.nextActionReason}</p>
-          <p className="mt-2 text-sm font-semibold text-command-subtle">Lead facts completeness: {facts.infoCompletenessScore}%</p>
         </div>
         <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Last WhatsApp message</p>
@@ -169,39 +163,68 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div>
-          <p className="text-sm font-semibold text-command-muted">Risk</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {riskBadges.length ? riskBadges.map((badge) => (
-              <span key={badge.key} className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${riskBadgeClass(badge)}`}>
-                {badge.label}
-              </span>
-            )) : chips(lead.riskFlags, "No major risk flagged")}
+      <details className="mt-5 rounded-2xl border border-command-line bg-command-bg/45 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-command-muted">More lead details</summary>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[0.8fr_1fr]">
+          <LeadHeatMeter lead={lead} />
+          <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4 text-sm">
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-command-muted">Question category</dt>
+                <dd className="mt-1 font-semibold text-command-text">{questionCategory ?? "No matched category"}</dd>
+              </div>
+              <div>
+                <dt className="text-command-muted">Booking readiness</dt>
+                <dd className="mt-1 font-semibold text-command-text">{humanizeLabel(booking.status)}</dd>
+              </div>
+              <div>
+                <dt className="text-command-muted">Stage</dt>
+                <dd className="mt-1 font-semibold text-command-text">{humanizeLabel(stage)}</dd>
+              </div>
+              <div>
+                <dt className="text-command-muted">Lead facts completeness</dt>
+                <dd className="mt-1 font-semibold text-command-text">{facts.infoCompletenessScore}%</dd>
+              </div>
+            </dl>
+            {questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported" ? (
+              <p className="mt-4 text-command-subtle">Reply strategy: {questionMatch.entry.safe_answer_strategy}</p>
+            ) : null}
           </div>
         </div>
-        <div>
-          <p className="text-sm font-semibold text-command-muted">Missing</p>
-          <div className="mt-2 flex flex-wrap gap-2">{chips(facts.missingFields, "No key missing info")}</div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <p className="text-sm font-semibold text-command-muted">Full risk list</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {riskBadges.length ? riskBadges.map((badge) => (
+                <span key={badge.key} className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${riskBadgeClass(badge)}`}>
+                  {badge.label}
+                </span>
+              )) : chips(lead.riskFlags, "No major risk flagged")}
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-command-muted">Full missing info</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {facts.missingFields.length ? facts.missingFields.map((item) => (
+                <span key={item} className="rounded-full border border-command-line bg-command-bg/55 px-2.5 py-1 text-xs font-semibold text-command-muted">
+                  {humanizeLabel(item)}
+                </span>
+              )) : <span className="text-command-muted">No key missing info</span>}
+            </div>
+          </div>
         </div>
-      </div>
+      </details>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link href={`/inbox?lead=${encodeURIComponent(lead.id)}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
-          Open WhatsApp Chat
-        </Link>
-        <Link href={`/leads/${lead.id}`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
-          View Lead Details
-        </Link>
-        <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+        <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-10 items-center rounded-xl border border-command-line bg-command-bg/55 px-3 py-2 text-sm font-semibold text-command-text transition hover:border-command-gold/60">
           Take Over
         </Link>
         {lead.botPaused ? (
-          <span className="inline-flex min-h-11 items-center rounded-xl border border-command-cyan/50 bg-command-cyan/10 px-4 py-2 text-base font-semibold text-command-cyan">
+          <span className="inline-flex min-h-10 items-center rounded-xl border border-command-cyan/50 bg-command-cyan/10 px-3 py-2 text-sm font-semibold text-command-cyan">
             Bot Paused
           </span>
         ) : (
-          <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+          <Link href={`/leads/${lead.id}#bot-controls`} className="command-press inline-flex min-h-10 items-center rounded-xl border border-command-line bg-command-bg/55 px-3 py-2 text-sm font-semibold text-command-text transition hover:border-command-gold/60">
             Pause Bot
           </Link>
         )}

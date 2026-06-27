@@ -2,11 +2,35 @@ import { ActionButton } from "@/components/ActionButton";
 import { PageHeader } from "@/components/PageHeader";
 import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { decideApprovalAction, recordBossReviewAction } from "@/lib/actions";
-import { bossReviewActions } from "@/lib/boss-ops";
+import { recordBossReviewAction } from "@/lib/actions";
+import { bossReviewActions, type BossReviewActionKey } from "@/lib/boss-ops";
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
 import { approvalGateMatrix } from "@/lib/approval-gates";
 import { humanizeList } from "@/lib/labels";
+
+const bossActionOrder: BossReviewActionKey[] = [
+  "approve_quote",
+  "need_site_visit_first",
+  "ask_for_more_info",
+  "reject_quote",
+  "pause_bot",
+  "human_takeover",
+  "escalate_to_manager"
+];
+
+const bossActionLabels: Record<BossReviewActionKey, string> = {
+  approve_quote: "Approve Quote",
+  need_site_visit_first: "Need Site Visit First",
+  ask_for_more_info: "Ask For More Info",
+  reject_quote: "Reject / Revise Quote",
+  pause_bot: "Pause Bot",
+  human_takeover: "Human Takeover",
+  escalate_to_manager: "Escalate To Manager"
+};
+
+const orderedBossReviewActions = bossActionOrder
+  .map((key) => bossReviewActions.find((action) => action.key === key))
+  .filter(Boolean) as typeof bossReviewActions;
 
 export default async function BossApprovalQueuePage() {
   const auth = await getCurrentProfile();
@@ -48,38 +72,45 @@ export default async function BossApprovalQueuePage() {
             <p className="mt-4 rounded border border-command-line bg-command-panel2 p-3 text-sm">{request.proposedReply || request.aiRecommendation}</p>
             <p className="mt-3 text-sm text-command-muted">Status: {request.status}</p>
             {!canApprove ? <p className="mt-3 text-sm text-command-amber">Approval actions require boss/admin role.</p> : null}
-            <div className="mt-4 rounded border border-command-line bg-command-panel2 p-4">
-              <p className="text-sm font-semibold text-command-text">Boss actions</p>
-              <p className="mt-1 text-sm text-command-muted">Each action records an audit log and does not send WhatsApp, generate prices, or book Calendar events.</p>
-              <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {bossReviewActions.map((bossAction) => (
-                  <form key={bossAction.key} action={recordBossReviewAction} className="grid gap-2 rounded-lg border border-command-line bg-command-bg/55 p-3">
+            <div className="mt-4 rounded-xl border border-command-gold/40 bg-command-panel2 p-4">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-command-text">Boss action area</p>
+                  <p className="mt-1 text-sm text-command-muted">
+                    Choose one decision. It records an audit log and does not send WhatsApp, generate prices, or book Calendar events.
+                  </p>
+                </div>
+                <span className="rounded-full border border-command-gold/60 bg-command-gold/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-command-gold">
+                  Primary: Approve Quote
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {orderedBossReviewActions.map((bossAction) => (
+                  <form
+                    key={bossAction.key}
+                    action={recordBossReviewAction}
+                    className={`grid gap-2 rounded-lg border p-3 ${
+                      bossAction.key === "approve_quote"
+                        ? "border-command-gold/70 bg-command-gold/10"
+                        : "border-command-line bg-command-bg/55"
+                    }`}
+                  >
                     <input type="hidden" name="lead_id" value={request.leadId} />
                     <input type="hidden" name="action_key" value={bossAction.key} />
-                    <input name="note" placeholder="Boss note" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
-                    <ActionButton type="submit" tone={bossAction.key === "reject_quote" ? "danger" : "muted"} disabled={!canApprove}>
-                      {bossAction.label}
+                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-command-subtle" htmlFor={`${request.id}-${bossAction.key}-note`}>
+                      Boss note
+                    </label>
+                    <input id={`${request.id}-${bossAction.key}-note`} name="note" placeholder="Optional note" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+                    <ActionButton
+                      type="submit"
+                      tone={bossAction.key === "approve_quote" ? "primary" : bossAction.key === "reject_quote" ? "danger" : "muted"}
+                      disabled={!canApprove}
+                    >
+                      {bossActionLabels[bossAction.key]}
                     </ActionButton>
                   </form>
                 ))}
               </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <form action={decideApprovalAction}>
-                <input type="hidden" name="approval_id" value={request.id} />
-                <input type="hidden" name="decision" value="approved" />
-                <ActionButton type="submit" disabled={!canApprove}>Approve Reply</ActionButton>
-              </form>
-              <form action={decideApprovalAction}>
-                <input type="hidden" name="approval_id" value={request.id} />
-                <input type="hidden" name="decision" value="more_info" />
-                <ActionButton type="submit" tone="muted" disabled={!canApprove}>Request More Info</ActionButton>
-              </form>
-              <form action={decideApprovalAction}>
-                <input type="hidden" name="approval_id" value={request.id} />
-                <input type="hidden" name="decision" value="rejected" />
-                <ActionButton type="submit" tone="danger" disabled={!canApprove}>Hold</ActionButton>
-              </form>
             </div>
           </article>
         ))}

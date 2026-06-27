@@ -135,8 +135,8 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
   const isTemporaryReviewRoute = isReviewRouteEnabled() && pathname === "/review-chatgpt-ui";
   const isLoginRoute = pathname === "/login";
   const mainClassName = isTemporaryReviewRoute
-    ? "mx-auto max-w-[1440px] px-4 pb-28 pt-48 md:ml-64 md:px-8 md:pb-10 md:pt-8 xl:px-10"
-    : "mx-auto max-w-[1440px] px-4 pb-28 pt-36 md:ml-64 md:px-8 md:pb-10 md:pt-8 xl:px-10";
+    ? "mx-auto max-w-[1440px] px-4 pb-28 pt-28 md:ml-64 md:px-8 md:pb-10 md:pt-8 xl:px-10"
+    : "mx-auto max-w-[1440px] px-4 pb-28 pt-28 md:ml-64 md:px-8 md:pb-10 md:pt-8 xl:px-10";
 
   useEffect(() => {
     if (auth.mode === "Mock Mode") {
@@ -169,7 +169,7 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
           </div>
           <ShellStatus auth={auth} clientAuthenticated={clientAuthenticated} isTemporaryReviewRoute={isTemporaryReviewRoute} isLoginRoute={isLoginRoute} />
         </div>
-        <nav className="thin-scrollbar mt-4 flex gap-3 overflow-x-auto pb-1 md:mt-8 md:block md:space-y-5 md:overflow-visible md:pb-6">
+        <nav className="thin-scrollbar mt-8 hidden space-y-5 overflow-visible pb-6 md:block">
           {isTemporaryReviewRoute
             ? reviewNavItems.map((item) => (
                 <a
@@ -181,8 +181,8 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
                 </a>
               ))
             : appNavGroups.map((group) => (
-                <div key={group.title} className="flex shrink-0 gap-2 md:block md:space-y-1">
-                  <p className="hidden px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-command-subtle md:block">{group.title}</p>
+                <div key={group.title} className="space-y-1">
+                  <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-command-subtle">{group.title}</p>
                   {group.items.map((item) => {
                     const itemKey = `${group.title}-${item.label}`;
                     const hrefBase = "href" in item && item.href ? item.href.split("#")[0] : "";
