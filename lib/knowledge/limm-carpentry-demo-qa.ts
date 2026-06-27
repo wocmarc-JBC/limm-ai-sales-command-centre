@@ -142,11 +142,11 @@ export const carpentryDemoQaItems: readonly CarpentryDemoQaItem[] = [
   {
     id: "CDQ01_PRICE_FIRST",
     questionPatterns: ["How much?", "How much roughly?", "Can give price?", "多少钱?", "roughly how much to hack/build/modify?"],
-    answerPolicy: "No price/range/package. Ask for property type, photos/video, rough measurements, scope and preferred start date.",
+    answerPolicy: "No price/range/package. Detect carpentry versus demo/hacking and ask only the next useful details.",
     templateEn:
-      "Sure, we can help review this. For carpentry or demo works, pricing depends on the actual scope, size, site condition, access, disposal/protection, material choice, and whether approval is needed.\n\nPlease send the property type, photos/video of the area, rough measurements if available, what you want to build/remove/modify/hack, and preferred start date. Once we see the scope, we can advise the next step more accurately.",
+      "Sure, we can help review this. For custom carpentry, pricing mainly depends on the cabinet size, internal layout, material, laminate and hardware.\n\nCould you send a photo of the area and rough dimensions? Once we see the scope, we can advise the next step more accurately.",
     templateZh:
-      "可以，我们可以先帮您 review。木工或拆除工程需要看实际范围、尺寸、现场情况、出入通道、垃圾清理/保护、材料选择，以及是否需要批准。\n\n请先发 property type、现场照片或视频、rough measurements、想做/拆/修改的内容，以及希望开工的时间。我们看清楚范围后，才能更准确地 advise next step。",
+      "可以，我们可以先帮您看。请先发房屋类型（HDB / Condo / Landed）、现场照片或视频，以及大概尺寸（如果方便）。\n\n明天能不能安排，要看现场情况、工程范围和是否需要管理处/HDB批准。我们先看资料，再帮您确认下一步。",
     forbidden: ["price amount", "price range", "package", "exact quote without details"]
   },
   {
@@ -189,9 +189,9 @@ export const carpentryDemoQaItems: readonly CarpentryDemoQaItem[] = [
   {
     id: "CDQ07_DISPOSAL",
     questionPatterns: ["Disposal included?", "debris disposal", "haulage", "rubbish", "清走垃圾", "垃圾清理"],
-    answerPolicy: "Say disposal must be stated clearly and itemised after scope review.",
+    answerPolicy: "Answer disposal directly, then ask for the next useful visual context.",
     templateEn:
-      "For demo works, disposal should be clearly stated in the quotation.\n\nWe'll review whether the scope includes labour, dismantling/hacking, bagging, haulage, debris disposal, transport, protection and basic cleaning after works, then itemise it properly."
+      "Yes, we will clearly state in the quotation whether disposal is included.\n\nDepending on the scope, we will itemise hacking/dismantling, bagging, haulage, debris disposal, protection and basic cleaning. Could you send a photo of the area so we can review the scope?"
   },
   {
     id: "CDQ08_DUST_PROTECTION",

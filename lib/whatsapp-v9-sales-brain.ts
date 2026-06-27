@@ -547,6 +547,47 @@ function hasPreferredStartDate(memory: V9SalesMemory, input: V9WhatsAppSalesBrai
   return Boolean(memory.timeline_expectation || /\btomorrow\b|\btmr\b|\btonight\b|\bnext week\b|\bthis week\b|\bpreferred start\b|\bstart date\b|\bcan start\b/.test(context));
 }
 
+function carpentryDemoContextText(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
+  return normalize([input.inboundMessageText, ...previousInbound(input.previousMessages), memory.scope_summary, memory.project_type].join(" "));
+}
+
+function isCarpentryIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
+  const context = carpentryDemoContextText(input, memory);
+  return /carpentry|cabinet|kitchen cabinet|wardrobe|tv console|shel(?:f|ves)|laminate|hinge|drawer track|soft closing|fridge|木工|橱柜|衣柜|电视柜|修改柜|加层板/.test(context);
+}
+
+function isDemoHackingIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
+  const context = carpentryDemoContextText(input, memory);
+  return /hack|hacking|dismantle|demolition|remove wall|wall removal|tile hacking|floor hacking|debris|disposal|haulage|rubbish|noisy|noise|敲墙|打墙|拆墙|拆柜|拆除|垃圾清理|清走/.test(context);
+}
+
+function hasTimingQuestion(input: V9WhatsAppSalesBrainInput) {
+  return /\btomorrow\b|\btmr\b|\btonight\b|\bnext week\b|\bthis week\b|\bcan start\b|\bstart\b|\btimeline\b|\bhow long\b|明天|几时|多久|什么时候/.test(normalize(input.inboundMessageText));
+}
+
+function composeCarpentryPriceReply(memory: V9SalesMemory) {
+  const acknowledgement = receivedCarpentryDemoAcknowledgement(memory);
+  const askParts: string[] = [];
+  if (!hasReceivedSitePhotos(memory) && !memory.do_not_ask_again.site_photos) askParts.push("a photo of the area");
+  askParts.push("rough dimensions");
+  const ask = askParts.length ? `Could you send ${joinList(askParts)}? ` : "";
+  return `${acknowledgement}Sure, we can help review this. For custom carpentry, pricing mainly depends on the cabinet size, internal layout, material, laminate and hardware.\n\n${ask}Once we see the scope, we can advise the next step more accurately.`;
+}
+
+function composeDemoHackingPriceReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  if (isMandarinMessage(input.inboundMessageText)) {
+    return "可以，我们可以先帮您看。请先发房屋类型（HDB / Condo / Landed）、现场照片或视频，以及大概尺寸（如果方便）。\n\n明天能不能安排，要看现场情况、工程范围和是否需要管理处/HDB批准。我们先看资料，再帮您确认下一步。";
+  }
+  const needsFloorPlan = /wall|hack|hacking|敲墙|打墙|拆墙/.test(carpentryDemoContextText(input, memory)) && !hasReceivedFloorPlan(memory);
+  const missing: string[] = [];
+  if (!memory.property_type) missing.push("property type");
+  if (needsFloorPlan) missing.push("floor plan");
+  if (!hasReceivedSitePhotos(memory) && !memory.do_not_ask_again.site_photos) missing.push("photo of the area");
+  const ask = missing.length ? ` Could you send the ${joinList(missing)} so we can review the scope?` : " We can review the details already shared and advise the next step.";
+  const timingNote = hasTimingQuestion(input) ? " Timing also depends on the site condition, approval requirements and team availability." : "";
+  return `Sure, we can help review this. For demo or hacking works, we need to check the scope, site condition, access, protection and any approval requirements before advising.${timingNote}${ask}`;
+}
+
 function missingCarpentryDemoDetails(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput, options: { includeFloorPlan?: boolean } = {}) {
   const missing: string[] = [];
   if (!memory.property_type) missing.push("property type");
@@ -585,14 +626,11 @@ function hasCarpentryDemoPriceQuestion(text: string) {
 
 function composeCarpentryDemoPriceReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
   if (isMandarinMessage(input.inboundMessageText)) {
-    return "可以，我们可以先帮您 review。木工或拆除工程需要看 property type、照片/视频、rough measurements、实际范围、现场情况、保护/垃圾清理，以及是否需要批准。明天能不能做也要看 scope、现场条件、团队 availability 和 approval 情况。请先把这些资料发来，我们再 advise next step。";
+    return composeDemoHackingPriceReply(memory, input);
   }
-  const acknowledgement = receivedCarpentryDemoAcknowledgement(memory);
-  const missingAsk = askMissingCarpentryDemoDetails(memory, input);
-  if (acknowledgement) {
-    return `${acknowledgement}Sure, we can help review this. For carpentry or demo works, pricing depends on the actual scope, size, site condition, access, disposal/protection, material choice, and whether approval is needed. ${missingAsk}`;
-  }
-  return findCarpentryDemoQaItem("CDQ01_PRICE_FIRST").templateEn;
+  if (isCarpentryIntent(input, memory) && !isDemoHackingIntent(input, memory)) return composeCarpentryPriceReply(memory);
+  if (isDemoHackingIntent(input, memory)) return composeDemoHackingPriceReply(memory, input);
+  return composeCarpentryPriceReply(memory);
 }
 
 function composeCondoWeekendHackingReply() {

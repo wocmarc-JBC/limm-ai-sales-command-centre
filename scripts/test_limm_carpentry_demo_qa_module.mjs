@@ -152,12 +152,18 @@ check("question bank retrieves carpentry/demo module", matchQuestionBankIntent("
 
 const priceCarpentry = decide("How much roughly for wardrobe and kitchen cabinet?");
 check("price-first carpentry uses active module", priceCarpentry.intent === "carpentry_demo_qa" && priceCarpentry.blackBoxTrace.carpentryDemoQaItem === "CDQ01_PRICE_FIRST", JSON.stringify(priceCarpentry.blackBoxTrace));
-check("price-first carpentry asks required info", includesAll(priceCarpentry.replyText, ["pricing depends", "property type", "photos/video", "rough measurements", "preferred start date"]), priceCarpentry.replyText);
-check("price-first carpentry mentions cost drivers", includesAll(priceCarpentry.replyText, ["actual scope", "site condition", "material"]), priceCarpentry.replyText);
+check("wardrobe pricing uses custom carpentry drivers", includesAll(priceCarpentry.replyText, ["custom carpentry", "cabinet size", "internal layout", "material", "laminate", "hardware"]), priceCarpentry.replyText);
+check("wardrobe pricing asks only photo and rough dimensions first", includesAll(priceCarpentry.replyText, ["photo of the area", "rough dimensions"]) && excludesAll(priceCarpentry.replyText, [/\bproperty type\b/i, /\bfloor plan\b/i, /\bpreferred start date\b/i]), priceCarpentry.replyText);
+check("wardrobe pricing does not mention demo/disposal/approval", excludesAll(priceCarpentry.replyText, [/\bdemo\b/i, /\bdisposal\b/i, /\bapproval\b/i, /\bhacking\b/i]), priceCarpentry.replyText);
 assertSafeReply("price-first carpentry", priceCarpentry.replyText);
+
+const kitchenCabinetPrice = decide("How much roughly for kitchen cabinet?");
+check("kitchen cabinet pricing stays carpentry-specific", includesAll(kitchenCabinetPrice.replyText, ["custom carpentry", "photo of the area", "rough dimensions"]) && excludesAll(kitchenCabinetPrice.replyText, [/\bdemo\b/i, /\bdisposal\b/i, /\bapproval\b/i, /\bpreferred start date\b/i]), kitchenCabinetPrice.replyText);
+assertSafeReply("kitchen cabinet pricing", kitchenCabinetPrice.replyText);
 
 const wallHacking = decide("Can hack this wall? I send photo.");
 check("wall hacking does not confirm from photo", includesAll(wallHacking.replyText, ["cannot confirm", "photo alone", "property type", "floor plan", "wall location", "approval"]), wallHacking.replyText);
+check("wall hacking does not over-ask", excludesAll(wallHacking.replyText, [/\brough measurements\b/i, /\bpreferred start date\b/i, /\bdesign reference/i]), wallHacking.replyText);
 check("wall hacking avoids unsafe certainty", excludesAll(wallHacking.replyText, [/\bsure can\b/i, /\bno problem\b/i, /\bconfirm can\b/i]), wallHacking.replyText);
 assertNoRepeatHandoff("normal wall hacking", wallHacking.replyText);
 assertSafeReply("wall hacking", wallHacking.replyText);
@@ -168,7 +174,8 @@ check("household shelter does not suggest cutting/removal", excludesAll(shelter.
 assertSafeReply("household shelter", shelter.replyText);
 
 const disposal = decide("Your hacking price include disposal?");
-check("disposal answer itemises review", includesAll(disposal.replyText, ["clearly stated", "quotation", "bagging", "haulage", "debris disposal", "protection"]), disposal.replyText);
+check("disposal answers directly", includesAll(disposal.replyText, ["yes", "clearly state", "quotation", "whether disposal is included"]), disposal.replyText);
+check("disposal answer itemises review", includesAll(disposal.replyText, ["bagging", "haulage", "debris disposal", "protection", "basic cleaning", "photo of the area"]), disposal.replyText);
 assertNoRepeatHandoff("normal disposal", disposal.replyText);
 assertSafeReply("disposal", disposal.replyText);
 
@@ -191,7 +198,8 @@ check("condo weekend hacking does not promise Saturday", !/sure saturday|saturda
 assertSafeReply("condo weekend", condoWeekend.replyText);
 
 const mandarin = decide("拆柜多少钱？可以明天做吗？");
-check("Mandarin price/demo reply stays useful", /可以/.test(mandarin.replyText) && /property type/i.test(mandarin.replyText) && /照片/.test(mandarin.replyText) && /measurements/i.test(mandarin.replyText) && /approval/i.test(mandarin.replyText), mandarin.replyText);
+check("Mandarin price/demo reply stays useful", /可以/.test(mandarin.replyText) && /房屋类型/.test(mandarin.replyText) && /现场照片或视频/.test(mandarin.replyText) && /大概尺寸/.test(mandarin.replyText) && /明天能不能安排/.test(mandarin.replyText), mandarin.replyText);
+check("Mandarin price/demo reply avoids unnatural mixed English", excludesAll(mandarin.replyText, [/\bproperty type\b/i, /\brough measurements\b/i, /\bavailability\b/i]), mandarin.replyText);
 check("Mandarin price/demo reply has no amount", excludesAll(mandarin.replyText, [/\$\s*\d/i, /\bS\$\s*\d/i, /\bSGD\s*\d/i, /\bfrom\s*\$/i]), mandarin.replyText);
 assertNoRepeatHandoff("normal Mandarin demo price", mandarin.replyText);
 assertSafeReply("Mandarin price-first", mandarin.replyText);
