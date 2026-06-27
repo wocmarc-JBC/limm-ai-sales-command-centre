@@ -551,14 +551,45 @@ function carpentryDemoContextText(input: V9WhatsAppSalesBrainInput, memory: V9Sa
   return normalize([input.inboundMessageText, ...previousInbound(input.previousMessages), memory.scope_summary, memory.project_type].join(" "));
 }
 
+function hasCarpentryTerms(text: string) {
+  return /carpentry|cabinet|kitchen cabinet|wardrobe|tv console|shoe cabinet|built[- ]?in cabinet|shel(?:f|ves)|laminate|hinge|drawer|drawer track|soft closing|fridge|木工|橱柜|衣柜|电视柜|修改柜|加层板/.test(text);
+}
+
+function hasDemoHackingTerms(text: string) {
+  return /hack|hacking|dismantle|demolition|remove|remove wall|wall removal|tile hacking|floor hacking|debris|disposal|haulage|rubbish|noisy|noise|拆|拆除|敲墙|打墙|拆墙|拆柜|垃圾清理|清走/.test(text);
+}
+
+function hasDemoActionVerb(text: string) {
+  return /\b(?:remove|dismantle|demolish|hack|hacking)\b|拆柜|拆除|拆墙|敲墙|打墙|垃圾清理|清走/.test(text);
+}
+
+function hasCarpentryActionVerb(text: string) {
+  return /\b(?:make|build|custom|modify|fit|install|add|replace|repair)\b|修改柜|加层板/.test(text);
+}
+
 function isCarpentryIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
-  const context = carpentryDemoContextText(input, memory);
-  return /carpentry|cabinet|kitchen cabinet|wardrobe|tv console|shel(?:f|ves)|laminate|hinge|drawer track|soft closing|fridge|木工|橱柜|衣柜|电视柜|修改柜|加层板/.test(context);
+  return hasCarpentryTerms(carpentryDemoContextText(input, memory));
 }
 
 function isDemoHackingIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
+  return hasDemoHackingTerms(carpentryDemoContextText(input, memory));
+}
+
+function carpentryDemoServiceIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
+  const current = normalize(input.inboundMessageText);
+  const currentHasCarpentry = hasCarpentryTerms(current);
+  const currentHasDemo = hasDemoHackingTerms(current);
+
+  if (currentHasDemo && (hasDemoActionVerb(current) || !currentHasCarpentry)) return "demo_hacking";
+  if (currentHasCarpentry && (hasCarpentryActionVerb(current) || !currentHasDemo)) return "carpentry";
+
   const context = carpentryDemoContextText(input, memory);
-  return /hack|hacking|dismantle|demolition|remove wall|wall removal|tile hacking|floor hacking|debris|disposal|haulage|rubbish|noisy|noise|敲墙|打墙|拆墙|拆柜|拆除|垃圾清理|清走/.test(context);
+  const contextHasCarpentry = hasCarpentryTerms(context);
+  const contextHasDemo = hasDemoHackingTerms(context);
+  if (contextHasDemo && !contextHasCarpentry) return "demo_hacking";
+  if (contextHasCarpentry) return "carpentry";
+  if (contextHasDemo) return "demo_hacking";
+  return "carpentry";
 }
 
 function hasTimingQuestion(input: V9WhatsAppSalesBrainInput) {
@@ -628,9 +659,9 @@ function composeCarpentryDemoPriceReply(memory: V9SalesMemory, input: V9WhatsApp
   if (isMandarinMessage(input.inboundMessageText)) {
     return composeDemoHackingPriceReply(memory, input);
   }
-  if (isCarpentryIntent(input, memory) && !isDemoHackingIntent(input, memory)) return composeCarpentryPriceReply(memory);
-  if (isDemoHackingIntent(input, memory)) return composeDemoHackingPriceReply(memory, input);
-  return composeCarpentryPriceReply(memory);
+  return carpentryDemoServiceIntent(input, memory) === "demo_hacking"
+    ? composeDemoHackingPriceReply(memory, input)
+    : composeCarpentryPriceReply(memory);
 }
 
 function composeCondoWeekendHackingReply() {

@@ -157,9 +157,17 @@ check("wardrobe pricing asks only photo and rough dimensions first", includesAll
 check("wardrobe pricing does not mention demo/disposal/approval", excludesAll(priceCarpentry.replyText, [/\bdemo\b/i, /\bdisposal\b/i, /\bapproval\b/i, /\bhacking\b/i]), priceCarpentry.replyText);
 assertSafeReply("price-first carpentry", priceCarpentry.replyText);
 
-const kitchenCabinetPrice = decide("How much roughly for kitchen cabinet?");
+const kitchenCabinetPrice = decide("Kitchen cabinet how much?");
 check("kitchen cabinet pricing stays carpentry-specific", includesAll(kitchenCabinetPrice.replyText, ["custom carpentry", "photo of the area", "rough dimensions"]) && excludesAll(kitchenCabinetPrice.replyText, [/\bdemo\b/i, /\bdisposal\b/i, /\bapproval\b/i, /\bpreferred start date\b/i]), kitchenCabinetPrice.replyText);
 assertSafeReply("kitchen cabinet pricing", kitchenCabinetPrice.replyText);
+
+const wardrobeQuote = decide("Wardrobe quote?");
+check("wardrobe quote routes to carpentry", includesAll(wardrobeQuote.replyText, ["custom carpentry", "cabinet size", "photo of the area", "rough dimensions"]) && excludesAll(wardrobeQuote.replyText, [/\bdemo\b/i, /\bhacking\b/i, /\bdisposal\b/i, /\bapproval\b/i, /\bfloor plan\b/i]), wardrobeQuote.replyText);
+assertSafeReply("wardrobe quote", wardrobeQuote.replyText);
+
+const removeKitchenCabinet = decide("Remove kitchen cabinet how much?");
+check("remove kitchen cabinet routes to demo dismantling", includesAll(removeKitchenCabinet.replyText, ["demo or hacking works", "site condition", "protection"]) && excludesAll(removeKitchenCabinet.replyText, [/\bcustom carpentry\b/i, /\bcabinet size\b/i, /\binternal layout\b/i]), removeKitchenCabinet.replyText);
+assertSafeReply("remove kitchen cabinet", removeKitchenCabinet.replyText);
 
 const wallHacking = decide("Can hack this wall? I send photo.");
 check("wall hacking does not confirm from photo", includesAll(wallHacking.replyText, ["cannot confirm", "photo alone", "property type", "floor plan", "wall location", "approval"]), wallHacking.replyText);
@@ -181,6 +189,7 @@ assertSafeReply("disposal", disposal.replyText);
 
 const cabinet = decide("Can modify existing cabinet to fit bigger fridge?");
 check("cabinet modification answer is useful", includesAll(cabinet.replyText, ["can help review", "resizing openings", "modifying for appliances", "existing cabinet condition", "support", "laminate", "fridge size"]), cabinet.replyText);
+check("modify cabinet routes to carpentry", excludesAll(cabinet.replyText, [/\bdemo or hacking works\b/i, /\bdisposal\b/i, /\bhaulage\b/i]), cabinet.replyText);
 check("cabinet modification uses fridge-specific ask", !/item size/i.test(cabinet.replyText), cabinet.replyText);
 assertNoRepeatHandoff("normal cabinet modification", cabinet.replyText);
 assertSafeReply("cabinet modification", cabinet.replyText);
