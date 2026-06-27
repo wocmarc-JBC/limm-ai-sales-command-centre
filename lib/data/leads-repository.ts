@@ -7,6 +7,7 @@ import { getSupabaseAdminClient } from "./supabase-admin";
 import { getSupabaseServerClient } from "./supabase-server";
 import { buildLeadFacts, leadFactsToLeadPatch } from "@/lib/lead-facts";
 import { buildQuoteApprovalGate, isQuoteSentPatch } from "@/lib/boss-ops";
+import { isProductionHiddenLead } from "@/lib/production-visibility";
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
 import type { Lead, LeadFile, LeadIntakeProfile, LeadMessage, LeadStatus } from "@/lib/types";
 
@@ -16,6 +17,7 @@ function shouldShowLead(lead: Lead, options?: ListLeadsOptions) {
   if (!options?.includeInactive && (lead.deletedAt || lead.archivedAt || lead.isSpam)) return false;
   if (!options?.includeTest && lead.isTest) return false;
   if (!options?.includeTest && scoreTestLead(lead).clearlyTest) return false;
+  if (!options?.includeTest && isProductionHiddenLead(lead)) return false;
   return true;
 }
 

@@ -4,7 +4,9 @@ import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { recordBossReviewAction } from "@/lib/actions";
 import { bossReviewActions, type BossReviewActionKey } from "@/lib/boss-ops";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
+import { listLeads } from "@/lib/data/leads-repository";
 import { approvalGateMatrix } from "@/lib/approval-gates";
 import { humanizeList } from "@/lib/labels";
 
@@ -35,7 +37,10 @@ const orderedBossReviewActions = bossActionOrder
 export default async function BossApprovalQueuePage() {
   const auth = await getCurrentProfile();
   const canApprove = Boolean(auth.profile && can(auth.profile.role, "approve_requests"));
-  const approvalRequests = await listApprovalRequests();
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const leads = await listLeads({ includeTest: showTestDemoRecords });
+  const visibleLeadIds = new Set(leads.map((lead) => lead.id));
+  const approvalRequests = await listApprovalRequests({ includeTestDemo: showTestDemoRecords, visibleLeadIds });
   return (
     <>
       <PageHeader title="Boss Review Gate" eyebrow="Risk control" />

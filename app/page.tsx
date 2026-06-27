@@ -1,11 +1,11 @@
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { buildBossDailyBrief, type BossBriefItem } from "@/lib/boss-ops";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 import { listFollowUps } from "@/lib/data/followups-repository";
-import { listLeads } from "@/lib/data/leads-repository";
-import { listPaymentRecords, listProjectAccounts } from "@/lib/data/sales-collection-repository";
+import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import { safeSingaporeDateLabel, singaporeNow } from "@/lib/date-safety";
 
 const toneClasses = {
@@ -64,14 +64,14 @@ function groupCount(items: BossBriefItem[]) {
 }
 
 export default async function BossDailyBriefPage() {
-  const [leads, followUps, approvalRequests, projects, payments, auditLogs] = await Promise.all([
-    listLeads(),
-    listFollowUps({ status: "active", pageSize: 80 }),
-    listApprovalRequests(),
-    listProjectAccounts(),
-    listPaymentRecords(),
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const [{ leads, projects, payments }, followUps, auditLogs] = await Promise.all([
+    getSalesCollectionData(undefined, { includeTestDemo: showTestDemoRecords }),
+    listFollowUps({ status: "active", pageSize: 80, includeTest: showTestDemoRecords }),
     listAuditLogs()
   ]);
+  const visibleLeadIds = new Set(leads.map((lead) => lead.id));
+  const approvalRequests = await listApprovalRequests({ includeTestDemo: showTestDemoRecords, visibleLeadIds });
   const briefItems = buildBossDailyBrief({ leads, followUps, approvalRequests, projects, payments, auditLogs });
   const itemByKey = new Map(briefItems.map((item) => [item.key, item]));
   const mustHandleNow = sortAttentionItems(mustHandleNowKeys.map((key) => itemByKey.get(key)).filter(Boolean) as typeof briefItems);
@@ -162,26 +162,25 @@ export default async function BossDailyBriefPage() {
       </section>
 
       <section className="mt-6 mission-panel rounded-2xl p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-green">All clear summary</p>
-            <p className="mt-2 text-sm leading-6 text-command-muted">
-              {clearItems.length
-                ? `${clearItems.length} clear module${clearItems.length === 1 ? "" : "s"} hidden from the main queue.`
-                : "No clear modules are hidden right now; everything visible above needs attention."}
-            </p>
-          </div>
-          <p className="text-sm text-command-subtle">
+        <details>
+          <summary className="cursor-pointer text-sm font-semibold text-command-green">
+            {clearItems.length
+              ? `${clearItems.length} clear module${clearItems.length === 1 ? "" : "s"} hidden`
+              : "No clear modules hidden"}
+          </summary>
+          <p className="mt-3 text-sm text-command-subtle">
             {clearItems.length ? clearItems.map((item) => item.title).join(" | ") : "Action queue is fully visible."}
           </p>
-        </div>
+        </details>
       </section>
 
       <section className="mt-6 mission-panel rounded-2xl p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Operating posture</p>
-        <p className="mt-2 text-sm leading-6 text-command-muted">
-          This brief is repository-driven. It records boss decisions through audit logs, keeps WhatsApp reply review manual, keeps Calendar auto-booking off, and does not generate quotation prices.
-        </p>
+        <details>
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">Operating posture</summary>
+          <p className="mt-3 text-sm leading-6 text-command-muted">
+            This brief is repository-driven. It records boss decisions through audit logs, keeps WhatsApp reply review manual, keeps Calendar auto-booking off, and does not generate quotation prices.
+          </p>
+        </details>
       </section>
     </>
   );

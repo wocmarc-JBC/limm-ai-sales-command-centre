@@ -33,8 +33,7 @@ const appNavGroups = [
     title: "Delivery",
     items: [
       { href: "/delivery", label: "Do Not Start Gate" },
-      { href: "/client-files", label: "Client Files" },
-      { href: "/appointments", label: "Appointments" }
+      { href: "/client-files", label: "Client Files" }
     ]
   },
   {
@@ -101,7 +100,6 @@ function ShellStatus({
   if (isLoginRoute) {
     return (
       <div className="rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted md:mt-5">
-        <p>{auth.mode}</p>
         <p>Secure sign-in</p>
       </div>
     );
@@ -113,7 +111,6 @@ function ShellStatus({
     return (
       <div className={statusCardClass}>
         <LogoutButton mode={auth.mode} />
-        <p>{auth.mode}</p>
         <p>{auth.profile.fullName} | {auth.profile.role}</p>
       </div>
     );

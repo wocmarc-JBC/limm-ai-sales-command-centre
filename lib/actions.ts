@@ -63,7 +63,9 @@ import { listLeadMessages, saveLeadMessage } from "@/lib/data/lead-messages-repo
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildLeadIntakePlan } from "@/lib/lead-intake";
 import { currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
-import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
+import { setShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
+import { getProductionLeadVisibilityReasons } from "@/lib/production-visibility";
+import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan, isProtectedLead } from "@/lib/test-lead-cleanup";
 import type { Permission } from "@/lib/auth/roles";
 import type { AiDraftReviewStatus, ApprovalStatus, FollowUpStatus, LeadFileCategory, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
 
@@ -151,6 +153,19 @@ export async function saveAppointmentSettingsAction(formData: FormData) {
   revalidatePath("/appointment-settings");
   revalidatePath("/appointments");
   revalidatePath("/audit-log");
+}
+
+export async function setShowTestDemoRecordsAction(formData: FormData) {
+  const permission = await requirePermission("edit_settings");
+  if (!permission.ok) return;
+  setShowTestDemoRecordsPreference(formData.get("show_test_demo_records") === "on");
+  revalidatePath("/");
+  revalidatePath("/settings");
+  revalidatePath("/sales-pipeline");
+  revalidatePath("/approvals");
+  revalidatePath("/delivery");
+  revalidatePath("/sales-collection");
+  redirect("/settings#data-visibility");
 }
 
 export async function updateLeadStatusAction(formData: FormData) {
@@ -1024,4 +1039,42 @@ export async function cleanupOldTestLeadsAction(formData: FormData) {
   revalidatePath("/followups");
   revalidatePath("/settings");
   revalidatePath("/audit-log");
+}
+
+export async function softArchiveProductionNoiseRecordsAction(formData: FormData) {
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) return;
+  const selectedLeadIds = new Set(formData.getAll("lead_id").map((value) => String(value)));
+  if (!selectedLeadIds.size) {
+    redirect("/settings/production-data-cleanup?archived=0");
+  }
+
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const leads = await listLeads({ includeInactive: true, includeTest: true });
+  let archived = 0;
+
+  for (const lead of leads) {
+    if (!selectedLeadIds.has(lead.id)) continue;
+    if (lead.archivedAt || lead.deletedAt || isProtectedLead(lead)) continue;
+    const reasons = getProductionLeadVisibilityReasons(lead);
+    if (!reasons.length) continue;
+    await markLeadAsTest(lead.id);
+    await archiveLead(
+      lead.id,
+      `Production visibility cleanup, soft archive only: ${reasons.join("; ")}`,
+      actor
+    );
+    archived += 1;
+  }
+
+  revalidatePath("/");
+  revalidatePath("/leads");
+  revalidatePath("/settings");
+  revalidatePath("/settings/production-data-cleanup");
+  revalidatePath("/sales-pipeline");
+  revalidatePath("/approvals");
+  revalidatePath("/delivery");
+  revalidatePath("/sales-collection");
+  revalidatePath("/audit-log");
+  redirect(`/settings/production-data-cleanup?archived=${archived}`);
 }

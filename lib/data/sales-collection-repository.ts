@@ -4,6 +4,11 @@ import { listLeads } from "./leads-repository";
 import { mapMonthlyTargetRow, mapPaymentRow, mapProjectRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseServerClient } from "./supabase-server";
+import {
+  filterPaymentsForProductionVisibility,
+  filterProjectsForProductionVisibility,
+  type ProductionVisibilityOptions
+} from "@/lib/production-visibility";
 import { buildSalesCollectionSummary, currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
 import type { Lead, MonthlySalesTarget, PaymentRecord, ProjectAccount } from "@/lib/types";
 
@@ -27,22 +32,22 @@ function targetToRow(target: MonthlySalesTarget) {
   };
 }
 
-export async function listProjectAccounts() {
+export async function listProjectAccounts(options: ProductionVisibilityOptions = {}) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase!.from("project_accounts").select("*").order("updated_at", { ascending: false });
-    if (!error && data) return data.map(mapProjectRow);
+    if (!error && data) return filterProjectsForProductionVisibility(data.map(mapProjectRow), options);
   }
-  return mockClone(getMockStore().projectAccounts);
+  return filterProjectsForProductionVisibility(mockClone(getMockStore().projectAccounts), options);
 }
 
-export async function listPaymentRecords() {
+export async function listPaymentRecords(options: ProductionVisibilityOptions = {}) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase!.from("payment_records").select("*").order("created_at", { ascending: false });
-    if (!error && data) return data.map(mapPaymentRow);
+    if (!error && data) return filterPaymentsForProductionVisibility(data.map(mapPaymentRow), options);
   }
-  return mockClone(getMockStore().paymentRecords);
+  return filterPaymentsForProductionVisibility(mockClone(getMockStore().paymentRecords), options);
 }
 
 export async function getMonthlySalesTarget(month = currentMonthKey()) {
@@ -288,13 +293,17 @@ export async function voidPaymentRecord(payment: PaymentRecord, reason: string, 
   return after;
 }
 
-export async function getSalesCollectionData(month = currentMonthKey()) {
-  const [leads, projects, payments, target] = await Promise.all([
-    listLeads(),
-    listProjectAccounts(),
-    listPaymentRecords(),
+export async function getSalesCollectionData(month = currentMonthKey(), options: ProductionVisibilityOptions = {}) {
+  const [leads, rawProjects, rawPayments, target] = await Promise.all([
+    listLeads({ includeTest: options.includeTestDemo }),
+    listProjectAccounts({ includeTestDemo: options.includeTestDemo }),
+    listPaymentRecords({ includeTestDemo: options.includeTestDemo }),
     getMonthlySalesTarget(month)
   ]);
+  const visibleLeadIds = new Set(leads.map((lead) => lead.id));
+  const projects = filterProjectsForProductionVisibility(rawProjects, { ...options, visibleLeadIds });
+  const visibleProjectIds = new Set(projects.map((project) => project.id));
+  const payments = filterPaymentsForProductionVisibility(rawPayments, { ...options, visibleLeadIds, visibleProjectIds });
   return {
     leads,
     projects,

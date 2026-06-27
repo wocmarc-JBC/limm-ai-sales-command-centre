@@ -1,8 +1,10 @@
 import { PageHeader } from "@/components/PageHeader";
 import { CleanupPanel } from "@/components/CleanupPanel";
-import { cleanupOldTestLeadsAction } from "@/lib/actions";
+import { cleanupOldTestLeadsAction, setShowTestDemoRecordsAction } from "@/lib/actions";
+import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getCalendarRuntime } from "@/lib/calendar-config";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listFollowUps } from "@/lib/data/followups-repository";
 import { listLeadMessages } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
@@ -31,6 +33,8 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
   }
 
   const { health } = await getSettingsSummary();
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const canEditSettings = Boolean(auth.profile && can(auth.profile.role, "edit_settings"));
   const openAi = getOpenAiBrainRuntime();
   const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
   const whatsapp = getWhatsAppRuntime();
@@ -177,6 +181,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
       detail: "Data cleanup, files, developer tools, and hidden lead views.",
       links: [
         ["Client Files", "/client-files", "Review file intake and upload-link status."],
+        ["Production Data Cleanup", "/settings/production-data-cleanup", "Preview test/demo records and soft-archive selected lead records only."],
         ["Cleanup", "/settings?cleanup=scan#test-lead-cleanup", "Dry-run cleanup before soft-deleting test data."],
         ["Developer Tools", "#developer-tools", "Safe command references only; no browser script execution."],
         ["Archived / QA Leads", "/leads?view=all", "Review archived, spam, or non-production lead records."]
@@ -187,6 +192,37 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
   return (
     <>
       <PageHeader title="Settings" eyebrow="Admin hub" />
+      <section id="data-visibility" className="mission-panel mb-6 rounded-2xl p-5 shadow-premium">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Production data visibility</p>
+            <h2 className="mt-1 text-2xl font-semibold text-command-text">Show test/demo records</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
+              Default is OFF in production. Boss Daily Brief, Sales Pipeline, Boss Review Gate, Delivery, and Collection Queue hide test, QA, demo, dummy, sample, v3_live_test, miamamun, semon, archived, deleted, spam, and generated QA records unless this admin preference is enabled.
+            </p>
+          </div>
+          <form action={setShowTestDemoRecordsAction} className="rounded-xl border border-command-line bg-command-bg/55 p-4">
+            <label className="flex items-center gap-3 text-sm font-semibold text-command-text">
+              <input
+                type="checkbox"
+                name="show_test_demo_records"
+                defaultChecked={showTestDemoRecords}
+                disabled={!canEditSettings}
+                className="h-5 w-5 accent-command-gold"
+              />
+              Show test/demo records
+            </label>
+            <p className="mt-2 text-xs text-command-muted">Current: {showTestDemoRecords ? "ON - admin review mode" : "OFF - production business records only"}</p>
+            <button
+              type="submit"
+              disabled={!canEditSettings}
+              className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-command-gold bg-command-gold px-3 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Save Visibility
+            </button>
+          </form>
+        </div>
+      </section>
       <section className="mb-6 grid gap-5 xl:grid-cols-3">
         {adminHubSections.map((section) => (
           <div key={section.title} id={section.id} className="mission-panel rounded-2xl p-5 shadow-premium">

@@ -3,16 +3,15 @@ import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { buildDoNotStartGate, jobStartChecklistActions } from "@/lib/boss-ops";
 import { recordJobStartChecklistAction } from "@/lib/actions";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listAuditLogs } from "@/lib/data/audit-repository";
-import { listLeads } from "@/lib/data/leads-repository";
-import { listPaymentRecords, listProjectAccounts } from "@/lib/data/sales-collection-repository";
+import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import { money } from "@/lib/sales-collection";
 
 export default async function DeliveryPage() {
-  const [leads, projects, payments, auditLogs] = await Promise.all([
-    listLeads(),
-    listProjectAccounts(),
-    listPaymentRecords(),
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const [{ leads, projects, payments }, auditLogs] = await Promise.all([
+    getSalesCollectionData(undefined, { includeTestDemo: showTestDemoRecords }),
     listAuditLogs()
   ]);
   const leadById = new Map(leads.map((lead) => [lead.id, lead]));

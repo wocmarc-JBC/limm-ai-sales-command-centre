@@ -3,19 +3,24 @@ import { getDataMode } from "./data-source";
 import { mapApprovalRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseServerClient } from "./supabase-server";
+import { filterApprovalsForProductionVisibility, type ProductionVisibilityOptions } from "@/lib/production-visibility";
 import type { ApprovalStatus } from "@/lib/types";
 
-export async function listApprovalRequests() {
+export type ListApprovalRequestsOptions = ProductionVisibilityOptions & {
+  visibleLeadIds?: Set<string>;
+};
+
+export async function listApprovalRequests(options: ListApprovalRequestsOptions = {}) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("approval_requests")
       .select("*")
       .order("requested_at", { ascending: false });
-    if (!error && data) return data.map(mapApprovalRow);
+    if (!error && data) return filterApprovalsForProductionVisibility(data.map(mapApprovalRow), options);
   }
 
-  return mockClone(getMockStore().approvalRequests);
+  return filterApprovalsForProductionVisibility(mockClone(getMockStore().approvalRequests), options);
 }
 
 export async function decideApprovalRequest(id: string, status: ApprovalStatus, notes = "") {

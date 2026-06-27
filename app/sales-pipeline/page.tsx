@@ -4,6 +4,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { markQuotationSentAction, recordBossReviewAction } from "@/lib/actions";
 import { buildQuoteApprovalGate } from "@/lib/boss-ops";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 import { listLatestMeaningfulWhatsAppMessagesForLeads } from "@/lib/data/lead-messages-repository";
 import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
@@ -13,7 +14,8 @@ import { getLeadRiskBadges, riskBadgeClass } from "@/lib/risk-badges";
 import { money, salesStageForLead, salesStages, weightedForecastForLead } from "@/lib/sales-collection";
 
 export default async function SalesPipelinePage() {
-  const { leads, summary } = await getSalesCollectionData();
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const { leads, summary } = await getSalesCollectionData(undefined, { includeTestDemo: showTestDemoRecords });
   const [auditLogs, latestWhatsAppMessages] = await Promise.all([
     listAuditLogs(),
     listLatestMeaningfulWhatsAppMessagesForLeads(leads.map((lead) => lead.id))

@@ -3,6 +3,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { recordJobStartChecklistAction } from "@/lib/actions";
 import { buildCollectionQueue, buildDoNotStartGate, buildJbcDefaultPaymentSchedule, jobStartChecklistActions } from "@/lib/boss-ops";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import {
@@ -15,7 +16,8 @@ import {
 } from "@/lib/sales-collection";
 
 export default async function SalesCollectionPage() {
-  const { leads, projects, payments, summary, target } = await getSalesCollectionData();
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const { leads, projects, payments, summary, target } = await getSalesCollectionData(undefined, { includeTestDemo: showTestDemoRecords });
   const auditLogs = await listAuditLogs();
   const reminders = buildQuotationPaymentFollowUps(leads, projects, payments);
   const activePaymentRows = activePayments(payments);

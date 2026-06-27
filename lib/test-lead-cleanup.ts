@@ -52,7 +52,7 @@ const knownTestPhrases = [
   "request scope, floor plan, and photos for initial project review"
 ];
 
-const strongTestPattern = /\b(test|test_only|qa|demo|sample|sandbox|browser[_ -]?test|live[_ -]?test|auth[_ -]?boss[_ -]?browser[_ -]?test|playwright|dev[_ -]?brain|generated[_ -]?test|v3_3_live_test|v4_3_auth_boss_browser_test|v[3456][_ -])/i;
+const strongTestPattern = /(?:\b(test|test_only|qa|demo|sample|dummy|sandbox|browser[_ -]?test|live[_ -]?test|auth[_ -]?boss[_ -]?browser[_ -]?test|playwright|dev[_ -]?brain|generated[_ -]?test)\b|v3[_ -]?live[_ -]?test|v3_3_live_test|v4_3_auth_boss_browser_test|v[3456][_ -]|miamamun|semon)/i;
 
 export function protectedPersonEvidence(lead: Lead, messages: LeadMessage[] = []) {
   const extendedLead = lead as Lead & Record<string, unknown>;

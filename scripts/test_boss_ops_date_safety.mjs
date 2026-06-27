@@ -62,4 +62,42 @@ assert.equal(parseSafeDate("1970-01-01T00:00:00Z"), null, "Unix epoch should be 
 assert.equal(parseSafeDate("1969-12-31T23:59:59Z"), null, "pre-epoch date should be rejected");
 assert.equal(overdueDaysSingapore("1970-01-01T00:00:00Z", today), 0, "epoch date must not become a giant overdue number");
 
-console.log("PASS: boss ops Singapore date safety checks passed.");
+function read(relativePath) {
+  return fs.readFileSync(path.join(projectRoot, relativePath), "utf8");
+}
+
+const productionVisibility = read("lib/production-visibility.ts");
+const dataPreference = read("lib/data-visibility-preference.ts");
+const homePage = read("app/page.tsx");
+const settingsPage = read("app/settings/page.tsx");
+const cleanupPage = read("app/settings/production-data-cleanup/page.tsx");
+const actions = read("lib/actions.ts");
+const shell = read("components/ShellChrome.tsx");
+const salesRepo = read("lib/data/sales-collection-repository.ts");
+const approvalsRepo = read("lib/data/approvals-repository.ts");
+const leadsRepo = read("lib/data/leads-repository.ts");
+
+for (const term of ["test", "qa", "demo", "v3_live_test", "miamamun", "semon", "dummy", "sample"]) {
+  assert.ok(productionVisibility.includes(term), `production visibility filter missing ${term}`);
+}
+for (const phrase of [
+  "filterLeadsForProductionVisibility",
+  "filterApprovalsForProductionVisibility",
+  "filterProjectsForProductionVisibility",
+  "filterPaymentsForProductionVisibility",
+  "isProductionHiddenLead"
+]) {
+  assert.ok(productionVisibility.includes(phrase), `production visibility helper missing ${phrase}`);
+}
+assert.ok(leadsRepo.includes("isProductionHiddenLead") && leadsRepo.includes("!options?.includeTest"), "lead repository must hide production-noise records unless explicitly included");
+assert.ok(approvalsRepo.includes("visibleLeadIds") && approvalsRepo.includes("filterApprovalsForProductionVisibility"), "approval repository must hide demo approvals and approvals linked to hidden leads");
+assert.ok(salesRepo.includes("visibleLeadIds") && salesRepo.includes("visibleProjectIds"), "sales collection repository must filter projects/payments through visible leads/projects");
+assert.ok(dataPreference.includes("limm_show_test_demo_records") && dataPreference.includes("maxAge"), "visibility preference cookie must be server-side and durable");
+assert.ok(homePage.includes("getShowTestDemoRecordsPreference") && homePage.includes("visibleLeadIds"), "Boss Daily Brief must use the production visibility preference and visible lead IDs");
+assert.ok(settingsPage.includes("Show test/demo records") && settingsPage.includes("Default is OFF in production"), "Settings must expose the production visibility toggle");
+assert.ok(cleanupPage.includes("Production Data Cleanup") && cleanupPage.includes("Soft Archive Selected"), "admin cleanup page must preview and soft archive selected records");
+assert.ok(actions.includes("softArchiveProductionNoiseRecordsAction") && !/softArchiveProductionNoiseRecordsAction[\s\S]{0,900}hardDeleteLead/.test(actions), "production cleanup action must not hard delete records");
+assert.ok(!/"Delivery"[\s\S]{0,220}"Appointments"/.test(shell), "sidebar must not duplicate Appointments under Delivery");
+assert.ok(!/<p>\{auth\.mode\}<\/p>/.test(shell), "normal sidebar display must not show Supabase/Mock mode");
+
+console.log("PASS: boss ops Singapore date safety and production visibility checks passed.");
