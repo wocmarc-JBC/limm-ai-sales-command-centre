@@ -99,6 +99,22 @@ function inbound(body, type = "text", metadata = {}) {
   };
 }
 
+function outbound(body, metadata = {}) {
+  return {
+    id: `qa-out-${Math.random().toString(16).slice(2)}`,
+    leadId: "qa-carpentry-demo",
+    direction: "outbound",
+    channel: "whatsapp",
+    body,
+    safeToSend: true,
+    providerMessageId: `wamid.out.${Math.random().toString(16).slice(2)}`,
+    providerTimestamp: new Date().toISOString(),
+    whatsappStatus: "sent",
+    metadata,
+    createdAt: new Date().toISOString()
+  };
+}
+
 function decide(clientMessage, options = {}) {
   const current = inbound(clientMessage, options.messageType ?? "text");
   const previousMessages = [...(options.previousMessages ?? []), current];
@@ -184,9 +200,52 @@ const shoeCabinetPrice = decide("Shoe cabinet how much?");
 check("shoe cabinet short price routes to carpentry", shoeCabinetPrice.intent === "carpentry_demo_qa" && includesAll(shoeCabinetPrice.replyText, ["custom carpentry", "photo of the area", "rough dimensions"]) && excludesAll(shoeCabinetPrice.replyText, shortCarpentryPriceForbidden), shoeCabinetPrice.replyText);
 assertSafeReply("shoe cabinet pricing", shoeCabinetPrice.replyText);
 
+const priorCustomCarpentryReply = [
+  inbound("Kitchen cabinet how much?"),
+  outbound(kitchenCabinetPrice.replyText, { replySource: "v9_clean_core", intent: "carpentry_demo_qa" })
+];
+
+for (const message of [
+  "Wardrobe quote?",
+  "TV console price?",
+  "Shoe cabinet how much?",
+  "Cabinet quote?",
+  "Built-in wardrobe cost?",
+  "Shelves price?",
+  "Drawer quote?",
+  "Kitchen cabinet quotation?"
+]) {
+  const livePathDecision = decide(message, { previousMessages: priorCustomCarpentryReply });
+  check(
+    `live path repeated short carpentry price stays carpentry: ${message}`,
+    livePathDecision.intent === "carpentry_demo_qa" &&
+      includesAll(livePathDecision.replyText, ["custom carpentry", "cabinet size", "photo of the area", "rough dimensions"]) &&
+      excludesAll(livePathDecision.replyText, shortCarpentryPriceForbidden),
+    `${livePathDecision.intent}: ${livePathDecision.replyText}`
+  );
+  check(
+    `live path repeated short carpentry price is not generic greeting: ${message}`,
+    !/dream home|what renovation works are you planning/i.test(livePathDecision.replyText),
+    livePathDecision.replyText
+  );
+  assertSafeReply(`live path ${message}`, livePathDecision.replyText);
+}
+
+const priorDemoContext = [
+  inbound("Remove kitchen cabinet how much?"),
+  outbound("Sure, we can help review this. For demo or hacking works, we need to check the scope, site condition, access, protection and any approval requirements before advising.")
+];
+const currentCarpentryWins = decide("Wardrobe quote?", { previousMessages: priorDemoContext });
+check("current short carpentry price wins over old demo context", currentCarpentryWins.intent === "carpentry_demo_qa" && includesAll(currentCarpentryWins.replyText, ["custom carpentry", "photo of the area", "rough dimensions"]) && excludesAll(currentCarpentryWins.replyText, shortCarpentryPriceForbidden), currentCarpentryWins.replyText);
+assertSafeReply("current carpentry wins over old demo context", currentCarpentryWins.replyText);
+
 const removeKitchenCabinet = decide("Remove kitchen cabinet how much?");
 check("remove kitchen cabinet routes to demo dismantling", includesAll(removeKitchenCabinet.replyText, ["demo or hacking works", "site condition", "protection"]) && excludesAll(removeKitchenCabinet.replyText, [/\bcustom carpentry\b/i, /\bcabinet size\b/i, /\binternal layout\b/i]), removeKitchenCabinet.replyText);
 assertSafeReply("remove kitchen cabinet", removeKitchenCabinet.replyText);
+
+const dismantleWardrobe = decide("Dismantle wardrobe price?");
+check("dismantle wardrobe price keeps demo action precedence", includesAll(dismantleWardrobe.replyText, ["demo or hacking works", "site condition", "protection"]) && excludesAll(dismantleWardrobe.replyText, [/\bcustom carpentry\b/i, /\bcabinet size\b/i, /\binternal layout\b/i]), dismantleWardrobe.replyText);
+assertSafeReply("dismantle wardrobe price", dismantleWardrobe.replyText);
 
 const wallHacking = decide("Can hack this wall? I send photo.");
 check("wall hacking does not confirm from photo", includesAll(wallHacking.replyText, ["cannot confirm", "photo alone", "property type", "floor plan", "wall location", "approval"]), wallHacking.replyText);

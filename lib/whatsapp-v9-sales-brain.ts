@@ -564,12 +564,21 @@ function hasCarpentryTerms(text: string) {
   return /carpentry|cabinet|kitchen cabinet|wardrobe|tv console|shoe cabinet|built[- ]?in cabinet|shel(?:f|ves)|laminate|hinge|drawer|drawer track|soft closing|fridge|木工|橱柜|衣柜|电视柜|修改柜|加层板/.test(text);
 }
 
+function hasCurrentCarpentryItemTerms(text: string) {
+  return hasCarpentryTerms(text) ||
+    /\bbuilt[- ]?in\b|\bshelf\b|\bshelves\b|\u6728\u5de5|\u6a71\u67dc|\u8863\u67dc|\u7535\u89c6\u67dc/.test(text);
+}
+
 function hasDemoHackingTerms(text: string) {
   return /hack|hacking|dismantle|demolition|remove|remove wall|wall removal|tile hacking|floor hacking|debris|disposal|haulage|rubbish|noisy|noise|拆|拆除|敲墙|打墙|拆墙|拆柜|垃圾清理|清走/.test(text);
 }
 
 function hasDemoActionVerb(text: string) {
   return /\b(?:remove|dismantle|demolish|hack|hacking)\b|拆柜|拆除|拆墙|敲墙|打墙|垃圾清理|清走/.test(text);
+}
+
+function hasCurrentDemoActionVerb(text: string) {
+  return hasDemoActionVerb(text) || /\bdispose\b|\u62c6|\u62c6\u9664|\u6572|\u6572\u5899/.test(text);
 }
 
 function hasCarpentryActionVerb(text: string) {
@@ -582,8 +591,8 @@ function hasCarpentryPriceTerms(text: string) {
 
 function isShortCarpentryPriceEnquiry(text: string) {
   const normalized = normalize(text);
-  if (!hasCarpentryTerms(normalized) || !hasCarpentryPriceTerms(normalized)) return false;
-  return !hasDemoActionVerb(normalized);
+  if (!hasCurrentCarpentryItemTerms(normalized) || !hasCarpentryPriceTerms(normalized)) return false;
+  return !hasCurrentDemoActionVerb(normalized);
 }
 
 function isCarpentryIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
@@ -1028,7 +1037,7 @@ function legacyTemplateBlocked(reply: string) {
   return LEGACY_REPLY_TEMPLATE_PATTERNS.some((pattern) => pattern.test(reply));
 }
 
-function v9QualityProblems(reply: string, intent: string, memory: V9SalesMemory) {
+function v9QualityProblems(reply: string, intent: string, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
   const normalizedReply = normalize(reply);
   const problems: string[] = [];
   if (!reply.trim()) problems.push("empty_reply");
@@ -1052,7 +1061,7 @@ function v9QualityProblems(reply: string, intent: string, memory: V9SalesMemory)
     problems.push("generic_intake_after_handoff_lock");
   }
   const prior = memory.last_bot_replies.map(normalize);
-  if (prior.includes(normalizedReply)) problems.push("exact_repeat");
+  if (prior.includes(normalizedReply) && !isShortCarpentryPriceEnquiry(input.inboundMessageText)) problems.push("exact_repeat");
   if (intent === "price_question") {
     const allowedPriceOpenings = [
       "I understand you'd like a rough idea",
@@ -1076,7 +1085,7 @@ function finalV9Reply(input: V9WhatsAppSalesBrainInput, intent: string, memory: 
   let repetitionResult: V9WhatsAppSalesBrainDecision["repetitionResult"] = "pass";
   let noSilenceGuardResult: V9WhatsAppSalesBrainDecision["noSilenceGuardResult"] = "not_needed";
 
-  let qualityProblems = v9QualityProblems(reply, intent, memory);
+  let qualityProblems = v9QualityProblems(reply, intent, memory, input);
   if (qualityProblems.length) {
     reply = shouldUseRepeatHandoffSentence(memory, intent) ? HANDOFF_HOLDING_REPLY : ULTRA_SAFE_V9_FALLBACK;
     qualityResult = "rewritten";
