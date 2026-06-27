@@ -617,7 +617,8 @@ function composeCarpentryDemoKnowledgeReply(match: CarpentryDemoQaMatch, memory:
   if (/approval|permit|mcst|management|批准|管理处/.test(text)) return findCarpentryDemoQaItem("CDQ05_APPROVAL").templateEn;
   if (/hack|hacking|remove wall|wall removal|wall|敲墙|打墙|拆墙/.test(text)) return findCarpentryDemoQaItem("CDQ04_WALL_HACKING").templateEn;
   if (/modify|cabinet|fridge|shelf|replace door|修改柜|加层板/.test(text)) {
-    const ask = hasMeasurements(input) ? "" : " Could you send photos, rough dimensions and the fridge size or item size?";
+    const sizeLabel = /fridge/i.test(input.inboundMessageText) ? "fridge size" : "item size";
+    const ask = hasMeasurements(input) ? "" : ` Could you send photos, rough dimensions and the ${sizeLabel}?`;
     return `${findCarpentryDemoQaItem("CDQ10_CABINET_MODIFICATION").templateEn}${ask}`;
   }
   if (/match|same colour|laminate colour/.test(text)) return findCarpentryDemoQaItem("CDQ11_LAMINATE_MATCH").templateEn;
@@ -768,8 +769,16 @@ function joinList(items: string[]) {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
-function handoffAppend(reply: string, memory: V9SalesMemory) {
-  if (!memory.handoff_lock) return reply;
+function shouldUseRepeatHandoffSentence(memory: V9SalesMemory, intent = "") {
+  if (!memory.handoff_lock) return false;
+  if (intent === "frustration_or_correction") return true;
+  if (memory.client_patience === "annoyed") return true;
+  if (memory.repeated_question_count > 1) return true;
+  return memory.correction_history.some((entry) => /frustration|repeat|asked again|stuck/i.test(entry));
+}
+
+function handoffAppend(reply: string, memory: V9SalesMemory, intent = "") {
+  if (!shouldUseRepeatHandoffSentence(memory, intent)) return reply;
   if (normalize(reply).includes(normalize(TEAM_FOLLOW_UP))) return reply;
   return `${reply} ${TEAM_FOLLOW_UP}`;
 }
@@ -798,30 +807,30 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
 
   if (intent === "carpentry_demo_qa") {
     const match = carpentryDemoMatch(input, memory);
-    if (match) return handoffAppend(composeCarpentryDemoKnowledgeReply(match, memory, input), memory);
+    if (match) return handoffAppend(composeCarpentryDemoKnowledgeReply(match, memory, input), memory, intent);
   }
   if (intent === "price_question") {
-    return handoffAppend(composePriceReply(memory, input), memory);
+    return handoffAppend(composePriceReply(memory, input), memory, intent);
   }
   if (intent === "timeline_question") {
-    return handoffAppend("We can check the timeline, but it depends on the scope, site condition, and team availability. May I know what works you need done?", memory);
+    return handoffAppend("We can check the timeline, but it depends on the scope, site condition, and team availability. May I know what works you need done?", memory, intent);
   }
   if (intent === "timeline_followup") {
-    return handoffAppend("We can't say it cannot finish without reviewing the confirmed project details, but we also shouldn't promise 3 months before checking the site details and work sequence.", memory);
+    return handoffAppend("We can't say it cannot finish without reviewing the confirmed project details, but we also shouldn't promise 3 months before checking the site details and work sequence.", memory, intent);
   }
   if (intent === "hypothetical_timeline") {
-    return handoffAppend("For many condo renovations, 6 months is usually a more comfortable planning window, but the team still needs to check the project details, condo management requirements, materials and site condition before confirming.", memory);
+    return handoffAppend("For many condo renovations, 6 months is usually a more comfortable planning window, but the team still needs to check the project details, condo management requirements, materials and site condition before confirming.", memory, intent);
   }
   if (intent === "office_visit_request") {
     const timeText = timing || "your preferred office visit timing";
-    return handoffAppend(`${timeText} noted as your preferred office visit timing. The team will check availability before confirming.`, memory);
+    return handoffAppend(`${timeText} noted as your preferred office visit timing. The team will check availability before confirming.`, memory, intent);
   }
   if (intent === "appointment_request") {
-    return handoffAppend(composeAppointmentReply(memory, input), memory);
+    return handoffAppend(composeAppointmentReply(memory, input), memory, intent);
   }
   if (intent === "design_direction_statement") {
     const direction = memory.design_direction || "your preferred design direction";
-    return handoffAppend(`${capitalize(direction)} noted. If you have reference images later, you can send them, but the team can already use this as the starting design direction.`, memory);
+    return handoffAppend(`${capitalize(direction)} noted. If you have reference images later, you can send them, but the team can already use this as the starting design direction.`, memory, intent);
   }
   if (intent === "design_question") {
     return composeDesignQuestionReply(memory);
@@ -839,47 +848,47 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
   }
   if (intent === "hacking_wall") {
     if (memory.property_type === "condo") {
-      return handoffAppend("Possible, but it depends on the wall type, structure, services and condo management renovation guidelines. May I know which wall or area you're looking at?", memory);
+      return handoffAppend("Possible, but it depends on the wall type, structure, services and condo management renovation guidelines. May I know which wall or area you're looking at?", memory, intent);
     }
     if (memory.property_type === "HDB") {
-      return handoffAppend("Possible, but hacking and wet works will depend on HDB rules and approval where applicable. May I know which wall or area you're looking at?", memory);
+      return handoffAppend("Possible, but hacking and wet works will depend on HDB rules and approval where applicable. May I know which wall or area you're looking at?", memory, intent);
     }
     if (seriousAa) {
-      return handoffAppend("Possible, but for landed/A&A works, it's better for us to review the existing layout and site photos first before advising on wall work.", memory);
+      return handoffAppend("Possible, but for landed/A&A works, it's better for us to review the existing layout and site photos first before advising on wall work.", memory, intent);
     }
     if (!memory.property_type) {
-      return handoffAppend("Possible, but it depends on whether the wall is structural and the approval requirements. May I know if this is HDB, condo, or landed?", memory);
+      return handoffAppend("Possible, but it depends on whether the wall is structural and the approval requirements. May I know if this is HDB, condo, or landed?", memory, intent);
     }
-    return handoffAppend("We'll need to check the drawings and site condition first. Whether wall work is possible depends on the wall type, structure, services, property rules and approval or submission requirements if applicable.", memory);
+    return handoffAppend("We'll need to check the drawings and site condition first. Whether wall work is possible depends on the wall type, structure, services, property rules and approval or submission requirements if applicable.", memory, intent);
   }
   if (intent === "approval_submission") {
-    return handoffAppend("We can help review the scope and approval requirements first. Approval depends on the property type, authorities or management rules, and the actual works involved.", memory);
+    return handoffAppend("We can help review the scope and approval requirements first. Approval depends on the property type, authorities or management rules, and the actual works involved.", memory, intent);
   }
   if (intent === "portfolio_request") {
-    return handoffAppend("Yes, you can view some of our renovation works, design references and project-related content on Instagram here: https://www.instagram.com/limmworks/ If you're looking for a specific reference type, let us know whether it is landed A&A, full house renovation, kitchen, bathroom, carpentry, hacking works, design works or commercial renovation.", memory);
+    return handoffAppend("Yes, you can view some of our renovation works, design references and project-related content on Instagram here: https://www.instagram.com/limmworks/ If you're looking for a specific reference type, let us know whether it is landed A&A, full house renovation, kitchen, bathroom, carpentry, hacking works, design works or commercial renovation.", memory, intent);
   }
   if (intent === "promotion_question") {
-    return handoffAppend("We don't confirm discounts or promo offers in this chat. The team can review the project details properly and advise the suitable next step.", memory);
+    return handoffAppend("We don't confirm discounts or promo offers in this chat. The team can review the project details properly and advise the suitable next step.", memory, intent);
   }
   if (intent === "free_work_request") {
-    return handoffAppend("We don't do renovation works for free, but the team can review the project details properly and advise the next step.", memory);
+    return handoffAppend("We don't do renovation works for free, but the team can review the project details properly and advise the next step.", memory, intent);
   }
   if (intent === "identity_question") {
     return "This WhatsApp chat is assisted by LIMM's enquiry assistant. Important project details are routed to the team for review.";
   }
   if (intent === "media_received") {
-    if (floorReceived) return handoffAppend("Hi, thanks for sending the floor plan. May I know the main areas you're planning to renovate?", memory);
-    return handoffAppend("Hi, thanks for sending the photos. May I know what works you're planning for this area?", memory);
+    if (floorReceived) return handoffAppend("Hi, thanks for sending the floor plan. May I know the main areas you're planning to renovate?", memory, intent);
+    return handoffAppend("Hi, thanks for sending the photos. May I know what works you're planning for this area?", memory, intent);
   }
   if (intent === "serious_project_enquiry") {
     const project = seriousAa ? "landed A&A or landed renovation" : "renovation";
     const next = nextUsefulInfoSentence(memory);
-    return handoffAppend(`Thanks for sharing. We can help review the ${project} properly. ${next}`, memory);
+    return handoffAppend(`Thanks for sharing. We can help review the ${project} properly. ${next}`, memory, intent);
   }
   if (intent === "follow_up_ping") {
-    return handoffAppend("Hi, yes we're here. Thanks for contacting LIMM Works. May I know what renovation works you're planning?", memory);
+    return handoffAppend("Hi, yes we're here. Thanks for contacting LIMM Works. May I know what renovation works you're planning?", memory, intent);
   }
-  return handoffAppend(FIRST_TOUCH_GREETING_REPLY, memory);
+  return handoffAppend(FIRST_TOUCH_GREETING_REPLY, memory, intent);
 }
 
 function capitalize(value: string) {
@@ -947,7 +956,7 @@ function v9QualityProblems(reply: string, intent: string, memory: V9SalesMemory)
   ) {
     problems.push("asked_received_site_photos");
   }
-  if (intent !== "design_question" && memory.handoff_lock && has(normalizedReply, /\bproperty type\b|\bfloor\s*plan\b|\bsite photos?\b|\bscope\b|\bdesign references?\b|\bpreferred timing\b/) && !normalizedReply.includes(normalize(TEAM_FOLLOW_UP))) {
+  if (intent !== "design_question" && shouldUseRepeatHandoffSentence(memory, intent) && has(normalizedReply, /\bproperty type\b|\bfloor\s*plan\b|\bsite photos?\b|\bscope\b|\bdesign references?\b|\bpreferred timing\b/) && !normalizedReply.includes(normalize(TEAM_FOLLOW_UP))) {
     problems.push("generic_intake_after_handoff_lock");
   }
   const prior = memory.last_bot_replies.map(normalize);
@@ -977,14 +986,14 @@ function finalV9Reply(input: V9WhatsAppSalesBrainInput, intent: string, memory: 
 
   let qualityProblems = v9QualityProblems(reply, intent, memory);
   if (qualityProblems.length) {
-    reply = memory.handoff_lock ? HANDOFF_HOLDING_REPLY : ULTRA_SAFE_V9_FALLBACK;
+    reply = shouldUseRepeatHandoffSentence(memory, intent) ? HANDOFF_HOLDING_REPLY : ULTRA_SAFE_V9_FALLBACK;
     qualityResult = "rewritten";
     if (qualityProblems.includes("exact_repeat")) repetitionResult = "rewritten";
   }
 
   let safety = validateWhatsAppAutoReply(reply, { calendarEventId: input.calendarEventId ?? "" });
   if (!safety.ok) {
-    reply = memory.handoff_lock ? HANDOFF_HOLDING_REPLY : ULTRA_SAFE_V9_FALLBACK;
+    reply = shouldUseRepeatHandoffSentence(memory, intent) ? HANDOFF_HOLDING_REPLY : ULTRA_SAFE_V9_FALLBACK;
     safetyResult = "rewritten";
     safety = validateWhatsAppAutoReply(reply, { calendarEventId: input.calendarEventId ?? "" });
   }

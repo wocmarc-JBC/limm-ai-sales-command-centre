@@ -134,6 +134,12 @@ function assertSafeReply(label, reply) {
   check(`${label}: no unsafe appointment/approval/hacking certainty`, excludesAll(reply, [/\bappointment confirmed\b/i, /\bbooked for you\b/i, /\bapproval sure pass\b/i, /\bno approval needed\b/i, /\bsure can\b/i, /\bno problem\b/i, /\bconfirm can\b/i]), reply);
 }
 
+const repeatHandoffSentence = "I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.";
+
+function assertNoRepeatHandoff(label, reply) {
+  check(`${label}: no repeat handoff sentence`, !reply.includes(repeatHandoffSentence), reply);
+}
+
 const stats = carpentryDemoQaStats();
 check("module id matches source", limmCarpentryDemoQaModule.moduleId === "limm_carpentry_demo_common_questions_sg");
 check("module has 13 Q&A policies", carpentryDemoQaItems.length === 13 && stats.qaItems === 13, JSON.stringify(stats));
@@ -153,6 +159,7 @@ assertSafeReply("price-first carpentry", priceCarpentry.replyText);
 const wallHacking = decide("Can hack this wall? I send photo.");
 check("wall hacking does not confirm from photo", includesAll(wallHacking.replyText, ["cannot confirm", "photo alone", "property type", "floor plan", "wall location", "approval"]), wallHacking.replyText);
 check("wall hacking avoids unsafe certainty", excludesAll(wallHacking.replyText, [/\bsure can\b/i, /\bno problem\b/i, /\bconfirm can\b/i]), wallHacking.replyText);
+assertNoRepeatHandoff("normal wall hacking", wallHacking.replyText);
 assertSafeReply("wall hacking", wallHacking.replyText);
 
 const shelter = decide("Can hack bomb shelter wall to make bigger?");
@@ -162,10 +169,13 @@ assertSafeReply("household shelter", shelter.replyText);
 
 const disposal = decide("Your hacking price include disposal?");
 check("disposal answer itemises review", includesAll(disposal.replyText, ["clearly stated", "quotation", "bagging", "haulage", "debris disposal", "protection"]), disposal.replyText);
+assertNoRepeatHandoff("normal disposal", disposal.replyText);
 assertSafeReply("disposal", disposal.replyText);
 
 const cabinet = decide("Can modify existing cabinet to fit bigger fridge?");
-check("cabinet modification answer is useful", includesAll(cabinet.replyText, ["can help review", "existing cabinet condition", "support", "laminate", "fridge size"]), cabinet.replyText);
+check("cabinet modification answer is useful", includesAll(cabinet.replyText, ["can help review", "resizing openings", "modifying for appliances", "existing cabinet condition", "support", "laminate", "fridge size"]), cabinet.replyText);
+check("cabinet modification uses fridge-specific ask", !/item size/i.test(cabinet.replyText), cabinet.replyText);
+assertNoRepeatHandoff("normal cabinet modification", cabinet.replyText);
 assertSafeReply("cabinet modification", cabinet.replyText);
 
 const photosContext = decide("So can you quote me?", {
@@ -183,6 +193,7 @@ assertSafeReply("condo weekend", condoWeekend.replyText);
 const mandarin = decide("拆柜多少钱？可以明天做吗？");
 check("Mandarin price/demo reply stays useful", /可以/.test(mandarin.replyText) && /property type/i.test(mandarin.replyText) && /照片/.test(mandarin.replyText) && /measurements/i.test(mandarin.replyText) && /approval/i.test(mandarin.replyText), mandarin.replyText);
 check("Mandarin price/demo reply has no amount", excludesAll(mandarin.replyText, [/\$\s*\d/i, /\bS\$\s*\d/i, /\bSGD\s*\d/i, /\bfrom\s*\$/i]), mandarin.replyText);
+assertNoRepeatHandoff("normal Mandarin demo price", mandarin.replyText);
 assertSafeReply("Mandarin price-first", mandarin.replyText);
 
 const laminate = decide("Can match my existing laminate exactly?");
@@ -194,6 +205,14 @@ const multi = decide("Can hack kitchen wall, disposal included, and start next w
 check("multi-intent demo answers all parts", includesAll(multi.replyText, ["wall", "approval", "disposal", "start", "photos", "floor plan", "property type"]), multi.replyText);
 check("multi-intent demo uses one reply", multi.replyText.trim().length > 0 && multi.shouldReply, multi.replyText);
 assertSafeReply("multi-intent demo", multi.replyText);
+
+const lockedLead = baseLead({ bossApprovalNeeded: true });
+const lockedWallHacking = decide("Can hack this wall? I send photo.", { lead: lockedLead });
+check("normal Q&A with stale handoff lock keeps wall answer", includesAll(lockedWallHacking.replyText, ["cannot confirm", "photo alone", "wall location"]), lockedWallHacking.replyText);
+assertNoRepeatHandoff("normal Q&A with stale handoff lock", lockedWallHacking.replyText);
+
+const frustratedWallHacking = decide("Why you keep repeating? Can hack this wall?", { lead: lockedLead });
+check("frustrated thread keeps safe handoff behavior", /repeat|team|check/i.test(frustratedWallHacking.replyText), frustratedWallHacking.replyText);
 
 const qaCentre = read("app/qa-centre/page.tsx");
 check("QA Centre exposes carpentry/demo pack", qaCentre.includes("Open Carpentry / Demo Pack") && qaCentre.includes("showCarpentryDemoPack"));

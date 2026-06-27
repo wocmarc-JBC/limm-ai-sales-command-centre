@@ -212,7 +212,7 @@ export const carpentryDemoQaItems: readonly CarpentryDemoQaItem[] = [
     questionPatterns: ["Can modify existing cabinet?", "modify cabinet", "fit bigger fridge", "add shelves", "replace cabinet door", "修改柜", "加层板"],
     answerPolicy: "Confirm modification can be reviewed and explain practicality factors.",
     templateEn:
-      "Yes, we can help review existing cabinet modification, such as resizing openings, adding shelves, changing doors, modifying for appliances, replacing hinges/drawer tracks or adjusting built-ins.\n\nWhether it is practical depends on the existing cabinet condition, internal support, laminate and whether the altered area can still look clean after modification."
+      "Yes, we can help review existing cabinet modification, such as resizing openings, modifying for appliances or adjusting built-ins.\n\nWhether it is practical depends on the existing cabinet condition, internal support, laminate and whether the altered area can still look clean after modification."
   },
   {
     id: "CDQ11_LAMINATE_MATCH",
