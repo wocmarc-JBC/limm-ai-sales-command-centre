@@ -157,13 +157,32 @@ check("wardrobe pricing asks only photo and rough dimensions first", includesAll
 check("wardrobe pricing does not mention demo/disposal/approval", excludesAll(priceCarpentry.replyText, [/\bdemo\b/i, /\bdisposal\b/i, /\bapproval\b/i, /\bhacking\b/i]), priceCarpentry.replyText);
 assertSafeReply("price-first carpentry", priceCarpentry.replyText);
 
+const shortCarpentryPriceForbidden = [
+  /\bdream home\b/i,
+  /\bwhat renovation works\b/i,
+  /\bdemo\b/i,
+  /\bhacking\b/i,
+  /\bdisposal\b/i,
+  /\bapproval\b/i,
+  /\bfloor plan\b/i
+];
+
 const kitchenCabinetPrice = decide("Kitchen cabinet how much?");
-check("kitchen cabinet pricing stays carpentry-specific", includesAll(kitchenCabinetPrice.replyText, ["custom carpentry", "photo of the area", "rough dimensions"]) && excludesAll(kitchenCabinetPrice.replyText, [/\bdemo\b/i, /\bdisposal\b/i, /\bapproval\b/i, /\bpreferred start date\b/i]), kitchenCabinetPrice.replyText);
+check("kitchen cabinet short price routes to carpentry module", kitchenCabinetPrice.intent === "carpentry_demo_qa" && kitchenCabinetPrice.blackBoxTrace.carpentryDemoQaItem === "CDQ01_PRICE_FIRST", JSON.stringify(kitchenCabinetPrice.blackBoxTrace));
+check("kitchen cabinet pricing stays carpentry-specific", includesAll(kitchenCabinetPrice.replyText, ["custom carpentry", "photo of the area", "rough dimensions"]) && excludesAll(kitchenCabinetPrice.replyText, [...shortCarpentryPriceForbidden, /\bpreferred start date\b/i]), kitchenCabinetPrice.replyText);
 assertSafeReply("kitchen cabinet pricing", kitchenCabinetPrice.replyText);
 
 const wardrobeQuote = decide("Wardrobe quote?");
-check("wardrobe quote routes to carpentry", includesAll(wardrobeQuote.replyText, ["custom carpentry", "cabinet size", "photo of the area", "rough dimensions"]) && excludesAll(wardrobeQuote.replyText, [/\bdemo\b/i, /\bhacking\b/i, /\bdisposal\b/i, /\bapproval\b/i, /\bfloor plan\b/i]), wardrobeQuote.replyText);
+check("wardrobe quote routes to carpentry", wardrobeQuote.intent === "carpentry_demo_qa" && includesAll(wardrobeQuote.replyText, ["custom carpentry", "cabinet size", "photo of the area", "rough dimensions"]) && excludesAll(wardrobeQuote.replyText, shortCarpentryPriceForbidden), wardrobeQuote.replyText);
 assertSafeReply("wardrobe quote", wardrobeQuote.replyText);
+
+const tvConsolePrice = decide("TV console price?");
+check("TV console price routes to carpentry", tvConsolePrice.intent === "carpentry_demo_qa" && includesAll(tvConsolePrice.replyText, ["custom carpentry", "photo of the area", "rough dimensions"]) && excludesAll(tvConsolePrice.replyText, shortCarpentryPriceForbidden), tvConsolePrice.replyText);
+assertSafeReply("TV console price", tvConsolePrice.replyText);
+
+const shoeCabinetPrice = decide("Shoe cabinet how much?");
+check("shoe cabinet short price routes to carpentry", shoeCabinetPrice.intent === "carpentry_demo_qa" && includesAll(shoeCabinetPrice.replyText, ["custom carpentry", "photo of the area", "rough dimensions"]) && excludesAll(shoeCabinetPrice.replyText, shortCarpentryPriceForbidden), shoeCabinetPrice.replyText);
+assertSafeReply("shoe cabinet pricing", shoeCabinetPrice.replyText);
 
 const removeKitchenCabinet = decide("Remove kitchen cabinet how much?");
 check("remove kitchen cabinet routes to demo dismantling", includesAll(removeKitchenCabinet.replyText, ["demo or hacking works", "site condition", "protection"]) && excludesAll(removeKitchenCabinet.replyText, [/\bcustom carpentry\b/i, /\bcabinet size\b/i, /\binternal layout\b/i]), removeKitchenCabinet.replyText);
@@ -207,6 +226,7 @@ check("condo weekend hacking does not promise Saturday", !/sure saturday|saturda
 assertSafeReply("condo weekend", condoWeekend.replyText);
 
 const mandarin = decide("拆柜多少钱？可以明天做吗？");
+check("Mandarin dismantle cabinet stays demo/dismantling", mandarin.intent === "carpentry_demo_qa" && /现场情况/.test(mandarin.replyText) && /工程范围/.test(mandarin.replyText), mandarin.replyText);
 check("Mandarin price/demo reply stays useful", /可以/.test(mandarin.replyText) && /房屋类型/.test(mandarin.replyText) && /现场照片或视频/.test(mandarin.replyText) && /大概尺寸/.test(mandarin.replyText) && /明天能不能安排/.test(mandarin.replyText), mandarin.replyText);
 check("Mandarin price/demo reply avoids unnatural mixed English", excludesAll(mandarin.replyText, [/\bproperty type\b/i, /\brough measurements\b/i, /\bavailability\b/i]), mandarin.replyText);
 check("Mandarin price/demo reply has no amount", excludesAll(mandarin.replyText, [/\$\s*\d/i, /\bS\$\s*\d/i, /\bSGD\s*\d/i, /\bfrom\s*\$/i]), mandarin.replyText);

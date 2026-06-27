@@ -417,6 +417,7 @@ function detectIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
   if (!text && !["image", "document"].includes(type)) return "unsupported";
   if (detectFrustration(text)) return "frustration_or_correction";
   if (has(text, /\bfloor\s*plan already\b|\bfloorplan already\b|\bfloor.{0,20}sent\b|\bphotos? already\b|\bphotos?.{0,25}(?:sent|been sent)\b|\balready sent\b|\bi sent\b/)) return "file_correction";
+  if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) return "carpentry_demo_qa";
   if (carpentryDemoMatch(input, memory)) return "carpentry_demo_qa";
   if (has(text, /\bhow much\b|\bprice\b|\bbudget how\b|\bquotation\b|\bquote\b|\bestimate\b|\brough cost\b|\broughly\b|\bpackage\b|多少钱/)) return "price_question";
   if (has(text, /\bso .*cannot finish\b|\bcannot finish\b/)) return "timeline_followup";
@@ -520,10 +521,18 @@ function combinedCarpentryDemoContext(input: V9WhatsAppSalesBrainInput, memory: 
 }
 
 function carpentryDemoMatch(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory): CarpentryDemoQaMatch | null {
-  const match = matchCarpentryDemoQaItem(input.inboundMessageText);
+  const shortCarpentryPrice = isShortCarpentryPriceEnquiry(input.inboundMessageText);
+  const match = matchCarpentryDemoQaItem(input.inboundMessageText) ?? (shortCarpentryPrice
+    ? {
+        item: findCarpentryDemoQaItem("CDQ01_PRICE_FIRST"),
+        score: 9,
+        matchedKeywords: ["short_carpentry_price"],
+        matchedPatterns: ["carpentry_term + price_term"]
+      }
+    : null);
   if (!match) return null;
   const context = combinedCarpentryDemoContext(input, memory);
-  if (isCarpentryDemoKnowledgeTrigger(input.inboundMessageText) || isCarpentryDemoKnowledgeTrigger(context)) {
+  if (shortCarpentryPrice || isCarpentryDemoKnowledgeTrigger(input.inboundMessageText) || isCarpentryDemoKnowledgeTrigger(context)) {
     return match;
   }
   return null;
@@ -565,6 +574,16 @@ function hasDemoActionVerb(text: string) {
 
 function hasCarpentryActionVerb(text: string) {
   return /\b(?:make|build|custom|modify|fit|install|add|replace|repair)\b|修改柜|加层板/.test(text);
+}
+
+function hasCarpentryPriceTerms(text: string) {
+  return /\b(?:how much|quote|quotation|price|cost|roughly|estimate)\b|å¤šå°‘é’±|æŠ¥ä»·|ä¼°ä»·/.test(text);
+}
+
+function isShortCarpentryPriceEnquiry(text: string) {
+  const normalized = normalize(text);
+  if (!hasCarpentryTerms(normalized) || !hasCarpentryPriceTerms(normalized)) return false;
+  return !hasDemoActionVerb(normalized);
 }
 
 function isCarpentryIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
@@ -776,6 +795,7 @@ function composeAppointmentReply(memory: V9SalesMemory, input: V9WhatsAppSalesBr
 function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
   if (!isFirstTouch(input)) return "";
   if (["carpentry_demo_qa", "hacking_wall", "approval_submission"].includes(intent)) return "";
+  if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) return composeCarpentryDemoPriceReply(memory, input);
   const text = normalize(input.inboundMessageText);
   const type = input.inboundMessageType.toLowerCase();
   const greetingKind = firstTouchGreetingKind(text);
@@ -870,6 +890,9 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
 
   if (intent === "voice_message") {
     return "Sorry, we're not able to listen to voice messages here. Could you type the key details instead, such as your property type, renovation scope, and preferred appointment timing?";
+  }
+  if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) {
+    return handoffAppend(composeCarpentryDemoPriceReply(memory, input), memory, "carpentry_demo_qa");
   }
   const firstTouchReply = composeFirstTouchReply(intent, memory, input);
   if (firstTouchReply) return firstTouchReply;
