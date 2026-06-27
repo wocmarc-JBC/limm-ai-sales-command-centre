@@ -7,6 +7,13 @@ import type {
   ProjectAccount,
   SalesStage
 } from "@/lib/types";
+import {
+  addSingaporeDays,
+  daysBetweenSingaporeDates,
+  isDueOnOrBeforeSingaporeDate,
+  overdueDaysSingapore,
+  singaporeDateKey
+} from "@/lib/date-safety";
 
 export const nonGstNote = "LIMM Works Pte Ltd is not GST-registered. No GST charged.";
 
@@ -76,7 +83,7 @@ export const wonReasons = [
 ];
 
 export function currentMonthKey(date = new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return singaporeDateKey(date).slice(0, 7);
 }
 
 export function defaultMonthlyTarget(month = currentMonthKey()): MonthlySalesTarget {
@@ -116,8 +123,10 @@ export function quotationStatusForLead(lead: Lead): ManualQuotationStatus {
 }
 
 export function daysLeftInMonth(date = new Date()) {
-  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-  return Math.max(1, end.getDate() - date.getDate() + 1);
+  const key = singaporeDateKey(date);
+  const [year, month, day] = key.split("-").map(Number);
+  const end = new Date(Date.UTC(year, month, 0));
+  return Math.max(1, end.getUTCDate() - day + 1);
 }
 
 export function money(value = 0) {
@@ -151,7 +160,7 @@ export function outstandingForProject(project: ProjectAccount, payments: Payment
 export function overdueAmountForProject(project: ProjectAccount, payments: PaymentRecord[], today = new Date()) {
   return activePayments(payments)
     .filter((payment) => payment.projectId === project.id)
-    .filter((payment) => payment.dueDate && new Date(payment.dueDate) < today)
+    .filter((payment) => overdueDaysSingapore(payment.dueDate, today) > 0)
     .filter((payment) => !payment.receivedDate && payment.status !== "Fully Paid" && payment.status !== "Disputed")
     .reduce((sum, payment) => sum + payment.amount, 0);
 }
@@ -186,7 +195,7 @@ export function buildQuotationPaymentFollowUps(leads: Lead[], projects: ProjectA
   const reminders: Array<{ title: string; reason: string; href: string; tone: "gold" | "amber" | "red" | "cyan" }> = [];
   for (const lead of leads) {
     const quoteStatus = quotationStatusForLead(lead);
-    if (quoteStatus === "Sent" && lead.quoteFollowUpDate && new Date(lead.quoteFollowUpDate) <= today) {
+    if (quoteStatus === "Sent" && lead.quoteFollowUpDate && isDueOnOrBeforeSingaporeDate(lead.quoteFollowUpDate, today)) {
       reminders.push({ title: "Quotation follow-up due", reason: `${lead.clientName} has a sent quotation awaiting follow-up.`, href: `/leads/${lead.id}`, tone: "amber" });
     }
     if (!lead.salesNextAction && salesStageForLead(lead) !== "Archived") {
@@ -200,11 +209,10 @@ export function buildQuotationPaymentFollowUps(leads: Lead[], projects: ProjectA
     }
     for (const payment of projectPayments) {
       if (payment.dueDate && !payment.receivedDate) {
-        const due = new Date(payment.dueDate);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        if (due < today) reminders.push({ title: "Payment overdue", reason: `${project.clientName} has overdue ${payment.paymentType} payment.`, href: "/sales-collection", tone: "red" });
-        else if (due.toDateString() === tomorrow.toDateString()) reminders.push({ title: "Payment due tomorrow", reason: `${project.clientName} has ${payment.paymentType} payment due tomorrow.`, href: "/sales-collection", tone: "amber" });
+        const overdueDays = overdueDaysSingapore(payment.dueDate, today);
+        const dueTomorrow = daysBetweenSingaporeDates(payment.dueDate, today) === 1 || singaporeDateKey(payment.dueDate) === addSingaporeDays(today, 1);
+        if (overdueDays > 0) reminders.push({ title: "Payment overdue", reason: `${project.clientName} has overdue ${payment.paymentType} payment.`, href: "/sales-collection", tone: "red" });
+        else if (dueTomorrow) reminders.push({ title: "Payment due tomorrow", reason: `${project.clientName} has ${payment.paymentType} payment due tomorrow.`, href: "/sales-collection", tone: "amber" });
       }
     }
   }

@@ -2,6 +2,12 @@
 .next/
 out/
 dist/
+build/
+coverage/
+.turbo/
+.cache/
+.parcel-cache/
+.swc/
 .env
 .env.*
 !.env.example
@@ -10,6 +16,13 @@ test-results/
 playwright-report/
 screenshots/
 .codex-tools/
+tmp/
+temp/
+*.tsbuildinfo
+.eslintcache
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .DS_Store
 Thumbs.db

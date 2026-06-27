@@ -64,7 +64,8 @@ export default async function ClientUploadPage({
             <input
               name="file"
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+              accept="image/*,.pdf,application/pdf"
+              capture="environment"
               className="rounded-lg border border-command-line bg-command-bg px-3 py-3 text-command-text file:mr-4 file:rounded-md file:border-0 file:bg-command-gold file:px-3 file:py-2 file:font-semibold file:text-black"
             />
           </label>

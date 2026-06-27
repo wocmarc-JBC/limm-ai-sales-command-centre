@@ -2,7 +2,8 @@ import { ActionButton } from "@/components/ActionButton";
 import { PageHeader } from "@/components/PageHeader";
 import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { decideApprovalAction } from "@/lib/actions";
+import { decideApprovalAction, recordBossReviewAction } from "@/lib/actions";
+import { bossReviewActions } from "@/lib/boss-ops";
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
 import { approvalGateMatrix } from "@/lib/approval-gates";
 import { humanizeList } from "@/lib/labels";
@@ -13,7 +14,13 @@ export default async function BossApprovalQueuePage() {
   const approvalRequests = await listApprovalRequests();
   return (
     <>
-      <PageHeader title="Boss Approval Queue" eyebrow="Risk control" />
+      <PageHeader title="Boss Review Gate" eyebrow="Risk control" />
+      <section className="mb-6 rounded border border-command-line bg-command-panel p-5 shadow-command">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Quote gate rule</p>
+        <p className="mt-2 text-sm leading-6 text-command-muted">
+          High-risk or high-value leads cannot move to Quotation Sent / Quoted until a boss approval audit record exists. Actions below log timestamp, user, action, and note.
+        </p>
+      </section>
       <div className="space-y-4">
         {approvalRequests.map((request) => (
           <article key={request.id} data-testid={`approval-${request.id}`} className="rounded border border-command-line bg-command-panel p-5 shadow-command">
@@ -41,6 +48,22 @@ export default async function BossApprovalQueuePage() {
             <p className="mt-4 rounded border border-command-line bg-command-panel2 p-3 text-sm">{request.proposedReply || request.aiRecommendation}</p>
             <p className="mt-3 text-sm text-command-muted">Status: {request.status}</p>
             {!canApprove ? <p className="mt-3 text-sm text-command-amber">Approval actions require boss/admin role.</p> : null}
+            <div className="mt-4 rounded border border-command-line bg-command-panel2 p-4">
+              <p className="text-sm font-semibold text-command-text">Boss actions</p>
+              <p className="mt-1 text-sm text-command-muted">Each action records an audit log and does not send WhatsApp, generate prices, or book Calendar events.</p>
+              <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {bossReviewActions.map((bossAction) => (
+                  <form key={bossAction.key} action={recordBossReviewAction} className="grid gap-2 rounded-lg border border-command-line bg-command-bg/55 p-3">
+                    <input type="hidden" name="lead_id" value={request.leadId} />
+                    <input type="hidden" name="action_key" value={bossAction.key} />
+                    <input name="note" placeholder="Boss note" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text" />
+                    <ActionButton type="submit" tone={bossAction.key === "reject_quote" ? "danger" : "muted"} disabled={!canApprove}>
+                      {bossAction.label}
+                    </ActionButton>
+                  </form>
+                ))}
+              </div>
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <form action={decideApprovalAction}>
                 <input type="hidden" name="approval_id" value={request.id} />

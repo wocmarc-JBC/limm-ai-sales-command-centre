@@ -1,5 +1,5 @@
 import { buildQuotationReadiness } from "./quotation-readiness";
-import type { ApprovalRequest, AuditLog, FollowUp, Lead } from "./types";
+import type { ApprovalRequest, AuditLog, FollowUp, Lead, PaymentRecord, ProjectAccount } from "./types";
 
 export const mockLeads: Lead[] = [
   {
@@ -26,7 +26,11 @@ export const mockLeads: Lead[] = [
     createdAt: "2026-05-28T09:10:00+08:00",
     updatedAt: "2026-05-28T11:18:00+08:00",
     preferredContactTime: "",
-    riskFlags: ["landed_a_and_a", "wet_works", "approval_review_needed"]
+    riskFlags: ["landed_a_and_a", "wet_works", "approval_review_needed"],
+    salesStage: "Quotation Needed",
+    potentialValue: 120000,
+    expectedCloseDate: "2026-07-08T18:00:00+08:00",
+    salesNextAction: "Boss quote review required before quotation is sent."
   },
   {
     id: "lead-002",
@@ -52,7 +56,11 @@ export const mockLeads: Lead[] = [
     createdAt: "2026-05-28T08:45:00+08:00",
     updatedAt: "2026-05-28T10:15:00+08:00",
     preferredContactTime: "Tomorrow afternoon",
-    riskFlags: ["mcst_rules"]
+    riskFlags: ["mcst_rules"],
+    salesStage: "Site Visit Needed",
+    potentialValue: 68000,
+    followUpDate: "2026-06-27T16:00:00+08:00",
+    salesNextAction: "Confirm site photos and appointment timing."
   },
   {
     id: "lead-003",
@@ -78,7 +86,10 @@ export const mockLeads: Lead[] = [
     createdAt: "2026-05-28T11:05:00+08:00",
     updatedAt: "2026-05-28T11:24:00+08:00",
     preferredContactTime: "Weekday 3pm",
-    riskFlags: ["commercial", "landlord_approval", "privacy_requirements"]
+    riskFlags: ["commercial", "landlord_approval", "privacy_requirements"],
+    salesStage: "Quotation Needed",
+    potentialValue: 90000,
+    salesNextAction: "Collect landlord requirements before boss review."
   },
   {
     id: "lead-004",
@@ -104,7 +115,10 @@ export const mockLeads: Lead[] = [
     createdAt: "2026-05-27T17:55:00+08:00",
     updatedAt: "2026-05-27T18:20:00+08:00",
     preferredContactTime: "",
-    riskFlags: ["price_sensitive"]
+    riskFlags: ["price_sensitive"],
+    salesStage: "Info Requested",
+    potentialValue: 8000,
+    followUpDate: "2026-06-26T17:00:00+08:00"
   },
   {
     id: "lead-005",
@@ -130,7 +144,109 @@ export const mockLeads: Lead[] = [
     createdAt: "2026-05-28T12:05:00+08:00",
     updatedAt: "2026-05-28T12:05:00+08:00",
     preferredContactTime: "",
-    riskFlags: ["hacking_demo", "site_protection"]
+    riskFlags: ["hacking_demo", "site_protection"],
+    salesStage: "Qualified",
+    potentialValue: 12000
+  },
+  {
+    id: "lead-006",
+    clientName: "Serene Ong",
+    phone: "+65 9222 7711",
+    source: "Referral",
+    division: "LIMM Works",
+    propertyType: "Condo",
+    serviceType: "Full home renovation",
+    scopeSummary: "Condo resale renovation with kitchen, bathrooms, flooring, painting, electrical and carpentry",
+    leadScore: 82,
+    leadCategory: "Hot",
+    status: "Quotation Readiness",
+    missingInfo: [],
+    aiRecommendedNextAction: "Won job. Check deposit and job-start gate before allowing site start.",
+    bossApprovalNeeded: false,
+    appointmentSuitable: true,
+    appointmentType: "site_discussion",
+    appointmentReadiness: 92,
+    quotationReadiness: 88,
+    lastClientMessage: "We accepted the quote. Can your team start next week after condo approval?",
+    lastReplyAt: "2026-06-25T15:30:00+08:00",
+    createdAt: "2026-06-10T10:05:00+08:00",
+    updatedAt: "2026-06-25T15:30:00+08:00",
+    preferredContactTime: "Weekday afternoon",
+    riskFlags: ["mcst_rules", "tight_timeline"],
+    salesStage: "Won",
+    quotationStatus: "Accepted",
+    quotedAmount: 62000,
+    confirmedValue: 62000,
+    wonDate: "2026-06-25T15:30:00+08:00",
+    projectId: "project-lead-006",
+    projectAddress: "Condo project, central Singapore",
+    salesNextAction: "Collect deposit and clear start gate before work starts."
+  }
+];
+
+export const mockProjectAccounts: ProjectAccount[] = [
+  {
+    id: "project-lead-006",
+    leadId: "lead-006",
+    clientName: "Serene Ong",
+    phone: "+65 9222 7711",
+    propertyType: "Condo",
+    scopeSummary: "Condo resale renovation with kitchen, bathrooms, flooring, painting, electrical and carpentry",
+    quotedAmount: 62000,
+    confirmedValue: 62000,
+    notes: "LIMM Works custom milestones may be changed manually after boss review.",
+    status: "Deposit Pending",
+    sourceLeadId: "lead-006",
+    projectAddress: "Condo project, central Singapore",
+    planningRegion: "Central Region",
+    planningArea: "To be confirmed",
+    locationConfidence: "area",
+    locationSource: "manual",
+    locationNotes: "Mock Mode operational example.",
+    createdAt: "2026-06-25T15:30:00+08:00",
+    updatedAt: "2026-06-25T15:30:00+08:00"
+  }
+];
+
+export const mockPaymentRecords: PaymentRecord[] = [
+  {
+    id: "payment-lead-006-deposit",
+    projectId: "project-lead-006",
+    leadId: "lead-006",
+    paymentType: "deposit",
+    amount: 31000,
+    dueDate: "2026-06-24T18:00:00+08:00",
+    receivedDate: null,
+    status: "Deposit Requested",
+    notes: "JBC default 50% deposit milestone.",
+    createdAt: "2026-06-25T15:35:00+08:00",
+    updatedAt: "2026-06-25T15:35:00+08:00"
+  },
+  {
+    id: "payment-lead-006-progress",
+    projectId: "project-lead-006",
+    leadId: "lead-006",
+    paymentType: "progress",
+    amount: 24800,
+    dueDate: "2026-07-15T18:00:00+08:00",
+    receivedDate: null,
+    status: "Progress Payment Due",
+    notes: "JBC default 40% progress milestone.",
+    createdAt: "2026-06-25T15:36:00+08:00",
+    updatedAt: "2026-06-25T15:36:00+08:00"
+  },
+  {
+    id: "payment-lead-006-final",
+    projectId: "project-lead-006",
+    leadId: "lead-006",
+    paymentType: "final",
+    amount: 6200,
+    dueDate: "2026-08-15T18:00:00+08:00",
+    receivedDate: null,
+    status: "Final Payment Due",
+    notes: "JBC default 10% final milestone.",
+    createdAt: "2026-06-25T15:37:00+08:00",
+    updatedAt: "2026-06-25T15:37:00+08:00"
   }
 ];
 

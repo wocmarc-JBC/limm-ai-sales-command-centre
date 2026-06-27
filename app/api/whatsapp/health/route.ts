@@ -64,6 +64,7 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v8.0"
 // version: "v9_0_clean_whatsapp_sales_brain"
 // salesBrainVersion: "v9_clean_core"
+// version: "v10_boss_operations_command_centre_pwa"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -94,6 +95,21 @@ export async function GET() {
       legacyReplyLogicQuarantined: true,
       singleReplyCoreOnly: true,
       manualWhatsappOutboundReplyAvailable: true,
+      bossDailyBriefAvailable: true,
+      bossOpsNavigationGroupsAvailable: true,
+      riskBadgesAvailable: true,
+      bossReviewGateAvailable: true,
+      quoteSentBossApprovalGateAvailable: true,
+      doNotStartGateAvailable: true,
+      collectionQueueAvailable: true,
+      jbcDefaultPaymentScheduleAvailable: true,
+      limmCustomMilestoneScheduleAvailable: true,
+      singaporeTimezoneDateSafetyAvailable: true,
+      pwaManifestAvailable: true,
+      pwaServiceWorkerAvailable: true,
+      pwaStandaloneDisplayAvailable: true,
+      mobileBottomNavigationAvailable: true,
+      cameraPhotoUploadSupportAvailable: true,
       leadConversationTimelineAvailable: true,
       manualTakeoverOnReplyAvailable: true,
       whatsappManualTestSendAvailable: true,
@@ -505,6 +521,21 @@ export async function GET() {
       legacyReplyLogicQuarantined: false,
       singleReplyCoreOnly: false,
       manualWhatsappOutboundReplyAvailable: false,
+      bossDailyBriefAvailable: false,
+      bossOpsNavigationGroupsAvailable: false,
+      riskBadgesAvailable: false,
+      bossReviewGateAvailable: false,
+      quoteSentBossApprovalGateAvailable: false,
+      doNotStartGateAvailable: false,
+      collectionQueueAvailable: false,
+      jbcDefaultPaymentScheduleAvailable: false,
+      limmCustomMilestoneScheduleAvailable: false,
+      singaporeTimezoneDateSafetyAvailable: false,
+      pwaManifestAvailable: false,
+      pwaServiceWorkerAvailable: false,
+      pwaStandaloneDisplayAvailable: false,
+      mobileBottomNavigationAvailable: false,
+      cameraPhotoUploadSupportAvailable: false,
       leadConversationTimelineAvailable: false,
       manualTakeoverOnReplyAvailable: false,
       whatsappManualTestSendAvailable: false,

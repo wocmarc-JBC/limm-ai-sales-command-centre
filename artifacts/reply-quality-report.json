@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-26T07:53:11.185Z",
+  "generatedAt": "2026-06-27T12:05:13.513Z",
   "rows": [
     {
       "id": "first_hi",
@@ -365,11 +365,11 @@
       "id": "hack_wall",
       "clientMessage": "Can hack wall?",
       "scenario": "safety_risk",
-      "proposedReply": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home, starting with the wall/hacking works. May I know if this is for a HDB, condo, landed property, or commercial unit?",
-      "score": 96,
+      "proposedReply": "We cannot confirm wall hacking from photo alone.\n\nWe'll need to check the property type, floor plan, wall location, whether the wall is structural/restricted, and whether hidden services may be present. For HDB or condo works, approval may also be required before hacking can proceed.",
+      "score": 95,
       "status": "PASS",
       "failedRules": [],
-      "suggestedCorrection": "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home, starting with the wall/hacking works. May I know if this is for a HDB, condo, landed property, or commercial unit?",
+      "suggestedCorrection": "We cannot confirm wall hacking from photo alone.\n\nWe'll need to check the property type, floor plan, wall location, whether the wall is structural/restricted, and whether hidden services may be present. For HDB or condo works, approval may also be required before hacking can proceed.",
       "simulationOnly": true,
       "whatsappSendCalled": false
     },

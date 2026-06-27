@@ -1,13 +1,26 @@
 import Link from "next/link";
+import { ActionButton } from "@/components/ActionButton";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
+import { markQuotationSentAction, recordBossReviewAction } from "@/lib/actions";
+import { buildQuoteApprovalGate } from "@/lib/boss-ops";
+import { listAuditLogs } from "@/lib/data/audit-repository";
 import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import { formatLeadDisplayName, formatFullPhoneForProtectedApp } from "@/lib/lead-display";
 import { humanizeLabel } from "@/lib/labels";
+import { getLeadRiskBadges, riskBadgeClass } from "@/lib/risk-badges";
 import { money, salesStageForLead, salesStages, weightedForecastForLead } from "@/lib/sales-collection";
 
 export default async function SalesPipelinePage() {
   const { leads, summary } = await getSalesCollectionData();
+  const auditLogs = await listAuditLogs();
+  const logsByLead = new Map<string, typeof auditLogs>();
+  for (const log of auditLogs) {
+    if (log.entityType !== "lead") continue;
+    const current = logsByLead.get(log.entityId) ?? [];
+    current.push(log);
+    logsByLead.set(log.entityId, current);
+  }
   const grouped = salesStages.map((stage) => {
     const stageLeads = leads.filter((lead) => salesStageForLead(lead) === stage);
     return {
@@ -47,7 +60,7 @@ export default async function SalesPipelinePage() {
             </div>
             <div className="mt-4 space-y-3">
               {group.leads.map((lead) => (
-                <Link key={lead.id} href={`/leads/${lead.id}`} className="block rounded-xl border border-command-line bg-command-bg/55 p-4 transition hover:border-command-cyan/60">
+                <article key={lead.id} className="rounded-xl border border-command-line bg-command-bg/55 p-4 transition hover:border-command-cyan/60">
                   <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="text-lg font-semibold text-command-text">{formatLeadDisplayName(lead)}</p>
@@ -61,7 +74,48 @@ export default async function SalesPipelinePage() {
                   </div>
                   <p className="mt-3 text-sm text-command-muted">Next action: {lead.salesNextAction || lead.aiRecommendedNextAction || "Set next action"}</p>
                   <p className="mt-1 text-xs text-command-subtle">Follow-up: {lead.followUpDate || "Not set"} | Owner: {lead.leadOwner || "Marcus / unassigned"}</p>
-                </Link>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {getLeadRiskBadges(lead).map((badge) => (
+                      <span key={badge.key} className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${riskBadgeClass(badge)}`}>
+                        {badge.label}
+                      </span>
+                    ))}
+                  </div>
+                  {(() => {
+                    const gate = buildQuoteApprovalGate(lead, logsByLead.get(lead.id) ?? []);
+                    return (
+                      <div className="mt-4 rounded-xl border border-command-line bg-command-card p-3">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-command-text">Boss Review Gate</p>
+                            <p className="mt-1 text-sm text-command-muted">
+                              {gate.requiresApproval
+                                ? gate.approved
+                                  ? "Boss approval recorded. Quotation Sent can be marked manually."
+                                  : gate.blockedReason
+                                : "No boss quote gate required for this lead."}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Link href={`/leads/${lead.id}`} className="inline-flex min-h-11 items-center rounded-md border border-command-line bg-command-bg/55 px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-gold/60">
+                              View Lead Details
+                            </Link>
+                            <form action={recordBossReviewAction}>
+                              <input type="hidden" name="lead_id" value={lead.id} />
+                              <input type="hidden" name="action_key" value="approve_quote" />
+                              <input type="hidden" name="note" value="Approved from Sales Pipeline." />
+                              <ActionButton type="submit" tone="muted">Approve quote</ActionButton>
+                            </form>
+                            <form action={markQuotationSentAction}>
+                              <input type="hidden" name="lead_id" value={lead.id} />
+                              <ActionButton type="submit" disabled={!gate.canMoveToQuoted}>Mark Quotation Sent</ActionButton>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </article>
               ))}
             </div>
           </article>

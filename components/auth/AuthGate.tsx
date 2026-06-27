@@ -17,6 +17,7 @@ export function AuthGate({
 }) {
   const pathname = usePathname();
   const isTemporaryReviewRoute = isReviewRouteEnabled() && pathname === "/review-chatgpt-ui";
+  const isTokenUploadRoute = pathname.startsWith("/upload/");
   const [authenticated, setAuthenticated] = useState(initialAuthenticated || mode === "Mock Mode");
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export function AuthGate({
     return () => subscription.subscription.unsubscribe();
   }, [mode]);
 
-  if (mode === "Supabase Mode" && !authenticated && pathname !== "/login" && !isTemporaryReviewRoute) {
+  if (mode === "Supabase Mode" && !authenticated && pathname !== "/login" && !isTemporaryReviewRoute && !isTokenUploadRoute) {
     return (
       <main className="px-4 pb-10 pt-36 md:ml-64 md:px-8 md:pt-8">
         <div className="rounded border border-command-line bg-command-panel p-6 shadow-command">

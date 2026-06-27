@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertNoTrackedOrPackagedGeneratedArtifacts, isGeneratedFolderPath } from "./generated_folder_guard.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -23,6 +24,7 @@ function exists(relativePath) {
 function walk(dir, output = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
+    if (entry.isDirectory() && isGeneratedFolderPath(path.relative(root, full))) continue;
     output.push(full);
     if (entry.isDirectory()) walk(full, output);
   }
@@ -30,12 +32,12 @@ function walk(dir, output = []) {
 }
 
 const requiredPages = [
-  ["app/page.tsx", "Marcus Command Centre Dashboard"],
+  ["app/page.tsx", "Boss Daily Brief"],
   ["app/leads/page.tsx", "AI Lead Inbox"],
   ["app/leads/[id]/page.tsx", "Lead Detail"],
   ["app/appointments/page.tsx", "Appointment Command Centre"],
   ["app/appointment-settings/page.tsx", "Appointment Settings"],
-  ["app/approvals/page.tsx", "Boss Approval Queue"],
+  ["app/approvals/page.tsx", "Boss Review Gate"],
   ["app/followups/page.tsx", "Follow-Up Queue"],
   ["app/quotation-readiness/page.tsx", "Quotation Readiness"],
   ["app/client-files/page.tsx", "Client Files"],
@@ -159,7 +161,7 @@ assert(!/toISOString\(\)\.slice\(0,\s*10\)/.test(appointmentEngine), "Appointmen
 
 const dashboardPage = read("app/page.tsx");
 assert(!dashboardPage.includes("Quotation Needed"), "Dashboard must not use Quotation Needed wording.");
-assert(dashboardPage.includes("Ready for Quotation Review"), "Dashboard must use quotation review wording.");
+assert(dashboardPage.includes("Boss Daily Brief"), "Dashboard must use boss daily brief wording.");
 
 const mockData = read("lib/mock-data.ts");
 assert(/id:\s*"lead-003"[\s\S]{0,280}division:\s*"LIMM Works"[\s\S]{0,280}propertyType:\s*"Commercial clinic"/.test(mockData), "Commercial clinic mock lead must be classified under LIMM Works.");
@@ -232,7 +234,7 @@ for (const migration of [
 
 const allPaths = walk(root);
 assert(!allPaths.some((file) => /LIMM_AI_Sales_Agent_v2/i.test(file)), "v2 folder was copied into v3.");
-assert(!allPaths.some((file) => /(__pycache__|node_modules|\.next|\\build\\|\\dist\\|coverage)/i.test(file)), "Generated cache or dependency folder found.");
+assertNoTrackedOrPackagedGeneratedArtifacts({ root, assert });
 assert(!exists(".env"), ".env must not exist in v3 scaffold.");
 
 console.log("PASS: v3 foundation tests passed.");

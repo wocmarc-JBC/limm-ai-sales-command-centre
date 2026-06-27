@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertNoTrackedOrPackagedGeneratedArtifacts, isGeneratedFolderPath } from "./generated_folder_guard.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -23,6 +24,7 @@ function exists(relativePath) {
 function walk(dir, output = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
+    if (entry.isDirectory() && isGeneratedFolderPath(path.relative(root, full))) continue;
     output.push(full);
     if (entry.isDirectory()) walk(full, output);
   }
@@ -168,6 +170,6 @@ for (const file of ["lib/quotation-readiness.ts", "app/quotation-readiness/page.
 }
 
 assert(!exists(".env"), ".env must not be committed.");
-assert(!walk(root).some((file) => /(__pycache__|node_modules|\.next|[\\/]build[\\/]|[\\/]dist[\\/]|\bcoverage\b)/i.test(file)), "Generated cache/dependency folder found.");
+assertNoTrackedOrPackagedGeneratedArtifacts({ root, assert });
 
 console.log("PASS: v3 live setup static tests passed.");

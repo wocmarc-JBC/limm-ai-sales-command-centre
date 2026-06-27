@@ -1,10 +1,12 @@
 import { createAuditLog } from "./audit-repository";
+import { listAuditLogs } from "./audit-repository";
 import { getDataMode } from "./data-source";
 import { mapLeadRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { getSupabaseServerClient } from "./supabase-server";
 import { buildLeadFacts, leadFactsToLeadPatch } from "@/lib/lead-facts";
+import { buildQuoteApprovalGate, isQuoteSentPatch } from "@/lib/boss-ops";
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
 import type { Lead, LeadFile, LeadIntakeProfile, LeadMessage, LeadStatus } from "@/lib/types";
 
@@ -172,6 +174,32 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
 }
 
 export async function updateLeadSalesTracking(id: string, patch: Partial<Lead>, reason = "Sales tracking updated.") {
+  const lead = await getLeadById(id);
+  if (lead && isQuoteSentPatch(patch)) {
+    const auditLogs = await listAuditLogs({ entityType: "lead", entityId: id });
+    const gate = buildQuoteApprovalGate(lead, auditLogs);
+    if (!gate.canMoveToQuoted) {
+      await createAuditLog({
+        actorType: "boss",
+        actorName: "Marcus",
+        action: "boss_quote_gate_blocked",
+        entityType: "lead",
+        entityId: id,
+        summary: "Quotation Sent / Quoted move blocked because boss approval is missing.",
+        beforeData: { salesStage: lead.salesStage, quotationStatus: lead.quotationStatus, bossApprovalNeeded: lead.bossApprovalNeeded },
+        afterData: null,
+        metadata: {
+          blockedReason: gate.blockedReason,
+          riskBadges: gate.badges.map((badge) => badge.label),
+          requiresApproval: gate.requiresApproval,
+          approved: gate.approved,
+          noPriceGuideAutomation: true
+        }
+      });
+      return null;
+    }
+  }
+
   return updateLead(
     id,
     patch,

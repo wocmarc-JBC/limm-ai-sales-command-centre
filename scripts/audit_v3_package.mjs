@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertNoTrackedOrPackagedGeneratedArtifacts, isGeneratedFolderPath } from "./generated_folder_guard.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -23,6 +24,7 @@ function exists(relativePath) {
 function walk(dir, output = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
+    if (entry.isDirectory() && isGeneratedFolderPath(path.relative(root, full))) continue;
     output.push(full);
     if (entry.isDirectory()) walk(full, output);
   }
@@ -279,12 +281,7 @@ for (const required of [
 }
 
 assert(!exists(".env"), ".env must not be committed or present in this scaffold.");
-assert(!relativePaths.some((file) => /^node_modules[\\/]/i.test(file)), "node_modules must not be present.");
-assert(!relativePaths.some((file) => /^\.next[\\/]/i.test(file)), ".next must not be present.");
-assert(!relativePaths.some((file) => /(^|[\\/])__pycache__($|[\\/])/i.test(file)), "__pycache__ must not be present.");
-assert(!relativePaths.some((file) => /(^|[\\/])(dist|build|coverage)($|[\\/])/i.test(file)), "build artifacts must not be present.");
-assert(!relativePaths.some((file) => /\.py[co]$/i.test(file)), "Python cache files must not be present.");
-assert(!relativePaths.some((file) => /tsconfig\.tsbuildinfo$/i.test(file)), "TypeScript build info cache must not be present.");
+assertNoTrackedOrPackagedGeneratedArtifacts({ root, assert });
 assert(!relativePaths.some((file) => /LIMM_AI_Sales_Agent_v2/i.test(file)), "v2 folder must not be copied into v3.");
 
 const textFiles = relativePaths.filter((file) =>
@@ -405,10 +402,14 @@ assert(!loginPage.includes('PageHeader title="Login"'), "Login page must not use
 assert(!/<h2[\s\S]{0,80}>Login<\/h2>/i.test(loginForm), "Login form must not duplicate Login heading.");
 assert(loginPage.includes("Sign in to Command Centre"), "Login page must have one clear sign-in title.");
 
-const dashboardPage = read("app/page.tsx");
+const homePage = read("app/page.tsx");
+const legacyDashboardPage = read("app/dashboard/page.tsx");
+const nextConfig = read("next.config.mjs");
 const commandCorePage = read("app/command-core/page.tsx");
 const quotationReadinessPage = read("app/quotation-readiness/page.tsx");
-assert(dashboardPage.includes('redirect("/command-core")'), "Old dashboard entry must redirect to Command Core.");
+assert(homePage.includes("Boss Daily Brief"), "Homepage must show the Boss Daily Brief.");
+assert(legacyDashboardPage.includes('redirect("/command-core")'), "Old dashboard route must redirect to Command Core.");
+assert(nextConfig.includes('source: "/dashboard"') && nextConfig.includes('destination: "/command-core"'), "Next routing must redirect old dashboard path before auth gate.");
 assert(!commandCorePage.includes("Quotation Needed"), "Command Core must not use Quotation Needed wording.");
 assert(quotationReadinessPage.includes("Ready for Quotation Review"), "Quotation review route must use quotation review wording.");
 

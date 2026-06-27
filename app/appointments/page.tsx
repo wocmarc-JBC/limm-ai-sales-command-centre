@@ -2,6 +2,7 @@ import { AppointmentSlotActions } from "@/components/AppointmentSlotActions";
 import { PageHeader } from "@/components/PageHeader";
 import { findAppointmentSlots } from "@/lib/appointment-engine";
 import { getAppointmentSettings } from "@/lib/data/appointment-settings-repository";
+import { singaporeDateKey } from "@/lib/date-safety";
 import { humanizeDay } from "@/lib/labels";
 
 function slotMessage(slot: { day: string; date: string; start: string; end: string }) {
@@ -10,7 +11,7 @@ function slotMessage(slot: { day: string; date: string; start: string; end: stri
 
 export default async function AppointmentCommandCentrePage({ searchParams }: { searchParams?: { lead?: string } }) {
   const settings = await getAppointmentSettings();
-  const startDate = new Date().toISOString().slice(0, 10);
+  const startDate = singaporeDateKey();
   const slots = findAppointmentSlots(settings, "site_discussion", startDate, 7).slice(0, 8);
   const leadId = searchParams?.lead;
 

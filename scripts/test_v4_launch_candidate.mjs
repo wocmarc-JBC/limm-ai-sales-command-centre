@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertNoTrackedOrPackagedGeneratedArtifacts, isGeneratedFolderPath } from "./generated_folder_guard.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -23,6 +24,7 @@ function exists(relativePath) {
 function walk(dir, output = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
+    if (entry.isDirectory() && isGeneratedFolderPath(path.relative(root, full))) continue;
     output.push(full);
     if (entry.isDirectory()) walk(full, output);
   }
@@ -119,7 +121,7 @@ for (const file of walk(root).filter((item) => /\.(ts|tsx)$/.test(item) && /^(ap
 
 const allPaths = walk(root).map((file) => path.relative(root, file));
 assert(!exists(".env"), ".env must not be present.");
-assert(!allPaths.some((file) => /^node_modules[\\/]|^\.next[\\/]|(^|[\\/])(__pycache__|cache|dist|build|coverage)($|[\\/])/i.test(file)), "Generated cache/dependency/build folder found.");
+assertNoTrackedOrPackagedGeneratedArtifacts({ root, assert });
 assert(!allPaths.some((file) => /LIMM_AI_Sales_Agent_v2/i.test(file)), "Old v2 folder copied into v3.");
 
 console.log("PASS: v4 launch candidate tests passed.");

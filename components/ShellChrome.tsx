@@ -11,28 +11,56 @@ import { isReviewRouteEnabled } from "@/lib/review-route";
 
 const appNavGroups = [
   {
-    title: "Command",
+    title: "Today",
     items: [
+      { href: "/", label: "Boss Daily Brief" },
       { href: "/command-core", label: "Command Core" },
-      { href: "/inbox", label: "WhatsApp Inbox" }
+      { href: "/inbox", label: "WhatsApp Inbox" },
+      { href: "/followups", label: "Follow-Ups" },
+      { href: "/appointments", label: "Appointments" }
     ]
   },
   {
-    title: "Sales",
+    title: "Sales Pipeline",
     items: [
-      { href: "/followups", label: "Follow-Ups" },
-      { href: "/appointments", label: "Appointments" },
-      { href: "/quotation-readiness", label: "Quotation Review" },
       { href: "/sales-pipeline", label: "Sales Pipeline" },
+      { href: "/leads", label: "Lead Inbox" },
+      { href: "/quotation-readiness", label: "Quotation Review" },
+      { href: "/approvals", label: "Boss Review Gate" }
+    ]
+  },
+  {
+    title: "Delivery",
+    items: [
+      { href: "/delivery", label: "Do Not Start Gate" },
+      { href: "/client-files", label: "Client Files" },
+      { href: "/appointments", label: "Appointments" }
+    ]
+  },
+  {
+    title: "Money",
+    items: [
+      { href: "/sales-collection", label: "Collection Queue" },
+      { href: "/targets", label: "Targets" },
       { href: "/reports", label: "Boss Report" }
     ]
   },
   {
     title: "Admin",
     items: [
-      { href: "/settings", label: "Settings" }
+      { href: "/settings", label: "Settings" },
+      { href: "/install", label: "Install App" },
+      { href: "/audit-log", label: "Audit Log" }
     ]
   }
+] as const;
+
+const mobileNavItems = [
+  { href: "/", label: "Today" },
+  { href: "/sales-pipeline", label: "Pipeline" },
+  { href: "/delivery", label: "Delivery" },
+  { href: "/sales-collection", label: "Money" },
+  { href: "/settings", label: "Admin" }
 ] as const;
 
 const reviewNavItems = [
@@ -107,8 +135,8 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
   const isTemporaryReviewRoute = isReviewRouteEnabled() && pathname === "/review-chatgpt-ui";
   const isLoginRoute = pathname === "/login";
   const mainClassName = isTemporaryReviewRoute
-    ? "mx-auto max-w-[1440px] px-4 pb-10 pt-48 md:ml-64 md:px-8 md:pt-8 xl:px-10"
-    : "mx-auto max-w-[1440px] px-4 pb-10 pt-36 md:ml-64 md:px-8 md:pt-8 xl:px-10";
+    ? "mx-auto max-w-[1440px] px-4 pb-28 pt-48 md:ml-64 md:px-8 md:pb-10 md:pt-8 xl:px-10"
+    : "mx-auto max-w-[1440px] px-4 pb-28 pt-36 md:ml-64 md:px-8 md:pb-10 md:pt-8 xl:px-10";
 
   useEffect(() => {
     if (auth.mode === "Mock Mode") {
@@ -159,8 +187,8 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
                     const itemKey = `${group.title}-${item.label}`;
                     const hrefBase = "href" in item && item.href ? item.href.split("#")[0] : "";
                     const active = hrefBase
-                      ? hrefBase === "/command-core"
-                        ? pathname === "/" || pathname.startsWith("/command-core") || pathname.startsWith("/dashboard")
+                      ? hrefBase === "/"
+                        ? pathname === "/"
                         : pathname.startsWith(hrefBase)
                       : false;
                     const className = `block whitespace-nowrap rounded-xl border px-3 py-2.5 text-[15px] transition ${
@@ -178,7 +206,7 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
                     if (item.href.includes("#")) {
                       return <a key={itemKey} href={item.href} className={className}>{item.label}</a>;
                     }
-                    return <Link key={itemKey} href={item.href} className={className}>{item.label}</Link>;
+                    return <Link key={itemKey} href={item.href as any} className={className}>{item.label}</Link>;
                   })}
                 </div>
               ))}
@@ -187,6 +215,26 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
       <AuthGate mode={auth.mode} initialAuthenticated={auth.authenticated}>
         <main className={mainClassName}>{children}</main>
       </AuthGate>
+      {!isTemporaryReviewRoute && !isLoginRoute ? (
+        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-command-line bg-command-bg/95 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-command backdrop-blur-xl md:hidden">
+          {mobileNavItems.map((item) => {
+            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href as any}
+                className={`mx-0.5 min-h-12 rounded-lg border px-1 py-1.5 text-center text-[11px] font-semibold leading-tight transition ${
+                  active
+                    ? "border-command-cyan/60 bg-command-cyan/10 text-command-text"
+                    : "border-transparent text-command-muted hover:border-command-line hover:bg-command-card"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
     </div>
   );
 }

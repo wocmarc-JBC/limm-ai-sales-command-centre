@@ -29,6 +29,7 @@ const collectionPage = read("app/sales-collection/page.tsx");
 const targetsPage = read("app/targets/page.tsx");
 const reportsPage = read("app/reports/page.tsx");
 const quotationPage = read("app/quotation-readiness/page.tsx");
+const approvalsPage = read("app/approvals/page.tsx");
 const migration = read("supabase/migrations/020_v6_3_sales_collection_command_centre.sql");
 const migrationOrder = read("supabase/MIGRATION_ORDER.md");
 const packageJson = read("package.json");
@@ -122,8 +123,8 @@ for (const phrase of [
   'href: "/sales-pipeline"',
   'href: "/sales-collection"',
   'href: "/targets"',
-  "Client Files",
-  "disabled: true"
+  "Collection Queue",
+  "Money"
 ]) {
   assert(shell.includes(phrase), `shell navigation missing ${phrase}`);
 }
@@ -141,14 +142,18 @@ for (const phrase of [
 }
 
 for (const phrase of [
-  "Sales & Collection",
+  "Collection Queue",
   "Manual non-GST tracking",
+  "JBC default schedule",
+  "LIMM Works custom milestone",
+  "Amount due",
+  "Due date",
+  "Overdue days",
+  "Payment milestone",
+  "Chase status",
   "Outstanding Receivables",
-  "Overdue Payments",
   "Won Projects",
-  "Recent Payments",
-  "Void instead of delete",
-  "Follow-Up Due"
+  "Recent Payments"
 ]) {
   assert(collectionPage.includes(phrase), `sales collection page missing ${phrase}`);
 }
@@ -185,13 +190,20 @@ for (const phrase of [
 }
 
 for (const phrase of [
-  "Manual Quotation Tracking",
-  "manualQuotationStatuses",
-  "Manual quotation status",
-  "Quoted amount",
-  "manual only / no amount entered"
+  "Quotation Readiness",
+  "Ready for Quotation Review",
+  "Boss Review Required",
+  "QuotationReadinessGateActions"
 ]) {
-  assert(quotationPage.includes(phrase), `manual quotation tracking UI missing ${phrase}`);
+  assert(quotationPage.includes(phrase), `quotation review UI missing ${phrase}`);
+}
+
+for (const phrase of [
+  "Boss Review Gate",
+  "Quotation Sent / Quoted",
+  "timestamp, user, action, and note"
+]) {
+  assert(approvalsPage.includes(phrase), `boss review gate UI missing ${phrase}`);
 }
 
 for (const phrase of [

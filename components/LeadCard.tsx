@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { evaluateBookingReadiness } from "@/lib/calendar-booking";
 import type { Lead, LeadMessage } from "@/lib/types";
+import { parseSafeDate, SINGAPORE_TIME_ZONE } from "@/lib/date-safety";
 import { humanizeLabel } from "@/lib/labels";
 import { formatFullPhoneForProtectedApp, formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadFacts } from "@/lib/lead-facts";
+import { getLeadRiskBadges, riskBadgeClass } from "@/lib/risk-badges";
 import { calculateLeadLevel } from "@/lib/sales-control";
 import { matchQuestionBankIntent } from "@/lib/whatsapp-question-bank";
 import { StatusBadge } from "./StatusBadge";
@@ -15,9 +17,10 @@ function snippet(text: string) {
 }
 
 function compactTimestamp(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+  const date = parseSafeDate(value);
+  if (!date) return "";
   return date.toLocaleString("en-SG", {
+    timeZone: SINGAPORE_TIME_ZONE,
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -107,12 +110,13 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
   const displayName = formatLeadDisplayName(lead);
   const fullPhone = formatFullPhoneForProtectedApp(lead.phone) || "Phone pending";
   const scope = facts.scopeSummary.value || lead.serviceType || "Renovation scope pending";
-  const stage = booking.appointmentIntent ? "Appointment requested" : lead.status;
+  const stage = booking.appointmentIntent ? "Appointment Requested" : lead.status;
   const whatsAppPreview = latestWhatsAppPreview(latestWhatsAppMessage);
   const questionCategory = questionMatch && questionMatch.score > 0 && questionMatch.entry.intent_key !== "unsupported"
     ? questionMatch.entry.category
     : undefined;
   const { visibleBadges, hiddenBadgeCount } = compactPriorityBadges(lead, stage, leadLevel, isWhatsapp, questionCategory);
+  const riskBadges = getLeadRiskBadges(lead);
 
   return (
     <article className="mission-panel command-hover-lift rounded-2xl p-5 transition hover:border-command-cyan/70 hover:shadow-glow">
@@ -168,7 +172,13 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <div>
           <p className="text-sm font-semibold text-command-muted">Risk</p>
-          <div className="mt-2 flex flex-wrap gap-2">{chips(lead.riskFlags, "No major risk flagged")}</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {riskBadges.length ? riskBadges.map((badge) => (
+              <span key={badge.key} className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${riskBadgeClass(badge)}`}>
+                {badge.label}
+              </span>
+            )) : chips(lead.riskFlags, "No major risk flagged")}
+          </div>
         </div>
         <div>
           <p className="text-sm font-semibold text-command-muted">Missing</p>

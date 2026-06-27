@@ -6,6 +6,7 @@ import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { listPaymentRecords, listProjectAccounts } from "@/lib/data/sales-collection-repository";
+import { daysBetweenSingaporeDates } from "@/lib/date-safety";
 import { formatFullPhoneForProtectedApp, formatLeadDisplayName, leadSubtitle } from "@/lib/lead-display";
 import { buildLeadFacts } from "@/lib/lead-facts";
 import { buildSingaporeMissionMapData } from "@/lib/mission-map";
@@ -98,17 +99,8 @@ function ResourcePill({ label, value, href, tone }: { label: string; value: numb
   );
 }
 
-function daysBetween(today: Date, value: string | null | undefined) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  return Math.round((target - start) / 86400000);
-}
-
 function bucketForDate(today: Date, value: string | null | undefined): TimelineItem["bucket"] | null {
-  const diff = daysBetween(today, value);
+  const diff = daysBetweenSingaporeDates(value, today);
   if (diff === null) return null;
   if (diff < 0) return "Overdue";
   if (diff === 0) return "Today";
