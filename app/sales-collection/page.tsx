@@ -179,7 +179,7 @@ export default async function SalesCollectionPage() {
         <article className="mission-panel rounded-2xl p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">Recent Payments</p>
           <div className="mt-4 space-y-3">
-            {activePaymentRows.length ? activePaymentRows.slice(0, 6).map((payment) => (
+            {activePaymentRows.length ? activePaymentRows.map((payment) => (
               <div key={payment.id} className="rounded-xl border border-command-line bg-command-bg/55 p-4 text-sm">
                 <div className="flex justify-between gap-3">
                   <p className="font-semibold text-command-text">{payment.paymentType}</p>
@@ -252,7 +252,7 @@ export default async function SalesCollectionPage() {
                       <input type="hidden" name="project_id" value={project.id} />
                       <input type="hidden" name="checklist_key" value={item.key} />
                       <input type="hidden" name="note" value={`Confirmed from Collection Queue: ${item.label}`} />
-                      <ActionButton type="submit" tone="muted">{item.label}</ActionButton>
+                      <ActionButton type="submit" tone="muted" data-testid={`confirm-${item.key}-${project.id}`}>{item.label}</ActionButton>
                     </form>
                   ))}
                 </div>
