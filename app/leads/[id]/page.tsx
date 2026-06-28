@@ -319,7 +319,7 @@ export default async function LeadDetailPage({
               {latestQuotation ? `${latestQuotation.quotationNumber} / v${latestQuotation.versionNumber}` : "Create quotation package"}
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
-              Upload the actual quotation document, submit it for boss review, then manually mark sent and accepted from the quotation detail page. No automated pricing is generated here.
+              File upload is optional. Create the quotation package without a file when needed, or upload the actual quotation document before boss review. No automated pricing is generated here.
             </p>
           </div>
           {latestQuotation ? (

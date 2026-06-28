@@ -1022,15 +1022,12 @@ export async function createQuotationPackageAction(formData: FormData) {
   };
 
   const file = formData.get("file");
-  const hasSelectedQuotationFile = file instanceof File && file.name.trim().length > 0;
-  if (hasSelectedQuotationFile && file.size <= 0) {
-    redirectToQuotationFailure(leadId, "Selected quotation file is empty. Please choose a valid file or remove the file selection.");
-  }
-  if (hasSelectedQuotationFile && !allowedQuotationMimeTypes.has((file.type || "application/octet-stream").toLowerCase())) {
+  const hasValidQuotationFile = file instanceof File && file.name.trim().length > 0 && file.size > 0;
+  if (hasValidQuotationFile && !allowedQuotationMimeTypes.has((file.type || "application/octet-stream").toLowerCase())) {
     redirectToQuotationFailure(leadId, "Selected quotation file type is not supported. Please choose a PDF, Excel, Word, JPG, PNG, or WEBP file.");
   }
 
-  const quotation = hasSelectedQuotationFile
+  const quotation = hasValidQuotationFile
     ? await uploadDraftQuotation({
         ...baseInput,
         fileName: file.name,
