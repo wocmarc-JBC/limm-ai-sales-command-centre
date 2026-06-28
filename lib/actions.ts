@@ -95,6 +95,17 @@ import type { Permission } from "@/lib/auth/roles";
 import type { AiDraftReviewStatus, ApprovalStatus, Division, FollowUpStatus, LeadCategory, LeadFileCategory, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
 
 const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+const allowedQuotationMimeTypes = new Set([
+  "application/pdf",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp"
+]);
 
 function text(formData: FormData, key: string, fallback = "") {
   return String(formData.get(key) ?? fallback);
@@ -103,6 +114,10 @@ function text(formData: FormData, key: string, fallback = "") {
 function numberValue(formData: FormData, key: string, fallback = 0) {
   const value = Number(text(formData, key, String(fallback)));
   return Number.isFinite(value) ? value : fallback;
+}
+
+function redirectToQuotationFailure(leadId: string, message: string): never {
+  redirect(`/leads/${leadId}?quotationStatus=failed&message=${encodeURIComponent(message)}#quotation-package`);
 }
 
 function listValue(formData: FormData, key: string) {
@@ -1007,7 +1022,15 @@ export async function createQuotationPackageAction(formData: FormData) {
   };
 
   const file = formData.get("file");
-  const quotation = file instanceof File && file.name
+  const hasSelectedQuotationFile = file instanceof File && file.name.trim().length > 0;
+  if (hasSelectedQuotationFile && file.size <= 0) {
+    redirectToQuotationFailure(leadId, "Selected quotation file is empty. Please choose a valid file or remove the file selection.");
+  }
+  if (hasSelectedQuotationFile && !allowedQuotationMimeTypes.has((file.type || "application/octet-stream").toLowerCase())) {
+    redirectToQuotationFailure(leadId, "Selected quotation file type is not supported. Please choose a PDF, Excel, Word, JPG, PNG, or WEBP file.");
+  }
+
+  const quotation = hasSelectedQuotationFile
     ? await uploadDraftQuotation({
         ...baseInput,
         fileName: file.name,

@@ -91,6 +91,7 @@ const aiReviewActions: Array<{
 
 const quotationInputClass = "rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text";
 type DeleteStatus = "softDeleted" | "permissionDenied" | "restored" | "hardDeleted" | "failed";
+type QuotationStatus = "failed";
 
 function getAiStatus(openAi: ReturnType<typeof getOpenAiBrainRuntime>) {
   if (!openAi.dryRunEnabled) return "Off";
@@ -133,6 +134,8 @@ export default async function LeadDetailPage({
     uploadLink?: string;
     metaMessageId?: string;
     deleteStatus?: DeleteStatus;
+    quotationStatus?: QuotationStatus;
+    message?: string;
     created?: string;
   };
 }) {
@@ -175,6 +178,10 @@ export default async function LeadDetailPage({
     }
   };
   const activeDeleteFeedback = searchParams?.deleteStatus ? deleteFeedback[searchParams.deleteStatus] : null;
+  const quotationFailureMessage =
+    searchParams?.quotationStatus === "failed"
+      ? searchParams.message || "Quotation package was not created. Please check the file and try again."
+      : "";
   const readiness = await getQuotationReadinessForLead(lead.id);
   const quotationPackages = await listQuotationPackagesForLead(lead.id, { includeTestDemo: true });
   const latestQuotation = quotationPackages[0] ?? null;
@@ -340,6 +347,13 @@ export default async function LeadDetailPage({
               <p className="text-command-muted">Sent</p>
               <p className="mt-1 font-semibold text-command-text">{latestQuotation.sentAt || "Not sent"}</p>
             </div>
+          </div>
+        ) : null}
+
+        {quotationFailureMessage ? (
+          <div className="mt-5 rounded-xl border border-command-red/60 bg-command-red/10 p-4 text-command-red" data-testid="quotation-package-failed-feedback">
+            <p className="font-semibold">Quotation package was not created</p>
+            <p className="mt-1 text-sm">{quotationFailureMessage}</p>
           </div>
         ) : null}
 
