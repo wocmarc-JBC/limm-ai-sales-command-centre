@@ -43,6 +43,7 @@ const requiredPages = [
   ["app/client-files/page.tsx", "Client Files"],
   ["app/reports/page.tsx", "Reports"],
   ["app/settings/page.tsx", "Settings"],
+  ["app/system-health/page.tsx", "System Health"],
   ["app/audit-log/page.tsx", "Audit Log"],
   ["app/review-chatgpt-ui/page.tsx", "ChatGPT UI Review"]
 ];
@@ -182,6 +183,33 @@ assert(actionsSource.includes('deleteStatus: "restored"'), "Restore action must 
 assert(actionsSource.includes('deleteStatus: "failed"'), "Hard delete guard failures must redirect with failed feedback.");
 assert(actionsSource.includes('confirmation !== "PERMANENT DELETE"'), "Hard delete must require exact PERMANENT DELETE confirmation.");
 assert(actionsSource.includes("!lead?.deletedAt"), "Hard delete action must verify prior soft delete.");
+
+const packageJson = read("package.json");
+const fullSchemaVerifier = read("scripts/verify_full_supabase_schema.mjs");
+const fullSchemaVerifierTest = read("scripts/test_full_supabase_schema_verifier.mjs");
+const systemHealthPage = read("app/system-health/page.tsx");
+assert(packageJson.includes('"verify:full-supabase": "node scripts/verify_full_supabase_schema.mjs"'), "Package must expose verify:full-supabase.");
+for (const phrase of [
+  "STAGING_SUPABASE_DB_URL || process.env.SUPABASE_DB_URL",
+  "profiles",
+  "quotation_packages",
+  "deleted_at",
+  "intake_profile",
+  "quotation_packages_lead_number_version_idx",
+  "storage.buckets",
+  "SKIP: full Supabase schema verification not run",
+  "Missing columns:",
+  "019_v6_ultimate_command_centre.sql"
+]) {
+  assert(fullSchemaVerifier.includes(phrase), `Full schema verifier missing ${phrase}`);
+}
+for (const phrase of ["Missing column should fail", "Missing table should fail", "No DB URL verifier path should exit 0", "Verifier must not print DB URL or password", "Verifier must remain read-only"]) {
+  assert(fullSchemaVerifierTest.includes(phrase), `Full schema verifier tests missing ${phrase}`);
+}
+for (const phrase of ["App version", "Data mode", "Supabase mode", "WhatsApp health", "Price guide automation", "Calendar auto-booking", "Schema warning"]) {
+  assert(systemHealthPage.includes(phrase), `System Health page missing ${phrase}`);
+}
+assert(read("app/settings/page.tsx").includes("/system-health"), "Settings must link to System Health.");
 
 const mockData = read("lib/mock-data.ts");
 assert(/id:\s*"lead-003"[\s\S]{0,280}division:\s*"LIMM Works"[\s\S]{0,280}propertyType:\s*"Commercial clinic"/.test(mockData), "Commercial clinic mock lead must be classified under LIMM Works.");
