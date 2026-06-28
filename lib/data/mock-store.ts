@@ -1,6 +1,6 @@
 import { defaultAppointmentSettings } from "@/lib/appointment-engine";
 import { buildQuotationReadiness } from "@/lib/quotation-readiness";
-import { approvalRequests, auditLogs, followUps, mockLeads, mockPaymentRecords, mockProjectAccounts } from "@/lib/mock-data";
+import { approvalRequests, auditLogs, followUps, mockLeads, mockPaymentRecords, mockProjectAccounts, quotationPackages } from "@/lib/mock-data";
 import type {
   ApprovalRequest,
   AppointmentSettings,
@@ -14,6 +14,7 @@ import type {
   MonthlySalesTarget,
   PaymentRecord,
   ProjectAccount,
+  QuotationPackage,
   QuotationReadinessRecord
 } from "@/lib/types";
 
@@ -28,6 +29,7 @@ type MockStore = {
   leadUploadLinks: LeadUploadLink[];
   projectAccounts: ProjectAccount[];
   paymentRecords: PaymentRecord[];
+  quotationPackages: QuotationPackage[];
   monthlyTargets: MonthlySalesTarget[];
   quotationReadiness: QuotationReadinessRecord[];
   appointmentSettings: AppointmentSettings;
@@ -54,6 +56,7 @@ function createStore(): MockStore {
     leadUploadLinks: [],
     projectAccounts: clone(mockProjectAccounts),
     paymentRecords: clone(mockPaymentRecords),
+    quotationPackages: clone(quotationPackages),
     monthlyTargets: [],
     quotationReadiness: mockLeads.map((lead) => {
       const readiness = buildQuotationReadiness(lead);

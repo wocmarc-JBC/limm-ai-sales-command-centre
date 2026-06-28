@@ -1,0 +1,185 @@
+{
+  "qaRunId": "QA_RUN_boss_ops_review_expanded",
+  "runTarget": "Local Next.js dev server",
+  "dataMode": "QA_E2E_MODE mock data / dry-run external actions",
+  "routesTested": [
+    "/",
+    "/command-core",
+    "/inbox",
+    "/followups",
+    "/appointments",
+    "/sales-pipeline",
+    "/leads",
+    "/quotation-readiness",
+    "/quotations",
+    "/approvals",
+    "/delivery",
+    "/client-files",
+    "/sales-collection",
+    "/targets",
+    "/reports",
+    "/settings",
+    "/install",
+    "/audit-log",
+    "/data-hygiene",
+    "mobile responsive bottom nav",
+    "/manifest.webmanifest",
+    "/api/whatsapp/health"
+  ],
+  "buttonsTested": [
+    "Create Quotation Package",
+    "Upload Draft Quotation",
+    "Submit Quotation for Boss Review",
+    "Approve Quote",
+    "Mark Quotation Sent",
+    "Mark Quote Accepted",
+    "Create Quotation Package",
+    "Upload Draft Quotation",
+    "Need Site Visit First",
+    "Upload revised quotation v2",
+    "Submit Quotation for Boss Review",
+    "Approve Quote",
+    "Mark Quotation Sent",
+    "Create Quotation Package",
+    "Upload Draft Quotation",
+    "Submit Quotation for Boss Review",
+    "Approve Quote",
+    "Mark Quotation Sent",
+    "Mark Quote Accepted",
+    "Record Deposit Received",
+    "Record progress payment",
+    "Record final payment",
+    "Confirm MCST approval",
+    "Confirm protection arranged",
+    "Create Quotation Package",
+    "Upload Draft Quotation",
+    "Request Revision",
+    "Upload revised quotation v2",
+    "Submit Quotation for Boss Review",
+    "Approve Quote",
+    "Mark Quotation Sent",
+    "Create Quotation Package",
+    "Upload Draft Quotation",
+    "Ask For More Info",
+    "Upload revised quotation v2",
+    "Reject / Hold",
+    "Upload revised quotation v2",
+    "Submit Quotation for Boss Review",
+    "Approve Quote",
+    "Mark Client Rejected",
+    "Data Hygiene preview suspected records",
+    "Soft archive QA/test records",
+    "Restore wrongly flagged data-hygiene record"
+  ],
+  "workflows": [
+    {
+      "name": "Normal condo quotation accepted creates project/payment schedule",
+      "status": "PASS",
+      "notes": [
+        "Project/payment schedule appears after manual acceptance."
+      ]
+    },
+    {
+      "name": "Do Not Start Gate shows blockers clearly",
+      "status": "PASS",
+      "notes": [
+        "Condo start blockers are visible after quote acceptance."
+      ]
+    },
+    {
+      "name": "Landed/A&A site-visit-first workflow",
+      "status": "PASS",
+      "notes": [
+        "Risk badge shown; site visit action audited; revised quote manually sent after boss approval."
+      ]
+    },
+    {
+      "name": "JBC carpentry 50/40/10 and deposit blocker",
+      "status": "PASS",
+      "notes": [
+        "Deposit/progress/final milestones created; deposit receipt clears deposit blocker."
+      ]
+    },
+    {
+      "name": "Condo MCST/protection start blockers",
+      "status": "PASS",
+      "notes": [
+        "MCST and protection confirmations update the Do Not Start Gate."
+      ]
+    },
+    {
+      "name": "Revision v1 to approved v2",
+      "status": "PASS",
+      "notes": [
+        "v1 requested revision; v2 submitted, approved, and manually marked sent."
+      ]
+    },
+    {
+      "name": "Client rejected quote creates no project/payment schedule",
+      "status": "PASS",
+      "notes": [
+        "Manual rejection recorded; collection queue remains clean."
+      ]
+    },
+    {
+      "name": "Cannot mark quote sent before boss approval",
+      "status": "PASS",
+      "notes": []
+    }
+  ],
+  "roleTests": [
+    {
+      "role": "QA Sales",
+      "status": "PASS",
+      "notes": [
+        "Approve Quote is disabled."
+      ]
+    },
+    {
+      "role": "QA Project",
+      "status": "PASS",
+      "notes": [
+        "Project persona uses viewer-level permission and cannot approve."
+      ]
+    },
+    {
+      "role": "QA Admin",
+      "status": "PASS",
+      "notes": [
+        "Approve Quote is enabled."
+      ]
+    },
+    {
+      "role": "QA Boss",
+      "status": "PASS",
+      "notes": [
+        "Boss approved a submitted quotation package."
+      ]
+    }
+  ],
+  "migrationReadiness": [
+    "024_quotation_packages.sql is listed in MIGRATION_ORDER.md.",
+    "Local migration DDL includes quotation_packages table, required workflow columns, RLS enablement, and read/write policies.",
+    "Live/staging command added: npm run verify:quotation-migration with SUPABASE_DB_URL or STAGING_SUPABASE_DB_URL."
+  ],
+  "safetyChecks": [
+    "QA/STAGING banner visible in QA_E2E_MODE.",
+    "WhatsApp health confirms no public auto-reply recommendation, no calendar auto-booking, and no price-guide automation.",
+    "No hard delete action was used during data hygiene cleanup."
+  ],
+  "dirtyDataChecks": [
+    "Serene-like fake/demo unlinked payment is hidden from Collection Queue by default.",
+    "Dirty QA records are visible in Data Hygiene preview.",
+    "Dirty QA records remain hidden from Boss Daily Brief by default after restore review because they remain marked test/demo.",
+    "Cleanup and restore actions appear in audit log."
+  ],
+  "skippedTests": [
+    "Authenticated live Supabase write/browser specs are skipped unless SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD are provided.",
+    "Live/staging quotation_packages DB verification is skipped unless SUPABASE_DB_URL or STAGING_SUPABASE_DB_URL is provided to npm run verify:quotation-migration."
+  ],
+  "screenshots": [],
+  "knownTodos": [
+    "QA Project persona uses viewer-level permissions in QA_E2E_MODE until a dedicated production project role is added to Supabase role constraints.",
+    "This Playwright suite runs against mock/QA mode by default; staging Supabase schema readiness is covered by npm run verify:quotation-migration when DB URL is supplied."
+  ]
+}

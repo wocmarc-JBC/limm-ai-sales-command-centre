@@ -26,6 +26,7 @@ const appNavGroups = [
       { href: "/sales-pipeline", label: "Sales Pipeline" },
       { href: "/leads", label: "Lead Inbox" },
       { href: "/quotation-readiness", label: "Quotation Review" },
+      { href: "/quotations", label: "Quotations" },
       { href: "/approvals", label: "Boss Review Gate" }
     ]
   },
@@ -48,6 +49,7 @@ const appNavGroups = [
     title: "Admin",
     items: [
       { href: "/settings", label: "Settings" },
+      { href: "/data-hygiene", label: "Data Hygiene" },
       { href: "/install", label: "Install App" },
       { href: "/audit-log", label: "Audit Log" }
     ]
@@ -126,7 +128,17 @@ function ShellStatus({
   );
 }
 
-export function ShellChrome({ auth, children }: { auth: AuthContext; children: React.ReactNode }) {
+export function ShellChrome({
+  auth,
+  children,
+  qaE2eMode = false,
+  qaRunId = ""
+}: {
+  auth: AuthContext;
+  children: React.ReactNode;
+  qaE2eMode?: boolean;
+  qaRunId?: string;
+}) {
   const pathname = usePathname();
   const [clientAuthenticated, setClientAuthenticated] = useState(auth.authenticated || auth.mode === "Mock Mode");
   const isTemporaryReviewRoute = isReviewRouteEnabled() && pathname === "/review-chatgpt-ui";
@@ -159,6 +171,11 @@ export function ShellChrome({ auth, children }: { auth: AuthContext; children: R
   return (
     <div className="min-h-screen">
       <aside className="thin-scrollbar fixed inset-x-0 top-0 z-20 border-b border-command-line bg-command-bg/90 px-4 py-3 shadow-command backdrop-blur-xl md:bottom-0 md:left-0 md:right-auto md:h-screen md:w-64 md:overflow-y-auto md:overscroll-contain md:border-b-0 md:border-r md:px-5 md:py-6">
+        {qaE2eMode ? (
+          <div className="mb-4 rounded-xl border border-command-amber/60 bg-command-amber/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-command-amber" data-testid="qa-e2e-banner">
+            QA / staging dry-run {qaRunId ? `- ${qaRunId}` : ""}
+          </div>
+        ) : null}
         <div className="flex items-center justify-between gap-3 md:block">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">LIMM Works</p>

@@ -1,5 +1,7 @@
 import { getDataMode, hasSupabaseEnv } from "@/lib/data/data-source";
 import { getSupabaseServerClient } from "@/lib/data/supabase-server";
+import { isQaE2EMode, QA_E2E_RUN_ID } from "@/lib/qa-e2e-mode";
+import { cookies } from "next/headers";
 import { can, type Permission, type UserRole } from "./roles";
 
 export type CurrentProfile = {
@@ -19,7 +21,26 @@ export type AuthContext = {
   rlsNotes: string;
 };
 
+function qaRoleFromCookie(): { role: UserRole; fullName: string; email: string } {
+  const role = cookies().get("qa_e2e_role")?.value;
+  if (role === "admin") return { role: "admin", fullName: "QA Admin", email: "qa.admin@limm.local" };
+  if (role === "sales") return { role: "sales", fullName: "QA Sales", email: "qa.sales@limm.local" };
+  if (role === "project") return { role: "viewer", fullName: "QA Project", email: "qa.project@limm.local" };
+  return { role: "boss", fullName: "QA Boss", email: "qa.boss@limm.local" };
+}
+
 export function getMockProfile(): CurrentProfile {
+  if (isQaE2EMode()) {
+    const qa = qaRoleFromCookie();
+    return {
+      id: `qa-${qa.role}-${QA_E2E_RUN_ID}`,
+      email: qa.email,
+      fullName: qa.fullName,
+      role: qa.role,
+      active: true
+    };
+  }
+
   return {
     id: "mock-marcus",
     email: "marcus.mock@limm.local",
@@ -38,7 +59,9 @@ export async function getCurrentProfile(): Promise<AuthContext> {
       profile: getMockProfile(),
       authEnabled: false,
       rlsExpected: false,
-      rlsNotes: "Mock Mode uses demo boss access. Supabase Auth/RLS is not active without env vars."
+      rlsNotes: isQaE2EMode()
+        ? "QA_E2E_MODE uses dedicated mock boss access and never mutates production data."
+        : "Mock Mode uses demo boss access. Supabase Auth/RLS is not active without env vars."
     };
   }
 

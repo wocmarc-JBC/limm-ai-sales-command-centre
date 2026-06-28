@@ -1,5 +1,5 @@
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
-import type { ApprovalRequest, Lead, PaymentRecord, ProjectAccount } from "@/lib/types";
+import type { ApprovalRequest, Lead, PaymentRecord, ProjectAccount, QuotationPackage } from "@/lib/types";
 
 export type ProductionVisibilityOptions = {
   includeTestDemo?: boolean;
@@ -13,10 +13,12 @@ export const productionVisibilityNoiseTerms = [
   "miamamun",
   "semon",
   "dummy",
-  "sample"
+  "sample",
+  "generated test",
+  "test approval"
 ] as const;
 
-export const productionVisibilityNoisePattern = /(?:\b(?:test|qa|demo|dummy|sample)\b|v3[_ -]?live[_ -]?test|miamamun|semon)/i;
+export const productionVisibilityNoisePattern = /(?:\b(?:test|qa|demo|dummy|sample)\b|v3[_ -]?live[_ -]?test|miamamun|semon|generated\s+test|test\s+approval)/i;
 
 function stringify(value: unknown) {
   if (value === null || value === undefined) return "";
@@ -89,6 +91,8 @@ export function filterApprovalsForProductionVisibility(
 }
 
 export function isProductionHiddenProject(project: ProjectAccount, visibleLeadIds?: Set<string>) {
+  if (project.isTest) return true;
+  if (project.archivedAt || project.deletedAt) return true;
   if (visibleLeadIds) {
     const linkedLeadIds = [project.leadId, project.sourceLeadId].filter(Boolean);
     if (linkedLeadIds.length && linkedLeadIds.every((leadId) => !visibleLeadIds.has(leadId))) return true;
@@ -117,6 +121,7 @@ export function filterProjectsForProductionVisibility(
 }
 
 export function isProductionHiddenPayment(payment: PaymentRecord, visibleProjectIds?: Set<string>, visibleLeadIds?: Set<string>) {
+  if (payment.isTest) return true;
   if (visibleProjectIds && payment.projectId && !visibleProjectIds.has(payment.projectId)) return true;
   if (visibleLeadIds && payment.leadId && !visibleLeadIds.has(payment.leadId)) return true;
   return containsProductionVisibilityNoise(
@@ -128,6 +133,37 @@ export function isProductionHiddenPayment(payment: PaymentRecord, visibleProject
     payment.notes,
     payment.voidReason
   );
+}
+
+export function isProductionHiddenQuotationPackage(quotation: QuotationPackage, visibleLeadIds?: Set<string>) {
+  if (quotation.isTest) return true;
+  if (quotation.voidedAt || quotation.status === "Voided") return true;
+  if (visibleLeadIds && quotation.leadId && !visibleLeadIds.has(quotation.leadId)) return true;
+  return containsProductionVisibilityNoise(
+    quotation.id,
+    quotation.leadId,
+    quotation.clientName,
+    quotation.quotationNumber,
+    quotation.status,
+    quotation.preparedBy,
+    quotation.bossReviewedBy,
+    quotation.sentBy,
+    quotation.scopeSummary,
+    quotation.bossNotes,
+    quotation.revisionNotes,
+    quotation.clientNotes,
+    quotation.originalFileName,
+    quotation.storagePath,
+    quotation.qaRunId
+  );
+}
+
+export function filterQuotationPackagesForProductionVisibility(
+  quotations: QuotationPackage[],
+  options: ProductionVisibilityOptions & { visibleLeadIds?: Set<string> } = {}
+) {
+  if (options.includeTestDemo) return quotations;
+  return quotations.filter((quotation) => !isProductionHiddenQuotationPackage(quotation, options.visibleLeadIds));
 }
 
 export function filterPaymentsForProductionVisibility(

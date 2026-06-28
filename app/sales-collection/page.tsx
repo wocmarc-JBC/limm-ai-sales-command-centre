@@ -1,7 +1,7 @@
 import { ActionButton } from "@/components/ActionButton";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
-import { recordJobStartChecklistAction } from "@/lib/actions";
+import { recordJobStartChecklistAction, recordPaymentReceivedAction } from "@/lib/actions";
 import { buildCollectionQueue, buildDoNotStartGate, buildJbcDefaultPaymentSchedule, jobStartChecklistActions } from "@/lib/boss-ops";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listAuditLogs } from "@/lib/data/audit-repository";
@@ -179,7 +179,7 @@ export default async function SalesCollectionPage() {
         <article className="mission-panel rounded-2xl p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">Recent Payments</p>
           <div className="mt-4 space-y-3">
-            {activePaymentRows.length ? activePaymentRows.slice(0, 6).map((payment) => (
+            {activePaymentRows.length ? activePaymentRows.map((payment) => (
               <div key={payment.id} className="rounded-xl border border-command-line bg-command-bg/55 p-4 text-sm">
                 <div className="flex justify-between gap-3">
                   <p className="font-semibold text-command-text">{payment.paymentType}</p>
@@ -187,6 +187,14 @@ export default async function SalesCollectionPage() {
                 </div>
                 <p className="mt-1 text-command-muted">Status: {payment.status} | Due: {payment.dueDate || "Not set"} | Received: {payment.receivedDate || "Not received"}</p>
                 <p className="mt-1 text-command-subtle">Void instead of delete if this entry is wrong.</p>
+                {!payment.receivedDate ? (
+                  <form action={recordPaymentReceivedAction} className="mt-3">
+                    <input type="hidden" name="payment_id" value={payment.id} />
+                    <ActionButton type="submit" tone="muted" data-testid={`record-${payment.paymentType}-received-${payment.id}`}>
+                      Record {payment.paymentType} Received
+                    </ActionButton>
+                  </form>
+                ) : null}
               </div>
             )) : (
               <p className="rounded-xl border border-command-line bg-command-bg/55 p-4 text-command-muted">
@@ -244,7 +252,7 @@ export default async function SalesCollectionPage() {
                       <input type="hidden" name="project_id" value={project.id} />
                       <input type="hidden" name="checklist_key" value={item.key} />
                       <input type="hidden" name="note" value={`Confirmed from Collection Queue: ${item.label}`} />
-                      <ActionButton type="submit" tone="muted">{item.label}</ActionButton>
+                      <ActionButton type="submit" tone="muted" data-testid={`confirm-${item.key}-${project.id}`}>{item.label}</ActionButton>
                     </form>
                   ))}
                 </div>

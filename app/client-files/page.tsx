@@ -73,7 +73,8 @@ function shouldShowLead(input: {
 export default async function ClientFilesPage({ searchParams }: { searchParams?: { filter?: string } }) {
   const filter = searchParams?.filter || "all";
   const leads = await listLeads();
-  const files = await listAllLeadFiles();
+  const visibleLeadIds = new Set(leads.map((lead) => lead.id));
+  const files = (await listAllLeadFiles()).filter((file) => visibleLeadIds.has(file.leadId));
   const uploadLinksByLead = new Map<string, LeadUploadLink[]>(
     await Promise.all(leads.map(async (lead) => [lead.id, await listLeadUploadLinks(lead.id)] as const))
   );

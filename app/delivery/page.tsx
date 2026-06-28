@@ -93,7 +93,7 @@ export default async function DeliveryPage() {
                         <input type="hidden" name="project_id" value={project.id} />
                         <input type="hidden" name="checklist_key" value={item.key} />
                         <input type="hidden" name="note" value={`Confirmed from Delivery page: ${item.label}`} />
-                        <ActionButton type="submit" tone="muted">{item.label}</ActionButton>
+                        <ActionButton type="submit" tone="muted" data-testid={`confirm-${item.key}-${project.id}`}>{item.label}</ActionButton>
                       </form>
                     ))}
                   </div>

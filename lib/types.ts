@@ -39,6 +39,19 @@ export type ManualQuotationStatus =
   | "Rejected"
   | "Expired";
 
+export type QuotationPackageStatus =
+  | "Draft"
+  | "Submitted for Boss Review"
+  | "Boss Approved"
+  | "Revision Requested"
+  | "Rejected / Hold"
+  | "Sent to Client"
+  | "Client Reviewing"
+  | "Accepted"
+  | "Client Rejected"
+  | "Expired"
+  | "Voided";
+
 export type ProjectAccountStatus =
   | "Active"
   | "Deposit Pending"
@@ -310,6 +323,13 @@ export interface ProjectAccount {
   locationNotes?: string;
   createdAt: string;
   updatedAt?: string;
+  archivedAt?: string | null;
+  archivedBy?: string;
+  archivedReason?: string;
+  deletedAt?: string | null;
+  deletedBy?: string;
+  deleteReason?: string;
+  isTest?: boolean;
 }
 
 export interface PaymentRecord {
@@ -325,8 +345,51 @@ export interface PaymentRecord {
   voidedAt?: string | null;
   voidedBy?: string;
   voidReason?: string;
+  isTest?: boolean;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface QuotationPackage {
+  id: string;
+  leadId: string;
+  clientName: string;
+  quotationNumber: string;
+  versionNumber: number;
+  status: QuotationPackageStatus;
+  preparedBy: string;
+  preparedAt: string;
+  submittedForBossReviewAt: string | null;
+  bossReviewedAt: string | null;
+  bossReviewedBy: string;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  revisionRequestedAt: string | null;
+  sentAt: string | null;
+  sentBy: string;
+  acceptedAt: string | null;
+  rejectedByClientAt: string | null;
+  quotationAmount: number;
+  internalCostEstimate?: number | null;
+  marginEstimate?: number | null;
+  expiryDate: string | null;
+  scopeSummary: string;
+  bossNotes: string;
+  revisionNotes: string;
+  clientNotes: string;
+  fileId: string;
+  storageBucket: string;
+  storagePath: string;
+  originalFileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  createdAt: string;
+  updatedAt: string;
+  voidedAt?: string | null;
+  voidedBy?: string;
+  voidReason?: string;
+  qaRunId?: string;
+  isTest?: boolean;
 }
 
 export interface MonthlySalesTarget {

@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/data/audit-repository";
 import { saveLeadMessage } from "@/lib/data/lead-messages-repository";
 import { getLeadById, markLeadAwaitingClientAfterManualReply, pauseBotForLead } from "@/lib/data/leads-repository";
+import { isQaE2EMode, qaE2eSafetyMetadata } from "@/lib/qa-e2e-mode";
 
 function safeWhatsAppError(error: unknown) {
   if (error instanceof WhatsAppCloudApiSendError) {
@@ -51,6 +52,50 @@ export async function POST(request: Request) {
   const actorId = permission.auth.profile?.id ?? null;
   const adapter = new WhatsAppCloudApiAdapter();
   const payloadSummary = getWhatsAppSendPayloadSummary(lead.phone, body);
+
+  if (isQaE2EMode()) {
+    const saved = await saveLeadMessage({
+      leadId,
+      direction: "outbound",
+      body,
+      safeToSend: false,
+      whatsappStatus: "disabled",
+      metadata: {
+        manualReply: true,
+        manualTakeover: true,
+        clientTempId,
+        inboxJsonApiSend: true,
+        qaDryRun: true,
+        ...qaE2eSafetyMetadata()
+      }
+    });
+    await createAuditLog({
+      actorName: actor,
+      actorEmail,
+      actorId,
+      action: "whatsapp_manual_reply_qa_dry_run",
+      entityType: "lead",
+      entityId: leadId,
+      summary: "QA_E2E_MODE recorded manual WhatsApp reply without external send.",
+      metadata: {
+        toDigitsLength: payloadSummary.toDigitsLength,
+        bodyLength: payloadSummary.bodyLength,
+        clientTempIdPresent: Boolean(clientTempId),
+        ...qaE2eSafetyMetadata()
+      }
+    });
+    return NextResponse.json({
+      ok: true,
+      dryRun: true,
+      leadId,
+      messageId: saved.id,
+      providerMessageId: "",
+      whatsappStatus: "disabled",
+      createdAt: saved.createdAt,
+      body: saved.body,
+      clientTempId
+    });
+  }
 
   console.info("inbox_whatsapp_manual_reply_payload_summary", {
     leadId,

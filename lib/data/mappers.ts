@@ -10,6 +10,7 @@ import type {
   MonthlySalesTarget,
   PaymentRecord,
   ProjectAccount,
+  QuotationPackage,
   QuotationReadinessRecord
 } from "@/lib/types";
 
@@ -164,7 +165,14 @@ export function mapProjectRow(row: any): ProjectAccount {
     locationSource: row.location_source ?? "unknown",
     locationNotes: row.location_notes ?? "",
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    archivedAt: row.archived_at ?? null,
+    archivedBy: row.archived_by ?? "",
+    archivedReason: row.archived_reason ?? "",
+    deletedAt: row.deleted_at ?? null,
+    deletedBy: row.deleted_by ?? "",
+    deleteReason: row.delete_reason ?? "",
+    isTest: row.is_test ?? false
   };
 }
 
@@ -182,8 +190,53 @@ export function mapPaymentRow(row: any): PaymentRecord {
     voidedAt: row.voided_at ?? null,
     voidedBy: row.voided_by ?? "",
     voidReason: row.void_reason ?? "",
+    isTest: row.is_test ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at
+  };
+}
+
+export function mapQuotationPackageRow(row: any): QuotationPackage {
+  return {
+    id: row.id,
+    leadId: row.lead_id ?? "",
+    clientName: row.client_name ?? "",
+    quotationNumber: row.quotation_number ?? "",
+    versionNumber: Number(row.version_number ?? 1),
+    status: row.status ?? "Draft",
+    preparedBy: row.prepared_by ?? "",
+    preparedAt: row.prepared_at ?? row.created_at,
+    submittedForBossReviewAt: row.submitted_for_boss_review_at ?? null,
+    bossReviewedAt: row.boss_reviewed_at ?? null,
+    bossReviewedBy: row.boss_reviewed_by ?? "",
+    approvedAt: row.approved_at ?? null,
+    rejectedAt: row.rejected_at ?? null,
+    revisionRequestedAt: row.revision_requested_at ?? null,
+    sentAt: row.sent_at ?? null,
+    sentBy: row.sent_by ?? "",
+    acceptedAt: row.accepted_at ?? null,
+    rejectedByClientAt: row.rejected_by_client_at ?? null,
+    quotationAmount: Number(row.quotation_amount ?? 0),
+    internalCostEstimate: row.internal_cost_estimate ?? null,
+    marginEstimate: row.margin_estimate ?? null,
+    expiryDate: row.expiry_date ?? null,
+    scopeSummary: row.scope_summary ?? "",
+    bossNotes: row.boss_notes ?? "",
+    revisionNotes: row.revision_notes ?? "",
+    clientNotes: row.client_notes ?? "",
+    fileId: row.file_id ?? "",
+    storageBucket: row.storage_bucket ?? "client-files",
+    storagePath: row.storage_path ?? "",
+    originalFileName: row.original_file_name ?? "",
+    mimeType: row.mime_type ?? "",
+    fileSizeBytes: Number(row.file_size_bytes ?? 0),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at ?? row.created_at,
+    voidedAt: row.voided_at ?? null,
+    voidedBy: row.voided_by ?? "",
+    voidReason: row.void_reason ?? "",
+    qaRunId: row.qa_run_id ?? "",
+    isTest: row.is_test ?? false
   };
 }
 

@@ -307,6 +307,19 @@ from storage.buckets
 where id = 'client-files';
 ```
 
+## 024_quotation_packages.sql
+
+Purpose: Add versioned quotation packages for draft upload, boss review, manual sent/accepted tracking, and private quotation file metadata.
+Dependencies: migrations 002, 013, 016, 020, and 023.
+Safe to re-run: Yes. Uses `create table if not exists`, `create index if not exists`, and guarded policies.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_name = 'quotation_packages';
+```
+
 ## After All Migrations
 
 Run:

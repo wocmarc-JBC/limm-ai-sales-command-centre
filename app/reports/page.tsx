@@ -1,5 +1,6 @@
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
+import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
 import { listFollowUps } from "@/lib/data/followups-repository";
 import { listLeads } from "@/lib/data/leads-repository";
@@ -9,14 +10,16 @@ import { buildBossMonthlyReport, money, nonGstNote } from "@/lib/sales-collectio
 import { buildWeeklyBossReportDraft } from "@/lib/sales-learning";
 
 export default async function ReportsPage() {
-  const [leads, approvals, commandSummaries, followUpSummaries, quotationSummaries, followUps, salesCollection] = await Promise.all([
-    listLeads(),
-    listApprovalRequests(),
-    listCommandCoreLeadSummaries(80),
-    listFollowUpProtectionSummaries(80),
-    listQuotationReadinessSummaries(80),
-    listFollowUps(),
-    getSalesCollectionData()
+  const showTestDemoRecords = await getShowTestDemoRecordsPreference();
+  const leads = await listLeads({ includeTest: showTestDemoRecords });
+  const visibleLeadIds = new Set(leads.map((lead) => lead.id));
+  const [approvals, commandSummaries, followUpSummaries, quotationSummaries, followUps, salesCollection] = await Promise.all([
+    listApprovalRequests({ includeTestDemo: showTestDemoRecords, visibleLeadIds }),
+    listCommandCoreLeadSummaries(80, { includeTestDemo: showTestDemoRecords }),
+    listFollowUpProtectionSummaries(80, { includeTestDemo: showTestDemoRecords }),
+    listQuotationReadinessSummaries(80, { includeTestDemo: showTestDemoRecords }),
+    listFollowUps({ includeTest: showTestDemoRecords }),
+    getSalesCollectionData(undefined, { includeTestDemo: showTestDemoRecords })
   ]);
   const hotRatio = leads.length ? Math.round((leads.filter((lead) => lead.leadCategory === "Hot").length / leads.length) * 100) : 0;
   const weeklyDraft = buildWeeklyBossReportDraft(leads, followUps);
