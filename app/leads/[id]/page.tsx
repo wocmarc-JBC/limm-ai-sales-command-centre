@@ -133,6 +133,7 @@ export default async function LeadDetailPage({
     uploadLink?: string;
     metaMessageId?: string;
     deleteStatus?: DeleteStatus;
+    created?: string;
   };
 }) {
   const auth = await getCurrentProfile();
@@ -261,6 +262,12 @@ export default async function LeadDetailPage({
           <ActionButton type="submit" tone="muted">Move to Quotation Review</ActionButton>
         </form>
       </PageHeader>
+      {searchParams?.created ? (
+        <section className="mb-6 rounded-xl border border-command-green/50 bg-command-green/10 p-4 text-command-green" data-testid="manual-lead-created-feedback">
+          <p className="font-semibold">Manual lead created.</p>
+          <p className="mt-1 text-sm">No WhatsApp/email/calendar action was sent.</p>
+        </section>
+      ) : null}
       <section className="mt-6 rounded-lg border border-command-cyan/25 bg-command-card p-6 shadow-premium">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

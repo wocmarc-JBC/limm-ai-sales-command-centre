@@ -23,6 +23,12 @@ export default async function LeadInboxPage({ searchParams }: { searchParams?: {
   return (
     <>
       <PageHeader title="AI Lead Inbox" eyebrow="Reply queue">
+        <a
+          href="/leads/new"
+          className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover"
+        >
+          Create Manual Lead
+        </a>
         {views.map((item) => (
           <a
             key={item.key}

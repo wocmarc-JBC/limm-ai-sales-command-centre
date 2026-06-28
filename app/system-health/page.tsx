@@ -68,6 +68,12 @@ export default async function SystemHealthPage() {
     <>
       <PageHeader title="System Health" eyebrow="Read-only diagnostics">
         <a
+          href="/leads/new?template=qa"
+          className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover"
+        >
+          Create QA Test Lead
+        </a>
+        <a
           href="/api/whatsapp/health"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-cyan/60 bg-command-cyan/10 px-4 py-2 text-base font-semibold text-command-cyan transition hover:bg-command-cyan/15"
         >

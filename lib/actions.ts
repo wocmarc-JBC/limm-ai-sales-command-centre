@@ -36,6 +36,7 @@ import { hideTestFollowUp, listFollowUps, updateFollowUpStatus } from "@/lib/dat
 import {
   archiveLead,
   approveAppointmentBooking,
+  createManualLead,
   getLeadById,
   hardDeleteLead,
   listLeads,
@@ -91,7 +92,7 @@ import { setShowTestDemoRecordsPreference } from "@/lib/data-visibility-preferen
 import { getProductionLeadVisibilityReasons } from "@/lib/production-visibility";
 import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan, isProtectedLead } from "@/lib/test-lead-cleanup";
 import type { Permission } from "@/lib/auth/roles";
-import type { AiDraftReviewStatus, ApprovalStatus, FollowUpStatus, LeadFileCategory, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
+import type { AiDraftReviewStatus, ApprovalStatus, Division, FollowUpStatus, LeadCategory, LeadFileCategory, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
 
 const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 
@@ -102,6 +103,13 @@ function text(formData: FormData, key: string, fallback = "") {
 function numberValue(formData: FormData, key: string, fallback = 0) {
   const value = Number(text(formData, key, String(fallback)));
   return Number.isFinite(value) ? value : fallback;
+}
+
+function listValue(formData: FormData, key: string) {
+  return text(formData, key)
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function safeWhatsAppError(error: unknown) {
@@ -195,6 +203,52 @@ export async function setShowTestDemoRecordsAction(formData: FormData) {
   revalidatePath("/delivery");
   revalidatePath("/sales-collection");
   redirect("/settings#data-visibility");
+}
+
+export async function createManualLeadAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) {
+    redirect(`/leads/new?createStatus=failed&message=${encodeURIComponent(permission.error || "Permission denied.")}`);
+  }
+
+  const required = ["client_name", "phone", "source", "division", "property_type", "service_type", "scope_summary"];
+  const missing = required.filter((key) => !text(formData, key).trim());
+  if (missing.length) {
+    redirect(`/leads/new?createStatus=failed&message=${encodeURIComponent(`Missing required fields: ${missing.join(", ")}`)}`);
+  }
+
+  let leadId = "";
+  try {
+    const lead = await createManualLead(
+      {
+        clientName: text(formData, "client_name"),
+        phone: text(formData, "phone"),
+        source: text(formData, "source", "Manual / Internal"),
+        division: text(formData, "division", "LIMM Works") as Division,
+        propertyType: text(formData, "property_type"),
+        serviceType: text(formData, "service_type"),
+        scopeSummary: text(formData, "scope_summary"),
+        preferredContactTime: text(formData, "preferred_contact_time"),
+        leadCategory: text(formData, "lead_category", "Warm") as LeadCategory,
+        leadScore: numberValue(formData, "lead_score", 0),
+        riskFlags: listValue(formData, "risk_flags"),
+        missingInfo: listValue(formData, "missing_info"),
+        isTest: formData.get("is_test") === "on",
+        notes: text(formData, "notes")
+      },
+      permission.auth.profile?.fullName ?? "Marcus"
+    );
+    leadId = lead.id;
+
+    revalidatePath("/");
+    revalidatePath("/leads");
+    revalidatePath(`/leads/${lead.id}`);
+    revalidatePath("/audit-log");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Manual lead creation failed. No external action was sent.";
+    redirect(`/leads/new?createStatus=failed&message=${encodeURIComponent(message.slice(0, 220))}`);
+  }
+  redirect(`/leads/${encodeURIComponent(leadId)}?created=1`);
 }
 
 export async function updateLeadStatusAction(formData: FormData) {

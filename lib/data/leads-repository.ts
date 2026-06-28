@@ -9,9 +9,33 @@ import { buildLeadFacts, leadFactsToLeadPatch } from "@/lib/lead-facts";
 import { buildQuoteApprovalGate, isQuoteSentPatch } from "@/lib/boss-ops";
 import { isProductionHiddenLead } from "@/lib/production-visibility";
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
-import type { Lead, LeadFile, LeadIntakeProfile, LeadMessage, LeadStatus } from "@/lib/types";
+import type { Division, Lead, LeadCategory, LeadFile, LeadIntakeProfile, LeadMessage, LeadStatus } from "@/lib/types";
 
 type ListLeadsOptions = { includeInactive?: boolean; includeTest?: boolean };
+
+export class ManualLeadCreateError extends Error {
+  constructor(message = "Manual lead creation failed. No external message or booking was sent.") {
+    super(message);
+    this.name = "ManualLeadCreateError";
+  }
+}
+
+export type ManualLeadCreateInput = {
+  clientName: string;
+  phone: string;
+  source?: string;
+  division?: Division;
+  propertyType: string;
+  serviceType: string;
+  scopeSummary: string;
+  preferredContactTime?: string;
+  leadCategory?: LeadCategory;
+  leadScore?: number;
+  riskFlags?: string[];
+  missingInfo?: string[];
+  isTest?: boolean;
+  notes?: string;
+};
 
 function shouldShowLead(lead: Lead, options?: ListLeadsOptions) {
   if (!options?.includeInactive && (lead.deletedAt || lead.archivedAt || lead.isSpam)) return false;
@@ -120,6 +144,145 @@ export async function getLeadById(id: string) {
 
   const lead = getMockStore().leads.find((item) => item.id === id) ?? null;
   return lead ? mockClone(lead) : null;
+}
+
+function cleanList(values: string[] = []) {
+  return values.map((value) => value.trim()).filter(Boolean);
+}
+
+function manualLeadToRow(input: ManualLeadCreateInput, now: string) {
+  const isTest = Boolean(input.isTest);
+  const nextAction = "Review manually. No WhatsApp/email/calendar action was sent.";
+  const leadScore = Number.isFinite(input.leadScore) ? Number(input.leadScore) : 0;
+  return {
+    client_name: input.clientName.trim(),
+    phone: input.phone.trim(),
+    email: "",
+    source: input.source?.trim() || "Manual / Internal",
+    division: input.division || "LIMM Works",
+    property_type: input.propertyType.trim(),
+    service_type: input.serviceType.trim(),
+    scope_summary: input.scopeSummary.trim(),
+    lead_score: leadScore,
+    lead_category: input.leadCategory || "Warm",
+    status: "New Enquiry",
+    missing_info: cleanList(input.missingInfo),
+    risk_flags: cleanList(input.riskFlags),
+    boss_approval_needed: false,
+    appointment_suitable: false,
+    appointment_type: "initial_project_review",
+    appointment_readiness: 0,
+    quotation_readiness_score: 0,
+    next_action: nextAction,
+    preferred_contact_time: input.preferredContactTime?.trim() || "",
+    is_test: isTest,
+    is_spam: false,
+    lead_level: isTest ? "Spam/Test" : "Warm Lead",
+    mission_category: isTest ? "Test/Spam Cleanup" : "Sales Follow-Up",
+    conversation_summary: "Manual internal lead created from Command Centre.",
+    sales_stage: "New Lead",
+    sales_next_action: nextAction,
+    lead_source: input.source?.trim() || "Manual / Internal",
+    stage_notes: input.notes?.trim() || "",
+    created_at: now,
+    updated_at: now
+  };
+}
+
+export async function createManualLead(input: ManualLeadCreateInput, actor = "Marcus") {
+  const now = new Date().toISOString();
+  const row = manualLeadToRow(input, now);
+
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseAdminClient() ?? getSupabaseServerClient();
+    const { data, error } = await supabase!
+      .from("leads")
+      .insert(row)
+      .select("*")
+      .maybeSingle();
+
+    if (error || !data) {
+      throw new ManualLeadCreateError("Manual lead creation failed in Supabase. No WhatsApp/email/calendar action was sent.");
+    }
+
+    const lead = mapLeadRow(data);
+    await createAuditLog({
+      actorType: "boss",
+      actorName: actor,
+      action: "lead_manual_created",
+      entityType: "lead",
+      entityId: lead.id,
+      summary: "Manual internal lead created from Command Centre.",
+      beforeData: null,
+      afterData: { id: lead.id, clientName: lead.clientName, isTest: Boolean(lead.isTest), status: lead.status },
+      metadata: {
+        manualCreate: true,
+        noWhatsAppSend: true,
+        noEmailSend: true,
+        noCalendarBooking: true,
+        noPriceGuideAutomation: true,
+        isTest: Boolean(lead.isTest)
+      }
+    });
+    return lead;
+  }
+
+  const lead: Lead = {
+    id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    clientName: row.client_name,
+    phone: row.phone,
+    email: "",
+    source: row.source,
+    division: row.division as Division,
+    propertyType: row.property_type,
+    serviceType: row.service_type,
+    scopeSummary: row.scope_summary,
+    leadScore: row.lead_score,
+    leadCategory: row.lead_category as LeadCategory,
+    status: "New Enquiry",
+    missingInfo: row.missing_info,
+    aiRecommendedNextAction: row.next_action,
+    bossApprovalNeeded: false,
+    appointmentSuitable: false,
+    appointmentType: "initial_project_review",
+    appointmentReadiness: 0,
+    quotationReadiness: 0,
+    lastClientMessage: "",
+    lastReplyAt: null,
+    createdAt: now,
+    updatedAt: now,
+    preferredContactTime: row.preferred_contact_time,
+    riskFlags: row.risk_flags,
+    isTest: row.is_test,
+    isSpam: false,
+    leadLevel: row.lead_level as Lead["leadLevel"],
+    missionCategory: row.mission_category,
+    conversationSummary: row.conversation_summary,
+    salesStage: "New Lead",
+    salesNextAction: row.sales_next_action,
+    leadSource: row.lead_source,
+    stageNotes: row.stage_notes
+  };
+  getMockStore().leads.unshift(lead);
+  await createAuditLog({
+    actorType: "boss",
+    actorName: actor,
+    action: "lead_manual_created",
+    entityType: "lead",
+    entityId: lead.id,
+    summary: "Manual internal lead created from Command Centre.",
+    beforeData: null,
+    afterData: { id: lead.id, clientName: lead.clientName, isTest: Boolean(lead.isTest), status: lead.status },
+    metadata: {
+      manualCreate: true,
+      noWhatsAppSend: true,
+      noEmailSend: true,
+      noCalendarBooking: true,
+      noPriceGuideAutomation: true,
+      isTest: Boolean(lead.isTest)
+    }
+  });
+  return mockClone(lead);
 }
 
 async function updateLead(id: string, patch: Partial<Lead>, action: string, summary: string, metadata: Record<string, unknown> = {}) {
