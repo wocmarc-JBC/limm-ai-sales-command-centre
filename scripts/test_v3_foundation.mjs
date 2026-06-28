@@ -163,6 +163,26 @@ const dashboardPage = read("app/page.tsx");
 assert(!dashboardPage.includes("Quotation Needed"), "Dashboard must not use Quotation Needed wording.");
 assert(dashboardPage.includes("Boss Daily Brief"), "Dashboard must use boss daily brief wording.");
 
+const leadDetailPage = read("app/leads/[id]/page.tsx");
+const actionsSource = read("lib/actions.ts");
+const rolesSource = read("lib/auth/roles.ts");
+assert(rolesSource.includes("sales: [\"view_all\", \"update_leads\", \"manage_followups\", \"control_bot\"]"), "Sales role must not have delete permissions.");
+assert(/boss:[\s\S]{0,260}"soft_delete_leads"[\s\S]{0,120}"restore_leads"[\s\S]{0,120}"hard_delete_leads"/.test(rolesSource), "Boss role must retain delete permissions.");
+assert(leadDetailPage.includes("const canSoftDelete = can(role, \"soft_delete_leads\")"), "Lead detail must calculate soft delete permission.");
+assert(leadDetailPage.includes("const canRestore = can(role, \"restore_leads\")"), "Lead detail must calculate restore permission.");
+assert(leadDetailPage.includes("const canHardDelete = can(role, \"hard_delete_leads\")"), "Lead detail must calculate hard delete permission.");
+assert(leadDetailPage.includes("Your role:") && leadDetailPage.includes("Soft delete requires boss/admin permission.") && leadDetailPage.includes("Permanent delete requires boss/admin and prior soft delete."), "Lead detail must show delete permission guidance.");
+assert(/data-testid="soft-delete-lead-button"[\s\S]{0,160}Boss\/admin only/.test(leadDetailPage), "Sales/no-permission users must see disabled Boss/admin only soft delete state.");
+assert(/disabled=\{!canSoftDelete\}[\s\S]{0,100}data-testid="soft-delete-lead-button"/.test(leadDetailPage), "Soft delete button must be disabled without permission.");
+assert(/const hardDeleteEnabled = canHardDelete && Boolean\(lead\.deletedAt\)/.test(leadDetailPage), "Hard delete must be enabled only for boss/admin after soft delete.");
+assert(/disabled=\{!hardDeleteEnabled\}[\s\S]{0,120}data-testid="hard-delete-lead-button"/.test(leadDetailPage), "Hard delete button must be disabled before soft delete.");
+assert(actionsSource.includes('deleteStatus: "permissionDenied"'), "Delete actions must redirect with permissionDenied feedback.");
+assert(actionsSource.includes('deleteStatus: "softDeleted"'), "Soft delete action must redirect with softDeleted feedback.");
+assert(actionsSource.includes('deleteStatus: "restored"'), "Restore action must redirect with restored feedback.");
+assert(actionsSource.includes('deleteStatus: "failed"'), "Hard delete guard failures must redirect with failed feedback.");
+assert(actionsSource.includes('confirmation !== "PERMANENT DELETE"'), "Hard delete must require exact PERMANENT DELETE confirmation.");
+assert(actionsSource.includes("!lead?.deletedAt"), "Hard delete action must verify prior soft delete.");
+
 const mockData = read("lib/mock-data.ts");
 assert(/id:\s*"lead-003"[\s\S]{0,280}division:\s*"LIMM Works"[\s\S]{0,280}propertyType:\s*"Commercial clinic"/.test(mockData), "Commercial clinic mock lead must be classified under LIMM Works.");
 

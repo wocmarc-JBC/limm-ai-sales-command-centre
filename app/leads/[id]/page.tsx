@@ -33,6 +33,7 @@ import {
 import { evaluateBookingReadiness } from "@/lib/calendar-booking";
 import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import { getLatestAiRecommendationForLead } from "@/lib/data/ai-decisions-repository";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 import {
@@ -89,6 +90,7 @@ const aiReviewActions: Array<{
 ];
 
 const quotationInputClass = "rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text";
+type DeleteStatus = "softDeleted" | "permissionDenied" | "restored" | "hardDeleted" | "failed";
 
 function getAiStatus(openAi: ReturnType<typeof getOpenAiBrainRuntime>) {
   if (!openAi.dryRunEnabled) return "Off";
@@ -130,13 +132,48 @@ export default async function LeadDetailPage({
   searchParams?: {
     uploadLink?: string;
     metaMessageId?: string;
+    deleteStatus?: DeleteStatus;
   };
 }) {
   const auth = await getCurrentProfile();
   if (!auth.authenticated) return null;
+  if (!auth.profile) return null;
 
   const lead = (await getLeadById(params.id)) ?? (await getLeadById("lead-001"));
   if (!lead) return null;
+  const role = auth.profile.role;
+  const canSoftDelete = can(role, "soft_delete_leads");
+  const canRestore = can(role, "restore_leads");
+  const canHardDelete = can(role, "hard_delete_leads");
+  const hardDeleteEnabled = canHardDelete && Boolean(lead.deletedAt);
+  const deleteFeedback: Record<DeleteStatus, { title: string; body: string; tone: string }> = {
+    softDeleted: {
+      title: "Lead soft-deleted",
+      body: "The lead was archived from active command queues. Permanent delete is still blocked unless boss/admin confirms it separately.",
+      tone: "border-command-green/50 bg-command-green/10 text-command-green"
+    },
+    permissionDenied: {
+      title: "Permission denied",
+      body: "Your current role cannot perform that delete/archive action. Ask a boss/admin to do it.",
+      tone: "border-command-red/60 bg-command-red/10 text-command-red"
+    },
+    restored: {
+      title: "Lead restored",
+      body: "The lead was restored to active command queues.",
+      tone: "border-command-green/50 bg-command-green/10 text-command-green"
+    },
+    hardDeleted: {
+      title: "Lead permanently deleted",
+      body: "The permanent delete action completed after boss/admin confirmation.",
+      tone: "border-command-red/60 bg-command-red/10 text-command-red"
+    },
+    failed: {
+      title: "Delete action failed",
+      body: "Permanent delete requires boss/admin permission, prior soft delete, a reason, and exact confirmation: PERMANENT DELETE.",
+      tone: "border-command-amber/60 bg-command-amber/10 text-command-amber"
+    }
+  };
+  const activeDeleteFeedback = searchParams?.deleteStatus ? deleteFeedback[searchParams.deleteStatus] : null;
   const readiness = await getQuotationReadinessForLead(lead.id);
   const quotationPackages = await listQuotationPackagesForLead(lead.id, { includeTestDemo: true });
   const latestQuotation = quotationPackages[0] ?? null;
@@ -654,6 +691,18 @@ export default async function LeadDetailPage({
             <p className="mt-1 text-base text-command-muted">
               Normal delete is soft delete. Permanent delete is boss/admin only, requires prior soft delete, typed confirmation, reason, and an audit before deletion.
             </p>
+            <div className="mt-4 rounded-lg border border-command-line bg-command-bg/60 p-4 text-sm">
+              <p className="font-semibold text-command-text">Delete / Archive Controls</p>
+              <p className="mt-2 text-command-muted">Your role: <span className="font-semibold text-command-text">{role}</span></p>
+              <p className="mt-1 text-command-muted">Soft delete requires boss/admin permission.</p>
+              <p className="mt-1 text-command-muted">Permanent delete requires boss/admin and prior soft delete.</p>
+              {activeDeleteFeedback ? (
+                <div className={`mt-3 rounded-md border p-3 ${activeDeleteFeedback.tone}`} data-testid="lead-delete-feedback">
+                  <p className="font-semibold">{activeDeleteFeedback.title}</p>
+                  <p className="mt-1">{activeDeleteFeedback.body}</p>
+                </div>
+              ) : null}
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <form action={takeOverLeadAction}>
                 <input type="hidden" name="lead_id" value={lead.id} />
@@ -692,24 +741,30 @@ export default async function LeadDetailPage({
               </form>
               <form action={archiveLeadAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="lead_id" value={lead.id} />
-                <input name="reason" placeholder="Archive reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
-                <ActionButton type="submit" tone="muted">Archive Lead</ActionButton>
+                <input name="reason" placeholder="Archive reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" disabled={!canSoftDelete} />
+                <ActionButton type="submit" tone="muted" disabled={!canSoftDelete} data-testid="archive-lead-button">
+                  {canSoftDelete ? "Archive Lead" : "Boss/admin only"}
+                </ActionButton>
               </form>
               <form action={softDeleteLeadAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="lead_id" value={lead.id} />
-                <input name="reason" placeholder="Soft delete reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
-                <ActionButton type="submit" tone="danger">Soft Delete Lead</ActionButton>
+                <input name="reason" placeholder="Soft delete reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" disabled={!canSoftDelete} />
+                <ActionButton type="submit" tone="danger" disabled={!canSoftDelete} data-testid="soft-delete-lead-button">
+                  {canSoftDelete ? "Soft Delete Lead" : "Boss/admin only"}
+                </ActionButton>
               </form>
               <form action={restoreLeadAction}>
                 <input type="hidden" name="lead_id" value={lead.id} />
-                <ActionButton type="submit" tone="muted">Restore Lead</ActionButton>
+                <ActionButton type="submit" tone="muted" disabled={!canRestore || !lead.deletedAt} data-testid="restore-lead-button">
+                  Restore Lead
+                </ActionButton>
               </form>
             </div>
             <form action={hardDeleteLeadAction} className="mt-5 grid gap-3 rounded-lg border border-command-red/60 bg-command-bg p-4 md:grid-cols-[1fr_1fr_auto]">
               <input type="hidden" name="lead_id" value={lead.id} />
-              <input name="reason" placeholder="Permanent delete reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
-              <input name="confirmation" placeholder="Type PERMANENT DELETE" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" />
-              <ActionButton type="submit" tone="danger" disabled={!lead.deletedAt}>Permanent Delete</ActionButton>
+              <input name="reason" placeholder="Permanent delete reason" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" disabled={!hardDeleteEnabled} />
+              <input name="confirmation" placeholder="Type PERMANENT DELETE" className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text" disabled={!hardDeleteEnabled} />
+              <ActionButton type="submit" tone="danger" disabled={!hardDeleteEnabled} data-testid="hard-delete-lead-button">Permanent Delete</ActionButton>
             </form>
           </div>
         </div>

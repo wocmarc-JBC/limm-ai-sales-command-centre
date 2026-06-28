@@ -1229,40 +1229,48 @@ function revalidateLeadPaths(leadId: string) {
 }
 
 export async function archiveLeadAction(formData: FormData) {
-  const permission = await requirePermission("soft_delete_leads");
-  if (!permission.ok) return;
   const leadId = text(formData, "lead_id");
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) leadReplyRedirect(leadId, { deleteStatus: "permissionDenied" });
   await archiveLead(leadId, text(formData, "reason", "Archived by Marcus/admin."), permission.auth.profile?.fullName ?? "Marcus");
   revalidateLeadPaths(leadId);
+  leadReplyRedirect(leadId, { deleteStatus: "softDeleted" });
 }
 
 export async function softDeleteLeadAction(formData: FormData) {
-  const permission = await requirePermission("soft_delete_leads");
-  if (!permission.ok) return;
   const leadId = text(formData, "lead_id");
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) leadReplyRedirect(leadId, { deleteStatus: "permissionDenied" });
   await softDeleteLead(leadId, text(formData, "reason", "Soft deleted by Marcus/admin."), permission.auth.profile?.fullName ?? "Marcus");
   revalidateLeadPaths(leadId);
+  leadReplyRedirect(leadId, { deleteStatus: "softDeleted" });
 }
 
 export async function restoreLeadAction(formData: FormData) {
-  const permission = await requirePermission("restore_leads");
-  if (!permission.ok) return;
   const leadId = text(formData, "lead_id");
+  const permission = await requirePermission("restore_leads");
+  if (!permission.ok) leadReplyRedirect(leadId, { deleteStatus: "permissionDenied" });
   await restoreLead(leadId, permission.auth.profile?.fullName ?? "Marcus");
   revalidateLeadPaths(leadId);
+  leadReplyRedirect(leadId, { deleteStatus: "restored" });
 }
 
 export async function hardDeleteLeadAction(formData: FormData) {
-  const permission = await requirePermission("hard_delete_leads");
-  if (!permission.ok) return;
   const leadId = text(formData, "lead_id");
+  const permission = await requirePermission("hard_delete_leads");
+  if (!permission.ok) leadReplyRedirect(leadId, { deleteStatus: "permissionDenied" });
   const reason = text(formData, "reason");
   const confirmation = text(formData, "confirmation");
-  if (!reason || confirmation !== "PERMANENT DELETE") return;
-  await hardDeleteLead(leadId, reason);
+  const lead = await getLeadById(leadId);
+  if (!lead?.deletedAt || !reason || confirmation !== "PERMANENT DELETE") {
+    leadReplyRedirect(leadId, { deleteStatus: "failed" });
+  }
+  const deleted = await hardDeleteLead(leadId, reason);
+  if (!deleted) leadReplyRedirect(leadId, { deleteStatus: "failed" });
   revalidatePath("/");
   revalidatePath("/leads");
   revalidatePath("/audit-log");
+  redirect(`/leads?deleteStatus=hardDeleted`);
 }
 
 export async function markLeadTestAction(formData: FormData) {
