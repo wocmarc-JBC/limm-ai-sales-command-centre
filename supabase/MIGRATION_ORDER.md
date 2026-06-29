@@ -339,6 +339,37 @@ where schemaname = 'public'
 and indexname in ('project_accounts_is_test_idx','payment_records_is_test_idx');
 ```
 
+## 026_project_accounts_location_fields.sql
+
+Purpose: Add project/account location fields required by downstream QA project creation, delivery gates, and map-safe project/account views.
+Dependencies: migrations 020, 021, 024, and 025.
+Safe to re-run: Yes. Uses `add column if not exists`, guarded `create index if not exists`, and comments only.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_schema = 'public'
+and table_name = 'project_accounts'
+and column_name in (
+  'property_area',
+  'postal_code',
+  'project_address',
+  'planning_region',
+  'planning_area',
+  'map_lat',
+  'map_lng',
+  'location_confidence',
+  'location_source',
+  'location_notes'
+);
+
+select indexname
+from pg_indexes
+where schemaname = 'public'
+and indexname = 'project_accounts_location_idx';
+```
+
 ## After All Migrations
 
 Run:
