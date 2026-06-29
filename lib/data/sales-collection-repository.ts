@@ -17,7 +17,8 @@ import {
   quotationStatusForLead,
   salesStageForLead
 } from "@/lib/sales-collection";
-import type { Lead, MonthlySalesTarget, PaymentRecord, ProjectAccount } from "@/lib/types";
+import { qaWorkflowSafetyMetadata } from "@/lib/qa-workflow-test-mode";
+import type { Lead, MonthlySalesTarget, PaymentRecord, ProjectAccount, QuotationPackage } from "@/lib/types";
 
 function auditPayload<T extends object>(value: T) {
   return value as unknown as Record<string, unknown>;
@@ -164,6 +165,7 @@ export async function createProjectFromWonLead(lead: Lead, actorName = "Marcus")
     locationConfidence: lead.locationConfidence ?? "unknown",
     locationSource: lead.locationSource ?? "unknown",
     locationNotes: lead.locationNotes ?? "",
+    isTest: Boolean(lead.isTest),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -193,7 +195,10 @@ export async function createProjectFromWonLead(lead: Lead, actorName = "Marcus")
         map_lng: project.mapLng,
         location_confidence: project.locationConfidence,
         location_source: project.locationSource,
-        location_notes: project.locationNotes
+        location_notes: project.locationNotes,
+        is_test: project.isTest ?? false,
+        created_at: project.createdAt,
+        updated_at: project.updatedAt
       }, { onConflict: "source_lead_id" })
       .select("*")
       .maybeSingle();
@@ -208,7 +213,7 @@ export async function createProjectFromWonLead(lead: Lead, actorName = "Marcus")
         summary: "Won lead converted into project/account record.",
         beforeData: null,
         afterData: auditPayload(saved),
-        metadata: { sourceLeadId: lead.id, nonGst: true }
+        metadata: { sourceLeadId: lead.id, nonGst: true, isTest: Boolean(saved.isTest) }
       });
       return saved;
     }
@@ -227,7 +232,7 @@ export async function createProjectFromWonLead(lead: Lead, actorName = "Marcus")
     summary: "Won lead converted into project/account record.",
     beforeData: null,
     afterData: auditPayload(project),
-    metadata: { sourceLeadId: lead.id, nonGst: true }
+    metadata: { sourceLeadId: lead.id, nonGst: true, isTest: Boolean(project.isTest) }
   });
   return project;
 }
@@ -238,6 +243,7 @@ export async function addPaymentRecord(payment: PaymentRecord, actorName = "Marc
     const { data, error } = await supabase!
       .from("payment_records")
       .insert({
+        id: payment.id,
         project_id: payment.projectId,
         lead_id: payment.leadId,
         payment_type: payment.paymentType,
@@ -245,7 +251,10 @@ export async function addPaymentRecord(payment: PaymentRecord, actorName = "Marc
         due_date: payment.dueDate,
         received_date: payment.receivedDate,
         status: payment.status,
-        notes: payment.notes
+        notes: payment.notes,
+        is_test: payment.isTest ?? false,
+        created_at: payment.createdAt,
+        updated_at: payment.updatedAt
       })
       .select("*")
       .maybeSingle();
@@ -260,7 +269,7 @@ export async function addPaymentRecord(payment: PaymentRecord, actorName = "Marc
         summary: "Manual payment record added.",
         beforeData: null,
         afterData: auditPayload(saved),
-        metadata: { moneyChangeAudit: true, nonGst: true }
+        metadata: { moneyChangeAudit: true, nonGst: true, isTest: Boolean(saved.isTest) }
       });
       return saved;
     }
@@ -276,7 +285,7 @@ export async function addPaymentRecord(payment: PaymentRecord, actorName = "Marc
     summary: "Manual payment record added.",
     beforeData: null,
     afterData: auditPayload(payment),
-    metadata: { moneyChangeAudit: true, nonGst: true }
+    metadata: { moneyChangeAudit: true, nonGst: true, isTest: Boolean(payment.isTest) }
   });
   return payment;
 }
@@ -451,6 +460,7 @@ export async function createDefaultPaymentScheduleForProject(project: ProjectAcc
     receivedDate: null,
     status: index === 0 ? "Deposit Requested" : index === 1 ? "Progress Payment Due" : "Final Payment Due",
     notes: `${lead.division === "Carpentry Works" ? "JBC default 50/40/10" : "LIMM Works editable non-GST"} milestone: ${milestone.label}.`,
+    isTest: Boolean(project.isTest || lead.isTest),
     createdAt: now,
     updatedAt: now
   }));
@@ -461,6 +471,120 @@ export async function createDefaultPaymentScheduleForProject(project: ProjectAcc
     if (payment) saved.push(payment);
   }
   return saved;
+}
+
+export async function createQaTestProjectForQuotation(lead: Lead, quotation: QuotationPackage, actorName = "Marcus") {
+  const existing = (await listProjectAccounts({ includeTestDemo: true })).find((project) => project.sourceLeadId === lead.id);
+  const now = new Date().toISOString();
+  const project: ProjectAccount = {
+    id: existing?.id ?? `qa-project-${lead.id}`,
+    leadId: lead.id,
+    clientName: lead.clientName,
+    phone: lead.phone,
+    propertyType: lead.propertyType,
+    scopeSummary: quotation.scopeSummary || lead.scopeSummary,
+    quotedAmount: quotation.quotationAmount,
+    confirmedValue: quotation.quotationAmount,
+    notes: "QA TEST RECORD - NOT REAL CLIENT. Created for downstream workflow testing only.",
+    status: "Deposit Pending",
+    sourceLeadId: lead.id,
+    propertyArea: lead.propertyArea ?? "",
+    postalCode: lead.postalCode ?? "",
+    projectAddress: lead.projectAddress ?? "",
+    planningRegion: lead.planningRegion ?? "",
+    planningArea: lead.planningArea ?? "",
+    mapLat: lead.mapLat ?? null,
+    mapLng: lead.mapLng ?? null,
+    locationConfidence: lead.locationConfidence ?? "unknown",
+    locationSource: lead.locationSource ?? "unknown",
+    locationNotes: lead.locationNotes ?? "",
+    isTest: true,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now
+  };
+
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase!
+      .from("project_accounts")
+      .upsert({
+        id: project.id,
+        lead_id: project.leadId,
+        source_lead_id: project.sourceLeadId,
+        client_name: project.clientName,
+        phone: project.phone,
+        property_type: project.propertyType,
+        scope_summary: project.scopeSummary,
+        quoted_amount: project.quotedAmount,
+        confirmed_value: project.confirmedValue,
+        notes: project.notes,
+        status: project.status,
+        property_area: project.propertyArea,
+        postal_code: project.postalCode,
+        project_address: project.projectAddress,
+        planning_region: project.planningRegion,
+        planning_area: project.planningArea,
+        map_lat: project.mapLat,
+        map_lng: project.mapLng,
+        location_confidence: project.locationConfidence,
+        location_source: project.locationSource,
+        location_notes: project.locationNotes,
+        is_test: true,
+        created_at: project.createdAt,
+        updated_at: project.updatedAt
+      }, { onConflict: "source_lead_id" })
+      .select("*")
+      .maybeSingle();
+    if (error) throw new Error(`QA test project creation failed: ${error.message}`);
+    if (data) {
+      const saved = mapProjectRow(data);
+      await createAuditLog({
+        actorType: "boss",
+        actorName,
+        action: "qa_delivery_gate_created",
+        entityType: "project_account",
+        entityId: saved.id,
+        summary: "QA test delivery gate created. This is not a real client project.",
+        beforeData: existing ? auditPayload(existing) : null,
+        afterData: auditPayload(saved),
+        metadata: { quotationId: quotation.id, ...qaWorkflowSafetyMetadata }
+      });
+      return saved;
+    }
+  }
+
+  const store = getMockStore();
+  const index = store.projectAccounts.findIndex((item) => item.sourceLeadId === lead.id);
+  if (index >= 0) store.projectAccounts[index] = project;
+  else store.projectAccounts.push(project);
+  await createAuditLog({
+    actorType: "boss",
+    actorName,
+    action: "qa_delivery_gate_created",
+    entityType: "project_account",
+    entityId: project.id,
+    summary: "QA test delivery gate created. This is not a real client project.",
+    beforeData: existing ? auditPayload(existing) : null,
+    afterData: auditPayload(project),
+    metadata: { quotationId: quotation.id, ...qaWorkflowSafetyMetadata }
+  });
+  return mockClone(project);
+}
+
+export async function createQaTestCollectionSchedule(project: ProjectAccount, lead: Lead, actorName = "Marcus") {
+  const payments = await createDefaultPaymentScheduleForProject({ ...project, isTest: true }, { ...lead, isTest: true }, actorName);
+  await createAuditLog({
+    actorType: "boss",
+    actorName,
+    action: "qa_collection_schedule_created",
+    entityType: "project_account",
+    entityId: project.id,
+    summary: "QA test collection schedule created. Payment records are test-marked and hidden by default.",
+    beforeData: null,
+    afterData: { projectId: project.id, paymentCount: payments.length },
+    metadata: { paymentIds: payments.map((payment) => payment.id), ...qaWorkflowSafetyMetadata }
+  });
+  return payments;
 }
 
 export async function getSalesCollectionData(month = currentMonthKey(), options: ProductionVisibilityOptions = {}) {

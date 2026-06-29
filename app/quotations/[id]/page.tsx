@@ -7,6 +7,11 @@ import {
   markQuoteAcceptedAction,
   markQuoteRejectedAction,
   recordQuotationBossAction,
+  qaArchiveQaLeadAction,
+  qaCreateTestCollectionScheduleAction,
+  qaCreateTestDeliveryGateAction,
+  qaMarkAcceptedSimulationAction,
+  qaMarkSentSimulationAction,
   submitQuotationForBossReviewAction,
   voidQuotationPackageAction
 } from "@/lib/actions";
@@ -21,6 +26,7 @@ import {
   listQuotationPackagesForLead
 } from "@/lib/data/quotation-repository";
 import { humanizeList } from "@/lib/labels";
+import { getQaWorkflowTestEligibility } from "@/lib/qa-workflow-test-mode";
 import { money } from "@/lib/sales-collection";
 
 const bossActions = [
@@ -40,7 +46,7 @@ export default async function QuotationDetailPage({
   searchParams
 }: {
   params: { id: string };
-  searchParams?: { created?: string };
+  searchParams?: { created?: string; qaStatus?: string; message?: string };
 }) {
   const auth = await getCurrentProfile();
   const canApprove = Boolean(auth.profile && can(auth.profile.role, "approve_requests"));
@@ -66,6 +72,7 @@ export default async function QuotationDetailPage({
   const sendGate = buildQuotationSendGate(quotation, lead);
   const canViewCost = canApprove;
   const revisionDefaultNumber = `${quotation.quotationNumber || "LIMM-Q"}-R${quotation.versionNumber + 1}`;
+  const qaEligibility = getQaWorkflowTestEligibility({ role: auth.profile?.role, lead, quotation });
 
   return (
     <>
@@ -81,6 +88,19 @@ export default async function QuotationDetailPage({
       {searchParams?.created ? (
         <p className="mb-6 rounded-xl border border-command-green/40 bg-command-green/10 p-3 text-sm font-semibold text-command-green">
           Quotation package created. Upload file and submit for boss review before marking sent.
+        </p>
+      ) : null}
+
+      {searchParams?.qaStatus ? (
+        <p
+          className={`mb-6 rounded-xl border p-3 text-sm font-semibold ${
+            ["sentSimulated", "acceptedSimulated", "collectionCreated", "deliveryCreated", "leadArchived"].includes(searchParams.qaStatus)
+              ? "border-command-green/40 bg-command-green/10 text-command-green"
+              : "border-command-amber/50 bg-command-amber/10 text-command-amber"
+          }`}
+          data-testid="qa-workflow-feedback"
+        >
+          {searchParams.message || "QA workflow action finished."}
         </p>
       ) : null}
 
@@ -259,6 +279,62 @@ export default async function QuotationDetailPage({
           </div>
         </article>
       </section>
+
+      {canApprove ? (
+        <section className="mt-6 mission-panel rounded-2xl border-command-cyan/40 p-5" data-testid="qa-workflow-test-controls">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-cyan">QA Workflow Test Controls</p>
+              <h2 className="mt-1 text-2xl font-semibold text-command-text">Downstream simulation only</h2>
+              <p className="mt-2 text-sm leading-6 text-command-muted">
+                Boss/admin QA mode only. These controls do not send WhatsApp, email, create Calendar bookings, or generate prices. Real Send Gate rules remain unchanged.
+              </p>
+            </div>
+            <span className="inline-flex rounded-full border border-command-cyan/60 bg-command-cyan/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-command-cyan">
+              QA TEST RECORD — NOT REAL CLIENT
+            </span>
+          </div>
+
+          {!qaEligibility.eligible ? (
+            <p className="mt-4 rounded-xl border border-command-amber/45 bg-command-amber/10 p-3 text-sm font-semibold text-command-amber" data-testid="qa-workflow-disabled-reason">
+              QA controls disabled: {qaEligibility.reasons.join(" ")}
+            </p>
+          ) : null}
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <form action={qaMarkSentSimulationAction} className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <input type="hidden" name="quotation_id" value={quotation.id} />
+              <ActionButton type="submit" tone="muted" disabled={!qaEligibility.eligible} data-testid="qa-mark-sent-simulation">
+                QA Mark Sent Simulation
+              </ActionButton>
+            </form>
+            <form action={qaMarkAcceptedSimulationAction} className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <input type="hidden" name="quotation_id" value={quotation.id} />
+              <ActionButton type="submit" tone="muted" disabled={!qaEligibility.eligible} data-testid="qa-mark-accepted-simulation">
+                QA Mark Accepted Simulation
+              </ActionButton>
+            </form>
+            <form action={qaCreateTestCollectionScheduleAction} className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <input type="hidden" name="quotation_id" value={quotation.id} />
+              <ActionButton type="submit" tone="muted" disabled={!qaEligibility.eligible} data-testid="qa-create-test-collection-schedule">
+                QA Create Test Collection Schedule
+              </ActionButton>
+            </form>
+            <form action={qaCreateTestDeliveryGateAction} className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <input type="hidden" name="quotation_id" value={quotation.id} />
+              <ActionButton type="submit" tone="muted" disabled={!qaEligibility.eligible} data-testid="qa-create-test-delivery-gate">
+                QA Create Test Delivery Gate
+              </ActionButton>
+            </form>
+            <form action={qaArchiveQaLeadAction} className="rounded-xl border border-command-line bg-command-bg/55 p-3">
+              <input type="hidden" name="quotation_id" value={quotation.id} />
+              <ActionButton type="submit" tone="danger" disabled={!qaEligibility.eligible} data-testid="qa-archive-qa-lead">
+                QA Archive QA Lead
+              </ActionButton>
+            </form>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-6 mission-panel rounded-2xl p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-command-gold">Upload revised quotation</p>

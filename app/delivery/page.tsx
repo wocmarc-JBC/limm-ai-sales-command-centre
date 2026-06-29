@@ -65,6 +65,11 @@ export default async function DeliveryPage() {
                     {gate.statusLabel}
                   </span>
                   <h2 className="mt-3 text-2xl font-semibold text-command-text">{project.clientName}</h2>
+                  {project.isTest ? (
+                    <span className="mt-2 inline-flex rounded-full border border-command-cyan/60 bg-command-cyan/10 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-command-cyan">
+                      QA TEST RECORD — NOT REAL CLIENT
+                    </span>
+                  ) : null}
                   <p className="mt-1 text-sm text-command-muted">{project.scopeSummary || project.propertyType}</p>
                 </div>
                 <div className="rounded-xl border border-command-line bg-command-bg/55 px-4 py-3 text-sm text-command-muted lg:text-right">

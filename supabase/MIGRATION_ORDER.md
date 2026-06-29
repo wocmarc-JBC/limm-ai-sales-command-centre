@@ -320,6 +320,25 @@ from information_schema.columns
 where table_name = 'quotation_packages';
 ```
 
+## 025_qa_downstream_test_flags.sql
+
+Purpose: Add QA/demo test flags for downstream project/account and payment records so QA workflow simulations stay hidden from normal production collection and delivery views.
+Dependencies: migrations 020 and 024.
+Safe to re-run: Yes. Uses `add column if not exists`, `create index if not exists`, and comments only.
+Verification query:
+
+```sql
+select table_name, column_name
+from information_schema.columns
+where table_name in ('project_accounts','payment_records')
+and column_name = 'is_test';
+
+select indexname
+from pg_indexes
+where schemaname = 'public'
+and indexname in ('project_accounts_is_test_idx','payment_records_is_test_idx');
+```
+
 ## After All Migrations
 
 Run:
