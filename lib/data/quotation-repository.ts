@@ -13,6 +13,7 @@ import {
   type ProductionVisibilityOptions
 } from "@/lib/production-visibility";
 import { isQaE2EMode, qaE2eSafetyMetadata, QA_E2E_RUN_ID } from "@/lib/qa-e2e-mode";
+import { getQaWorkflowTestEligibility, qaWorkflowSafetyMetadata } from "@/lib/qa-workflow-test-mode";
 import type {
   Lead,
   QuotationPackage,
@@ -606,6 +607,76 @@ export async function markQuotationClientRejected(quotationId: string, actorName
     actorRole: "sales",
     note: clientNotes
   });
+}
+
+export async function qaSimulateQuotationSent(input: {
+  quotationId: string;
+  lead: Lead;
+  actorName: string;
+  actorRole: string;
+}) {
+  const before = await getQuotationPackageById(input.quotationId);
+  const eligibility = getQaWorkflowTestEligibility({ role: input.actorRole, lead: input.lead, quotation: before });
+  if (!before || !eligibility.eligible) {
+    return { ok: false, error: eligibility.reasons.join(" "), quotation: before };
+  }
+
+  const after: QuotationPackage = {
+    ...before,
+    status: "Sent to Client",
+    sentAt: nowIso(),
+    sentBy: `${input.actorName} (QA simulation)`,
+    isTest: true,
+    qaRunId: before.qaRunId || QA_E2E_RUN_ID
+  };
+  const saved = await saveQuotationPackage(after, before, {
+    action: "qa_mark_sent_simulated",
+    summary: "QA Mark Sent simulated for a QA/test quotation. No external message was sent.",
+    actorName: input.actorName,
+    actorRole: input.actorRole,
+    metadata: {
+      ...qaWorkflowSafetyMetadata,
+      manualSimulationOnly: true,
+      realSendGateUnchanged: true
+    }
+  });
+  return { ok: true, error: "", quotation: saved };
+}
+
+export async function qaSimulateQuotationAccepted(input: {
+  quotationId: string;
+  lead: Lead;
+  actorName: string;
+  actorRole: string;
+  note?: string;
+}) {
+  const before = await getQuotationPackageById(input.quotationId);
+  const eligibility = getQaWorkflowTestEligibility({ role: input.actorRole, lead: input.lead, quotation: before });
+  if (!before || !eligibility.eligible) {
+    return { ok: false, error: eligibility.reasons.join(" "), quotation: before };
+  }
+
+  const after: QuotationPackage = {
+    ...before,
+    status: "Accepted",
+    acceptedAt: nowIso(),
+    clientNotes: input.note || before.clientNotes || "QA accepted simulation only. Not a real client acceptance.",
+    isTest: true,
+    qaRunId: before.qaRunId || QA_E2E_RUN_ID
+  };
+  const saved = await saveQuotationPackage(after, before, {
+    action: "qa_quote_accepted_simulated",
+    summary: "QA quote acceptance simulated for downstream workflow testing only.",
+    actorName: input.actorName,
+    actorRole: input.actorRole,
+    note: input.note,
+    metadata: {
+      ...qaWorkflowSafetyMetadata,
+      manualSimulationOnly: true,
+      createsOnlyTestMarkedDownstreamRecords: true
+    }
+  });
+  return { ok: true, error: "", quotation: saved };
 }
 
 export async function voidQuotationPackage(quotationId: string, actorName = "Marcus", reason = "") {

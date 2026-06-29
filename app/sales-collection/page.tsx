@@ -82,18 +82,28 @@ export default async function SalesCollectionPage() {
                 </tr>
               </thead>
               <tbody>
-                {collectionQueue.length ? collectionQueue.map((item) => (
-                  <tr key={item.id} className="rounded-xl bg-command-bg/55 text-command-muted">
-                    <td className="rounded-l-xl border-y border-l border-command-line px-3 py-3 font-semibold text-command-text">{money(item.amountDue)}</td>
-                    <td className="border-y border-command-line px-3 py-3">{item.dueDateLabel}</td>
-                    <td className={`border-y border-command-line px-3 py-3 font-semibold ${item.overdueDays > 0 ? "text-command-red" : "text-command-muted"}`}>{item.overdueDays}</td>
-                    <td className="border-y border-command-line px-3 py-3">{item.jobClient}</td>
-                    <td className="border-y border-command-line px-3 py-3">{item.paymentMilestone}</td>
-                    <td className="border-y border-command-line px-3 py-3">{item.chaseStatus}</td>
-                    <td className="border-y border-command-line px-3 py-3">{item.nextChaseDate}</td>
-                    <td className="rounded-r-xl border-y border-r border-command-line px-3 py-3 text-command-amber">{item.stopWorkWarning || item.scheduleSource}</td>
-                  </tr>
-                )) : (
+                {collectionQueue.length ? collectionQueue.map((item) => {
+                  const project = projects.find((row) => row.id === item.projectId);
+                  return (
+                    <tr key={item.id} className="rounded-xl bg-command-bg/55 text-command-muted">
+                      <td className="rounded-l-xl border-y border-l border-command-line px-3 py-3 font-semibold text-command-text">{money(item.amountDue)}</td>
+                      <td className="border-y border-command-line px-3 py-3">{item.dueDateLabel}</td>
+                      <td className={`border-y border-command-line px-3 py-3 font-semibold ${item.overdueDays > 0 ? "text-command-red" : "text-command-muted"}`}>{item.overdueDays}</td>
+                      <td className="border-y border-command-line px-3 py-3">
+                        {item.jobClient}
+                        {project?.isTest ? (
+                          <span className="mt-2 inline-flex rounded-full border border-command-cyan/60 bg-command-cyan/10 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-command-cyan">
+                            QA TEST RECORD — NOT REAL CLIENT
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="border-y border-command-line px-3 py-3">{item.paymentMilestone}</td>
+                      <td className="border-y border-command-line px-3 py-3">{item.chaseStatus}</td>
+                      <td className="border-y border-command-line px-3 py-3">{item.nextChaseDate}</td>
+                      <td className="rounded-r-xl border-y border-r border-command-line px-3 py-3 text-command-amber">{item.stopWorkWarning || item.scheduleSource}</td>
+                    </tr>
+                  );
+                }) : (
                   <tr>
                     <td colSpan={8} className="rounded-xl border border-command-line bg-command-bg/55 px-3 py-4 text-command-muted">
                       No open collection milestones right now.
@@ -104,12 +114,19 @@ export default async function SalesCollectionPage() {
             </table>
           </div>
           <div className="mt-5 space-y-3 md:hidden">
-            {collectionQueue.length ? collectionQueue.map((item) => (
+            {collectionQueue.length ? collectionQueue.map((item) => {
+              const project = projects.find((row) => row.id === item.projectId);
+              return (
               <article key={item.id} className="rounded-xl border border-command-line bg-command-bg/55 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-cyan">Client</p>
                     <h3 className="mt-1 text-lg font-semibold text-command-text">{item.clientName}</h3>
+                    {project?.isTest ? (
+                      <span className="mt-2 inline-flex rounded-full border border-command-cyan/60 bg-command-cyan/10 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-command-cyan">
+                        QA TEST RECORD — NOT REAL CLIENT
+                      </span>
+                    ) : null}
                   </div>
                   <p className="text-right text-lg font-semibold text-command-text">{money(item.amountDue)}</p>
                 </div>
@@ -132,7 +149,8 @@ export default async function SalesCollectionPage() {
                   </div>
                 </dl>
               </article>
-            )) : (
+              );
+            }) : (
               <p className="rounded-xl border border-command-line bg-command-bg/55 p-4 text-command-muted">
                 No open collection milestones right now.
               </p>
@@ -159,6 +177,11 @@ export default async function SalesCollectionPage() {
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-lg font-semibold text-command-text">{project.clientName}</p>
+                    {project.isTest ? (
+                      <span className="mt-2 inline-flex rounded-full border border-command-cyan/60 bg-command-cyan/10 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-command-cyan">
+                        QA TEST RECORD — NOT REAL CLIENT
+                      </span>
+                    ) : null}
                     <p className="text-sm text-command-muted">{project.scopeSummary || "Scope carried from lead"}</p>
                   </div>
                   <div className="text-sm text-command-muted md:text-right">
@@ -185,6 +208,11 @@ export default async function SalesCollectionPage() {
                   <p className="font-semibold text-command-text">{payment.paymentType}</p>
                   <p className="text-command-text">{money(payment.amount)}</p>
                 </div>
+                {payment.isTest ? (
+                  <span className="mt-2 inline-flex rounded-full border border-command-cyan/60 bg-command-cyan/10 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-command-cyan">
+                    QA TEST RECORD — NOT REAL CLIENT
+                  </span>
+                ) : null}
                 <p className="mt-1 text-command-muted">Status: {payment.status} | Due: {payment.dueDate || "Not set"} | Received: {payment.receivedDate || "Not received"}</p>
                 <p className="mt-1 text-command-subtle">Void instead of delete if this entry is wrong.</p>
                 {!payment.receivedDate ? (

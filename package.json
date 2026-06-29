@@ -11,7 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "doctor": "node scripts/doctor.mjs",
-    "test": "node scripts/test_v3_foundation.mjs && node scripts/test_full_supabase_schema_verifier.mjs && node scripts/test_manual_create_lead.mjs && node scripts/test_quotation_file_upload_feedback.mjs",
+    "test": "node scripts/test_v3_foundation.mjs && node scripts/test_full_supabase_schema_verifier.mjs && node scripts/test_manual_create_lead.mjs && node scripts/test_quotation_file_upload_feedback.mjs && node scripts/test_qa_workflow_test_mode.mjs",
     "test:v4": "node scripts/test_v4_launch_candidate.mjs",
     "test:v4.1": "node scripts/test_v4_1_dev_brain_static.mjs",
     "test:v4.6": "node scripts/test_v4_6_openai_dry_run.mjs",

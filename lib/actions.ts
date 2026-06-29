@@ -68,6 +68,8 @@ import {
   markQuotationClientAccepted,
   markQuotationClientRejected,
   markQuotationSent,
+  qaSimulateQuotationAccepted,
+  qaSimulateQuotationSent,
   recordQuotationBossDecision,
   submitQuotationForBossReview,
   updateQuotationReadinessStatus,
@@ -75,6 +77,8 @@ import {
   voidQuotationPackage
 } from "@/lib/data/quotation-repository";
 import {
+  createQaTestCollectionSchedule,
+  createQaTestProjectForQuotation,
   createDefaultPaymentScheduleForProject,
   createProjectFromWonLead,
   listPaymentRecords,
@@ -87,6 +91,7 @@ import { listLeadMessages, saveLeadMessage } from "@/lib/data/lead-messages-repo
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildLeadIntakePlan } from "@/lib/lead-intake";
 import { isQaE2EMode, qaE2eSafetyMetadata } from "@/lib/qa-e2e-mode";
+import { getQaWorkflowTestEligibility, qaWorkflowSafetyMetadata } from "@/lib/qa-workflow-test-mode";
 import { currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
 import { setShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { getProductionLeadVisibilityReasons } from "@/lib/production-visibility";
@@ -118,6 +123,10 @@ function numberValue(formData: FormData, key: string, fallback = 0) {
 
 function redirectToQuotationFailure(leadId: string, message: string): never {
   redirect(`/leads/${leadId}?quotationStatus=failed&message=${encodeURIComponent(message)}#quotation-package`);
+}
+
+function redirectToQuotationQaStatus(quotationId: string, status: string, message: string): never {
+  redirect(`/quotations/${encodeURIComponent(quotationId)}?qaStatus=${encodeURIComponent(status)}&message=${encodeURIComponent(message)}`);
 }
 
 function listValue(formData: FormData, key: string) {
@@ -1180,6 +1189,138 @@ export async function markQuoteAcceptedAction(formData: FormData) {
   revalidatePath("/sales-collection");
   revalidatePath("/delivery");
   revalidatePath("/audit-log");
+}
+
+async function requireQaQuotationWorkflowContext(formData: FormData) {
+  const permission = await requirePermission("approve_requests");
+  const quotationId = text(formData, "quotation_id");
+  if (!quotationId) redirect(`/quotations?qaStatus=failed&message=${encodeURIComponent("Missing quotation id.")}`);
+  if (!permission.ok) redirectToQuotationQaStatus(quotationId, "permissionDenied", permission.error || "QA workflow controls require boss/admin role.");
+
+  const quotation = await getQuotationPackageById(quotationId);
+  if (!quotation) redirectToQuotationQaStatus(quotationId, "failed", "Quotation package was not found.");
+  const lead = await getLeadById(quotation.leadId);
+  if (!lead) redirectToQuotationQaStatus(quotationId, "failed", "Quotation lead was not found.");
+
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  const role = permission.auth.profile?.role ?? "boss";
+  const eligibility = getQaWorkflowTestEligibility({ role, lead, quotation });
+  if (!eligibility.eligible) {
+    redirectToQuotationQaStatus(quotationId, "blocked", `QA workflow blocked: ${eligibility.reasons.join(" ")}`);
+  }
+  return { permission, quotation, lead, actor, role };
+}
+
+function revalidateQaQuotationWorkflowPaths(leadId: string, quotationId: string) {
+  revalidateLeadPaths(leadId);
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${quotationId}`);
+  revalidatePath("/sales-collection");
+  revalidatePath("/delivery");
+  revalidatePath("/audit-log");
+}
+
+export async function qaMarkSentSimulationAction(formData: FormData) {
+  const { quotation, lead, actor, role } = await requireQaQuotationWorkflowContext(formData);
+  const result = await qaSimulateQuotationSent({
+    quotationId: quotation.id,
+    lead,
+    actorName: actor,
+    actorRole: role
+  });
+  if (!result.ok || !result.quotation) {
+    redirectToQuotationQaStatus(quotation.id, "failed", result.error || "QA Mark Sent simulation failed.");
+  }
+
+  await updateLeadSalesTracking(
+    lead.id,
+    {
+      isTest: true,
+      salesStage: "Quotation Sent",
+      quotationStatus: "Sent",
+      quotedAmount: result.quotation.quotationAmount,
+      quoteExpiryDate: result.quotation.expiryDate,
+      quoteSentDate: `${singaporeDateKey()}T10:00:00+08:00`,
+      quoteFollowUpDate: suggestedQuoteFollowUpDate(),
+      salesNextAction: "QA sent simulation only. No WhatsApp/email/calendar action was sent."
+    },
+    "QA Mark Sent simulation recorded without using the real Send Gate or external sends."
+  );
+
+  revalidateQaQuotationWorkflowPaths(lead.id, quotation.id);
+  redirectToQuotationQaStatus(quotation.id, "sentSimulated", "QA Mark Sent simulated. No WhatsApp/email/calendar action was sent.");
+}
+
+export async function qaMarkAcceptedSimulationAction(formData: FormData) {
+  const { quotation, lead, actor, role } = await requireQaQuotationWorkflowContext(formData);
+  const accepted = await qaSimulateQuotationAccepted({
+    quotationId: quotation.id,
+    lead,
+    actorName: actor,
+    actorRole: role,
+    note: "QA accepted simulation only. Not a real client acceptance."
+  });
+  if (!accepted.ok || !accepted.quotation) {
+    redirectToQuotationQaStatus(quotation.id, "failed", accepted.error || "QA Mark Accepted simulation failed.");
+  }
+
+  const updatedLead = await updateLeadSalesTracking(
+    lead.id,
+    {
+      isTest: true,
+      salesStage: "Won",
+      quotationStatus: "Accepted",
+      quotedAmount: accepted.quotation.quotationAmount,
+      confirmedValue: accepted.quotation.quotationAmount,
+      wonDate: new Date().toISOString(),
+      salesNextAction: "QA accepted simulation only. Downstream records are test-marked and hidden by default."
+    },
+    "QA quote accepted simulation recorded. No external action was sent."
+  );
+  const qaLead = updatedLead ?? { ...lead, isTest: true, confirmedValue: accepted.quotation.quotationAmount };
+  const project = await createQaTestProjectForQuotation(qaLead, accepted.quotation, actor);
+  await updateLeadSalesTracking(lead.id, { projectId: project.id, isTest: true }, "QA project/account linked after simulated acceptance.");
+  await createQaTestCollectionSchedule(project, qaLead, actor);
+
+  revalidateQaQuotationWorkflowPaths(lead.id, quotation.id);
+  redirectToQuotationQaStatus(quotation.id, "acceptedSimulated", "QA quote accepted simulation complete. Test project and payment schedule are hidden by default.");
+}
+
+export async function qaCreateTestCollectionScheduleAction(formData: FormData) {
+  const { quotation, lead, actor } = await requireQaQuotationWorkflowContext(formData);
+  const project = await createQaTestProjectForQuotation(lead, quotation, actor);
+  await createQaTestCollectionSchedule(project, { ...lead, isTest: true }, actor);
+  await updateLeadSalesTracking(lead.id, { projectId: project.id, isTest: true }, "QA collection schedule linked to test project.");
+  revalidateQaQuotationWorkflowPaths(lead.id, quotation.id);
+  redirectToQuotationQaStatus(quotation.id, "collectionCreated", "QA test collection schedule created and hidden from normal queues.");
+}
+
+export async function qaCreateTestDeliveryGateAction(formData: FormData) {
+  const { quotation, lead, actor } = await requireQaQuotationWorkflowContext(formData);
+  const project = await createQaTestProjectForQuotation(lead, quotation, actor);
+  await updateLeadSalesTracking(lead.id, { projectId: project.id, isTest: true }, "QA delivery gate linked to test project.");
+  revalidateQaQuotationWorkflowPaths(lead.id, quotation.id);
+  redirectToQuotationQaStatus(quotation.id, "deliveryCreated", "QA test delivery gate created and hidden from normal delivery view.");
+}
+
+export async function qaArchiveQaLeadAction(formData: FormData) {
+  const { quotation, lead, actor, permission } = await requireQaQuotationWorkflowContext(formData);
+  await archiveLead(lead.id, "QA workflow test complete. Soft archive only; no hard delete.", actor);
+  await createAuditLog({
+    actorType: permission.auth.profile?.role ?? "boss",
+    actorName: actor,
+    actorEmail: permission.auth.profile?.email ?? "",
+    actorId: permission.auth.profile?.id ?? null,
+    action: "qa_lead_archived",
+    entityType: "lead",
+    entityId: lead.id,
+    summary: "QA lead archived after workflow test. No hard delete was performed.",
+    beforeData: { archivedAt: lead.archivedAt ?? null, deletedAt: lead.deletedAt ?? null },
+    afterData: { archived: true, hardDeleted: false },
+    metadata: { quotationId: quotation.id, ...qaWorkflowSafetyMetadata }
+  });
+  revalidateQaQuotationWorkflowPaths(lead.id, quotation.id);
+  redirectToQuotationQaStatus(quotation.id, "leadArchived", "QA lead archived. No hard delete was performed.");
 }
 
 export async function markQuoteRejectedAction(formData: FormData) {

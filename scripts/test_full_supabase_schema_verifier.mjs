@@ -92,6 +92,22 @@ for (const column of ["lead_owner", "follow_up_date", "probability_percent", "po
 }
 assert(missingSalesResult.likelyMigrationFiles.includes("020_v6_3_sales_collection_command_centre.sql"), "Missing v6.3 sales lead columns should hint migration 020.");
 
+for (const table of ["project_accounts", "payment_records"]) {
+  assert(requiredColumnsByTable[table].includes("is_test"), `Required ${table} columns must include is_test.`);
+}
+
+const missingQaFlagsSnapshot = completeSnapshot();
+missingQaFlagsSnapshot.columnsByTable.project_accounts = missingQaFlagsSnapshot.columnsByTable.project_accounts.filter((column) => column !== "is_test");
+missingQaFlagsSnapshot.columnsByTable.payment_records = missingQaFlagsSnapshot.columnsByTable.payment_records.filter((column) => column !== "is_test");
+missingQaFlagsSnapshot.indexes = missingQaFlagsSnapshot.indexes.filter((index) => index !== "project_accounts_is_test_idx" && index !== "payment_records_is_test_idx");
+const missingQaFlagsResult = analyzeSchemaSnapshot(missingQaFlagsSnapshot);
+assert(!missingQaFlagsResult.ok, "Missing QA downstream test flags should fail schema analysis.");
+assert(missingQaFlagsResult.missingColumns.project_accounts.includes("is_test"), "Missing project_accounts.is_test must be reported.");
+assert(missingQaFlagsResult.missingColumns.payment_records.includes("is_test"), "Missing payment_records.is_test must be reported.");
+assert(missingQaFlagsResult.missingIndexes.includes("project_accounts_is_test_idx"), "Missing project_accounts_is_test_idx must be reported.");
+assert(missingQaFlagsResult.missingIndexes.includes("payment_records_is_test_idx"), "Missing payment_records_is_test_idx must be reported.");
+assert(missingQaFlagsResult.likelyMigrationFiles.includes("025_qa_downstream_test_flags.sql"), "Missing QA test flags should hint migration 025.");
+
 const missingTableSnapshot = completeSnapshot();
 missingTableSnapshot.tables = missingTableSnapshot.tables.filter((table) => table !== "quotation_packages");
 const missingTableResult = analyzeSchemaSnapshot(missingTableSnapshot);
