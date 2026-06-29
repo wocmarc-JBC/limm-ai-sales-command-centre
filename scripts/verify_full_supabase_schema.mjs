@@ -3,6 +3,19 @@ import { pathToFileURL } from "node:url";
 
 const { Client } = pg;
 
+export const projectAccountLocationColumns = [
+  "property_area",
+  "postal_code",
+  "project_address",
+  "planning_region",
+  "planning_area",
+  "map_lat",
+  "map_lng",
+  "location_confidence",
+  "location_source",
+  "location_notes"
+];
+
 export const requiredTables = [
   "profiles",
   "leads",
@@ -158,6 +171,7 @@ export const requiredColumnsByTable = {
     "scope_summary",
     "quoted_amount",
     "confirmed_value",
+    ...projectAccountLocationColumns,
     "notes",
     "status",
     "is_test",
@@ -192,6 +206,7 @@ export const requiredIndexes = [
   "quotation_packages_status_idx",
   "quotation_packages_qa_run_id_idx",
   "quotation_packages_lead_number_version_idx",
+  "project_accounts_location_idx",
   "project_accounts_is_test_idx",
   "payment_records_is_test_idx"
 ];
@@ -215,6 +230,12 @@ const migrationHints = [
   { matchType: "table", name: "lead_files", file: "020_v6_7_client_file_uploads.sql" },
   { matchType: "table", name: "lead_upload_links", file: "020_v6_7_client_file_uploads.sql" },
   { matchType: "table", name: "quotation_readiness", file: "011_quotation_readiness.sql" },
+  ...projectAccountLocationColumns.map((name) => ({
+    matchType: "column",
+    table: "project_accounts",
+    name,
+    file: "026_project_accounts_location_fields.sql"
+  })),
   { matchType: "column", table: "project_accounts", name: "is_test", file: "025_qa_downstream_test_flags.sql" },
   { matchType: "column", table: "payment_records", name: "is_test", file: "025_qa_downstream_test_flags.sql" },
   { matchType: "column", table: "leads", name: "id", file: "002_leads.sql" },
@@ -270,6 +291,7 @@ const migrationHints = [
   { matchType: "column", table: "leads", name: "intake_profile", file: "018_v6_5_smart_lead_intake.sql" },
   { matchType: "index", name: "leads_active_command_queue_idx", file: "019_v6_ultimate_command_centre.sql" },
   { matchType: "index", name: "quotation_packages_lead_number_version_idx", file: "024_quotation_packages.sql" },
+  { matchType: "index", name: "project_accounts_location_idx", file: "026_project_accounts_location_fields.sql" },
   { matchType: "index", name: "project_accounts_is_test_idx", file: "025_qa_downstream_test_flags.sql" },
   { matchType: "index", name: "payment_records_is_test_idx", file: "025_qa_downstream_test_flags.sql" },
   { matchType: "bucket", name: "client-files", file: "020_v6_7_client_file_uploads.sql" }

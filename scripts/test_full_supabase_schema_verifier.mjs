@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   analyzeSchemaSnapshot,
+  projectAccountLocationColumns,
   requiredColumnsByTable,
   requiredIndexes,
   requiredStorageBuckets,
@@ -95,6 +96,19 @@ assert(missingSalesResult.likelyMigrationFiles.includes("020_v6_3_sales_collecti
 for (const table of ["project_accounts", "payment_records"]) {
   assert(requiredColumnsByTable[table].includes("is_test"), `Required ${table} columns must include is_test.`);
 }
+
+for (const column of projectAccountLocationColumns) {
+  assert(requiredColumnsByTable.project_accounts.includes(column), `Required project_accounts columns must include ${column}.`);
+}
+
+const missingProjectLocationSnapshot = completeSnapshot();
+missingProjectLocationSnapshot.columnsByTable.project_accounts = missingProjectLocationSnapshot.columnsByTable.project_accounts.filter((column) => column !== "location_confidence");
+missingProjectLocationSnapshot.indexes = missingProjectLocationSnapshot.indexes.filter((index) => index !== "project_accounts_location_idx");
+const missingProjectLocationResult = analyzeSchemaSnapshot(missingProjectLocationSnapshot);
+assert(!missingProjectLocationResult.ok, "Missing project account location fields should fail schema analysis.");
+assert(missingProjectLocationResult.missingColumns.project_accounts.includes("location_confidence"), "Missing project_accounts.location_confidence must be reported.");
+assert(missingProjectLocationResult.missingIndexes.includes("project_accounts_location_idx"), "Missing project_accounts_location_idx must be reported.");
+assert(missingProjectLocationResult.likelyMigrationFiles.includes("026_project_accounts_location_fields.sql"), "Missing project account location fields should hint migration 026.");
 
 const missingQaFlagsSnapshot = completeSnapshot();
 missingQaFlagsSnapshot.columnsByTable.project_accounts = missingQaFlagsSnapshot.columnsByTable.project_accounts.filter((column) => column !== "is_test");
