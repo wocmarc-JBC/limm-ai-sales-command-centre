@@ -99,22 +99,50 @@ const burstIntakeScenarios = [
   {
     name: "HDB burst",
     sequence: ["Hello", "HDB", "5 room", "Full work", "Kitchen also"],
-    expected: "First-touch reply, short facts captured quietly, one consolidated reply when enough context is known, then no extra reply for another short add-on."
+    expected: "First-touch reply, short facts captured quietly, one consolidated reply when enough context is known, then no extra reply for another short add-on.",
+    steps: [
+      "Hello -> replied first-touch",
+      "HDB -> suppressed, captured property_type=HDB",
+      "5 room -> suppressed, captured flat_type=5-room flat",
+      "Full work -> consolidated reply sent",
+      "Kitchen also -> suppressed after recent consolidated reply",
+      "Next action: Ask for floor plan/photos/reference images"
+    ]
   },
   {
     name: "Condo burst",
     sequence: ["Hi", "condo", "kitchen"],
-    expected: "Condo is captured silently inside the quiet window; kitchen triggers the single useful stage-aware reply."
+    expected: "Condo is captured silently inside the quiet window; kitchen triggers the single useful stage-aware reply.",
+    steps: [
+      "Hi -> replied first-touch",
+      "condo -> suppressed, captured property_type=condo",
+      "kitchen -> consolidated reply sent",
+      "Next action: Ask whether this is carpentry only or full kitchen works, then request floor plan/photos if available"
+    ]
   },
   {
     name: "Landed A&A burst",
     sequence: ["Hello", "landed", "A&A", "wet kitchen extension"],
-    expected: "Landed and A&A fragments are captured silently; wet kitchen extension triggers the consolidated landed/A&A reply."
+    expected: "Landed and A&A fragments are captured silently; wet kitchen extension triggers the consolidated landed/A&A reply.",
+    steps: [
+      "Hello -> replied first-touch",
+      "landed -> suppressed, captured property_type=landed",
+      "A&A -> suppressed, captured project_type=landed A&A",
+      "wet kitchen extension -> consolidated reply sent",
+      "Next action: Ask for existing layout/site photos/areas to change"
+    ]
   },
   {
     name: "Direct-question bypass",
     sequence: ["Hi", "HDB", "How much?", "Need approval?"],
-    expected: "Direct questions bypass quiet-window suppression and still receive immediate safe replies."
+    expected: "Direct questions bypass quiet-window suppression and still receive immediate safe replies.",
+    steps: [
+      "Hi -> replied first-touch",
+      "HDB -> suppressed, captured property_type=HDB",
+      "How much? -> immediate safe no-price reply sent",
+      "Need approval? -> immediate safe approval-caution reply sent",
+      "Next action: continue from the answered client question, not another first-touch greeting"
+    ]
   }
 ] as const;
 
@@ -500,6 +528,11 @@ export default async function QaCentrePage({
               <p className="font-semibold text-command-text">{scenario.name}</p>
               <p className="mt-2 text-sm text-command-muted">{scenario.sequence.join(" -> ")}</p>
               <p className="mt-2 text-sm leading-6 text-command-text">{scenario.expected}</p>
+              <ul className="mt-3 space-y-1 text-xs leading-5 text-command-muted">
+                {scenario.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>

@@ -22,6 +22,7 @@ import {
 } from "@/lib/actions";
 import { getInboxQueueState, inboxQueuePriority, type InboxPrimaryStatus } from "@/lib/inbox-queue";
 import type { Lead, LeadMessage } from "@/lib/types";
+import { isSilentCaptureMessage, latestSilentCapture, silentCaptureSummary } from "@/lib/whatsapp-silent-capture";
 
 export type MultiChatSummary = {
   id: string;
@@ -230,6 +231,7 @@ function isLegacyRedirectFailure(message: LeadMessage) {
 }
 
 function messageStatus(message: LeadMessage) {
+  if (message.direction === "internal") return "Internal";
   if (message.direction === "inbound") return "Received";
   const metadataMetaMessageId = metadataString(message, "metaMessageId") || metadataString(message, "providerMessageId");
   if (metadataBoolean(message, "sending")) return "Sending";
@@ -245,12 +247,14 @@ function statusTone(message: LeadMessage) {
   const status = messageStatus(message);
   if (status === "Failed") return "border-command-red/45 bg-command-red/10 text-command-red";
   if (status === "Sending") return "border-command-amber/45 bg-command-amber/10 text-command-amber";
+  if (message.direction === "internal") return "border-command-line bg-command-bg/60 text-command-muted";
   if (message.direction === "inbound") return "border-command-cyan/35 bg-command-cyan/10 text-command-cyan";
   return "border-command-green/45 bg-command-green/10 text-command-green";
 }
 
 function senderLabel(message: LeadMessage) {
   if (message.direction === "inbound") return "Client";
+  if (isSilentCaptureMessage(message)) return "AI note";
   if (message.direction === "internal") return "Internal";
   if (message.metadata?.manualReply) return "Marcus";
   return "AI";
@@ -420,6 +424,7 @@ const MessageBubble = memo(function MessageBubble({
 }) {
   const outbound = message.direction === "outbound";
   const internal = message.direction === "internal";
+  const silentCapture = isSilentCaptureMessage(message) ? silentCaptureSummary(message) : null;
   const error = metadataString(message, "error");
   const showFailure = messageStatus(message) === "Failed" && !isNextRedirectOnly(error);
   return (
@@ -431,7 +436,16 @@ const MessageBubble = memo(function MessageBubble({
             {messageStatus(message)}
           </span>
         </div>
-        <p className="mt-1.5 whitespace-pre-wrap break-words">{message.body || "Message body not available."}</p>
+        {silentCapture ? (
+          <div className="mt-2 rounded-xl border border-command-line bg-command-panel2/70 p-3 text-left">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-cyan">{silentCapture.title}</p>
+            <p className="mt-2 text-sm leading-6 text-command-text">{silentCapture.fieldSummary}</p>
+            <p className="mt-1 text-xs leading-5 text-command-muted">Next action: {silentCapture.nextAction}</p>
+            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-command-subtle">Internal only - not sent to client</p>
+          </div>
+        ) : (
+          <p className="mt-1.5 whitespace-pre-wrap break-words">{message.body || "Message body not available."}</p>
+        )}
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-[11px] text-command-muted">
           <time dateTime={message.createdAt}>{formatTimestamp(message.createdAt)}</time>
           {message.metadata?.manualReply ? <span>Manual reply</span> : outbound ? <span>AI/system reply</span> : null}
@@ -699,6 +713,8 @@ const LeadContextPanel = memo(function LeadContextPanel({
   const [showTechnicalAudit, setShowTechnicalAudit] = useState(false);
   const chat = conversation.summary;
   const context = conversation.context;
+  const recentSilentCapture = latestSilentCapture(activeMessages);
+  const recentSilentCaptureSummary = recentSilentCapture ? silentCaptureSummary(recentSilentCapture) : null;
 
   useEffect(() => {
     setShowDeliveryDetails(false);
@@ -737,6 +753,15 @@ const LeadContextPanel = memo(function LeadContextPanel({
           <p className="mt-2 text-base font-semibold text-command-text">{context.nextAction}</p>
           <p className="mt-2 text-sm leading-6 text-command-muted">{context.nextReason}</p>
         </div>
+
+        {recentSilentCaptureSummary ? (
+          <div className="mt-4 rounded-2xl border border-command-cyan/35 bg-command-cyan/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-cyan">Recent AI capture</p>
+            <p className="mt-2 text-sm leading-6 text-command-text">{recentSilentCaptureSummary.fieldSummary}</p>
+            <p className="mt-2 text-sm leading-6 text-command-muted">Next action: {recentSilentCaptureSummary.nextAction}</p>
+            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-command-subtle">Internal only</p>
+          </div>
+        ) : null}
 
         <div className="mt-4 grid gap-3">
           <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">

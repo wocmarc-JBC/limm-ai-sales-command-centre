@@ -1372,6 +1372,55 @@ function memoryPatch(before: V9SalesMemory, after: V9SalesMemory) {
   return patch;
 }
 
+const SILENT_CAPTURE_FIELD_KEYS = [
+  "property_type",
+  "flat_type",
+  "scope_summary",
+  "project_type",
+  "floor_plan_status",
+  "site_photo_status",
+  "design_reference_status",
+  "address",
+  "postal_code",
+  "appointment_preference"
+] as const;
+
+function cleanSilentCaptureValue(value: unknown) {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "boolean") return value ? "true" : "";
+  return String(value).trim();
+}
+
+function silentCaptureChangedKeys(patch: Partial<V9SalesMemory> & Record<string, unknown>) {
+  return SILENT_CAPTURE_FIELD_KEYS.filter((key) => cleanSilentCaptureValue(patch[key]));
+}
+
+function silentCaptureValues(memory: V9SalesMemory, keys: readonly (typeof SILENT_CAPTURE_FIELD_KEYS)[number][]) {
+  return Object.fromEntries(
+    keys
+      .map((key) => [key, cleanSilentCaptureValue(memory[key])])
+      .filter(([, value]) => Boolean(value))
+  );
+}
+
+function silentCaptureNextAction(memory: V9SalesMemory) {
+  const scope = normalize(memory.scope_summary);
+  if ((memory.property_type === "HDB" || memory.flat_type) && hasSpecificScope(memory)) {
+    return "Ask for floor plan, site photos and reference images.";
+  }
+  if (memory.property_type === "condo" && scope.includes("kitchen")) {
+    return "Ask whether this is carpentry only or full kitchen works, then request floor plan and site photos if available.";
+  }
+  if ((memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type)) && /kitchen|extension|extend/.test(scope)) {
+    return "Ask for existing layout, site photos and areas to change.";
+  }
+  if (!hasSpecificScope(memory)) {
+    return "Wait for the next client detail before sending another auto-reply.";
+  }
+  return "Ask for the next missing project detail before the initial project review.";
+}
+
 export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInput): V9WhatsAppSalesBrainDecision {
   const before = initialMemory(input);
   const memory = deriveMemory(input);
@@ -1393,6 +1442,10 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     ["frustration_or_correction", "file_correction", "price_question", "appointment_request", "office_visit_request", "hacking_wall", "approval_submission", "carpentry_demo_qa", "free_work_request", "promotion_question"].includes(intent);
   const confidence = memory.handoff_lock && intent !== "design_question" ? 95 : ["general_enquiry", "media_received"].includes(intent) ? 82 : 96;
   const patch = memoryPatch(before, memory);
+  const silentCaptureKeys = silentCaptureChangedKeys(patch);
+  const silentCapturePreviousValues = silentCaptureValues(before, silentCaptureKeys);
+  const silentCaptureNewValues = silentCaptureValues(memory, silentCaptureKeys);
+  const silentCaptureAction = silentCaptureNextAction(memory);
   const correctionApplied = memory.correction_history.length > 0 || memory.handoff_lock;
   const blockedLegacyTemplate = legacyTemplateBlocked(final.reply);
   const trace = {
@@ -1426,6 +1479,13 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     final_reply_text: final.reply,
     finalReplyHash: hashReply(final.reply),
     ...burstThrottle,
+    silentCaptureInternalNoteRequired: burstThrottle.burstIntakeSuppressed,
+    silentCaptureReason: burstThrottle.burstIntakeSuppressed ? "short_fact_suppressed_to_avoid_chatty_reply" : "",
+    silentCaptureCapturedFields: silentCaptureNewValues,
+    silentCapturePreviousValues,
+    silentCaptureNewValues,
+    silentCaptureNextAction: silentCaptureAction,
+    silentCaptureVisibleToClient: false,
     memoryUsed: true,
     knownFactsUsed: Boolean(conciseKnownFacts(memory)),
     knownFactsSummary: conciseKnownFacts(memory),

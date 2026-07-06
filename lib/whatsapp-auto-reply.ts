@@ -21,6 +21,7 @@ import { storeWhatsAppMediaForLead } from "@/lib/whatsapp-media-storage";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
 import { buildWhatsAppReplyDecision, type WhatsAppReplyDecision } from "@/lib/whatsapp-reply-decision";
 import { validateWhatsAppAutoReply, WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY } from "@/lib/whatsapp-safety";
+import { buildSilentCaptureNoteFromDecision } from "@/lib/whatsapp-silent-capture";
 
 export type WhatsAppInboundHandleResult = {
   providerMessageId: string;
@@ -33,6 +34,7 @@ export type WhatsAppInboundHandleResult = {
     | "auto_reply_sent"
     | "auto_reply_blocked"
     | "auto_reply_disabled"
+    | "auto_reply_silent_capture"
     | "auto_reply_failed";
   reason: string;
   reply?: string;
@@ -501,6 +503,36 @@ export async function handleWhatsAppInboundMessage(
   });
 
   if (!decision.shouldReply) {
+    const silentCaptureNote = buildSilentCaptureNoteFromDecision(decision, {
+      leadId: lead.id,
+      sourceMessageId: providerMessageId
+    });
+    if (silentCaptureNote) {
+      logWhatsApp("whatsapp_silent_capture_internal_note_created", {
+        providerMessageId,
+        leadId: lead.id,
+        reason: silentCaptureNote.metadata.reason,
+        capturedFieldCount: Object.keys(silentCaptureNote.metadata.capturedFields as Record<string, unknown>).length
+      });
+      await saveLeadMessage(silentCaptureNote);
+      await auditWhatsApp({
+        action: "whatsapp_silent_capture_recorded",
+        leadId: lead.id,
+        summary: "AI captured WhatsApp facts silently to avoid repeated client-facing replies.",
+        metadata: {
+          ...brainMetadata,
+          ...silentCaptureNote.metadata
+        }
+      });
+      return {
+        providerMessageId,
+        leadId: lead.id,
+        status: "auto_reply_silent_capture",
+        reason: "AI captured facts silently to avoid repeated replies.",
+        reply: ""
+      };
+    }
+
     logWhatsApp("whatsapp_auto_reply_disabled", {
       providerMessageId,
       leadId: lead.id,

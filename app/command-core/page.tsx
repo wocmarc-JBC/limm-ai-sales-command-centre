@@ -20,6 +20,7 @@ import {
   outstandingForProject
 } from "@/lib/sales-collection";
 import type { FollowUp, Lead, LeadFile, PaymentRecord, ProjectAccount } from "@/lib/types";
+import { latestSilentCaptureWithoutNewerClientReply, silentCaptureSummary } from "@/lib/whatsapp-silent-capture";
 
 type Tone = "gold" | "cyan" | "amber" | "red" | "green" | "slate";
 type DecisionPriority = "critical" | "high" | "medium" | "low";
@@ -276,6 +277,8 @@ export default async function CommandCorePage() {
   const topLeadSummary = commandCoreLeadSummaries[0] ?? null;
   const topLead = topLeadSummary ? leads.find((lead) => lead.id === topLeadSummary.leadId) ?? null : null;
   const topLeadFacts = topLead ? buildLeadFacts(topLead, messagesByLead.get(topLead.id) ?? []) : null;
+  const topLeadSilentCapture = topLead ? latestSilentCaptureWithoutNewerClientReply(messagesByLead.get(topLead.id) ?? []) : null;
+  const topLeadSilentCaptureSummary = topLeadSilentCapture ? silentCaptureSummary(topLeadSilentCapture) : null;
   const topLeadAction = topLeadSummary
     ? { action: topLeadSummary.nextAction, reason: `${topLeadSummary.followUpStatus} | ${topLeadSummary.quotationReadinessStatus}` }
     : topLeadFacts ? { action: topLeadFacts.nextAction, reason: topLeadFacts.nextActionReason } : null;
@@ -385,7 +388,15 @@ export default async function CommandCorePage() {
                 <StatusBadge label={topLead.status} />
                 <StatusBadge label={topLead.leadCategory} />
                 {topLead.botPaused ? <StatusBadge label="Bot Paused" /> : null}
+                {topLeadSilentCaptureSummary ? <StatusBadge label="Facts captured silently" /> : null}
               </div>
+              {topLeadSilentCaptureSummary ? (
+                <div className="mt-4 rounded-2xl border border-command-cyan/35 bg-command-cyan/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">Facts captured silently</p>
+                  <p className="mt-2 text-sm leading-6 text-command-text">{topLeadSilentCaptureSummary.fieldSummary}</p>
+                  <p className="mt-2 text-sm leading-6 text-command-muted">Next action: {topLeadSilentCaptureSummary.nextAction}</p>
+                </div>
+              ) : null}
               <div className="mt-5 rounded-2xl border border-command-line bg-command-bg/55 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Next action</p>
                 <p className="mt-2 text-lg font-semibold text-command-text">{topLeadAction.action}</p>
