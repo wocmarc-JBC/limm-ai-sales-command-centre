@@ -38,6 +38,7 @@ export interface V9SalesMemory {
   postal_code: string;
   project_type: string;
   scope_summary: string;
+  flat_type: string;
   budget_expectation: string;
   timeline_expectation: string;
   key_collection: string;
@@ -58,6 +59,7 @@ export interface V9SalesMemory {
   lead_stage: string;
   lead_seriousness: "low" | "medium" | "high";
   handoff_lock: boolean;
+  first_touch_reply_sent: boolean;
   do_not_ask_again: Record<string, boolean>;
   last_bot_replies: string[];
   repeated_question_count: number;
@@ -218,6 +220,15 @@ function previousOutbound(messages: LeadMessage[]) {
     .slice(0, 5);
 }
 
+function isFirstTouchReplyText(reply: string) {
+  const normalized = normalize(reply);
+  return [
+    FIRST_TOUCH_GREETING_REPLY,
+    CHINESE_FIRST_TOUCH_REPLY,
+    "Hi, yes we're here. Thanks for contacting LIMM Works. May I know what renovation works you're planning?"
+  ].map(normalize).some((template) => normalized === template || normalized.includes(template.slice(0, 55)));
+}
+
 function statusFromString(value: unknown): V9Status {
   const text = normalize(String(value ?? ""));
   if (!text) return "unknown";
@@ -237,6 +248,7 @@ function initialMemory(input: V9WhatsAppSalesBrainInput): V9SalesMemory {
     postal_code: input.lead.postalCode || traceMemory?.postal_code || "",
     project_type: input.lead.serviceType || traceMemory?.project_type || "",
     scope_summary: input.lead.intakeProfile?.scopeOfWork || input.lead.scopeSummary || traceMemory?.scope_summary || "",
+    flat_type: traceMemory?.flat_type || "",
     budget_expectation: input.lead.intakeProfile?.budgetExpectation || traceMemory?.budget_expectation || "",
     timeline_expectation: input.lead.intakeProfile?.timeline || traceMemory?.timeline_expectation || "",
     key_collection: input.lead.intakeProfile?.keyCollectionDate || traceMemory?.key_collection || "",
@@ -257,6 +269,7 @@ function initialMemory(input: V9WhatsAppSalesBrainInput): V9SalesMemory {
     lead_stage: traceMemory?.lead_stage || input.lead.status || "new_lead",
     lead_seriousness: (traceMemory?.lead_seriousness as V9SalesMemory["lead_seriousness"] | undefined) || "low",
     handoff_lock: Boolean(traceMemory?.handoff_lock || input.lead.bossApprovalNeeded),
+    first_touch_reply_sent: Boolean(traceMemory?.first_touch_reply_sent),
     do_not_ask_again: { ...(traceMemory?.do_not_ask_again ?? {}) },
     last_bot_replies: Array.isArray(traceMemory?.last_bot_replies) ? traceMemory.last_bot_replies.slice(0, 5) : [],
     repeated_question_count: Number(traceMemory?.repeated_question_count ?? 0),
@@ -274,10 +287,20 @@ function applyTextFacts(memory: V9SalesMemory, text: string, source: "current" |
 
   if (has(normalized, /\blanded\b|\bterrace\b|\bsemi d\b|\bbungalow\b/)) memory.property_type = "landed";
   if (has(normalized, /\bhdb\b|\bbto\b/)) memory.property_type ||= "HDB";
+  if (has(normalized, /\bpublic\b|\bpublic housing\b/) && !memory.property_type) memory.property_type = "HDB";
   if (has(normalized, /\bcondo\b|\bapartment\b/)) memory.property_type ||= "condo";
   if (has(normalized, /\bcommercial\b|\boffice\b|\bshop\b/) && !has(normalized, /\byour office\b|\bgo office\b/)) memory.property_type ||= "commercial";
-  if (has(normalized, /\ba\s*&\s*a\b|\baa\b|\baddition\b|\balteration\b|\bextension\b|\bextend\b/)) memory.project_type = "landed A&A";
-  if (has(normalized, /\bfull reno|\bfull renovation|\brenovate\b|\breno\b/)) memory.scope_summary ||= "renovation enquiry";
+  const flatMatch = normalized.match(/\b([1-5])\s*(?:room|rm)?\s*(?:flat|hdb)?\b/);
+  if (flatMatch && (has(normalized, /\broom\b|\brm\b|\bflat\b|\bhdb\b/) || normalized.length <= 8)) {
+    memory.flat_type = `${flatMatch[1]}-room flat`;
+    memory.property_type ||= "HDB";
+  }
+  if (has(normalized, /\ba\s*&\s*a\b|\ba\s+a\b|\baa\b|\baddition\b|\balteration\b|\bextension\b|\bextend\b/)) memory.project_type = "landed A&A";
+  if (has(normalized, /\bfull work\b|\bfull works\b|\bfull reno\b|\bfull renovation\b|\bwhole house\b|\bwhole-house\b|\bwhole unit\b|\bentire house\b/)) {
+    memory.scope_summary = appendUnique(memory.scope_summary, "full renovation");
+  } else if (has(normalized, /\brenovate\b|\breno\b/)) {
+    memory.scope_summary ||= "renovation enquiry";
+  }
   if (has(normalized, /\bkitchen\b/)) memory.scope_summary = appendUnique(memory.scope_summary, "kitchen");
   if (has(normalized, /\bbathroom\b|\btoilet\b/)) memory.scope_summary = appendUnique(memory.scope_summary, "bathroom");
   if (has(normalized, /\bcarpentry\b|\bcabinet\b|\bcabinets\b|\bwardrobe\b|\btv console\b|\bfeature wall\b|\blaminate\b|木工|橱柜|衣柜|电视柜|修改柜|加层板/)) {
@@ -398,6 +421,7 @@ function deriveMemory(input: V9WhatsAppSalesBrainInput) {
     markDoNotAsk(memory, "floor_plan");
   }
   memory.last_bot_replies = [...previousOutbound(input.previousMessages), ...memory.last_bot_replies].slice(0, 5);
+  memory.first_touch_reply_sent = memory.first_touch_reply_sent || memory.last_bot_replies.some(isFirstTouchReplyText);
   const seriousSignals = [
     memory.property_type === "landed",
     /a&a|landed/i.test(memory.project_type),
@@ -468,6 +492,7 @@ function missingInfo(memory: V9SalesMemory) {
 function conciseKnownFacts(memory: V9SalesMemory) {
   return [
     memory.property_type ? `property: ${memory.property_type}` : "",
+    memory.flat_type ? `flat: ${memory.flat_type}` : "",
     memory.project_type ? `project: ${memory.project_type}` : "",
     memory.address ? `address: ${memory.address}` : "",
     memory.floor_plan_status !== "unknown" ? `floor plan: ${memory.floor_plan_status}` : "",
@@ -500,6 +525,7 @@ function hasSpecificScope(memory: V9SalesMemory) {
 
 function scopePhrase(memory: V9SalesMemory) {
   const normalizedScope = normalize(`${memory.scope_summary} ${memory.project_type}`);
+  if (normalizedScope.includes("full") || normalizedScope.includes("whole")) return "full renovation";
   if (normalizedScope.includes("kitchen")) return "kitchen works";
   if (normalizedScope.includes("toilet") || normalizedScope.includes("bathroom")) return "toilet works";
   if (normalizedScope.includes("wall") || normalizedScope.includes("hacking")) return "wall/hacking works";
@@ -739,6 +765,88 @@ function firstTouchGreetingKind(text: string) {
   return "";
 }
 
+function currentMessageIsShortIntakeAnswer(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
+  const text = normalize(input.inboundMessageText);
+  if (!text || input.inboundMessageType.toLowerCase() !== "text") return false;
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 5) return false;
+  return Boolean(
+    memory.property_type ||
+      memory.flat_type ||
+      has(text, /\bpublic\b|\bfull work\b|\bfull works\b|\bfull reno\b|\bfull renovation\b|\bwhole house\b|\bkitchen\b|\btoilet\b|\bbathroom\b|\ba&a\b|\baa\b/)
+  );
+}
+
+function knownPropertyLabel(memory: V9SalesMemory) {
+  if (memory.flat_type && memory.property_type === "HDB") return `${memory.flat_type} HDB`;
+  if (memory.flat_type) return memory.flat_type;
+  return memory.property_type;
+}
+
+function composeStageAwareIntakeReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  const text = normalize(input.inboundMessageText);
+  const property = knownPropertyLabel(memory);
+  const scope = scopePhrase(memory);
+
+  if (has(text, /\bpublic\b/) && !has(text, /\bhdb\b/) && !memory.flat_type) {
+    return "Thanks, noted. Do you mean HDB or another type of public housing? May I know if this is a full renovation or selected areas only?";
+  }
+
+  if (has(text, /\bhdb\b/) && !hasSpecificScope(memory)) {
+    return "Thanks, HDB noted. May I know if this is a full renovation or selected areas only?";
+  }
+
+  if (memory.flat_type && !hasSpecificScope(memory)) {
+    return `Thanks, noted - ${memory.flat_type}. May I know which areas you're planning to renovate?`;
+  }
+
+  if (memory.property_type === "HDB" && !hasSpecificScope(memory)) {
+    return "Thanks, HDB noted. May I know if this is a full renovation or selected areas only?";
+  }
+
+  if (memory.property_type === "condo" && !hasSpecificScope(memory)) {
+    return "Thanks, condo noted. May I know which areas you're planning to renovate?";
+  }
+
+  if (memory.property_type === "landed" && !hasSpecificScope(memory)) {
+    return "Thanks, landed property noted. May I know if this is A&A, extension works, or selected renovation areas?";
+  }
+
+  if (memory.property_type === "condo" && normalize(memory.scope_summary).includes("kitchen")) {
+    return "Thanks, condo kitchen noted. May I know if this is carpentry only or full kitchen works? You may also send the floor plan and site photos if available.";
+  }
+
+  if (
+    (memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type)) &&
+    hasSpecificScope(memory) &&
+    (normalize(memory.scope_summary).includes("kitchen") || has(text, /\bkitchen\b|\bextension\b|\bextend\b/))
+  ) {
+    return "Thanks, wet kitchen or extension works noted. For landed/A&A works, layout, site condition and approval requirements may affect the scope. You may send the layout, site photos and the areas you want to change, and we'll review from there.";
+  }
+
+  if ((memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type)) && hasSpecificScope(memory)) {
+    return "Thanks, noted. For landed/A&A works, layout, site condition and approval requirements may affect the scope. You may send the layout, site photos and areas you want to change, and we'll review from there.";
+  }
+
+  if (property && hasSpecificScope(memory)) {
+    return `Thanks, noted - ${property} ${scope}. You may send us the floor plan, site photos, and any reference images here first, and we'll review the scope from there.`;
+  }
+
+  if (hasSpecificScope(memory)) {
+    return `Thanks, noted - ${scope}. May I know what type of property this is?`;
+  }
+
+  return "";
+}
+
+function safeFallbackForContext(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  if (memory.first_touch_reply_sent) {
+    return composeStageAwareIntakeReply(memory, input) ||
+      "Thanks, noted. May I know the main scope or areas you're planning to renovate?";
+  }
+  return ULTRA_SAFE_V9_FALLBACK;
+}
+
 function composePriceReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
   const text = normalize(input.inboundMessageText);
   const seriousAa = memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type);
@@ -802,6 +910,7 @@ function composeAppointmentReply(memory: V9SalesMemory, input: V9WhatsAppSalesBr
 }
 
 function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  if (memory.first_touch_reply_sent) return composeStageAwareIntakeReply(memory, input);
   if (!isFirstTouch(input)) return "";
   if (["carpentry_demo_qa", "hacking_wall", "approval_submission"].includes(intent)) return "";
   if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) return composeCarpentryDemoPriceReply(memory, input);
@@ -903,6 +1012,10 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
   if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) {
     return handoffAppend(composeCarpentryDemoPriceReply(memory, input), memory, "carpentry_demo_qa");
   }
+  const stageAwareIntakeReply = (memory.first_touch_reply_sent || (!isFirstTouch(input) && currentMessageIsShortIntakeAnswer(input, memory)))
+    ? composeStageAwareIntakeReply(memory, input)
+    : "";
+  if (stageAwareIntakeReply) return handoffAppend(stageAwareIntakeReply, memory, intent);
   const firstTouchReply = composeFirstTouchReply(intent, memory, input);
   if (firstTouchReply) return firstTouchReply;
 
@@ -987,7 +1100,13 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return handoffAppend(`Thanks for sharing. We can help review the ${project} properly. ${next}`, memory, intent);
   }
   if (intent === "follow_up_ping") {
+    if (memory.first_touch_reply_sent) {
+      return handoffAppend(composeStageAwareIntakeReply(memory, input) || "Hi, yes we're here. May I know which renovation details you would like to share next?", memory, intent);
+    }
     return handoffAppend("Hi, yes we're here. Thanks for contacting LIMM Works. May I know what renovation works you're planning?", memory, intent);
+  }
+  if (memory.first_touch_reply_sent) {
+    return handoffAppend(composeStageAwareIntakeReply(memory, input) || "Thanks, noted. May I know the main scope or areas you're planning to renovate?", memory, intent);
   }
   return handoffAppend(FIRST_TOUCH_GREETING_REPLY, memory, intent);
 }
@@ -1087,20 +1206,20 @@ function finalV9Reply(input: V9WhatsAppSalesBrainInput, intent: string, memory: 
 
   let qualityProblems = v9QualityProblems(reply, intent, memory, input);
   if (qualityProblems.length) {
-    reply = shouldUseRepeatHandoffSentence(memory, intent) ? HANDOFF_HOLDING_REPLY : ULTRA_SAFE_V9_FALLBACK;
+    reply = shouldUseRepeatHandoffSentence(memory, intent) ? HANDOFF_HOLDING_REPLY : safeFallbackForContext(memory, input);
     qualityResult = "rewritten";
     if (qualityProblems.includes("exact_repeat")) repetitionResult = "rewritten";
   }
 
   let safety = validateWhatsAppAutoReply(reply, { calendarEventId: input.calendarEventId ?? "" });
   if (!safety.ok) {
-    reply = shouldUseRepeatHandoffSentence(memory, intent) ? HANDOFF_HOLDING_REPLY : ULTRA_SAFE_V9_FALLBACK;
+    reply = shouldUseRepeatHandoffSentence(memory, intent) ? HANDOFF_HOLDING_REPLY : safeFallbackForContext(memory, input);
     safetyResult = "rewritten";
     safety = validateWhatsAppAutoReply(reply, { calendarEventId: input.calendarEventId ?? "" });
   }
 
   if (!reply.trim()) {
-    reply = ULTRA_SAFE_V9_FALLBACK;
+    reply = safeFallbackForContext(memory, input);
     noSilenceGuardResult = "used";
     safetyResult = "fallback_used";
     safety = validateWhatsAppAutoReply(reply, { calendarEventId: input.calendarEventId ?? "" });
@@ -1178,6 +1297,11 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     memoryUsed: true,
     knownFactsUsed: Boolean(conciseKnownFacts(memory)),
     knownFactsSummary: conciseKnownFacts(memory),
+    firstTouchReplySent: memory.first_touch_reply_sent,
+    repeatedFirstTouchGuardAvailable: true,
+    shortIntakeAnswerDetected: currentMessageIsShortIntakeAnswer(input, memory),
+    stageAwareIntakeReplyAvailable: true,
+    flatType: memory.flat_type,
     missingFactsSelected: missing,
     handoffRequired,
     handoff_required: handoffRequired,

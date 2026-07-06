@@ -72,6 +72,29 @@ const scenarioPack = [
   ["Marcus has replied already", "text", "human_takeover"]
 ] as const;
 
+const multiMessageIntakeScenarios = [
+  {
+    name: "HDB full renovation intake",
+    sequence: ["Hello", "5 room flat", "HDB", "Full work"],
+    expected: "First-touch sent once; property HDB; flat 5-room; scope full renovation; ask for floor plan/photos/reference images."
+  },
+  {
+    name: "Condo kitchen intake",
+    sequence: ["Hi", "condo", "kitchen"],
+    expected: "First-touch sent once; property condo; scope kitchen; ask whether carpentry only or full kitchen works."
+  },
+  {
+    name: "Landed A&A intake",
+    sequence: ["Hello", "landed", "A&A", "wet kitchen extension"],
+    expected: "First-touch sent once; landed/A&A captured; ask for layout, site photos and areas to change without approval promise."
+  },
+  {
+    name: "Mandarin renovation intake",
+    sequence: ["你好", "HDB", "全屋装修"],
+    expected: "First-touch sent once; HDB and full renovation captured; repeated greeting prevented."
+  }
+] as const;
+
 function fallbackLead(): Lead {
   const now = new Date().toISOString();
   return {
@@ -424,6 +447,23 @@ export default async function QaCentrePage({
           </div>
         </section>
       ) : null}
+
+      <section className="mt-6 rounded-2xl border border-command-line bg-command-card p-5 shadow-premium">
+        <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Multi-message intake</p>
+        <h2 className="mt-2 text-2xl font-semibold text-command-text">Repeated first-touch guard</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
+          Simulation-only checks for short client fragments sent after the first greeting. QA expects first-touch once, facts captured, a stage-aware next action, and no repeated greeting.
+        </p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {multiMessageIntakeScenarios.map((scenario) => (
+            <div key={scenario.name} className="rounded-xl border border-command-line bg-command-bg/60 p-4">
+              <p className="font-semibold text-command-text">{scenario.name}</p>
+              <p className="mt-2 text-sm text-command-muted">{scenario.sequence.join(" -> ")}</p>
+              <p className="mt-2 text-sm leading-6 text-command-text">{scenario.expected}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {showExpansionPack ? (
         <section className="mt-6 rounded-2xl border border-command-line bg-command-card p-5 shadow-premium">
