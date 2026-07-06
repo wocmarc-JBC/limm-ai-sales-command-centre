@@ -95,6 +95,29 @@ const multiMessageIntakeScenarios = [
   }
 ] as const;
 
+const burstIntakeScenarios = [
+  {
+    name: "HDB burst",
+    sequence: ["Hello", "HDB", "5 room", "Full work", "Kitchen also"],
+    expected: "First-touch reply, short facts captured quietly, one consolidated reply when enough context is known, then no extra reply for another short add-on."
+  },
+  {
+    name: "Condo burst",
+    sequence: ["Hi", "condo", "kitchen"],
+    expected: "Condo is captured silently inside the quiet window; kitchen triggers the single useful stage-aware reply."
+  },
+  {
+    name: "Landed A&A burst",
+    sequence: ["Hello", "landed", "A&A", "wet kitchen extension"],
+    expected: "Landed and A&A fragments are captured silently; wet kitchen extension triggers the consolidated landed/A&A reply."
+  },
+  {
+    name: "Direct-question bypass",
+    sequence: ["Hi", "HDB", "How much?", "Need approval?"],
+    expected: "Direct questions bypass quiet-window suppression and still receive immediate safe replies."
+  }
+] as const;
+
 function fallbackLead(): Lead {
   const now = new Date().toISOString();
   return {
@@ -456,6 +479,23 @@ export default async function QaCentrePage({
         </p>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {multiMessageIntakeScenarios.map((scenario) => (
+            <div key={scenario.name} className="rounded-xl border border-command-line bg-command-bg/60 p-4">
+              <p className="font-semibold text-command-text">{scenario.name}</p>
+              <p className="mt-2 text-sm text-command-muted">{scenario.sequence.join(" -> ")}</p>
+              <p className="mt-2 text-sm leading-6 text-command-text">{scenario.expected}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-command-line bg-command-card p-5 shadow-premium">
+        <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Burst intake</p>
+        <h2 className="mt-2 text-2xl font-semibold text-command-text">Quiet-window suppression</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
+          Simulation-only checks for rapid short facts after a greeting. QA expects facts to update silently during the 45-second quiet window, while direct questions still get immediate safe replies.
+        </p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {burstIntakeScenarios.map((scenario) => (
             <div key={scenario.name} className="rounded-xl border border-command-line bg-command-bg/60 p-4">
               <p className="font-semibold text-command-text">{scenario.name}</p>
               <p className="mt-2 text-sm text-command-muted">{scenario.sequence.join(" -> ")}</p>

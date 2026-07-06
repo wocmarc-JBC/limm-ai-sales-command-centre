@@ -117,6 +117,8 @@ const CHINESE_FIRST_TOUCH_REPLY =
 const ULTRA_SAFE_V9_FALLBACK =
   FIRST_TOUCH_GREETING_REPLY;
 
+const BURST_INTAKE_QUIET_WINDOW_SECONDS = 45;
+
 const LEGACY_REPLY_TEMPLATE_PATTERNS = [
   /Giving a rough figure too early can be misleading/i,
   /To avoid giving (?:you )?the wrong figure/i,
@@ -295,8 +297,13 @@ function applyTextFacts(memory: V9SalesMemory, text: string, source: "current" |
     memory.flat_type = `${flatMatch[1]}-room flat`;
     memory.property_type ||= "HDB";
   }
+  const chineseFlatMatch = normalized.match(/([1-5])\s*\u623f/);
+  if (chineseFlatMatch) {
+    memory.flat_type = `${chineseFlatMatch[1]}-room flat`;
+    memory.property_type ||= "HDB";
+  }
   if (has(normalized, /\ba\s*&\s*a\b|\ba\s+a\b|\baa\b|\baddition\b|\balteration\b|\bextension\b|\bextend\b/)) memory.project_type = "landed A&A";
-  if (has(normalized, /\bfull work\b|\bfull works\b|\bfull reno\b|\bfull renovation\b|\bwhole house\b|\bwhole-house\b|\bwhole unit\b|\bentire house\b/)) {
+  if (has(normalized, /\bfull work\b|\bfull works\b|\bfull reno\b|\bfull renovation\b|\bwhole house\b|\bwhole-house\b|\bwhole unit\b|\bentire house\b|\u5168\u5c4b|\u6574\u5c4b/)) {
     memory.scope_summary = appendUnique(memory.scope_summary, "full renovation");
   } else if (has(normalized, /\brenovate\b|\breno\b/)) {
     memory.scope_summary ||= "renovation enquiry";
@@ -777,6 +784,124 @@ function currentMessageIsShortIntakeAnswer(input: V9WhatsAppSalesBrainInput, mem
   );
 }
 
+function messageTimestampMs(message: LeadMessage) {
+  const raw = message.createdAt || message.providerTimestamp;
+  const parsed = raw ? Date.parse(String(raw)) : NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function currentMessageTimestampMs(input: V9WhatsAppSalesBrainInput) {
+  const byProviderId = input.providerMessageId
+    ? input.previousMessages.find((message) => message.providerMessageId === input.providerMessageId)
+    : undefined;
+  if (byProviderId) return messageTimestampMs(byProviderId);
+
+  const current = normalize(input.inboundMessageText);
+  const currentType = normalize(input.inboundMessageType);
+  const matchingInbound = input.previousMessages
+    .filter((message) => message.direction === "inbound")
+    .filter((message) => {
+      const text = normalize(messageText(message));
+      if (current) return text === current || text.startsWith(`${current} `);
+      return currentType ? text.includes(currentType) : false;
+    })
+    .map(messageTimestampMs)
+    .filter((value): value is number => value !== null)
+    .sort((a, b) => b - a)[0];
+
+  return matchingInbound ?? null;
+}
+
+function latestMessageBeforeCurrent(input: V9WhatsAppSalesBrainInput, direction: "inbound" | "outbound") {
+  const currentTime = currentMessageTimestampMs(input);
+  const currentProviderId = input.providerMessageId ?? "";
+  const currentText = normalize(input.inboundMessageText);
+  return input.previousMessages
+    .filter((message) => message.direction === direction)
+    .filter((message) => message.providerMessageId !== currentProviderId)
+    .filter((message) => {
+      if (direction !== "inbound" || !currentText) return true;
+      return normalize(messageText(message)) !== currentText;
+    })
+    .map((message) => ({ message, time: messageTimestampMs(message) }))
+    .filter((item): item is { message: LeadMessage; time: number } => {
+      if (item.time === null) return false;
+      return currentTime === null ? true : item.time <= currentTime;
+    })
+    .sort((a, b) => b.time - a.time)[0] ?? null;
+}
+
+function isBurstDirectQuestionException(input: V9WhatsAppSalesBrainInput) {
+  const text = normalize(input.inboundMessageText);
+  if (!text) return false;
+  return has(text, /\bhow much\b|\bprice\b|\bquote\b|\bquotation\b|\bestimate\b|\broughly\b|\bcost\b|\u591a\u5c11\u94b1|\u62a5\u4ef7|\u4f30\u4ef7/) ||
+    has(text, /\bcan (?:hack|come down|meet|start|do design|do theme|approve)\b|\bneed approval\b|\bapproval\b|\bpermit\b|\bsite visit\b|\bappointment\b|\bappt\b|\bavailable\b|\bare you there\b|\bcan reply\b|\bany update\b/) ||
+    has(text, /\?$/);
+}
+
+function currentMessageIsShortBurstFact(input: V9WhatsAppSalesBrainInput) {
+  const text = normalize(input.inboundMessageText);
+  if (!text || input.inboundMessageType.toLowerCase() !== "text") return false;
+  if (isBurstDirectQuestionException(input)) return false;
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 5) return false;
+  return has(text, /\bhdb\b|\bbto\b|\bpublic\b|\bcondo\b|\blanded\b|\bterrace\b|\bsemi d\b|\bbungalow\b|\b[1-5]\s*(?:room|rm|flat|hdb)?\b|\bfull work\b|\bfull works\b|\bfull reno\b|\bfull renovation\b|\bwhole house\b|\bkitchen\b|\bkitchen also\b|\btoilet\b|\bbathroom\b|\ba\s+a\b|\baa\b|\bextension\b|\bextend\b|\u5168\u5c4b|\u6574\u5c4b|[1-5]\s*\u623f/);
+}
+
+function burstContextReadyForConsolidatedReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  const current = normalize(input.inboundMessageText);
+  const scope = normalize(memory.scope_summary);
+  if ((memory.property_type === "HDB" || memory.flat_type) && hasSpecificScope(memory)) return true;
+  if (memory.property_type === "condo" && hasSpecificScope(memory)) return true;
+  if (memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type)) {
+    return Boolean(/kitchen|extension|extend|full|whole|bathroom|toilet|carpentry|wall|hacking/.test(scope) || has(current, /\bkitchen\b|\bextension\b|\bextend\b|\bfull\b|\bwhole\b/));
+  }
+  return Boolean(memory.property_type && hasSpecificScope(memory));
+}
+
+function burstIntakeThrottle(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory, intent: string) {
+  const directQuestionException = isBurstDirectQuestionException(input);
+  const shortFact = currentMessageIsShortBurstFact(input);
+  const currentTime = currentMessageTimestampMs(input);
+  const latestInbound = latestMessageBeforeCurrent(input, "inbound");
+  const latestOutbound = latestMessageBeforeCurrent(input, "outbound");
+  const secondsSincePreviousInbound = currentTime !== null && latestInbound
+    ? Math.max(0, Math.round((currentTime - latestInbound.time) / 1000))
+    : null;
+  const secondsSincePreviousOutbound = currentTime !== null && latestOutbound
+    ? Math.max(0, Math.round((currentTime - latestOutbound.time) / 1000))
+    : null;
+  const withinQuietWindow = secondsSincePreviousInbound !== null && secondsSincePreviousInbound <= BURST_INTAKE_QUIET_WINDOW_SECONDS;
+  const recentOutboundWithinQuietWindow = secondsSincePreviousOutbound !== null && secondsSincePreviousOutbound <= BURST_INTAKE_QUIET_WINDOW_SECONDS;
+  const recentOutboundWasFirstTouch = latestOutbound ? isFirstTouchReplyText(String(latestOutbound.message.body ?? "")) : false;
+  const contextReady = burstContextReadyForConsolidatedReply(memory, input);
+
+  let reason = "";
+  if (shortFact && withinQuietWindow && memory.first_touch_reply_sent && !directQuestionException) {
+    if (recentOutboundWithinQuietWindow && !recentOutboundWasFirstTouch) {
+      reason = "recent_consolidated_reply_already_sent";
+    } else if (!contextReady) {
+      reason = "waiting_for_more_intake_facts";
+    }
+  }
+
+  return {
+    burstIntakeThrottleAvailable: true,
+    burstQuietWindowSeconds: BURST_INTAKE_QUIET_WINDOW_SECONDS,
+    burstShortFactDetected: shortFact,
+    burstDirectQuestionException: directQuestionException,
+    burstWithinQuietWindow: withinQuietWindow,
+    burstSecondsSincePreviousInbound: secondsSincePreviousInbound,
+    burstSecondsSincePreviousOutbound: secondsSincePreviousOutbound,
+    burstRecentOutboundWithinQuietWindow: recentOutboundWithinQuietWindow,
+    burstRecentOutboundWasFirstTouch: recentOutboundWasFirstTouch,
+    burstContextReadyForConsolidatedReply: contextReady,
+    burstIntakeSuppressed: Boolean(reason),
+    burstSuppressionReason: reason,
+    burstIntent: intent
+  };
+}
+
 function knownPropertyLabel(memory: V9SalesMemory) {
   if (memory.flat_type && memory.property_type === "HDB") return `${memory.flat_type} HDB`;
   if (memory.flat_type) return memory.flat_type;
@@ -910,7 +1035,7 @@ function composeAppointmentReply(memory: V9SalesMemory, input: V9WhatsAppSalesBr
 }
 
 function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
-  if (memory.first_touch_reply_sent) return composeStageAwareIntakeReply(memory, input);
+  if (memory.first_touch_reply_sent) return "";
   if (!isFirstTouch(input)) return "";
   if (["carpentry_demo_qa", "hacking_wall", "approval_submission"].includes(intent)) return "";
   if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) return composeCarpentryDemoPriceReply(memory, input);
@@ -1012,7 +1137,8 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
   if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) {
     return handoffAppend(composeCarpentryDemoPriceReply(memory, input), memory, "carpentry_demo_qa");
   }
-  const stageAwareIntakeReply = (memory.first_touch_reply_sent || (!isFirstTouch(input) && currentMessageIsShortIntakeAnswer(input, memory)))
+  const stageAwareIntakeEligible = ["general_enquiry", "follow_up_ping", "serious_project_enquiry", "media_received"].includes(intent);
+  const stageAwareIntakeReply = stageAwareIntakeEligible && (memory.first_touch_reply_sent || (!isFirstTouch(input) && currentMessageIsShortIntakeAnswer(input, memory)))
     ? composeStageAwareIntakeReply(memory, input)
     : "";
   if (stageAwareIntakeReply) return handoffAppend(stageAwareIntakeReply, memory, intent);
@@ -1256,7 +1382,12 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
   const moveRisks = riskFlags(intent, memory);
   const missing = missingInfo(memory);
   const final = finalV9Reply(input, intent, memory);
-  const shouldReply = input.autoReplyEnabled && intent !== "unsupported" && Boolean(final.reply.trim());
+  const burstThrottle = burstIntakeThrottle(input, memory, intent);
+  const shouldReply =
+    input.autoReplyEnabled &&
+    intent !== "unsupported" &&
+    Boolean(final.reply.trim()) &&
+    !burstThrottle.burstIntakeSuppressed;
   const handoffRequired =
     (intent !== "design_question" && memory.handoff_lock) ||
     ["frustration_or_correction", "file_correction", "price_question", "appointment_request", "office_visit_request", "hacking_wall", "approval_submission", "carpentry_demo_qa", "free_work_request", "promotion_question"].includes(intent);
@@ -1294,6 +1425,7 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     reply_source: "v9_clean_core",
     final_reply_text: final.reply,
     finalReplyHash: hashReply(final.reply),
+    ...burstThrottle,
     memoryUsed: true,
     knownFactsUsed: Boolean(conciseKnownFacts(memory)),
     knownFactsSummary: conciseKnownFacts(memory),
@@ -1324,14 +1456,14 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     quality_result: final.qualityResult,
     qualityProblems: final.qualityProblems,
     repetition_result: final.repetitionResult,
-    no_silence_guard_result: final.noSilenceGuardResult,
+    no_silence_guard_result: burstThrottle.burstIntakeSuppressed ? "intentional_no_reply" : final.noSilenceGuardResult,
     blockedLegacyTemplate,
     priceGuideOnHold: true,
     calendarAutoBookingEnabled: false,
     voiceTranscriptionEnabled: false,
     appointment_status: appointmentStatus(intent),
     calendarEventId: input.calendarEventId ?? null,
-    final_send_result: "pending_send",
+    final_send_result: burstThrottle.burstIntakeSuppressed ? "burst_intake_suppressed" : "pending_send",
     error: ""
   };
 
@@ -1345,17 +1477,21 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     intent,
     stage,
     confidence,
-    replySource: memory.handoff_lock && intent !== "design_question" ? "handoff_holding" : "v9_clean_core",
+    replySource: burstThrottle.burstIntakeSuppressed ? "intentional_no_reply" : memory.handoff_lock && intent !== "design_question" ? "handoff_holding" : "v9_clean_core",
     salesMove,
     answeredClientQuestion: true,
     askedNextBestQuestion: /\?/.test(final.reply),
     riskFlags: moveRisks,
     missingInfo: missing,
-    nextAction: handoffRequired ? "Team follow-up required." : "Continue with v9 clean-core reply flow.",
+    nextAction: burstThrottle.burstIntakeSuppressed
+      ? "Short intake fact captured; wait for more context before sending another auto-reply."
+      : handoffRequired
+        ? "Team follow-up required."
+        : "Continue with v9 clean-core reply flow.",
     appointmentStatus: appointmentStatus(intent),
     safetyResult: final.safetyResult,
     repetitionResult: final.repetitionResult,
     qualityResult: final.qualityResult,
-    noSilenceGuardResult: final.noSilenceGuardResult
+    noSilenceGuardResult: burstThrottle.burstIntakeSuppressed ? "intentional_no_reply" : final.noSilenceGuardResult
   };
 }
