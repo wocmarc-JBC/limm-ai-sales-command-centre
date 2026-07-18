@@ -158,10 +158,14 @@ const leadsRepository = read("lib/data/leads-repository.ts");
 const operatorCommands = read("lib/operator-commands.ts");
 
 check("publishes and chains the v10.6.0 Operator Advantage release", () => {
-  assert.equal(packageJson.version, "10.6.0");
+  const [major, minor] = packageJson.version.split(".").map(Number);
+  assert.ok(major > 10 || (major === 10 && minor >= 6));
   assert.ok(packageJson.scripts["test:v10.6.0"]?.includes("test:v10.5.0"));
   assert.ok(packageJson.scripts["test:v10.6.0"]?.includes("test_v10_6_operator_advantage.mjs"));
-  assert.ok(packageJson.scripts.verify.includes("test:v10.6.0"));
+  assert.ok(packageJson.scripts.verify.includes("test:v10.6.0") || packageJson.scripts.verify.includes("test:v11.1.0"));
+  if (packageJson.scripts.verify.includes("test:v11.1.0")) {
+    assert.ok(packageJson.scripts["test:v11.1.0"]?.includes("test:v10.6.0"));
+  }
   assert.ok(packageJson.scripts.build.includes("test_operator_inbox_bundle_budget.mjs"));
   for (const marker of [
     "v10_6_0_operator_advantage",
@@ -175,7 +179,9 @@ check("publishes and chains the v10.6.0 Operator Advantage release", () => {
     "operatorQueueSyncHealthAvailable",
     "operatorInboxInitialBundleBudgetKb: 140"
   ]) {
-    assert.ok((health.match(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length >= 2, `Health success/fallback marker missing ${marker}.`);
+    const count = (health.match(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length;
+    const historicalVersionMarker = marker === "v10_6_0_operator_advantage" || marker === 'uiVersion: "v10.6.0"';
+    assert.ok(count >= (historicalVersionMarker ? 1 : 2), `Health success/fallback marker missing ${marker}.`);
   }
 });
 

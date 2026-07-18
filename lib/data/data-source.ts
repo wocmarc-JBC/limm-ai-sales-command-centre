@@ -3,10 +3,9 @@ import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { isQaE2EMode } from "@/lib/qa-e2e-mode";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
+import { getSupabasePublicKey, hasSupabaseEnv } from "./supabase-env";
 
-export function hasSupabaseEnv() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-}
+export { getSupabasePublicKey, hasSupabaseEnv } from "./supabase-env";
 
 export function getDataMode(): SystemHealth["mode"] {
   if (isQaE2EMode()) return "Mock Mode";
@@ -30,7 +29,7 @@ export function getSystemHealth(): SystemHealth {
   return {
     mode: getDataMode(),
     supabaseUrlDetected: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-    supabaseAnonKeyDetected: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    supabaseAnonKeyDetected: Boolean(getSupabasePublicKey()),
     authEnabled: supabaseConfigured,
     rlsExpected: supabaseConfigured,
     rlsNotes: supabaseConfigured

@@ -51,6 +51,7 @@ export function mapLeadRow(row: any): Lead {
     quotationReadiness: row.quotation_readiness_score ?? row.quotation_readiness ?? 0,
     lastClientMessage: row.last_client_message ?? "",
     lastReplyAt: row.last_reply_at ?? null,
+    firstOperatorResponseAt: row.first_operator_response_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     preferredContactTime: row.preferred_contact_time ?? "",

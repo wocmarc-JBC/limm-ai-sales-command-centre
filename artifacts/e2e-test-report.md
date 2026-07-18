@@ -1,7 +1,7 @@
 # E2E Test Report
 
-QA run: QA_RUN_boss_ops_review_expanded
-Run target: Local Next.js dev server
+QA run: QA_RUN_2026-07-18T18-49-27-151Z
+Run target: Preview or remote: http://localhost:3100
 Data mode: QA_E2E_MODE mock data / dry-run external actions
 
 ## Routes Tested

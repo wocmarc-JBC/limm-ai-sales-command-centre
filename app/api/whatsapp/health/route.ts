@@ -8,6 +8,9 @@ import { singaporeOfficialPlanningAreaMapAvailable } from "@/lib/singapore-map-g
 import { questionBankStats } from "@/lib/whatsapp-question-bank";
 import { getClientFilesStorageRuntime } from "@/lib/data/lead-files-repository";
 import { getWhatsAppConversationConcurrencyHealth } from "@/lib/data/whatsapp-conversation-lock-repository";
+import { getSupabasePublicKey } from "@/lib/data/data-source";
+import { hasSupabaseAdminEnv } from "@/lib/data/supabase-admin";
+import { getOperationsSloSnapshot } from "@/lib/operations/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +85,8 @@ export const dynamic = "force-dynamic";
 // uiVersion: "v10.5.0"
 // version: "v10_6_0_operator_advantage"
 // uiVersion: "v10.6.0"
+// version: "v11_1_0_world_class_operations"
+// uiVersion: "v11.1.0"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -104,16 +109,17 @@ export async function GET() {
     const clientFilesStorage = getClientFilesStorageRuntime();
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     const concurrencySafety = await getWhatsAppConversationConcurrencyHealth();
+    const operations = await getOperationsSloSnapshot();
     const webhookSignatureEnforced = envPresent("WHATSAPP_APP_SECRET");
     const concurrencySafetyReady =
       concurrencySafety.databaseConnected && concurrencySafety.migration027Ready && concurrencySafety.migration028Ready;
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v10_6_0_operator_advantage",
+      version: "v11_1_0_world_class_operations",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.6.0",
+      uiVersion: "v11.1.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -180,6 +186,34 @@ export async function GET() {
       operatorSpamUndoAvailable: true,
       operatorQueueSyncHealthAvailable: true,
       operatorInboxInitialBundleBudgetKb: 140,
+      privateRealtimeBroadcastAvailable: true,
+      realtimePresenceAvailable: true,
+      realtimePollingFallbackAvailable: true,
+      atomicInboxAssignmentAvailable: true,
+      personalAndTeamQueuesAvailable: true,
+      internalTeamNotesAvailable: true,
+      conversationCollisionWarningAvailable: true,
+      realtimePwaAlertsAvailable: true,
+      cursorInboxPaginationAvailable: true,
+      virtualizedConversationRowsAvailable: true,
+      operatorProductAnalyticsAvailable: true,
+      distributedRateLimitAvailable: true,
+      structuredOperationalTracesAvailable: true,
+      productionSloDashboardAvailable: true,
+      noSendSyntheticCanaryAvailable: true,
+      securityHeadersAndCspAvailable: true,
+      modernSupabaseKeyCompatibilityAvailable: true,
+      versionedAiQualityObservationsAvailable: true,
+      shadowReplyQualityEvaluationAvailable: true,
+      operatorAiOutcomeFeedbackAvailable: true,
+      aiQualityReleaseGateAvailable: true,
+      revenueIntelligenceAvailable: true,
+      responseTimeImpactAvailable: true,
+      weightedRevenueForecastAvailable: true,
+      revenuePriorityQueueAvailable: true,
+      worldClassOperationsSchemaReady: operations.schemaReady,
+      operations24hSuccessRatePercent: operations.successRatePercent,
+      operations24hP95DurationMs: operations.p95DurationMs,
       commandCentreSkipNavigationAvailable: true,
       commandCentreSemanticHeadingHierarchyAvailable: true,
       commandCoreDeferredMapBundleAvailable: true,
@@ -584,8 +618,8 @@ export async function GET() {
       safetyValidatorAvailable: true,
       repetitionCheckerAvailable: true,
       hasSupabaseUrl: envPresent("NEXT_PUBLIC_SUPABASE_URL"),
-      hasSupabaseAnonKey: envPresent("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-      hasServiceRoleKey: envPresent("SUPABASE_SERVICE_ROLE_KEY"),
+      hasSupabaseAnonKey: Boolean(getSupabasePublicKey()),
+      hasServiceRoleKey: hasSupabaseAdminEnv(),
       liveInboundEnabled: envFlag("WHATSAPP_LIVE_INBOUND_ENABLED"),
       testAutoReplyEnabled: envFlag("WHATSAPP_TEST_AUTO_REPLY_ENABLED"),
       publicAutoReplyEnabled: envFlag("WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED"),
@@ -608,10 +642,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v10_6_0_operator_advantage",
+      version: "v11_1_0_world_class_operations",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.6.0",
+      uiVersion: "v11.1.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,

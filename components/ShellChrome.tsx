@@ -45,7 +45,8 @@ const appNavGroups = [
     items: [
       { href: "/sales-collection", label: "Collection Queue", icon: "money" },
       { href: "/targets", label: "Targets", icon: "targets" },
-      { href: "/reports", label: "Boss Report", icon: "reports" }
+      { href: "/reports", label: "Boss Report", icon: "reports" },
+      { href: "/revenue-intelligence", label: "Revenue Intelligence", icon: "targets" }
     ]
   },
   {
@@ -54,7 +55,8 @@ const appNavGroups = [
       { href: "/settings", label: "Settings", icon: "settings" },
       { href: "/data-hygiene", label: "Data Hygiene", icon: "hygiene" },
       { href: "/install", label: "Install App", icon: "install" },
-      { href: "/audit-log", label: "Audit Log", icon: "audit" }
+      { href: "/audit-log", label: "Audit Log", icon: "audit" },
+      { href: "/operations", label: "Operations", icon: "audit" }
     ]
   }
 ] as const;

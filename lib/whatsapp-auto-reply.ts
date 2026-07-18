@@ -53,6 +53,8 @@ import {
 } from "@/lib/whatsapp-conversation-concurrency";
 import { validateWhatsAppAutoReply, WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY } from "@/lib/whatsapp-safety";
 import { buildSilentCaptureNoteFromDecision } from "@/lib/whatsapp-silent-capture";
+import { evaluateWhatsAppReplyQuality } from "@/lib/ai-quality";
+import { recordAiQualityObservation } from "@/lib/data/team-inbox-repository";
 
 export type WhatsAppInboundHandleResult = {
   providerMessageId: string;
@@ -1135,6 +1137,50 @@ export async function handleWhatsAppInboundMessage(
   }
 
   const finalReplySignature = replySemanticSignature(reply);
+  const liveQuality = evaluateWhatsAppReplyQuality(reply);
+  const shadowQuality = evaluateWhatsAppReplyQuality(reply, { strict: true });
+  await Promise.all([
+    recordAiQualityObservation({
+      leadId: lead.id,
+      traceId,
+      reply,
+      primaryMove: decision.salesMove,
+      qualityScores: {
+        overall: liveQuality.overall,
+        safety: liveQuality.safety,
+        focus: liveQuality.focus,
+        humanTone: liveQuality.humanTone,
+        questionCount: liveQuality.questionCount,
+        releaseEligible: liveQuality.releaseEligible
+      },
+      metadata: {
+        source: "live_single_reply_planner",
+        flagCount: liveQuality.flags.length,
+        intent: decision.intent,
+        replySource: decision.replySource
+      }
+    }),
+    recordAiQualityObservation({
+      leadId: lead.id,
+      traceId,
+      reply,
+      primaryMove: decision.salesMove,
+      qualityScores: {
+        overall: shadowQuality.overall,
+        safety: shadowQuality.safety,
+        focus: shadowQuality.focus,
+        humanTone: shadowQuality.humanTone,
+        questionCount: shadowQuality.questionCount,
+        releaseEligible: shadowQuality.releaseEligible
+      },
+      shadowCandidate: true,
+      metadata: {
+        source: "shadow_quality_evaluator",
+        flagCount: shadowQuality.flags.length,
+        wouldPass: shadowQuality.releaseEligible
+      }
+    })
+  ]).catch(() => [false, false]);
   try {
     const reservation = await reserveWhatsAppConversationReply({
       leadId: lead.id,

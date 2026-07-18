@@ -2,18 +2,16 @@
 
 ## Current Phase
 
-v6.7 Real Client File Upload + WhatsApp Media Storage is implemented locally on top of the v6.6 Command Core, v6.5 Smart Lead Intake, official Singapore map stack, v6 Ultimate CRM controls, and the live WhatsApp CRM pipeline.
-
-v6.7 adds a private `client-files` Supabase Storage workflow, `lead_files`, `lead_upload_links`, token upload page, real Client Files page, lead detail file panel, signed view/download links, review/void actions, WhatsApp image/document media storage, and file readiness/audit integration.
+v6.5.1 Accurate Singapore Map Refinement implemented on top of the v6.5 Smart Lead Intake, v6.4.4 Singapore Mission Map, v6.3 Sales + Collection command centre, and v6 Ultimate live WhatsApp CRM pipeline.
 
 ## Latest Report
 
-`docs/V6_7_REAL_CLIENT_FILE_UPLOAD_WHATSAPP_MEDIA_STORAGE.md`, plus the previous v6 map/UI/intake/WhatsApp reports.
+`docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md`, `docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md`, `docs/V6_4_4_ACCURATE_SINGAPORE_SVG_MAP_FIX.md`, `docs/V6_4_3_SINGAPORE_MAP_ZOOM_HQ_REDESIGN.md`, `docs/V6_4_2_ACCURATE_SINGAPORE_MAP_NO_OVERLAY.md`, `docs/V6_4_1_SINGAPORE_TACTICAL_MAP_UI_POLISH.md`, `docs/V6_4_SINGAPORE_MISSION_MAP.md`, `docs/V6_3_SALES_COLLECTION_COMMAND_CENTRE.md`, `DEV_BRAIN_QA_REPORT.md`, `reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md`, `reports/V6_ULTIMATE_DEEP_QA_REPORT.md`, `docs/V6_1_UI_POLISH_TEST_CLEANUP.md`, `docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md`, `docs/V6_ULTIMATE_BLUEPRINT.md`, `reports/V6_HUMAN_LIKE_SALES_BRAIN_DEEP_QA_REPORT.md`, `reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md`, `V4_10_WHATSAPP_LIVE_PASS_REPORT.md`, and `V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md`.
 
 ## Tests / Audit Status
 
-Status: UNKNOWN
-Browser QA: Playwright browser QA did not complete.
+Status: PASS WITH MANUAL AUTH REQUIRED
+Browser QA: Playwright browser QA completed.
 
 ## Open Issues
 
@@ -36,11 +34,6 @@ Browser QA: Playwright browser QA did not complete.
 - v6.4.2 improves the map base to a more accurate Singapore outline and removes the blocking empty-state overlay so the map remains visible even without mapped lead data.
 - v6.4.3 widens the map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal `228397`, and fixes gold/amber visual separation.
 - v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG layer, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on the central main island.
-- v6.4.5 replaces the hand-drawn map path with a local real Singapore GeoJSON asset, renders it into SVG paths, keeps LIMM HQ postal `228397` around Orchard / Dhoby Ghaut, keeps Sentosa small and island-shaped, and preserves no external map APIs.
-- v6.4.6 commits the official URA/data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea) geometry after Marcus ran the downloader locally.
-- v6.4.8 fixes the map reset/zoom interaction layer, tightens default fit, adds selected area/pin/HQ summaries, keeps filters meaningful, and preserves the official geometry.
-- v6.4.9 smooths map zoom, adds a non-passive wheel zoom lock so the page does not scroll while Marcus zooms the map, increases max zoom to 400%, and optimizes the official map fit without cropping.
-- v6.4.10 keeps the map default zoom at 100%, removes stacked top-left map copy, moves helper text below the map, polishes filter empty states, and adds pin/HQ inspector feedback.
 - v6.5 adds Smart Lead Intake, missing-info detection, a 3-5 next-question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness, Proposal Readiness, lead profile storage, and audit trace.
 - v6.5.1 refines the Singapore map with a more accurate local static outline, calibrated HQ marker around Orchard/Dhoby Ghaut, smaller island-shaped Sentosa, faint area labels, and no large helper box.
 - Question bank replies include non-repetition handling, escalation rules, and audit metadata.
@@ -58,19 +51,19 @@ Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
 
 ## Browser QA Status
 
-Playwright browser QA did not complete.
-Report: not generated.
+Playwright browser QA completed.
+Report: V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md
 
 ## Next Recommended Action
 
-Push the v6.7 storage patch, apply migration `023_v6_7_real_client_file_upload.sql`, confirm the `client-files` bucket is private, wait for Vercel, confirm health shows `v6_7_real_client_file_upload_whatsapp_media_storage`, then test upload link PDF/image upload, signed view/download, review/void actions, WhatsApp image/document storage, and WhatsApp text auto-reply continuity.
+v6.4.10 Singapore Map Interaction + Copy Cleanup is ready for controlled deploy proof after the health endpoint shows v6_4_10_singapore_map_interaction_copy_cleanup. Next recommended phase: Marcus should visually verify the map starts at 100%, top-left copy is not stacked, helper text is subtle, mouse wheel zoom does not scroll the page while over the map, plus/minus zoom feels smooth, reset clears pan/selection/tooltips, HQ and pins stay aligned, filters show one subtle empty state, and no external map API appears.
 
 ## Marcus Paste Block For ChatGPT
 
 ```text
-We are continuing LIMM AI Sales Command Centre after v6.4.10 Singapore Mission Map Interaction + Copy Cleanup.
-Latest Dev Brain QA status: UNKNOWN.
-Playwright browser QA did not complete.
+We are continuing LIMM AI Sales Command Centre after v6.5.1 Accurate Singapore Map Refinement.
+Latest Dev Brain QA status: PASS WITH MANUAL AUTH REQUIRED.
+Playwright browser QA completed.
 Authenticated boss checks are MANUAL REQUIRED until test credentials are set.
 Confirmed live result: inbound WhatsApp received, lead created, lead visible, audit logs written, and WhatsApp auto-reply sent successfully.
 v5.3 fixes the live silence issue by changing the old 3-in-10-min auto-reply gate into a warning, then forcing valid client text through the reply coach, safety/quality/repetition gates, and a no-silence fallback.
@@ -85,13 +78,8 @@ v6.4.1 replaces the generic oval/radar map visual with a stylised Singapore silh
 v6.4.2 upgrades that visual to a more accurate Singapore outline and removes the large blocking empty-state overlay so the map base stays visible even with no data.
 v6.4.3 widens the Singapore map, adds zoom/pan/reset controls, keeps only the main island plus Sentosa, adds a privacy-safe LIMM HQ marker at postal 228397, and fixes gold/amber colour separation.
 v6.4.4 replaces the weak blob-like island path with a dedicated local Singapore SVG layer, keeps only the mainland plus one small Sentosa, and positions LIMM HQ on central Singapore instead of below the island.
-v6.4.5 replaces the hand-drawn map path with a local real Singapore GeoJSON asset, renders it into SVG paths, keeps LIMM HQ postal 228397 around Orchard/Dhoby Ghaut, and keeps Sentosa small and island-shaped.
-v6.4.6 commits the official URA/data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea) geometry after Marcus ran the downloader locally.
-v6.4.8 fixes reset and zoom interaction, tightens the default official-map fit, adds area/pin/HQ summaries, keeps filters meaningful, and preserves privacy-safe local-only map rendering.
-v6.4.9 smooths map zoom, adds a non-passive wheel zoom lock so scrolling over the map zooms the map instead of the page, increases max zoom to 400%, and improves horizontal map fill without cropping.
-v6.4.10 keeps default zoom at 100%, removes stacked top-left map copy, moves helper text below the map, polishes filter empty states, and adds pin/HQ inspector feedback while preserving official geometry.
 v6.5 adds Smart Lead Intake, missing-info detection, a 3-5 next-question cap, lifestyle/occupants/helper/pets/safety fields, budget expectation collection without price replies, timeline/key/move-in collection, Meeting Readiness, Proposal Readiness, lead profile storage, and audit trace.
 v6.5.1 refines the Singapore map with a more accurate local static outline, calibrated HQ marker around Orchard/Dhoby Ghaut, smaller island-shaped Sentosa, faint area labels, and no large helper box.
 OpenAI WhatsApp reply is off by default. Calendar booking and auto booking remain disabled by default. No pricing, quote ranges, blasting, or booking confirmation before event exists.
-Please review docs/V6_4_10_SINGAPORE_MAP_INTERACTION_COPY_CLEANUP.md, confirm health shows v6_4_10_singapore_map_interaction_copy_cleanup after deploy, then visually test 100% default zoom, no stacked top-left copy, wheel zoom without page scroll, reset, zoom, pan, HQ/pin inspector, filters, and WhatsApp continuity.
+Please review docs/V6_5_1_ACCURATE_SINGAPORE_MAP_REFINEMENT.md and use the health endpoint first before Marcus judges the deployed dashboard map.
 ```

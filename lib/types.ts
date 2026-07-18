@@ -242,6 +242,7 @@ export interface Lead {
   quotationReadiness: number;
   lastClientMessage: string;
   lastReplyAt: string | null;
+  firstOperatorResponseAt?: string | null;
   createdAt: string;
   updatedAt?: string;
   preferredContactTime: string;

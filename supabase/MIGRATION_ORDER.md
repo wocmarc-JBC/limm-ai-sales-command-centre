@@ -424,6 +424,56 @@ where routine_schema = 'public'
   );
 ```
 
+## 029_v11_1_world_class_operations.sql
+
+Purpose: Add atomic team-inbox ownership, internal notes, privacy-minimised operations/AI/product telemetry, distributed rate limiting, private Realtime broadcasts, and first-response measurement for the v11.1 world-class release.
+Dependencies: migrations 002, 003, 016, 020, and 028. Supabase Realtime is optional during migration execution; the app retains polling fallback.
+Safe to re-run: Yes. Tables, columns, indexes, policies, triggers, grants, and functions are additive or replaced idempotently.
+Verification query:
+
+```sql
+select public.world_class_operations_schema_ready();
+
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+  and table_name in (
+    'inbox_assignments',
+    'inbox_internal_notes',
+    'operational_trace_events',
+    'ai_reply_quality_events',
+    'operator_product_events',
+    'api_rate_limit_windows'
+  );
+```
+
+## 030_v11_1_world_class_database_hardening.sql
+
+Purpose: Apply the migration-029 database-advisor follow-up: covering indexes for every new foreign key, explicit service-only RLS policies, and cached `auth.uid()` lookups in assignment-aware policies.
+Dependencies: migration 029.
+Safe to re-run: Yes. Indexes use `if not exists`; policies are replaced idempotently without changing their authorization predicates.
+Verification query:
+
+```sql
+select indexname
+from pg_indexes
+where schemaname = 'public'
+  and indexname in (
+    'inbox_internal_notes_created_by_idx',
+    'operational_trace_events_lead_created_idx',
+    'ai_reply_quality_events_lead_created_idx',
+    'ai_reply_quality_events_message_idx',
+    'ai_reply_quality_events_reviewer_idx',
+    'operator_product_events_actor_created_idx',
+    'operator_product_events_lead_created_idx'
+  );
+
+select policyname
+from pg_policies
+where schemaname = 'public'
+  and policyname like '%_service_role';
+```
+
 ## After All Migrations
 
 Run:

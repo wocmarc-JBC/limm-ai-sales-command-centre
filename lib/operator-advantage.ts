@@ -4,6 +4,8 @@ export const OPERATOR_RESPONSE_TARGET_MINUTES = 60;
 
 export const INBOX_VIEW_FILTERS = [
   "All",
+  "Mine",
+  "Unassigned",
   "Unread",
   "Response overdue",
   "Waiting for Marcus",
@@ -53,6 +55,8 @@ export type ConversationBrief = {
 };
 
 const inboxViewParamMap: Record<string, InboxViewFilter> = {
+  mine: "Mine",
+  unassigned: "Unassigned",
   unread: "Unread",
   overdue: "Response overdue",
   waiting: "Waiting for Marcus",

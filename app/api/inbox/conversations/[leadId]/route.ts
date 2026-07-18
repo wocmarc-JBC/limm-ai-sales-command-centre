@@ -3,17 +3,19 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { listLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
+import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
+import type { InboxAssignment } from "@/lib/operations/contracts";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
   return latestMeaningfulWhatsAppMessage(messages);
 }
 
-function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
+function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[], assignment?: InboxAssignment) {
   const latestMessage = latestWhatsAppMessage(messages);
   const queue = getInboxQueueState(lead, messages);
   const floorPlanReceived = files.some((file) => file.fileStatus !== "voided" && file.fileCategory === "floor_plan");
@@ -41,7 +43,10 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
     waitingForMarcus: queue.waitingForMarcus,
     closedOrDone: queue.closedOrDone,
     floorPlanReceived,
-    sitePhotosReceived
+    sitePhotosReceived,
+    assignedProfileId: assignment?.assignedProfileId ?? null,
+    assignedName: assignment?.assignedName ?? lead.assignedTo ?? "",
+    assignmentLeaseExpiresAt: assignment?.leaseExpiresAt ?? null
   };
 }
 
@@ -58,13 +63,14 @@ export async function GET(
   const lead = await getLeadById(params.leadId);
   if (!lead) return NextResponse.json({ ok: false, error: "lead_not_found" }, { status: 404 });
 
-  const [messagePage, leadFiles] = await Promise.all([
+  const [messagePage, leadFiles, assignmentsByLead] = await Promise.all([
     listLeadMessagesPage(lead.id, 30),
-    listLeadFiles(lead.id)
+    listLeadFiles(lead.id),
+    listInboxAssignments([lead.id])
   ]);
   const facts = buildLeadFacts(lead, messagePage.messages, leadFiles);
   const summary = {
-    ...buildSummary(lead, messagePage.messages, leadFiles),
+    ...buildSummary(lead, messagePage.messages, leadFiles, assignmentsByLead.get(lead.id)),
     propertyType: facts.propertyType.value || lead.propertyType,
     scopeSummary: facts.scopeSummary.value || lead.scopeSummary,
     floorPlanReceived: facts.floorPlanReceived.value,

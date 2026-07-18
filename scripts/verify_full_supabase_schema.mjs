@@ -51,7 +51,13 @@ export const requiredTables = [
   "payment_records",
   "monthly_targets",
   "whatsapp_conversation_reply_leases",
-  "whatsapp_reply_reservations"
+  "whatsapp_reply_reservations",
+  "inbox_assignments",
+  "inbox_internal_notes",
+  "operational_trace_events",
+  "ai_reply_quality_events",
+  "operator_product_events",
+  "api_rate_limit_windows"
 ];
 
 export const requiredColumnsByTable = {
@@ -135,7 +141,8 @@ export const requiredColumnsByTable = {
     "location_source",
     "location_notes",
     "intake_profile",
-    ...intentGateLeadColumns
+    ...intentGateLeadColumns,
+    "first_operator_response_at"
   ],
   quotation_packages: [
     "id",
@@ -234,6 +241,24 @@ export const requiredColumnsByTable = {
     "failure_reason",
     "reserved_at",
     "completed_at"
+  ],
+  inbox_assignments: [
+    "lead_id", "assigned_profile_id", "assigned_name", "claimed_at", "lease_expires_at", "updated_at", "version"
+  ],
+  inbox_internal_notes: [
+    "id", "lead_id", "body", "mentions", "created_by", "created_by_name", "created_at", "edited_at"
+  ],
+  operational_trace_events: [
+    "id", "trace_id", "lead_id", "event_name", "stage", "status", "duration_ms", "provider_message_id_hash", "error_code", "metadata", "created_at"
+  ],
+  ai_reply_quality_events: [
+    "id", "lead_id", "message_id", "trace_id", "model_version", "prompt_version", "planner_version", "reply_signature", "primary_move", "quality_scores", "shadow_candidate", "decision", "operator_feedback", "edit_distance", "metadata", "created_at", "reviewed_at", "reviewed_by"
+  ],
+  operator_product_events: [
+    "id", "event_name", "actor_id", "lead_id", "session_id", "duration_ms", "metadata", "created_at"
+  ],
+  api_rate_limit_windows: [
+    "key_hash", "window_started_at", "request_count", "updated_at"
   ]
 };
 
@@ -254,7 +279,15 @@ export const requiredIndexes = [
   "payment_records_is_test_idx",
   "whatsapp_reply_reservations_signature_bucket_uidx",
   "whatsapp_reply_reservations_lead_reserved_idx",
-  "whatsapp_reply_reservations_status_idx"
+  "whatsapp_reply_reservations_status_idx",
+  "inbox_assignments_profile_lease_idx",
+  "inbox_internal_notes_lead_created_idx",
+  "operational_trace_events_trace_created_idx",
+  "operational_trace_events_status_created_idx",
+  "ai_reply_quality_events_version_created_idx",
+  "ai_reply_quality_events_decision_created_idx",
+  "operator_product_events_name_created_idx",
+  "api_rate_limit_windows_updated_idx"
 ];
 
 export const rlsRequiredTables = [
@@ -265,12 +298,22 @@ export const rlsRequiredTables = [
   "lead_files",
   "lead_upload_links",
   "whatsapp_conversation_reply_leases",
-  "whatsapp_reply_reservations"
+  "whatsapp_reply_reservations",
+  "inbox_assignments",
+  "inbox_internal_notes",
+  "operational_trace_events",
+  "ai_reply_quality_events",
+  "operator_product_events",
+  "api_rate_limit_windows"
 ];
 
 export const serviceRoleOnlyRlsTables = [
   "whatsapp_conversation_reply_leases",
-  "whatsapp_reply_reservations"
+  "whatsapp_reply_reservations",
+  "operational_trace_events",
+  "ai_reply_quality_events",
+  "operator_product_events",
+  "api_rate_limit_windows"
 ];
 
 export const requiredStorageBuckets = ["client-files"];
@@ -285,6 +328,17 @@ const migrationHints = [
   { matchType: "table", name: "quotation_readiness", file: "011_quotation_readiness.sql" },
   { matchType: "table", name: "whatsapp_conversation_reply_leases", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
   { matchType: "table", name: "whatsapp_reply_reservations", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
+  ...["inbox_assignments", "inbox_internal_notes", "operational_trace_events", "ai_reply_quality_events", "operator_product_events", "api_rate_limit_windows"].map((name) => ({
+    matchType: "table",
+    name,
+    file: "029_v11_1_world_class_operations.sql"
+  })),
+  { matchType: "column", table: "leads", name: "first_operator_response_at", file: "029_v11_1_world_class_operations.sql" },
+  ...["inbox_assignments_profile_lease_idx", "inbox_internal_notes_lead_created_idx", "operational_trace_events_trace_created_idx", "operational_trace_events_status_created_idx", "ai_reply_quality_events_version_created_idx", "ai_reply_quality_events_decision_created_idx", "operator_product_events_name_created_idx", "api_rate_limit_windows_updated_idx"].map((name) => ({
+    matchType: "index",
+    name,
+    file: "029_v11_1_world_class_operations.sql"
+  })),
   ...["lead_id", "owner_token", "lease_expires_at", "cooldown_until", "pending_inbound_count", "last_inbound_at", "last_acquired_at", "updated_at"].map((name) => ({
     matchType: "column",
     table: "whatsapp_conversation_reply_leases",

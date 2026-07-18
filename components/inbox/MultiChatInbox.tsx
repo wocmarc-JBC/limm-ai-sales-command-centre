@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   memo,
   useCallback,
@@ -41,6 +42,22 @@ import {
   type SavedInboxView
 } from "@/lib/operator-advantage";
 import { OPERATOR_COMMAND_EVENT, type OperatorCommand } from "@/lib/operator-commands";
+import { trackOperatorEvent } from "@/lib/operator-product-analytics";
+import type { InboxAssignment, InboxOperator } from "@/lib/operations/contracts";
+import type { RealtimeStatus } from "@/components/inbox/useInboxRealtime";
+
+const InboxCollaborationLayer = dynamic(
+  () => import("@/components/inbox/InboxCollaborationLayer").then((module) => module.InboxCollaborationLayer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-11 shrink-0 items-center gap-2 border-b border-command-line bg-command-panel2/85 px-4 py-2 text-[11px] font-semibold text-command-muted" role="status">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-command-subtle" aria-hidden="true" />
+        Connecting team workspace…
+      </div>
+    )
+  }
+);
 
 export type MultiChatSummary = {
   id: string;
@@ -66,6 +83,9 @@ export type MultiChatSummary = {
   closedOrDone: boolean;
   floorPlanReceived: boolean;
   sitePhotosReceived: boolean;
+  assignedProfileId: string | null;
+  assignedName: string;
+  assignmentLeaseExpiresAt: string | null;
 };
 
 export type MultiChatContext = {
@@ -110,6 +130,10 @@ export type MultiChatConversation = {
 type MultiChatInboxProps = {
   conversations: MultiChatConversation[];
   canManageSpam: boolean;
+  operator: InboxOperator;
+  realtimeEnabled: boolean;
+  initialHasMore: boolean;
+  initialQueueCursor: string | null;
   selectedLeadId?: string;
   initialFilter?: InboxViewFilter;
   manualReplyStatus?: string;
@@ -350,8 +374,14 @@ function formatQueueSyncLabel(lastSyncAt: number | null, clock: number | null, s
   return `Live · synced ${Math.floor(seconds / 60)}m ago`;
 }
 
-function matchesFilter(chat: MultiChatSummary, filter: InboxViewFilter, clock: number | null) {
+function activeAssignment(chat: MultiChatSummary, clock: number | null) {
+  return Boolean(chat.assignedProfileId && chat.assignmentLeaseExpiresAt && Date.parse(chat.assignmentLeaseExpiresAt) > (clock ?? Date.now()));
+}
+
+function matchesFilter(chat: MultiChatSummary, filter: InboxViewFilter, clock: number | null, operatorId: string) {
   if (filter === "All") return true;
+  if (filter === "Mine") return activeAssignment(chat, clock) && chat.assignedProfileId === operatorId;
+  if (filter === "Unassigned") return !activeAssignment(chat, clock);
   if (filter === "Unread") return chat.unreadCount > 0;
   if (filter === "Response overdue") return clock !== null && getOperatorSlaState(chat, clock).status === "breached";
   if (filter === "Waiting for Marcus") return chat.primaryStatus === "Waiting for Marcus";
@@ -461,6 +491,7 @@ const ChatRow = memo(function ChatRow({
       data-testid="inbox-chat-row"
       data-last-activity-at={chat.lastActivityAt}
       data-active={active ? "true" : "false"}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "84px" }}
       className={`group relative border-b border-command-line/60 transition ${
         selected
           ? "bg-command-red/10"
@@ -499,6 +530,7 @@ const ChatRow = memo(function ChatRow({
             {sla.status !== "inactive" ? <span className={`shrink-0 ${slaTextTone(sla.status)}`}>· {sla.label}</span> : null}
             {!chat.intentClassified ? <span className="truncate text-command-amber">· Unclassified</span> : null}
             {chat.floorPlanReceived || chat.sitePhotosReceived ? <span className="shrink-0 text-command-green">· Files</span> : null}
+            {activeAssignment(chat, clock) ? <span className="truncate text-command-cyan">· {chat.assignedName || "Owned"}</span> : null}
           </span>
         </span>
         {chat.unreadCount > 0 ? (
@@ -1096,7 +1128,18 @@ const LeadContextPanel = memo(function LeadContextPanel({
   );
 });
 
-export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, initialFilter, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
+export function MultiChatInbox({
+  conversations,
+  canManageSpam,
+  operator,
+  realtimeEnabled,
+  initialHasMore,
+  initialQueueCursor,
+  selectedLeadId,
+  initialFilter,
+  manualReplyStatus,
+  manualReplyError
+}: MultiChatInboxProps) {
   const firstVisibleConversation = conversations[0];
   const initialLeadId = selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)
     ? selectedLeadId
@@ -1137,6 +1180,11 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
   const [olderState, setOlderState] = useState<Record<string, { hasOlder: boolean; cursor: string | null }>>({});
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [loadingConversationId, setLoadingConversationId] = useState("");
+  const [queueHasMore, setQueueHasMore] = useState(initialHasMore);
+  const [queueCursor, setQueueCursor] = useState<string | null>(initialQueueCursor);
+  const [loadingMoreQueue, setLoadingMoreQueue] = useState(false);
+  const [realtimeRevision, setRealtimeRevision] = useState(0);
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>(realtimeEnabled ? "connecting" : "disabled");
   const messagePaneRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const detailsButtonRef = useRef<HTMLButtonElement>(null);
@@ -1146,6 +1194,8 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
   const savedViewsReadyRef = useRef(false);
   const stickToLatestRef = useRef(true);
   const conversationCacheRef = useRef(conversationCache);
+  const realtimeRefreshTimerRef = useRef<number | null>(null);
+  const realtimeActiveDirtyRef = useRef(false);
 
   useEffect(() => {
     conversationCacheRef.current = conversationCache;
@@ -1171,6 +1221,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
   useEffect(() => {
     if (!filterPreferenceReadyRef.current) return;
     window.localStorage.setItem(INBOX_FILTER_STORAGE_KEY, filter);
+    trackOperatorEvent({ eventName: "queue_filter_changed", metadata: { filter } });
   }, [filter]);
 
   useEffect(() => {
@@ -1271,45 +1322,59 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
     }
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    let inFlight = false;
-    let controller: AbortController | null = null;
-    const pollQueue = async () => {
-      if (inFlight) return;
-      inFlight = true;
-      controller = new AbortController();
-      try {
-        const response = await fetch("/api/inbox/conversations", { cache: "no-store", signal: controller.signal });
-        const data = await response.json().catch(() => ({}));
-        if (!active) return;
-        if (!data?.ok || !Array.isArray(data.conversations)) {
-          setQueueSyncStatus("recovering");
-          return;
-        }
-        const nextSummaries = data.conversations as MultiChatSummary[];
-        setChatSummaries(nextSummaries);
-        setConversationMap((current) => {
-          const next = { ...current };
-          for (const summary of nextSummaries) {
-            if (next[summary.id]) next[summary.id] = { ...next[summary.id], summary };
-          }
-          return next;
-        });
-        setQueueSyncStatus("live");
-        setLastQueueSyncAt(Date.now());
-      } catch (error) {
-        if (active && !(error instanceof DOMException && error.name === "AbortError")) setQueueSyncStatus("recovering");
-      } finally {
-        inFlight = false;
+  const refreshQueue = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const requestedLimit = Math.max(30, chatSummaries.length);
+      const response = requestedLimit === 30
+        ? await fetch("/api/inbox/conversations", { cache: "no-store", signal })
+        : await fetch(`/api/inbox/conversations?limit=${requestedLimit}`, { cache: "no-store", signal });
+      const data = await response.json().catch(() => ({}));
+      if (!data?.ok || !Array.isArray(data.conversations)) {
+        setQueueSyncStatus("recovering");
+        return;
       }
-    };
-    const timer = window.setInterval(() => void pollQueue(), 15000);
+      const nextSummaries = data.conversations as MultiChatSummary[];
+      setChatSummaries(nextSummaries);
+      setConversationMap((current) => {
+        const next = { ...current };
+        for (const summary of nextSummaries) {
+          if (next[summary.id]) next[summary.id] = { ...next[summary.id], summary };
+        }
+        return next;
+      });
+      setQueueHasMore(Boolean(data.hasMore));
+      setQueueCursor(typeof data.nextCursor === "string" ? data.nextCursor : null);
+      setQueueSyncStatus("live");
+      setLastQueueSyncAt(Date.now());
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) setQueueSyncStatus("recovering");
+    }
+  }, [chatSummaries.length]);
+
+  const handleRealtimeActivity = useCallback((activity: { leadId?: string }) => {
+    if (activity.leadId && activity.leadId === activeLeadId) realtimeActiveDirtyRef.current = true;
+    if (realtimeRefreshTimerRef.current) window.clearTimeout(realtimeRefreshTimerRef.current);
+    realtimeRefreshTimerRef.current = window.setTimeout(() => {
+      realtimeRefreshTimerRef.current = null;
+      setRealtimeRevision((current) => current + 1);
+      void refreshQueue();
+      if (realtimeActiveDirtyRef.current && activeLeadId) void loadConversation(activeLeadId, { background: true });
+      realtimeActiveDirtyRef.current = false;
+    }, 180);
+  }, [activeLeadId, loadConversation, refreshQueue]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const intervalMs = realtimeStatus === "live" ? 60000 : 15000;
+    const timer = window.setInterval(() => void refreshQueue(controller.signal), intervalMs);
     return () => {
-      active = false;
       window.clearInterval(timer);
-      controller?.abort();
+      controller.abort();
     };
+  }, [realtimeStatus, refreshQueue]);
+
+  useEffect(() => () => {
+    if (realtimeRefreshTimerRef.current) window.clearTimeout(realtimeRefreshTimerRef.current);
   }, []);
 
   const activeLeadStillListed = activeLeadId ? chatSummaries.some((summary) => summary.id === activeLeadId) : false;
@@ -1400,9 +1465,9 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
       } catch {
         // Selected-chat polling is intentionally lightweight and self-healing.
       }
-    }, 9000);
+    }, realtimeStatus === "live" ? 60000 : 9000);
     return () => window.clearInterval(timer);
-  }, [activeLeadId, conversationMap, latestPersistedCursor, loadConversation, patchSummary]);
+  }, [activeLeadId, conversationMap, latestPersistedCursor, loadConversation, patchSummary, realtimeStatus]);
 
   useEffect(() => {
     if (stickToLatestRef.current) messagePaneRef.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -1434,11 +1499,12 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
         chat.lastMessagePreview,
         chat.propertyType,
         chat.scopeSummary,
-        chat.status
+        chat.status,
+        chat.assignedName
       ].join(" ").toLowerCase();
-      return matchesFilter(chat, filter, clock) && (!needle || haystack.includes(needle));
+      return matchesFilter(chat, filter, clock, operator.id) && (!needle || haystack.includes(needle));
     }));
-  }, [clock, deferredSearch, filter, visibleChatSummaries]);
+  }, [clock, deferredSearch, filter, operator.id, visibleChatSummaries]);
 
   const saveCurrentView = useCallback(() => {
     setSavedViews((current) => saveInboxView(current, filter, search));
@@ -1472,6 +1538,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
   );
 
   const selectConversation = useCallback((leadId: string) => {
+    trackOperatorEvent({ eventName: "conversation_opened", leadId, metadata: { pane: "chat" } });
     setActiveLeadId(leadId);
     setMobilePane("chat");
     stickToLatestRef.current = true;
@@ -1815,6 +1882,11 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
   }, []);
 
   const handleSendSettled = useCallback((leadId: string, clientTempId: string, result: SendResult) => {
+    trackOperatorEvent({
+      eventName: result.ok ? "reply_sent" : "reply_failed",
+      leadId,
+      metadata: { result: result.ok ? "sent" : result.errorCode || "failed" }
+    });
     setOptimisticReplies((current) => {
       const updated = (current[leadId] ?? []).map((message) => {
         if (messageClientTempId(message) !== clientTempId) return message;
@@ -1927,6 +1999,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
       const response = await fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeConversation.lead.id)}&before=${encodeURIComponent(activeOlderState.cursor)}`, { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (data?.ok) {
+        trackOperatorEvent({ eventName: "older_messages_loaded", leadId: activeConversation.lead.id, metadata: { count: Array.isArray(data.messages) ? data.messages.length : 0 } });
         setOlderMessages((current) => ({
           ...current,
           [activeConversation.lead.id]: mergeTimelineMessages([
@@ -1946,6 +2019,34 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
       setLoadingOlder(false);
     }
   };
+
+  const loadMoreConversations = async () => {
+    if (!queueHasMore || !queueCursor || loadingMoreQueue) return;
+    setLoadingMoreQueue(true);
+    try {
+      const response = await fetch(`/api/inbox/conversations?limit=30&cursor=${encodeURIComponent(queueCursor)}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!data?.ok || !Array.isArray(data.conversations)) return;
+      const incoming = data.conversations as MultiChatSummary[];
+      setChatSummaries((current) => {
+        const incomingIds = new Set(incoming.map((item) => item.id));
+        return sortQueue([...current.filter((item) => !incomingIds.has(item.id)), ...incoming]);
+      });
+      setQueueHasMore(Boolean(data.hasMore));
+      setQueueCursor(typeof data.nextCursor === "string" ? data.nextCursor : null);
+    } finally {
+      setLoadingMoreQueue(false);
+    }
+  };
+
+  const handleTeamAssignmentChange = useCallback((assignment: InboxAssignment | null) => {
+    if (!activeLeadId) return;
+    patchSummary(activeLeadId, {
+      assignedProfileId: assignment?.assignedProfileId ?? null,
+      assignedName: assignment?.assignedName ?? "",
+      assignmentLeaseExpiresAt: assignment?.leaseExpiresAt ?? null
+    });
+  }, [activeLeadId, patchSummary]);
 
   if (!activeConversation) {
     return (
@@ -2006,6 +2107,16 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
     chatStatusLabel(chat),
     automationStatusLabel === chatStatusLabel(chat) ? "" : automationStatusLabel
   ].filter(Boolean).join(" · ");
+  const initialAssignment: InboxAssignment | null = chat.assignedProfileId ? {
+    leadId: chat.id,
+    assignedProfileId: chat.assignedProfileId,
+    assignedName: chat.assignedName,
+    claimedAt: null,
+    leaseExpiresAt: chat.assignmentLeaseExpiresAt,
+    updatedAt: chat.lastActivityAt,
+    version: 1
+  } : null;
+  const latestOutboundMessageId = activeMessagesNewestFirst.find((message) => message.direction === "outbound" && !message.id.startsWith("optimistic-"))?.id;
 
   return (
     <>
@@ -2183,6 +2294,13 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
                   onMarkSpam={markConversationSpam}
                 />
               ))}
+              {queueHasMore && filter === "All" && !deferredSearch.trim() ? (
+                <div className="p-3">
+                  <button type="button" onClick={() => void loadMoreConversations()} disabled={loadingMoreQueue} className="w-full rounded-xl border border-command-line bg-command-bg/70 px-3 py-2 text-xs font-semibold text-command-muted transition hover:border-command-gold/45 hover:text-command-text disabled:opacity-50">
+                    {loadingMoreQueue ? "Loading more…" : "Load older conversations"}
+                  </button>
+                </div>
+              ) : null}
               {filteredConversations.length === 0 ? (
                 <div className="m-4 rounded-2xl bg-command-bg/55 p-4 text-sm text-command-muted">
                   No chats match this search or filter.
@@ -2245,6 +2363,18 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, i
                 </button>
               </div>
             </header>
+
+            <InboxCollaborationLayer
+              leadId={activeConversation.lead.id}
+              operator={operator}
+              realtimeEnabled={realtimeEnabled}
+              initialAssignment={initialAssignment}
+              realtimeRevision={realtimeRevision}
+              latestOutboundMessageId={latestOutboundMessageId}
+              onActivity={handleRealtimeActivity}
+              onStatusChange={setRealtimeStatus}
+              onAssignmentChange={handleTeamAssignmentChange}
+            />
 
             {manualReplyStatus === "sent" ? (
               <div className="shrink-0 border-b border-command-green/25 bg-command-green/10 px-4 py-2 text-sm text-command-green">

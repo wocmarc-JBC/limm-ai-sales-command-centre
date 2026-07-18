@@ -5,6 +5,7 @@ import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preferen
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
+import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { formatLeadDisplayName } from "@/lib/lead-display";
@@ -12,6 +13,7 @@ import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
 import { inboxViewFilterFromParam } from "@/lib/operator-advantage";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
+import type { InboxAssignment } from "@/lib/operations/contracts";
 import Link from "next/link";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
@@ -26,7 +28,7 @@ function leadLastActivityAt(lead: Lead, messages: LeadMessage[]) {
   return latestWhatsAppMessage(messages)?.createdAt ?? inboxLeadFallbackActivityAt(lead);
 }
 
-function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): MultiChatSummary {
+function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[], assignment?: InboxAssignment): MultiChatSummary {
   const latestMessage = latestWhatsAppMessage(messages);
   const queue = getInboxQueueState(lead, messages);
   const floorPlanReceived = files.some((file) => file.fileStatus !== "voided" && file.fileCategory === "floor_plan");
@@ -54,7 +56,10 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): M
     waitingForMarcus: queue.waitingForMarcus,
     closedOrDone: queue.closedOrDone,
     floorPlanReceived,
-    sitePhotosReceived
+    sitePhotosReceived,
+    assignedProfileId: assignment?.assignedProfileId ?? null,
+    assignedName: assignment?.assignedName ?? lead.assignedTo ?? "",
+    assignmentLeaseExpiresAt: assignment?.leaseExpiresAt ?? null
   };
 }
 
@@ -79,7 +84,10 @@ export default async function WhatsAppInboxPage({
     listAllLeadFiles()
   ]);
   const leadIds = leads.map((lead) => lead.id);
-  const summaryMessagesByLead = await listLatestLeadMessagesForInbox(leadIds, 3);
+  const [summaryMessagesByLead, assignmentsByLead] = await Promise.all([
+    listLatestLeadMessagesForInbox(leadIds, 3),
+    listInboxAssignments(leadIds)
+  ]);
   const activeLeadPool = leads
     .filter((lead) => hasWhatsAppContactOrMessages(
       lead,
@@ -113,7 +121,7 @@ export default async function WhatsAppInboxPage({
     const leadFiles = allFiles.filter((file) => file.leadId === lead.id);
     const facts = buildLeadFacts(lead, orderedMessages, leadFiles);
     const summary = {
-      ...buildSummary(lead, summaryMessages, leadFiles),
+      ...buildSummary(lead, summaryMessages, leadFiles, assignmentsByLead.get(lead.id)),
       propertyType: facts.propertyType.value || lead.propertyType,
       scopeSummary: facts.scopeSummary.value || lead.scopeSummary,
       floorPlanReceived: facts.floorPlanReceived.value,
@@ -186,6 +194,10 @@ export default async function WhatsAppInboxPage({
       <MultiChatInbox
         conversations={conversations}
         canManageSpam={canManageSpam}
+        operator={{ id: auth.profile!.id, fullName: auth.profile!.fullName, role: auth.profile!.role }}
+        realtimeEnabled={auth.mode === "Supabase Mode"}
+        initialHasMore={activeLeadPool.length > activeLeads.length}
+        initialQueueCursor={activeLeads.at(-1)?.id ?? null}
         selectedLeadId={searchParams?.lead}
         initialFilter={inboxViewFilterFromParam(searchParams?.view)}
         manualReplyStatus={searchParams?.manualReplyStatus}

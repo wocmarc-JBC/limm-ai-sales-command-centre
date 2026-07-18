@@ -1,6 +1,6 @@
 {
-  "qaRunId": "QA_RUN_boss_ops_review_expanded",
-  "runTarget": "Local Next.js dev server",
+  "qaRunId": "QA_RUN_2026-07-18T18-49-27-151Z",
+  "runTarget": "Preview or remote: http://localhost:3100",
   "dataMode": "QA_E2E_MODE mock data / dry-run external actions",
   "routesTested": [
     "/",

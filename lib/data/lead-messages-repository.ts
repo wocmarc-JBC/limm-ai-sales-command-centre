@@ -90,6 +90,25 @@ export async function findLeadMessageByProviderId(providerMessageId: string) {
   return message ? mockClone(message) : null;
 }
 
+export async function listLeadMessagesForRevenueIntelligence(leadIds: string[]) {
+  if (!leadIds.length) return [];
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = await getSupabaseServerClient();
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from("lead_messages")
+      .select("*")
+      .in("lead_id", leadIds)
+      .order("created_at", { ascending: true })
+      .limit(10000);
+    if (!error && data) return data.map(mapLeadMessageRow);
+  }
+  const visible = new Set(leadIds);
+  return mockClone(getMockStore().leadMessages)
+    .filter((message) => visible.has(message.leadId))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
 export async function upsertWhatsAppLead(input: { phone: string; contactName?: string; latestMessage: string }) {
   const now = new Date().toISOString();
   if (getDataMode() === "Supabase Mode") {

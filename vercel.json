@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/operations/canary",
+      "schedule": "15 0 * * *"
+    }
+  ]
+}

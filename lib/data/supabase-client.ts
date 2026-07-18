@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { hasSupabaseEnv } from "./data-source";
+import { getSupabasePublicKey, hasSupabaseEnv } from "./supabase-env";
 
 let cachedClient: SupabaseClient | null = null;
 
@@ -9,7 +9,7 @@ export function getSupabaseClient() {
 
   cachedClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabasePublicKey(),
     {
       auth: {
         persistSession: false,

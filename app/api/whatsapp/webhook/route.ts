@@ -3,6 +3,9 @@ import { handleWhatsAppInboundMessage } from "@/lib/whatsapp-auto-reply";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 import { parseWhatsAppInbound } from "@/lib/whatsapp-parser";
 import { verifyWhatsAppWebhookSignature } from "@/lib/whatsapp-webhook-signature";
+import { getSupabasePublicKey } from "@/lib/data/data-source";
+import { hasSupabaseAdminEnv } from "@/lib/data/supabase-admin";
+import { createTraceId, recordOperationalEvent } from "@/lib/operations/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,8 +33,8 @@ function getMissingWebhookConfig() {
   const missing: string[] = [];
 
   if (envMissing("NEXT_PUBLIC_SUPABASE_URL")) missing.push("NEXT_PUBLIC_SUPABASE_URL");
-  if (envMissing("NEXT_PUBLIC_SUPABASE_ANON_KEY")) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  if (envMissing("SUPABASE_SERVICE_ROLE_KEY")) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (!getSupabasePublicKey()) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  if (!hasSupabaseAdminEnv()) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (envMissing("WHATSAPP_VERIFY_TOKEN")) missing.push("WHATSAPP_VERIFY_TOKEN");
   if (envMissing("WHATSAPP_APP_SECRET")) missing.push("WHATSAPP_APP_SECRET");
   if (!runtime.liveInboundEnabled) missing.push("WHATSAPP_LIVE_INBOUND_ENABLED=true");
@@ -84,6 +87,8 @@ function autoReplyResponseFromResult(result: Awaited<ReturnType<typeof handleWha
 }
 
 export async function POST(request: NextRequest) {
+  const traceId = createTraceId(request);
+  const startedAt = performance.now();
   console.info("whatsapp_webhook_received_start");
   try {
     console.info("whatsapp_body_read_started");
@@ -131,6 +136,7 @@ export async function POST(request: NextRequest) {
       );
     }
     console.info("whatsapp_signature_verified");
+    await recordOperationalEvent({ traceId, eventName: "whatsapp_webhook", stage: "signature_verified", status: "started" }).catch(() => false);
 
     let payload: unknown;
     try {
@@ -159,8 +165,8 @@ export async function POST(request: NextRequest) {
       publicAutoReplyEnabled: whatsappRuntime.publicAutoReplyEnabled,
       testMode: whatsappRuntime.testMode,
       hasSupabaseUrl: !envMissing("NEXT_PUBLIC_SUPABASE_URL"),
-      hasSupabaseAnonKey: !envMissing("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-      hasServiceRoleKey: !envMissing("SUPABASE_SERVICE_ROLE_KEY"),
+      hasSupabaseAnonKey: Boolean(getSupabasePublicKey()),
+      hasServiceRoleKey: hasSupabaseAdminEnv(),
       hasWhatsappVerifyToken: !envMissing("WHATSAPP_VERIFY_TOKEN"),
       hasWhatsappAppSecret: !envMissing("WHATSAPP_APP_SECRET"),
       hasWhatsappPhoneNumberId: !envMissing("WHATSAPP_PHONE_NUMBER_ID"),
@@ -176,6 +182,7 @@ export async function POST(request: NextRequest) {
 
     if (missing.length) {
       console.error("whatsapp_webhook_error", { stage: "config_check", code: "config_error", missing });
+      await recordOperationalEvent({ traceId, eventName: "whatsapp_webhook", stage: "config_check", status: "failed", durationMs: performance.now() - startedAt, errorCode: "config_error", metadata: { missingCount: missing.length } }).catch(() => false);
       return NextResponse.json({ ok: false, error: "config_error", missing }, { status: 500 });
     }
 
@@ -192,6 +199,7 @@ export async function POST(request: NextRequest) {
           providerMessageId: message.providerMessageId,
           reason
         });
+        await recordOperationalEvent({ traceId, eventName: "whatsapp_webhook", stage: "message_processing", status: "failed", durationMs: performance.now() - startedAt, providerMessageId: message.providerMessageId, errorCode: "message_processing_failed" }).catch(() => false);
         return NextResponse.json(
           {
             ok: false,
@@ -206,8 +214,18 @@ export async function POST(request: NextRequest) {
     }
 
     const first = results[0];
+    await recordOperationalEvent({
+      traceId,
+      leadId: first?.leadId,
+      eventName: "whatsapp_webhook",
+      stage: "completed",
+      status: results.some((result) => result.status === "auto_reply_failed") ? "degraded" : "ok",
+      durationMs: performance.now() - startedAt,
+      providerMessageId: first?.providerMessageId,
+      metadata: { messageCount: results.length, firstStatus: first?.status || "none" }
+    }).catch(() => false);
     if (results.length === 1 && first) {
-      return NextResponse.json(autoReplyResponseFromResult(first));
+      return NextResponse.json(autoReplyResponseFromResult(first), { headers: { "X-LIMM-Trace-Id": traceId } });
     }
 
     return NextResponse.json({
@@ -218,7 +236,7 @@ export async function POST(request: NextRequest) {
         status: result.status,
         reason: result.reason
       }))
-    });
+    }, { headers: { "X-LIMM-Trace-Id": traceId } });
   } catch (error) {
     const reason = safeReason(error);
     console.error("whatsapp_webhook_error", {
@@ -226,6 +244,7 @@ export async function POST(request: NextRequest) {
       code: "top_level_webhook_failure",
       reason
     });
+    await recordOperationalEvent({ traceId, eventName: "whatsapp_webhook", stage: "top_level", status: "failed", durationMs: performance.now() - startedAt, errorCode: "top_level_webhook_failure" }).catch(() => false);
     return NextResponse.json(
       {
         ok: false,

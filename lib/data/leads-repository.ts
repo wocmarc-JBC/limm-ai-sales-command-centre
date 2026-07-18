@@ -92,6 +92,8 @@ function leadPatchToRow(patch: Partial<Lead>, now: string) {
     ["leadScore", "lead_score"],
     ["leadCategory", "lead_category"],
     ["lastClientMessage", "last_client_message"],
+    ["lastReplyAt", "last_reply_at"],
+    ["firstOperatorResponseAt", "first_operator_response_at"],
     ["preferredContactTime", "preferred_contact_time"],
     ["deletedAt", "deleted_at"],
     ["deletedBy", "deleted_by"],
@@ -583,6 +585,8 @@ export async function recordConversationSafetyOutcome(input: {
       nonSalesAcknowledgedAt: acknowledgementSent ? now : latestLead.nonSalesAcknowledgedAt ?? null,
       latestUnansweredQuestion: input.replySent ? null : latestLead.latestUnansweredQuestion ?? null,
       conversationSafetyState: safetyState,
+      lastReplyAt: input.replySent ? now : latestLead.lastReplyAt,
+      firstOperatorResponseAt: input.replySent ? latestLead.firstOperatorResponseAt || now : latestLead.firstOperatorResponseAt,
       intakeProfile
     },
     "whatsapp_conversation_safety_outcome",
@@ -946,6 +950,7 @@ export async function takeOverLead(id: string, actorName = "Marcus") {
 
 export async function markLeadAwaitingClientAfterManualReply(id: string, actorName = "Marcus") {
   const now = new Date().toISOString();
+  const existing = await getLeadById(id);
   return updateLead(
     id,
     {
@@ -955,7 +960,9 @@ export async function markLeadAwaitingClientAfterManualReply(id: string, actorNa
       botPausedBy: actorName,
       botPauseReason: "Human takeover",
       needsMarcus: false,
-      bossApprovalNeeded: false
+      bossApprovalNeeded: false,
+      lastReplyAt: now,
+      firstOperatorResponseAt: existing?.firstOperatorResponseAt || now
     },
     "lead_waiting_for_client_after_manual_reply",
     "Manual WhatsApp reply sent; bot remains paused and lead is waiting for client response.",

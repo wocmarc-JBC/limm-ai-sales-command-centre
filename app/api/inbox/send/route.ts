@@ -9,6 +9,8 @@ import { createAuditLog } from "@/lib/data/audit-repository";
 import { saveLeadMessage } from "@/lib/data/lead-messages-repository";
 import { getLeadById, markLeadAwaitingClientAfterManualReply, pauseBotForLead } from "@/lib/data/leads-repository";
 import { isQaE2EMode, qaE2eSafetyMetadata } from "@/lib/qa-e2e-mode";
+import { createTraceId, recordOperationalEvent } from "@/lib/operations/observability";
+import { consumeRateLimit, rateLimitHeaders } from "@/lib/operations/rate-limit";
 
 function safeWhatsAppError(error: unknown) {
   if (error instanceof WhatsAppCloudApiSendError) {
@@ -29,6 +31,15 @@ export async function POST(request: Request) {
   const permission = await requirePermission("control_bot");
   if (!permission.ok) {
     return NextResponse.json({ ok: false, errorCode: "permission_denied", errorMessage: permission.error || "Permission denied." }, { status: 403 });
+  }
+  const traceId = createTraceId(request);
+  const startedAt = performance.now();
+  const actorIdForLimit = permission.auth.profile?.id || "unknown-operator";
+  const rate = await consumeRateLimit({ identity: actorIdForLimit, action: "inbox_manual_send", limit: 30, windowSeconds: 60 });
+  const responseHeaders = { ...rateLimitHeaders(rate), "X-LIMM-Trace-Id": traceId };
+  if (!rate.allowed) {
+    await recordOperationalEvent({ traceId, eventName: "whatsapp_manual_send", stage: "rate_limit", status: "degraded", errorCode: "rate_limited" }).catch(() => false);
+    return NextResponse.json({ ok: false, errorCode: "rate_limited", errorMessage: "Too many send attempts. Wait briefly and retry." }, { status: 429, headers: responseHeaders });
   }
 
   let payload: Record<string, unknown>;
@@ -84,6 +95,7 @@ export async function POST(request: Request) {
         ...qaE2eSafetyMetadata()
       }
     });
+    await recordOperationalEvent({ traceId, leadId, eventName: "whatsapp_manual_send", stage: "qa_dry_run", status: "ok", durationMs: performance.now() - startedAt }).catch(() => false);
     return NextResponse.json({
       ok: true,
       dryRun: true,
@@ -94,7 +106,7 @@ export async function POST(request: Request) {
       createdAt: saved.createdAt,
       body: saved.body,
       clientTempId
-    });
+    }, { headers: responseHeaders });
   }
 
   console.info("inbox_whatsapp_manual_reply_payload_summary", {
@@ -111,6 +123,7 @@ export async function POST(request: Request) {
 
   let sent;
   try {
+    await recordOperationalEvent({ traceId, leadId, eventName: "whatsapp_manual_send", stage: "provider_send", status: "started", metadata: { bodyLength: payloadSummary.bodyLength } }).catch(() => false);
     sent = await adapter.sendReply(lead.phone, body);
   } catch (error) {
     const reason = safeWhatsAppError(error);
@@ -165,6 +178,7 @@ export async function POST(request: Request) {
         noTokenLogged: true
       }
     }).catch(() => null);
+    await recordOperationalEvent({ traceId, leadId, eventName: "whatsapp_manual_send", stage: "provider_send", status: "failed", durationMs: performance.now() - startedAt, errorCode: error instanceof WhatsAppCloudApiSendError ? `meta_${error.metaCode || error.status}` : "provider_send_failed" }).catch(() => false);
     return NextResponse.json({
       ok: false,
       errorCode: "whatsapp_send_failed",
@@ -174,7 +188,7 @@ export async function POST(request: Request) {
       whatsappStatus: "failed",
       createdAt: failedCreatedAt,
       clientTempId
-    }, { status: 502 });
+    }, { status: 502, headers: responseHeaders });
   }
 
   try {
@@ -219,6 +233,7 @@ export async function POST(request: Request) {
         noTokenLogged: true
       }
     });
+    await recordOperationalEvent({ traceId, leadId, eventName: "whatsapp_manual_send", stage: "persisted", status: "ok", durationMs: performance.now() - startedAt, providerMessageId: sent.providerMessageId, metadata: { bodyLength: payloadSummary.bodyLength } }).catch(() => false);
     return NextResponse.json({
       ok: true,
       leadId,
@@ -228,7 +243,7 @@ export async function POST(request: Request) {
       createdAt: saved.createdAt,
       body: saved.body,
       clientTempId
-    });
+    }, { headers: responseHeaders });
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Manual reply sent, but the CRM record could not be saved.";
     console.error("inbox_whatsapp_manual_reply_persist_failed", {
@@ -237,6 +252,7 @@ export async function POST(request: Request) {
       providerMessageIdPresent: Boolean(sent.providerMessageId),
       clientTempIdPresent: Boolean(clientTempId)
     });
+    await recordOperationalEvent({ traceId, leadId, eventName: "whatsapp_manual_send", stage: "post_send_persistence", status: "degraded", durationMs: performance.now() - startedAt, providerMessageId: sent.providerMessageId, errorCode: "outbound_persist_failed" }).catch(() => false);
     return NextResponse.json({
       ok: false,
       errorCode: "outbound_persist_failed",
@@ -245,6 +261,6 @@ export async function POST(request: Request) {
       providerMessageId: sent.providerMessageId || "",
       whatsappStatus: "failed",
       clientTempId
-    }, { status: 500 });
+    }, { status: 500, headers: responseHeaders });
   }
 }

@@ -33,6 +33,7 @@ function walk(dir, output = []) {
 
 const requiredRepos = [
   "lib/data/data-source.ts",
+  "lib/data/supabase-env.ts",
   "lib/data/supabase-client.ts",
   "lib/data/mock-store.ts",
   "lib/data/leads-repository.ts",
@@ -49,8 +50,11 @@ for (const repo of requiredRepos) {
 }
 
 const dataSource = read("lib/data/data-source.ts");
-assert(/NEXT_PUBLIC_SUPABASE_URL/.test(dataSource), "Data source must check Supabase URL.");
-assert(/NEXT_PUBLIC_SUPABASE_ANON_KEY/.test(dataSource), "Data source must check Supabase anon key.");
+const supabaseEnv = read("lib/data/supabase-env.ts");
+assert(/NEXT_PUBLIC_SUPABASE_URL/.test(supabaseEnv), "Supabase environment resolver must check the project URL.");
+assert(/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/.test(supabaseEnv), "Supabase environment resolver must prefer the current publishable key.");
+assert(/NEXT_PUBLIC_SUPABASE_ANON_KEY/.test(supabaseEnv), "Supabase environment resolver must retain the legacy anon-key fallback.");
+assert(/supabase-env/.test(dataSource), "Data source must use the browser-safe Supabase environment resolver.");
 assert(/Mock Mode/.test(dataSource) && /Supabase Mode/.test(dataSource), "Data source must expose mock and Supabase mode.");
 
 const supabaseClient = read("lib/data/supabase-client.ts");

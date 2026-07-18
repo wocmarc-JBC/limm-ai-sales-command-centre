@@ -32,9 +32,10 @@ check("preserves the v10.5.0 measurable quality release in later versions", () =
   assert.ok(major > 10 || (major === 10 && minor >= 5));
   assert.ok(packageJson.scripts["test:v10.5.0"]?.includes("test:v10.4.0"));
   assert.ok(packageJson.scripts["test:v10.5.0"]?.includes("test_command_centre_10_quality.mjs"));
-  const currentReleaseTest = packageJson.scripts["test:v10.6.0"] ?? packageJson.scripts["test:v10.5.0"] ?? "";
-  assert.ok(packageJson.scripts.verify.includes(packageJson.scripts["test:v10.6.0"] ? "test:v10.6.0" : "test:v10.5.0"));
-  assert.ok(currentReleaseTest.includes("test:v10.5.0") || currentReleaseTest.includes("test:v10.4.0"));
+  const currentReleaseTest = packageJson.scripts["test:v11.1.0"] ?? packageJson.scripts["test:v10.6.0"] ?? packageJson.scripts["test:v10.5.0"] ?? "";
+  assert.ok(packageJson.scripts.verify.includes(packageJson.scripts["test:v11.1.0"] ? "test:v11.1.0" : packageJson.scripts["test:v10.6.0"] ? "test:v10.6.0" : "test:v10.5.0"));
+  if (packageJson.scripts["test:v11.1.0"]) assert.ok(currentReleaseTest.includes("test:v10.6.0"));
+  assert.ok(currentReleaseTest.includes("test:v10.6.0") || currentReleaseTest.includes("test:v10.5.0") || currentReleaseTest.includes("test:v10.4.0"));
   assert.ok(packageJson.scripts.build.includes("test_command_core_bundle_budget.mjs"));
   for (const marker of [
     "v10_5_0_command_centre_10_quality",

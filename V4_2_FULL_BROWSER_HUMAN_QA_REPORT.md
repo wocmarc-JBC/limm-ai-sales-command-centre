@@ -1,7 +1,7 @@
 # v4.2 Full Browser Human QA Report
 
-Run marker: v4_2_browser_human_test_2026-06-02T07-12-55-193Z
-Generated: 2026-06-02T07:18:38.643Z
+Run marker: v4_2_browser_human_test_2026-07-18T18-48-13-613Z
+Generated: 2026-07-18T18:50:22.154Z
 
 ## Status PASS/FAIL
 
@@ -68,97 +68,241 @@ MANUAL REQUIRED. SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD were not present
 
 ## Buttons Clicked / Verified
 
-- Sign In
+- Jump anywhere⌘K
+- Logout
+- Approve Reply
+- Book Appointment
+- Move to Quotation Review
+- Save Intent Override
+- Create Quotation Package
+- Save Intake Profile
+- Create Upload Link
+- Save Status
+- Mark Boss Approval Needed
+- Mark Not Suitable
+- Take Over Lead
+- Pause Bot
+- Resume Bot
+- Mark Needs Marcus
+- Mark Followed Up
+- Mark Test Lead
+- Mark Spam
+- Mark Duplicate
+- Archive Lead
+- Soft Delete Lead
+- Restore Lead
+- Permanent Delete
+- Mark Ready for Appointment Review
+- Approve Booking
+- Reject / Need More Info
+- Calendar Connection Not Enabled
+- Dry-Run Off
+- Offer to Lead
+- Copy Slot Message
+- Reserve Slot
+- Block Slot
+- Save Appointment Settings
+- Approve Quote
+- Need Site Visit First
+- Ask For More Info
+- Reject / Revise Quote
+- Human Takeover
+- Escalate To Manager
+- Search
+- Mark Follow-Up Done
+- Snooze Follow-Up
+- Save Visibility
+- Soft Delete Test Leads + Test Follow-Ups
+- Hide / Complete Test Follow-Ups
+- Permanently Delete Soft-Deleted Test Leads
+- Filter
 
 ## Forms / Parameters Tested
 
-- Email | Password | Sign In
+- Approve Reply
+- Book Appointment
+- Move to Quotation Review
+- Manual correction | Clear override / use classifierRenovation leadExisting clientVendor / supplierPartnershipRecruitmentSpam / scamGeneral / wrong numberIntent unclearHuman takeoverBusiness contact | Save Intent Override
+- Quotation number | Quotation amount | Scope summaryWet kitchen extension, bathrooms, roof leak area, rewiring | Prepared by
+- Property type | Scope of work | Floor plan status | Site photos status
+- Create Upload Link
+- Update statusNew EnquiryAwaiting ClientWaiting Boss ApprovalReady To BookAppointment PendingQuotation ReadinessFollow Up DueNot Suitable | New EnquiryAwaiting ClientWaiting Boss ApprovalReady To BookAppointment PendingQuotation ReadinessFollow Up DueNot Suitable | Save Status
+- Mark Boss Approval Needed
+- Mark Not Suitable
+- Take Over Lead
+- Pause Bot
+- Resume Bot
+- Mark Needs Marcus
+- Mark Followed Up
+- Mark Test Lead
+- Mark Spam
+- Mark Duplicate
+- Archive Lead
+- Soft Delete Lead
+- Restore Lead
+- Permanent Delete
+- Mark Ready for Appointment Review
+- Approve Booking
+- Reject / Need More Info
+- Calendar Connection Not Enabled
+- Dry-Run Off
+- Allowed | Approval | Allowed | Approval
+- Boss note | Approve Quote
+- Boss note | Need Site Visit First
+- Boss note | Ask For More Info
+- Boss note | Reject / Revise Quote
+- Boss note | Pause Bot
+- Boss note | Human Takeover
+- Boss note | Escalate To Manager
+- Search
+- Show test/demo records | Save Visibility
+- Soft Delete Test Leads + Test Follow-Ups
+- Hide / Complete Test Follow-Ups
+- Permanently Delete Soft-Deleted Test Leads
+- Filter
 
 ## Screenshots Captured
 
-Folder: screenshots/v4_2_browser_human_test_2026-06-02T07-12-55-193Z
+Folder: screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z
 
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-dashboard.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-login.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-leads.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-leads-lead-001.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-appointments.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-appointment-settings.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-approvals.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-followups.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-quotation-readiness.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-client-files.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-reports.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-settings.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-audit-log.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-route-review-chatgpt-ui.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-review-route-disabled.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\desktop-chromium-login.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-dashboard.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-login.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-leads.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-leads-lead-001.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-appointments.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-appointment-settings.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-approvals.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-followups.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-quotation-readiness.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-client-files.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-reports.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-settings.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-audit-log.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-route-review-chatgpt-ui.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-review-route-disabled.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\mobile-chromium-login.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-dashboard.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-login.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-leads.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-leads-lead-001.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-appointments.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-appointment-settings.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-approvals.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-followups.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-quotation-readiness.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-client-files.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-reports.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-settings.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-audit-log.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-route-review-chatgpt-ui.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-review-route-disabled.png
-- screenshots\v4_2_browser_human_test_2026-06-02T07-12-55-193Z\tablet-chromium-login.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-dashboard.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-login.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-leads.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-leads-lead-001.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-appointments.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-appointment-settings.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-approvals.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-followups.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-quotation-readiness.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-client-files.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-reports.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-settings.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-audit-log.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-route-review-chatgpt-ui.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-review-route-disabled.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/desktop-chromium-login.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-dashboard.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-login.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-leads.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-leads-lead-001.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-appointments.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-appointment-settings.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-approvals.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-followups.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-quotation-readiness.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-client-files.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-reports.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-settings.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-audit-log.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-route-review-chatgpt-ui.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-review-route-disabled.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/mobile-chromium-login.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-dashboard.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-login.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-leads.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-leads-lead-001.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-appointments.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-appointment-settings.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-approvals.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-followups.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-quotation-readiness.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-client-files.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-reports.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-settings.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-audit-log.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-route-review-chatgpt-ui.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-review-route-disabled.png
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/tablet-chromium-login.png
 
 ## Traces Captured If Failures
 
-- No trace artifacts copied. If the run failed before Playwright launched, there may be no trace.
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621326-094cffd9a54c6944929f-b41415f8e5e0be9546de-recording28.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621326-41d3fd2474a19feb00a1-fcb4c0d78b951d060ab6.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621327-6f94529db8185b11ad0c-0123d6d6905dedbfaf56-recording2.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621327-6f94529db8185b11ad0c-1552b8c440c171b8f6ad-recording3.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621327-6f94529db8185b11ad0c-2986fe50f62921dfca1d-recording1.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621327-6f94529db8185b11ad0c-2d99f843439652a4cd26-recording10.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621327-6f94529db8185b11ad0c-3b6900be74d6c5594c64-recording9.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621327-6f94529db8185b11ad0c-48c522703c72c90f5f6e-recording4.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621327-6f94529db8185b11ad0c-640bb89e95854c82e300-recording8.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621327-6f94529db8185b11ad0c-70feaaf403c14fcead62-recording5.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-6f94529db8185b11ad0c-7a30d4dd3c0bcc9f2814-recording11.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-6f94529db8185b11ad0c-cc3d110e6045d983771f-recording7.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-6f94529db8185b11ad0c-e43df02c00bf2511472f-recording6.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-6f94529db8185b11ad0c-ee74e42ae09e4c89052a-recording12.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-8a7c9132eabb83b32043-030c6b8c177ea14b8d73-recording42.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-8a7c9132eabb83b32043-0e99c8fc464b388b512d-recording38.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-8a7c9132eabb83b32043-287932b510290ea90d29-recording31.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-8a7c9132eabb83b32043-2c1bd0a79675ea20269a-recording40.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621328-8a7c9132eabb83b32043-2d91c1f600e79bccf76b-recording33.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-3052b81f3a2ed2a5fb55-recording41.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-55dd872c8059c62f5ed5-recording39.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-566e609c01d11b96340c-recording35.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-56c54cea072d6c8656e4-recording45.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-58aa2f8194b08c784b1f-recording37.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-73ff151accb760c2ac25-recording29.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-766d6e66e9be05eccff3-recording44.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-8d8704af30bd7ad08118-recording43.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-9823ae0e2c5083ef3ec7-recording36.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621329-8a7c9132eabb83b32043-a1fb3a4ba43448a3fffb-recording30.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621330-8a7c9132eabb83b32043-ad4d340d05e7ba678e6a-recording34.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621330-8a7c9132eabb83b32043-c335eff607b0ce62ce02-recording32.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621330-afd0c53e9ca4721a6a97-ecc04025a2a25f85fda5-recording13.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621330-f86c4aae836a1c445e3c-1306745fda1143a6a2d3-recording21.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621330-f86c4aae836a1c445e3c-28cd0604c86006da476f-recording20.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-2cb97d23edb8c23930b4-recording24.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-30b5a4a7d348da9112e0-recording26.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-314a38488e245c8862a8-recording17.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-48c62094edb240d1a30e-recording15.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-63afb4220a83e489b75c-recording16.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-64298b94502f379a1e7d-recording14.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-6dcc707fc9d4b241350e-recording27.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-79e13b394319b74df2de-recording18.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621331-f86c4aae836a1c445e3c-94a5728b88eb8c80028d-recording22.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-f86c4aae836a1c445e3c-aaac69a86d2c244f4020-recording19.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-f86c4aae836a1c445e3c-bae17dcfbc8c17c68b74-recording25.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-f86c4aae836a1c445e3c-d456bdb610e8e8c0281e-recording23.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-8a7c9132eabb83b32043-2feb94ce16fb34e71504-recording9.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-8a7c9132eabb83b32043-52918fee26f558c53c32.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-8a7c9132eabb83b32043-97100c1f01c7a29af746-recording3.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-8a7c9132eabb83b32043-aa3868960fd5cac64f3b-recording8.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-8a7c9132eabb83b32043-ad9f6dec5f72d3cbfce0-recording2.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-8a7c9132eabb83b32043-c3296b3aa58c0435826c-recording1.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621332-8a7c9132eabb83b32043-df02f892bd0e8a837b7d-recording10.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-e59d3e76c2526bf7b4c2-recording4.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-e6b489ba32806237a0e5-recording11.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-edcaf16eb6bd4c3ed9d5-recording6.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-f5f24388f1c74c70041c-recording7.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-fd200b0830324a2bc255-recording5.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-112d7c6457a3460a944c-recording9.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-1f2de9ffafb48fefe27a-recording2.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-2a0e0efbee75e51afde6-recording5.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621333-8a7c9132eabb83b32043-371bce396d9fb5b11d95-recording6.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-41e06628b65751245afe-recording10.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-4cf355ab8bff3926dc5f-recording11.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-5c581fd8679059142ad2-recording8.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-5da5d18e32ff8847a009-recording12.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-5f1ee1af6105db6606fa-recording15.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-6ea785dfc79241487087-recording14.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-7e81bc14e55476aa1fca-recording4.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-8366163ec45c8b3cb45c-recording1.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-9ce6d5a984edb30c020f-recording7.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621334-8a7c9132eabb83b32043-a45e82950321271e5945-recording3.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621335-8a7c9132eabb83b32043-be780e80e35c9dfd40b4-recording13.trace
+- screenshots/v4_2_browser_human_test_2026-07-18T18-48-13-613Z/traces/1784400621335-8a7c9132eabb83b32043-cba10372fd8945eded38.trace
 
 ## Bugs Found
 
-- Console error: /login (desktop-chromium): Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
-- Console error: /login (desktop-chromium): TypeError: Failed to fetch
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/helpers.js:121:25)
-    at _handleRequest (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:122:24)
-    at _request (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:112:24)
-    at SupabaseAuthClient.signInWithPassword (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:825:81)
-    at submit (webpack-internal:///(app-pages-browser)/./components/auth/LoginForm.tsx:34:137)
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12837:12)
-    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12738:25)
-    at startHostTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12834:3)
-    at submitForm (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:29585:5)
-    at HTMLUnknownElement.callCallback (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20565:14)
-    at Object.invokeGuardedCallbackImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20614:16)
-    at invokeGuardedCallback (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20689:29)
-    at invokeGuardedCallbackAndCatchFirstError (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20703:25)
-    at executeDispatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32128:3)
-    at processDispatchQueueItemsInOrder (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32160:7)
-    at processDispatchQueue (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32173:5)
-    at dispatchEventsForPlugins (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32184:3)
-    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32374:12)
-    at batchedUpdates$1 (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24953:12)
-    at batchedUpdates (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:28844:12)
-    at dispatchEventForPluginEventSystem (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:32373:3)
-    at dispatchEvent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:30141:5)
-    at dispatchDiscreteEvent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:30112:5)
-- Visible error text: /login (desktop-chromium): Failed to fetch
+- Visible error text: /followups (desktop-chromium): Failed send
+- Visible error text: /reports (desktop-chromium): Failed sends
+- Visible error text: /review-chatgpt-ui (desktop-chromium): PAGE NOT FOUND
+- Visible error text: /review-chatgpt-ui (desktop-chromium): PAGE NOT FOUND
+- Visible error text: /followups (mobile-chromium): Failed send
+- Visible error text: /review-chatgpt-ui (mobile-chromium): PAGE NOT FOUND
+- Visible error text: /review-chatgpt-ui (mobile-chromium): PAGE NOT FOUND
+- Visible error text: /reports (tablet-chromium): Failed sends
+- Visible error text: /review-chatgpt-ui (tablet-chromium): PAGE NOT FOUND
+- Visible error text: /review-chatgpt-ui (tablet-chromium): PAGE NOT FOUND
 
 ## Bugs Fixed
 
@@ -206,265 +350,42 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 
 ## Repo Safety Search Findings
 
-- .env.example:10 contains "service_role"
-- .env.example:10 contains "SUPABASE_SERVICE_ROLE_KEY"
-- AGENTS.md:55 contains "free consultation"
-- AGENTS.md:54 contains "quote range"
-- AGENTS.md:86 contains "service_role"
-- AGENTS.md:86 contains "SUPABASE_SERVICE_ROLE_KEY"
-- app/api/whatsapp/health/route.ts:232 contains "service_role"
-- app/api/whatsapp/health/route.ts:232 contains "SUPABASE_SERVICE_ROLE_KEY"
-- app/api/whatsapp/webhook/route.ts:33 contains "service_role"
-- app/api/whatsapp/webhook/route.ts:33 contains "SUPABASE_SERVICE_ROLE_KEY"
+- .env.example:14 contains "service_role"
+- .env.example:14 contains "SUPABASE_SERVICE_ROLE_KEY"
+- AGENTS.md:95 contains "free consultation"
+- AGENTS.md:94 contains "quote range"
+- AGENTS.md:126 contains "service_role"
+- AGENTS.md:126 contains "SUPABASE_SERVICE_ROLE_KEY"
 - CALENDAR_BOOKING_SAFETY_RULES.md:14 contains "Sunday blocked"
-- CHATGPT_HANDOFF_REPORT.md:77 contains "quote range"
-- CURRENT_STATUS.md:419 contains "quote range"
-- CURRENT_STATUS.md:419 contains "rough estimate"
-- CURRENT_STATUS.md:524 contains "estimated price"
-- CURRENT_STATUS.md:419 contains "package price"
-- CURRENT_STATUS.md:457 contains "service_role"
-- CURRENT_STATUS.md:457 contains "SUPABASE_SERVICE_ROLE_KEY"
-- DEV_BRAIN_QA_REPORT.md:263 contains "quote range"
-- docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md:74 contains "quote range"
-- docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md:75 contains "rough estimate"
-- docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md:76 contains "package price"
-- docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md:109 contains "free consultation"
-- docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md:106 contains "quote range"
-- docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md:106 contains "package price"
-- docs/V6_HUMAN_LIKE_SALES_BRAIN.md:112 contains "rough estimate"
-- docs/V6_HUMAN_LIKE_SALES_BRAIN.md:112 contains "package price"
-- docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md:39 contains "free consultation"
-- docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md:39 contains "quote range"
-- docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md:39 contains "rough estimate"
-- docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md:39 contains "package price"
+- CHATGPT_HANDOFF_REPORT.md:83 contains "quote range"
+- CURRENT_STATUS.md:161 contains "quote range"
+- CURRENT_STATUS.md:161 contains "rough estimate"
+- CURRENT_STATUS.md:707 contains "estimated price"
+- CURRENT_STATUS.md:602 contains "package price"
+- CURRENT_STATUS.md:640 contains "service_role"
+- CURRENT_STATUS.md:640 contains "SUPABASE_SERVICE_ROLE_KEY"
+- DEV_BRAIN_QA_REPORT.md:453 contains "quote range"
 - INTERNAL_LAUNCH_CHECKLIST.md:63 contains "quote range"
 - INTERNAL_LAUNCH_CHECKLIST.md:28 contains "rough estimate"
 - INTERNAL_LAUNCH_CHECKLIST.md:63 contains "package price"
 - KNOWN_LIMITATIONS.md:16 contains "quote range"
 - KNOWN_LIMITATIONS.md:17 contains "rough estimate"
 - LAUNCH_CHECKLIST.md:53 contains "quote range"
-- lib/ai-dry-run.ts:12 contains "quote range"
-- lib/ai-dry-run.ts:13 contains "price range"
-- lib/ai-dry-run.ts:14 contains "rough estimate"
-- lib/ai-dry-run.ts:16 contains "package price"
-- lib/data/supabase-admin.ts:7 contains "service_role"
-- lib/data/supabase-admin.ts:7 contains "SUPABASE_SERVICE_ROLE_KEY"
-- lib/safety-rules.ts:2 contains "free consultation"
-- lib/whatsapp-question-bank.ts:154 contains "quote range"
-- lib/whatsapp-question-bank.ts:154 contains "rough estimate"
-- lib/whatsapp-question-bank.ts:154 contains "package price"
-- lib/whatsapp-safety.ts:7 contains "free consultation"
-- lib/whatsapp-safety.ts:6 contains "quote range"
-- lib/whatsapp-safety.ts:6 contains "price range"
-- lib/whatsapp-safety.ts:6 contains "rough estimate"
-- lib/whatsapp-safety.ts:6 contains "estimated price"
-- lib/whatsapp-safety.ts:6 contains "package price"
-- lib/whatsapp-sales-brain.ts:451 contains "quote range"
-- lib/whatsapp-sales-brain.ts:451 contains "rough estimate"
-- lib/whatsapp-v6/reply-planner.ts:19 contains "rough estimate"
-- lib/whatsapp-v6/reply-planner.ts:19 contains "package price"
-- lib/whatsapp-v6/safety-governor.ts:14 contains "free consultation"
-- lib/whatsapp-v6/safety-governor.ts:9 contains "quote range"
-- lib/whatsapp-v6/safety-governor.ts:9 contains "price range"
-- lib/whatsapp-v6/safety-governor.ts:8 contains "package price"
 - LIVE_INTEGRATION_PRODUCTION_PROOF_PLAYBOOK.md:43 contains "service_role"
 - LIVE_INTEGRATION_PRODUCTION_PROOF_PLAYBOOK.md:43 contains "SUPABASE_SERVICE_ROLE_KEY"
 - LIVE_SUPABASE_SETUP_GUIDE.md:122 contains "quote range"
-- META_WHATSAPP_WEBHOOK_LIVE_SETUP.md:84 contains "quote range"
+- META_WHATSAPP_WEBHOOK_LIVE_SETUP.md:94 contains "quote range"
 - NEXT_PHASE_OPENAI_BRAIN_PLAN.md:14 contains "quote range"
 - NEXT_PHASE_OPENAI_BRAIN_PLAN.md:15 contains "rough estimate"
-- NEXT_STEPS_FOR_CHATGPT.md:39 contains "package price"
+- NEXT_STEPS_FOR_CHATGPT.md:54 contains "package price"
 - PRODUCTION_ENV_VARS_CHECKLIST.md:21 contains "service_role"
 - PRODUCTION_ENV_VARS_CHECKLIST.md:21 contains "SUPABASE_SERVICE_ROLE_KEY"
 - README.md:61 contains "quote range"
 - README.md:68 contains "service_role"
 - README.md:68 contains "SUPABASE_SERVICE_ROLE_KEY"
-- reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md:114 contains "quote range"
-- reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md:114 contains "package price"
-- reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md:31 contains "service_role"
-- reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md:31 contains "SUPABASE_SERVICE_ROLE_KEY"
-- reports/V6_ULTIMATE_DEEP_QA_REPORT.md:1445 contains "package price"
-- scripts/audit_v3_package.mjs:310 contains "free consultation"
-- scripts/audit_v3_package.mjs:303 contains "quote range"
-- scripts/audit_v3_package.mjs:306 contains "package price"
-- scripts/audit_v3_package.mjs:257 contains "service_role"
-- scripts/audit_v3_package.mjs:257 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/cleanup_old_test_leads_v6_1.mjs:167 contains "service_role"
-- scripts/cleanup_old_test_leads_v6_1.mjs:167 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/dev_brain_route_probe.mjs:33 contains "free consultation"
-- scripts/dev_brain_route_probe.mjs:33 contains "quote range"
-- scripts/dev_brain_route_probe.mjs:33 contains "rough estimate"
-- scripts/dev_brain_route_probe.mjs:33 contains "estimated price"
-- scripts/doctor.mjs:115 contains "free consultation"
-- scripts/doctor.mjs:112 contains "quote range"
-- scripts/doctor.mjs:112 contains "rough estimate"
-- scripts/doctor.mjs:112 contains "package price"
-- scripts/doctor.mjs:100 contains "service_role"
-- scripts/doctor.mjs:100 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/doctor.mjs:123 contains "hardcoded Sunday"
-- scripts/generate_chatgpt_handoff_report.mjs:91 contains "quote range"
-- scripts/generate_dev_brain_report.mjs:145 contains "quote range"
-- scripts/generate_v4_2_browser_report.mjs:85 contains "free consultation"
-- scripts/generate_v4_2_browser_report.mjs:86 contains "quote range"
-- scripts/generate_v4_2_browser_report.mjs:87 contains "price range"
-- scripts/generate_v4_2_browser_report.mjs:88 contains "rough estimate"
-- scripts/generate_v4_2_browser_report.mjs:89 contains "estimated price"
-- scripts/generate_v4_2_browser_report.mjs:90 contains "package price"
-- scripts/generate_v4_2_browser_report.mjs:91 contains "service_role"
-- scripts/generate_v4_2_browser_report.mjs:92 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/generate_v4_2_browser_report.mjs:93 contains "Sunday blocked"
-- scripts/generate_v4_2_browser_report.mjs:94 contains "hardcoded Sunday"
-- scripts/test_v3_auth_rls_static.mjs:146 contains "free consultation"
-- scripts/test_v3_auth_rls_static.mjs:151 contains "quote range"
-- scripts/test_v3_auth_rls_static.mjs:138 contains "service_role"
-- scripts/test_v3_auth_rls_static.mjs:138 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v3_auth_rls_static.mjs:142 contains "hardcoded Sunday"
-- scripts/test_v3_foundation.mjs:80 contains "free consultation"
-- scripts/test_v3_foundation.mjs:86 contains "quote range"
-- scripts/test_v3_foundation.mjs:89 contains "package price"
-- scripts/test_v3_live_setup_static.mjs:160 contains "free consultation"
-- scripts/test_v3_live_setup_static.mjs:165 contains "quote range"
-- scripts/test_v3_live_setup_static.mjs:106 contains "service_role"
-- scripts/test_v3_live_setup_static.mjs:106 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v3_live_setup_static.mjs:156 contains "hardcoded Sunday"
-- scripts/test_v3_review_route_static.mjs:43 contains "free consultation"
-- scripts/test_v3_review_route_static.mjs:44 contains "quote range"
-- scripts/test_v3_review_route_static.mjs:44 contains "rough estimate"
-- scripts/test_v3_review_route_static.mjs:44 contains "package price"
-- scripts/test_v3_supabase_layer.mjs:120 contains "free consultation"
-- scripts/test_v3_supabase_layer.mjs:114 contains "quote range"
-- scripts/test_v3_supabase_layer.mjs:56 contains "service_role"
-- scripts/test_v3_supabase_layer.mjs:56 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v4_1_dev_brain_static.mjs:105 contains "quote range"
-- scripts/test_v4_1_dev_brain_static.mjs:105 contains "rough estimate"
-- scripts/test_v4_1_dev_brain_static.mjs:76 contains "service_role"
-- scripts/test_v4_6_openai_dry_run.mjs:57 contains "quote range"
-- scripts/test_v4_6_openai_dry_run.mjs:57 contains "rough estimate"
-- scripts/test_v4_6_openai_dry_run.mjs:57 contains "package price"
-- scripts/test_v4_7_openai_boss_review_ux.mjs:133 contains "free consultation"
-- scripts/test_v4_7_openai_boss_review_ux.mjs:110 contains "quote range"
-- scripts/test_v4_7_openai_boss_review_ux.mjs:111 contains "rough estimate"
-- scripts/test_v4_7_openai_boss_review_ux.mjs:112 contains "package price"
-- scripts/test_v4_8_live_diagnostics_static.mjs:91 contains "service_role"
-- scripts/test_v4_8_live_diagnostics_static.mjs:91 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v4_8_whatsapp_closed_test.mjs:106 contains "free consultation"
-- scripts/test_v4_8_whatsapp_closed_test.mjs:107 contains "quote range"
-- scripts/test_v4_8_whatsapp_closed_test.mjs:108 contains "rough estimate"
-- scripts/test_v4_8_whatsapp_closed_test.mjs:109 contains "package price"
-- scripts/test_v4_9_deployment_readiness.mjs:177 contains "free consultation"
-- scripts/test_v4_9_deployment_readiness.mjs:181 contains "quote range"
-- scripts/test_v4_9_deployment_readiness.mjs:183 contains "rough estimate"
-- scripts/test_v4_9_deployment_readiness.mjs:184 contains "estimated price"
-- scripts/test_v4_9_deployment_readiness.mjs:185 contains "package price"
-- scripts/test_v4_9_deployment_readiness.mjs:72 contains "service_role"
-- scripts/test_v4_9_deployment_readiness.mjs:72 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v4_launch_candidate.mjs:70 contains "free consultation"
-- scripts/test_v4_launch_candidate.mjs:67 contains "quote range"
-- scripts/test_v4_launch_candidate.mjs:67 contains "rough estimate"
-- scripts/test_v4_launch_candidate.mjs:67 contains "package price"
-- scripts/test_v4_launch_candidate.mjs:117 contains "service_role"
-- scripts/test_v4_launch_candidate.mjs:117 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v4_launch_candidate.mjs:78 contains "hardcoded Sunday"
-- scripts/test_v5_2_whatsapp_question_bank.mjs:200 contains "free consultation"
-- scripts/test_v5_2_whatsapp_question_bank.mjs:205 contains "quote range"
-- scripts/test_v5_2_whatsapp_question_bank.mjs:206 contains "rough estimate"
-- scripts/test_v5_2_whatsapp_question_bank.mjs:207 contains "estimated price"
-- scripts/test_v5_2_whatsapp_question_bank.mjs:208 contains "package price"
-- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:49 contains "free consultation"
-- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:33 contains "quote range"
-- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:34 contains "price range"
-- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:35 contains "rough estimate"
-- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:36 contains "estimated price"
-- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:38 contains "package price"
-- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:246 contains "service_role"
-- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:246 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs:44 contains "free consultation"
-- scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs:32 contains "quote range"
-- scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs:33 contains "price range"
-- scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs:34 contains "package price"
-- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:33 contains "quote range"
-- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:34 contains "price range"
-- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:35 contains "rough estimate"
-- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:36 contains "estimated price"
-- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:38 contains "package price"
-- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:284 contains "free consultation"
-- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:285 contains "quote range"
-- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:286 contains "rough estimate"
-- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:287 contains "estimated price"
-- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:288 contains "package price"
-- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:174 contains "Sunday blocked"
-- scripts/test_v6_1_5_performance_followup_test_cleanup.mjs:178 contains "free consultation"
-- scripts/test_v6_1_5_performance_followup_test_cleanup.mjs:181 contains "package price"
-- scripts/test_v6_1_5_performance_followup_test_cleanup.mjs:187 contains "service_role"
-- scripts/test_v6_1_5_performance_followup_test_cleanup.mjs:187 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:148 contains "free consultation"
-- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:152 contains "price range"
-- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:153 contains "package price"
-- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:159 contains "service_role"
-- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:159 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:153 contains "free consultation"
-- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:157 contains "price range"
-- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:158 contains "package price"
-- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:164 contains "service_role"
-- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:164 contains "SUPABASE_SERVICE_ROLE_KEY"
-- scripts/test_v6_1_8_dashboard_compression_zero_state_polish.mjs:118 contains "free consultation"
-- scripts/test_v6_1_8_dashboard_compression_zero_state_polish.mjs:122 contains "price range"
-- scripts/test_v6_1_8_dashboard_compression_zero_state_polish.mjs:123 contains "package price"
-- scripts/test_v6_3_sales_collection_command_centre.mjs:275 contains "free consultation"
-- scripts/test_v6_3_sales_collection_command_centre.mjs:278 contains "price range"
-- scripts/test_v6_3_sales_collection_command_centre.mjs:279 contains "package price"
-- scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs:101 contains "free consultation"
-- scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs:103 contains "price range"
-- scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs:104 contains "package price"
-- scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs:83 contains "free consultation"
-- scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs:85 contains "price range"
-- scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs:86 contains "package price"
-- scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs:128 contains "free consultation"
-- scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs:130 contains "price range"
-- scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs:131 contains "package price"
-- scripts/test_v6_4_singapore_mission_map.mjs:175 contains "free consultation"
-- scripts/test_v6_4_singapore_mission_map.mjs:177 contains "price range"
-- scripts/test_v6_4_singapore_mission_map.mjs:178 contains "package price"
-- scripts/test_v6_human_like_sales_brain_deep_qa.mjs:88 contains "free consultation"
-- scripts/test_v6_human_like_sales_brain_deep_qa.mjs:77 contains "price range"
-- scripts/test_v6_human_like_sales_brain_deep_qa.mjs:76 contains "package price"
-- scripts/test_v6_ultimate_deep_qa.mjs:90 contains "free consultation"
-- scripts/test_v6_ultimate_deep_qa.mjs:79 contains "price range"
-- scripts/test_v6_ultimate_deep_qa.mjs:78 contains "package price"
-- scripts/test_whatsapp_adapter_payload_shape.mjs:64 contains "free consultation"
-- scripts/test_whatsapp_adapter_payload_shape.mjs:65 contains "quote range"
-- scripts/test_whatsapp_adapter_payload_shape.mjs:66 contains "rough estimate"
-- scripts/test_whatsapp_adapter_payload_shape.mjs:67 contains "package price"
-- scripts/verify_live_supabase_schema.mjs:54 contains "hardcoded Sunday"
 - START_HERE_INTERNAL_LAUNCH.md:25 contains "quote range"
 - START_HERE_INTERNAL_LAUNCH.md:26 contains "rough estimate"
 - START_INTERNAL_LAUNCH_SAFE.ps1:15 contains "quote range"
-- tests/e2e/authenticated-boss.spec.ts:21 contains "free consultation"
-- tests/e2e/authenticated-boss.spec.ts:21 contains "quote range"
-- tests/e2e/authenticated-boss.spec.ts:21 contains "rough estimate"
-- tests/e2e/login.spec.ts:18 contains "service_role"
-- tests/e2e/protected-routes.spec.ts:23 contains "free consultation"
-- tests/e2e/protected-routes.spec.ts:23 contains "quote range"
-- tests/e2e/protected-routes.spec.ts:23 contains "rough estimate"
-- tests/e2e/review-route.spec.ts:33 contains "free consultation"
-- tests/e2e/review-route.spec.ts:34 contains "quote range"
-- tests/e2e/review-route.spec.ts:34 contains "rough estimate"
-- tests/e2e/route-checks.spec.ts:32 contains "free consultation"
-- tests/e2e/route-checks.spec.ts:32 contains "quote range"
-- tests/e2e/route-checks.spec.ts:32 contains "rough estimate"
-- tests/e2e/v4-2-human-browser.spec.ts:13 contains "free consultation"
-- tests/e2e/v4-2-human-browser.spec.ts:13 contains "quote range"
-- tests/e2e/v4-2-human-browser.spec.ts:13 contains "price range"
-- tests/e2e/v4-2-human-browser.spec.ts:13 contains "rough estimate"
-- tests/e2e/v4-2-human-browser.spec.ts:13 contains "estimated price"
-- tests/e2e/v4-2-human-browser.spec.ts:13 contains "package price"
-- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "free consultation"
-- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "quote range"
-- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "price range"
-- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "rough estimate"
-- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "estimated price"
-- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "package price"
-- tests/v3_foundation_cases.md:10 contains "quote range"
 - V3_0_BUILD_REPORT.md:81 contains "quote range"
 - V3_0_BUILD_REPORT.md:90 contains "hardcoded Sunday"
 - V3_1_SUPABASE_LAYER_REPORT.md:93 contains "quote range"
@@ -484,16 +405,16 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - V4_10_WHATSAPP_LIVE_PASS_REPORT.md:74 contains "package price"
 - V4_10_WHATSAPP_LIVE_PASS_REPORT.md:31 contains "service_role"
 - V4_10_WHATSAPP_LIVE_PASS_REPORT.md:31 contains "SUPABASE_SERVICE_ROLE_KEY"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:211 contains "free consultation"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:178 contains "quote range"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:247 contains "price range"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:222 contains "rough estimate"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:223 contains "estimated price"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:224 contains "package price"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:209 contains "service_role"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:210 contains "SUPABASE_SERVICE_ROLE_KEY"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:219 contains "Sunday blocked"
-- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:304 contains "hardcoded Sunday"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:358 contains "free consultation"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:325 contains "quote range"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:413 contains "price range"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:365 contains "rough estimate"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:366 contains "estimated price"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:367 contains "package price"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:356 contains "service_role"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:357 contains "SUPABASE_SERVICE_ROLE_KEY"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:362 contains "Sunday blocked"
+- V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md:393 contains "hardcoded Sunday"
 - V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md:70 contains "quote range"
 - V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md:70 contains "rough estimate"
 - V4_3_AUTHENTICATED_BOSS_BROWSER_WRITE_QA_REPORT.md:70 contains "estimated price"
@@ -535,10 +456,394 @@ Review route is checked as disabled by default unless NEXT_PUBLIC_ENABLE_REVIEW_
 - WHATSAPP_AUTO_REPLY_SAFETY_RULES.md:86 contains "rough estimate"
 - WHATSAPP_AUTO_REPLY_SAFETY_RULES.md:87 contains "package price"
 - WHATSAPP_EMERGENCY_OFF_GUIDE.md:46 contains "quote range"
-- WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:164 contains "quote range"
+- WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:169 contains "quote range"
 - WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:24 contains "service_role"
 - WHATSAPP_LIVE_TEST_SETUP_GUIDE.md:24 contains "SUPABASE_SERVICE_ROLE_KEY"
 - WHATSAPP_REPLY_COACH_PLAYBOOK.md:42 contains "package price"
+- app/api/whatsapp/webhook/route.ts:37 contains "service_role"
+- app/api/whatsapp/webhook/route.ts:37 contains "SUPABASE_SERVICE_ROLE_KEY"
+- components/inbox/MultiChatInbox.tsx contains process.env inside a client component
+- docs/LIMM_WHATSAPP_SALES_AGENT_PLAYBOOK_V5.md:1965 contains "free consultation"
+- docs/V10_2_1_CONVERSATION_CONCURRENCY_SAFETY.md:36 contains "service_role"
+- docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md:74 contains "quote range"
+- docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md:75 contains "rough estimate"
+- docs/V5_3_1_MULTI_INTENT_LEAD_CONTEXT_PORTFOLIO.md:76 contains "package price"
+- docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md:109 contains "free consultation"
+- docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md:106 contains "quote range"
+- docs/V5_3_2_DEEP_QA_MEDIA_SINGLISH_VOICE_EMAIL_HANDOFF.md:106 contains "package price"
+- docs/V6_4_5_REAL_SINGAPORE_GEOJSON_MAP.md:19 contains "quote range"
+- docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md:118 contains "quote range"
+- docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md:19 contains "rough estimate"
+- docs/V6_5_SMART_LEAD_INTAKE_MEETING_PREP.md:19 contains "package price"
+- docs/V6_6_STRATEGIC_COMMAND_CORE_LAYOUT.md:33 contains "quote range"
+- docs/V6_HUMAN_LIKE_SALES_BRAIN.md:112 contains "rough estimate"
+- docs/V6_HUMAN_LIKE_SALES_BRAIN.md:112 contains "package price"
+- docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md:39 contains "free consultation"
+- docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md:39 contains "quote range"
+- docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md:39 contains "rough estimate"
+- docs/V6_ULTIMATE_SALES_COMMAND_CENTRE.md:39 contains "package price"
+- docs/limm-qa-expansion-pack-v10.1.json:51 contains "free consultation"
+- lib/ai-dry-run.ts:12 contains "quote range"
+- lib/ai-dry-run.ts:13 contains "price range"
+- lib/ai-dry-run.ts:14 contains "rough estimate"
+- lib/ai-dry-run.ts:16 contains "package price"
+- lib/ai-quality.ts:33 contains "free consultation"
+- lib/data/supabase-admin.ts:7 contains "service_role"
+- lib/data/supabase-admin.ts:7 contains "SUPABASE_SERVICE_ROLE_KEY"
+- lib/knowledge/limm-carpentry-demo-qa.ts:150 contains "price range"
+- lib/knowledge/limm-qa-scenarios.ts:96 contains "free consultation"
+- lib/safety-rules.ts:2 contains "free consultation"
+- lib/whatsapp-multi-intent.ts:36 contains "rough estimate"
+- lib/whatsapp-question-bank.ts:157 contains "quote range"
+- lib/whatsapp-question-bank.ts:157 contains "rough estimate"
+- lib/whatsapp-question-bank.ts:157 contains "package price"
+- lib/whatsapp-reply-quality-scoreboard.ts:95 contains "free consultation"
+- lib/whatsapp-reply-quality-scoreboard.ts:347 contains "price range"
+- lib/whatsapp-reply-quality-scoreboard.ts:347 contains "rough estimate"
+- lib/whatsapp-reply-quality-scoreboard.ts:100 contains "package price"
+- lib/whatsapp-safety.ts:11 contains "free consultation"
+- lib/whatsapp-safety.ts:9 contains "quote range"
+- lib/whatsapp-safety.ts:9 contains "price range"
+- lib/whatsapp-safety.ts:9 contains "rough estimate"
+- lib/whatsapp-safety.ts:9 contains "estimated price"
+- lib/whatsapp-safety.ts:9 contains "package price"
+- lib/whatsapp-sales-brain.ts:451 contains "quote range"
+- lib/whatsapp-sales-brain.ts:451 contains "rough estimate"
+- lib/whatsapp-v6/message-understanding.ts:25 contains "rough estimate"
+- lib/whatsapp-v6/reply-planner.ts:19 contains "rough estimate"
+- lib/whatsapp-v6/reply-planner.ts:19 contains "package price"
+- lib/whatsapp-v6/safety-governor.ts:15 contains "free consultation"
+- lib/whatsapp-v6/safety-governor.ts:10 contains "quote range"
+- lib/whatsapp-v6/safety-governor.ts:10 contains "price range"
+- lib/whatsapp-v6/safety-governor.ts:9 contains "package price"
+- lib/whatsapp-v7-sales-brain.ts:1117 contains "free consultation"
+- lib/whatsapp-v7-sales-brain.ts:1117 contains "quote range"
+- lib/whatsapp-v7-sales-brain.ts:1117 contains "price range"
+- lib/whatsapp-v7-sales-brain.ts:1117 contains "rough estimate"
+- reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md:114 contains "quote range"
+- reports/V5_3_2_DEEP_WHATSAPP_AGENT_QA_REPORT.md:114 contains "package price"
+- reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md:31 contains "service_role"
+- reports/V6_1_TEST_LEAD_CLEANUP_REPORT.md:31 contains "SUPABASE_SERVICE_ROLE_KEY"
+- reports/V6_ULTIMATE_DEEP_QA_REPORT.md:1445 contains "package price"
+- reports/v9_final_boss_report.md:32 contains "free consultation"
+- reports/v9_final_boss_report.md:29 contains "package price"
+- scripts/audit_v3_package.mjs:347 contains "free consultation"
+- scripts/audit_v3_package.mjs:340 contains "quote range"
+- scripts/audit_v3_package.mjs:343 contains "package price"
+- scripts/audit_v3_package.mjs:294 contains "service_role"
+- scripts/audit_v3_package.mjs:294 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/backfill_lead_facts_from_messages.mjs:106 contains "service_role"
+- scripts/backfill_lead_facts_from_messages.mjs:106 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/cleanup_old_test_leads_v6_1.mjs:167 contains "service_role"
+- scripts/cleanup_old_test_leads_v6_1.mjs:167 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/dev_brain_route_probe.mjs:33 contains "free consultation"
+- scripts/dev_brain_route_probe.mjs:33 contains "quote range"
+- scripts/dev_brain_route_probe.mjs:33 contains "rough estimate"
+- scripts/dev_brain_route_probe.mjs:33 contains "estimated price"
+- scripts/doctor.mjs:115 contains "free consultation"
+- scripts/doctor.mjs:112 contains "quote range"
+- scripts/doctor.mjs:112 contains "rough estimate"
+- scripts/doctor.mjs:112 contains "package price"
+- scripts/doctor.mjs:100 contains "service_role"
+- scripts/doctor.mjs:100 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/doctor.mjs:123 contains "hardcoded Sunday"
+- scripts/generate_chatgpt_handoff_report.mjs:97 contains "quote range"
+- scripts/generate_dev_brain_report.mjs:145 contains "quote range"
+- scripts/generate_v4_2_browser_report.mjs:85 contains "free consultation"
+- scripts/generate_v4_2_browser_report.mjs:86 contains "quote range"
+- scripts/generate_v4_2_browser_report.mjs:87 contains "price range"
+- scripts/generate_v4_2_browser_report.mjs:88 contains "rough estimate"
+- scripts/generate_v4_2_browser_report.mjs:89 contains "estimated price"
+- scripts/generate_v4_2_browser_report.mjs:90 contains "package price"
+- scripts/generate_v4_2_browser_report.mjs:91 contains "service_role"
+- scripts/generate_v4_2_browser_report.mjs:92 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/generate_v4_2_browser_report.mjs:93 contains "Sunday blocked"
+- scripts/generate_v4_2_browser_report.mjs:94 contains "hardcoded Sunday"
+- scripts/mark_qa_test_leads.mjs:132 contains "service_role"
+- scripts/mark_qa_test_leads.mjs:132 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_command_centre_10_quality.mjs:145 contains "service_role"
+- scripts/test_command_centre_10_quality.mjs:145 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_command_centre_product_polish.mjs:148 contains "service_role"
+- scripts/test_command_centre_product_polish.mjs:148 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_command_core_whatsapp_cards.mjs:54 contains "service_role"
+- scripts/test_command_core_whatsapp_cards.mjs:54 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_limm_carpentry_demo_qa_module.mjs:149 contains "quote range"
+- scripts/test_limm_carpentry_demo_qa_module.mjs:149 contains "price range"
+- scripts/test_limm_carpentry_demo_qa_module.mjs:149 contains "package price"
+- scripts/test_limm_qa_expansion_pack.mjs:58 contains "quote range"
+- scripts/test_limm_qa_expansion_pack.mjs:58 contains "price range"
+- scripts/test_limm_qa_expansion_pack.mjs:58 contains "package price"
+- scripts/test_phase5_production_readiness.mjs:121 contains "quote range"
+- scripts/test_phase5_production_readiness.mjs:121 contains "price range"
+- scripts/test_phase5_production_readiness.mjs:121 contains "package price"
+- scripts/test_phase5_production_readiness.mjs:157 contains "service_role"
+- scripts/test_phase5_production_readiness.mjs:157 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_quotation_readiness_gate.mjs:38 contains "price range"
+- scripts/test_quotation_readiness_gate.mjs:38 contains "package price"
+- scripts/test_reply_quality_scoreboard.mjs:291 contains "free consultation"
+- scripts/test_reply_quality_scoreboard.mjs:185 contains "quote range"
+- scripts/test_reply_quality_scoreboard.mjs:185 contains "price range"
+- scripts/test_reply_quality_scoreboard.mjs:185 contains "package price"
+- scripts/test_v10_6_operator_advantage.mjs:250 contains "service_role"
+- scripts/test_v10_6_operator_advantage.mjs:250 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v11_1_world_class_operations.mjs:59 contains "service_role"
+- scripts/test_v3_auth_rls_static.mjs:148 contains "free consultation"
+- scripts/test_v3_auth_rls_static.mjs:153 contains "quote range"
+- scripts/test_v3_auth_rls_static.mjs:140 contains "service_role"
+- scripts/test_v3_auth_rls_static.mjs:140 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v3_auth_rls_static.mjs:144 contains "hardcoded Sunday"
+- scripts/test_v3_foundation.mjs:83 contains "free consultation"
+- scripts/test_v3_foundation.mjs:89 contains "quote range"
+- scripts/test_v3_foundation.mjs:92 contains "package price"
+- scripts/test_v3_live_setup_static.mjs:162 contains "free consultation"
+- scripts/test_v3_live_setup_static.mjs:167 contains "quote range"
+- scripts/test_v3_live_setup_static.mjs:108 contains "service_role"
+- scripts/test_v3_live_setup_static.mjs:108 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v3_live_setup_static.mjs:158 contains "hardcoded Sunday"
+- scripts/test_v3_review_route_static.mjs:43 contains "free consultation"
+- scripts/test_v3_review_route_static.mjs:44 contains "quote range"
+- scripts/test_v3_review_route_static.mjs:44 contains "rough estimate"
+- scripts/test_v3_review_route_static.mjs:44 contains "package price"
+- scripts/test_v3_supabase_layer.mjs:126 contains "free consultation"
+- scripts/test_v3_supabase_layer.mjs:120 contains "quote range"
+- scripts/test_v3_supabase_layer.mjs:62 contains "service_role"
+- scripts/test_v3_supabase_layer.mjs:62 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v4_1_dev_brain_static.mjs:113 contains "quote range"
+- scripts/test_v4_1_dev_brain_static.mjs:113 contains "rough estimate"
+- scripts/test_v4_1_dev_brain_static.mjs:76 contains "service_role"
+- scripts/test_v4_6_openai_dry_run.mjs:57 contains "quote range"
+- scripts/test_v4_6_openai_dry_run.mjs:57 contains "rough estimate"
+- scripts/test_v4_6_openai_dry_run.mjs:57 contains "package price"
+- scripts/test_v4_7_openai_boss_review_ux.mjs:133 contains "free consultation"
+- scripts/test_v4_7_openai_boss_review_ux.mjs:110 contains "quote range"
+- scripts/test_v4_7_openai_boss_review_ux.mjs:111 contains "rough estimate"
+- scripts/test_v4_7_openai_boss_review_ux.mjs:112 contains "package price"
+- scripts/test_v4_8_live_diagnostics_static.mjs:94 contains "service_role"
+- scripts/test_v4_8_live_diagnostics_static.mjs:94 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v4_8_whatsapp_closed_test.mjs:106 contains "free consultation"
+- scripts/test_v4_8_whatsapp_closed_test.mjs:107 contains "quote range"
+- scripts/test_v4_8_whatsapp_closed_test.mjs:108 contains "rough estimate"
+- scripts/test_v4_8_whatsapp_closed_test.mjs:109 contains "package price"
+- scripts/test_v4_9_deployment_readiness.mjs:177 contains "free consultation"
+- scripts/test_v4_9_deployment_readiness.mjs:181 contains "quote range"
+- scripts/test_v4_9_deployment_readiness.mjs:183 contains "rough estimate"
+- scripts/test_v4_9_deployment_readiness.mjs:184 contains "estimated price"
+- scripts/test_v4_9_deployment_readiness.mjs:185 contains "package price"
+- scripts/test_v4_9_deployment_readiness.mjs:72 contains "service_role"
+- scripts/test_v4_9_deployment_readiness.mjs:72 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v4_launch_candidate.mjs:72 contains "free consultation"
+- scripts/test_v4_launch_candidate.mjs:69 contains "quote range"
+- scripts/test_v4_launch_candidate.mjs:69 contains "rough estimate"
+- scripts/test_v4_launch_candidate.mjs:69 contains "package price"
+- scripts/test_v4_launch_candidate.mjs:128 contains "service_role"
+- scripts/test_v4_launch_candidate.mjs:128 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v4_launch_candidate.mjs:80 contains "hardcoded Sunday"
+- scripts/test_v5_2_whatsapp_question_bank.mjs:200 contains "free consultation"
+- scripts/test_v5_2_whatsapp_question_bank.mjs:205 contains "quote range"
+- scripts/test_v5_2_whatsapp_question_bank.mjs:206 contains "rough estimate"
+- scripts/test_v5_2_whatsapp_question_bank.mjs:207 contains "estimated price"
+- scripts/test_v5_2_whatsapp_question_bank.mjs:208 contains "package price"
+- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:49 contains "free consultation"
+- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:33 contains "quote range"
+- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:34 contains "price range"
+- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:35 contains "rough estimate"
+- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:36 contains "estimated price"
+- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:38 contains "package price"
+- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:246 contains "service_role"
+- scripts/test_v5_3_1_multi_intent_lead_context_portfolio.mjs:246 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs:44 contains "free consultation"
+- scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs:32 contains "quote range"
+- scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs:33 contains "price range"
+- scripts/test_v5_3_2_deep_whatsapp_agent_qa.mjs:34 contains "package price"
+- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:33 contains "quote range"
+- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:34 contains "price range"
+- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:35 contains "rough estimate"
+- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:36 contains "estimated price"
+- scripts/test_v5_3_whatsapp_reply_coach_replay.mjs:38 contains "package price"
+- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:284 contains "free consultation"
+- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:285 contains "quote range"
+- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:286 contains "rough estimate"
+- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:287 contains "estimated price"
+- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:288 contains "package price"
+- scripts/test_v5_whatsapp_sales_brain_calendar.mjs:174 contains "Sunday blocked"
+- scripts/test_v6_1_5_performance_followup_test_cleanup.mjs:180 contains "free consultation"
+- scripts/test_v6_1_5_performance_followup_test_cleanup.mjs:183 contains "package price"
+- scripts/test_v6_1_5_performance_followup_test_cleanup.mjs:189 contains "service_role"
+- scripts/test_v6_1_5_performance_followup_test_cleanup.mjs:189 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:150 contains "free consultation"
+- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:154 contains "price range"
+- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:155 contains "package price"
+- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:161 contains "service_role"
+- scripts/test_v6_1_6_mission_control_ui_integrated.mjs:161 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:155 contains "free consultation"
+- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:159 contains "price range"
+- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:160 contains "package price"
+- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:166 contains "service_role"
+- scripts/test_v6_1_7_mission_control_ui_refinement.mjs:166 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v6_1_8_dashboard_compression_zero_state_polish.mjs:108 contains "free consultation"
+- scripts/test_v6_1_8_dashboard_compression_zero_state_polish.mjs:112 contains "price range"
+- scripts/test_v6_1_8_dashboard_compression_zero_state_polish.mjs:113 contains "package price"
+- scripts/test_v6_3_sales_collection_command_centre.mjs:287 contains "free consultation"
+- scripts/test_v6_3_sales_collection_command_centre.mjs:290 contains "price range"
+- scripts/test_v6_3_sales_collection_command_centre.mjs:291 contains "package price"
+- scripts/test_v6_4_10_singapore_map_interaction_copy_cleanup.mjs:217 contains "free consultation"
+- scripts/test_v6_4_10_singapore_map_interaction_copy_cleanup.mjs:219 contains "price range"
+- scripts/test_v6_4_10_singapore_map_interaction_copy_cleanup.mjs:220 contains "package price"
+- scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs:104 contains "free consultation"
+- scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs:106 contains "price range"
+- scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs:107 contains "package price"
+- scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs:86 contains "free consultation"
+- scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs:88 contains "price range"
+- scripts/test_v6_4_2_accurate_singapore_map_no_overlay.mjs:89 contains "package price"
+- scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs:131 contains "free consultation"
+- scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs:133 contains "price range"
+- scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs:134 contains "package price"
+- scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs:129 contains "free consultation"
+- scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs:131 contains "price range"
+- scripts/test_v6_4_4_accurate_singapore_svg_map_fix.mjs:132 contains "package price"
+- scripts/test_v6_4_5_real_singapore_geojson_map.mjs:154 contains "free consultation"
+- scripts/test_v6_4_5_real_singapore_geojson_map.mjs:156 contains "price range"
+- scripts/test_v6_4_5_real_singapore_geojson_map.mjs:157 contains "package price"
+- scripts/test_v6_4_8_singapore_map_interaction_final_polish.mjs:152 contains "free consultation"
+- scripts/test_v6_4_8_singapore_map_interaction_final_polish.mjs:154 contains "price range"
+- scripts/test_v6_4_8_singapore_map_interaction_final_polish.mjs:155 contains "package price"
+- scripts/test_v6_4_9_singapore_map_smooth_zoom_wheel_lock.mjs:213 contains "free consultation"
+- scripts/test_v6_4_9_singapore_map_smooth_zoom_wheel_lock.mjs:215 contains "price range"
+- scripts/test_v6_4_9_singapore_map_smooth_zoom_wheel_lock.mjs:216 contains "package price"
+- scripts/test_v6_4_singapore_mission_map.mjs:176 contains "free consultation"
+- scripts/test_v6_4_singapore_mission_map.mjs:178 contains "price range"
+- scripts/test_v6_4_singapore_mission_map.mjs:179 contains "package price"
+- scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs:123 contains "free consultation"
+- scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs:124 contains "price range"
+- scripts/test_v6_5_1_accurate_singapore_map_refinement.mjs:125 contains "package price"
+- scripts/test_v6_5_1_intake_memory_budget_statement_fix.mjs:118 contains "quote range"
+- scripts/test_v6_5_1_intake_memory_budget_statement_fix.mjs:119 contains "price range"
+- scripts/test_v6_5_1_intake_memory_budget_statement_fix.mjs:119 contains "package price"
+- scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs:166 contains "free consultation"
+- scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs:167 contains "quote range"
+- scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs:168 contains "rough estimate"
+- scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs:169 contains "package price"
+- scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs:181 contains "service_role"
+- scripts/test_v6_5_smart_lead_intake_meeting_prep.mjs:181 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v6_6_2_command_core_map_first_layout.mjs:92 contains "free consultation"
+- scripts/test_v6_6_2_command_core_map_first_layout.mjs:94 contains "quote range"
+- scripts/test_v6_6_2_command_core_map_first_layout.mjs:95 contains "price range"
+- scripts/test_v6_6_2_command_core_map_first_layout.mjs:93 contains "rough estimate"
+- scripts/test_v6_6_2_command_core_map_first_layout.mjs:96 contains "package price"
+- scripts/test_v6_6_3_strategic_command_core_final_touchup.mjs:114 contains "free consultation"
+- scripts/test_v6_6_3_strategic_command_core_final_touchup.mjs:116 contains "quote range"
+- scripts/test_v6_6_3_strategic_command_core_final_touchup.mjs:117 contains "price range"
+- scripts/test_v6_6_3_strategic_command_core_final_touchup.mjs:115 contains "rough estimate"
+- scripts/test_v6_6_3_strategic_command_core_final_touchup.mjs:118 contains "package price"
+- scripts/test_v6_6_strategic_command_core_layout.mjs:169 contains "free consultation"
+- scripts/test_v6_6_strategic_command_core_layout.mjs:172 contains "quote range"
+- scripts/test_v6_6_strategic_command_core_layout.mjs:173 contains "price range"
+- scripts/test_v6_6_strategic_command_core_layout.mjs:171 contains "rough estimate"
+- scripts/test_v6_6_strategic_command_core_layout.mjs:174 contains "package price"
+- scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs:225 contains "free consultation"
+- scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs:226 contains "quote range"
+- scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs:227 contains "rough estimate"
+- scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs:228 contains "package price"
+- scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs:128 contains "service_role"
+- scripts/test_v6_7_real_client_file_upload_whatsapp_media_storage.mjs:128 contains "SUPABASE_SERVICE_ROLE_KEY"
+- scripts/test_v6_human_like_sales_brain_deep_qa.mjs:88 contains "free consultation"
+- scripts/test_v6_human_like_sales_brain_deep_qa.mjs:77 contains "price range"
+- scripts/test_v6_human_like_sales_brain_deep_qa.mjs:76 contains "package price"
+- scripts/test_v6_ui_100_command_centre_polish.mjs:107 contains "free consultation"
+- scripts/test_v6_ui_100_command_centre_polish.mjs:109 contains "quote range"
+- scripts/test_v6_ui_100_command_centre_polish.mjs:110 contains "price range"
+- scripts/test_v6_ui_100_command_centre_polish.mjs:108 contains "rough estimate"
+- scripts/test_v6_ui_100_command_centre_polish.mjs:111 contains "package price"
+- scripts/test_v6_ultimate_deep_qa.mjs:90 contains "free consultation"
+- scripts/test_v6_ultimate_deep_qa.mjs:79 contains "price range"
+- scripts/test_v6_ultimate_deep_qa.mjs:78 contains "package price"
+- scripts/test_v7_1_whatsapp_context_memory_contract_fix.mjs:180 contains "quote range"
+- scripts/test_v7_1_whatsapp_context_memory_contract_fix.mjs:180 contains "price range"
+- scripts/test_v7_1_whatsapp_context_memory_contract_fix.mjs:180 contains "estimated price"
+- scripts/test_v7_1_whatsapp_context_memory_contract_fix.mjs:180 contains "package price"
+- scripts/test_v7_2_1_context_aware_next_item_client_name_rule.mjs:72 contains "quote range"
+- scripts/test_v7_2_1_context_aware_next_item_client_name_rule.mjs:72 contains "price range"
+- scripts/test_v7_2_1_context_aware_next_item_client_name_rule.mjs:72 contains "rough estimate"
+- scripts/test_v7_2_1_context_aware_next_item_client_name_rule.mjs:72 contains "estimated price"
+- scripts/test_v7_2_1_context_aware_next_item_client_name_rule.mjs:72 contains "package price"
+- scripts/test_v7_2_2_price_reply_uses_known_context.mjs:102 contains "quote range"
+- scripts/test_v7_2_2_price_reply_uses_known_context.mjs:102 contains "price range"
+- scripts/test_v7_2_2_price_reply_uses_known_context.mjs:102 contains "rough estimate"
+- scripts/test_v7_2_2_price_reply_uses_known_context.mjs:102 contains "estimated price"
+- scripts/test_v7_2_2_price_reply_uses_known_context.mjs:102 contains "package price"
+- scripts/test_v7_2_3_legacy_template_removal.mjs:110 contains "quote range"
+- scripts/test_v7_2_3_legacy_template_removal.mjs:110 contains "price range"
+- scripts/test_v7_2_3_legacy_template_removal.mjs:110 contains "rough estimate"
+- scripts/test_v7_2_3_legacy_template_removal.mjs:110 contains "estimated price"
+- scripts/test_v7_2_3_legacy_template_removal.mjs:110 contains "package price"
+- scripts/test_v7_2_single_reply_planner_playbook_v5.mjs:301 contains "free consultation"
+- scripts/test_v7_2_single_reply_planner_playbook_v5.mjs:294 contains "quote range"
+- scripts/test_v7_2_single_reply_planner_playbook_v5.mjs:294 contains "price range"
+- scripts/test_v7_2_single_reply_planner_playbook_v5.mjs:294 contains "rough estimate"
+- scripts/test_v7_2_single_reply_planner_playbook_v5.mjs:294 contains "package price"
+- scripts/test_v7_world_class_whatsapp_sales_brain.mjs:249 contains "free consultation"
+- scripts/test_v7_world_class_whatsapp_sales_brain.mjs:229 contains "quote range"
+- scripts/test_v7_world_class_whatsapp_sales_brain.mjs:229 contains "price range"
+- scripts/test_v7_world_class_whatsapp_sales_brain.mjs:229 contains "estimated price"
+- scripts/test_v7_world_class_whatsapp_sales_brain.mjs:229 contains "package price"
+- scripts/test_whatsapp_adapter_payload_shape.mjs:64 contains "free consultation"
+- scripts/test_whatsapp_adapter_payload_shape.mjs:65 contains "quote range"
+- scripts/test_whatsapp_adapter_payload_shape.mjs:66 contains "rough estimate"
+- scripts/test_whatsapp_adapter_payload_shape.mjs:67 contains "package price"
+- scripts/test_whatsapp_burst_intake_throttle.mjs:188 contains "package price"
+- scripts/test_whatsapp_sales_agent_reply_behaviour.mjs:50 contains "free consultation"
+- scripts/verify_live_supabase_schema.mjs:58 contains "hardcoded Sunday"
+- supabase/MIGRATION_ORDER.md:474 contains "service_role"
+- supabase/migrations/028_v10_2_1_whatsapp_conversation_concurrency.sql:43 contains "service_role"
+- supabase/migrations/029_v11_1_world_class_operations.sql:121 contains "service_role"
+- supabase/migrations/030_v11_1_world_class_database_hardening.sql:27 contains "service_role"
+- tests/e2e/authenticated-boss.spec.ts:21 contains "free consultation"
+- tests/e2e/authenticated-boss.spec.ts:21 contains "quote range"
+- tests/e2e/authenticated-boss.spec.ts:21 contains "rough estimate"
+- tests/e2e/boss-ops-quotation-data-hygiene.spec.ts:208 contains "free consultation"
+- tests/e2e/boss-ops-quotation-data-hygiene.spec.ts:208 contains "quote range"
+- tests/e2e/boss-ops-quotation-data-hygiene.spec.ts:208 contains "rough estimate"
+- tests/e2e/login.spec.ts:22 contains "service_role"
+- tests/e2e/protected-routes.spec.ts:30 contains "free consultation"
+- tests/e2e/protected-routes.spec.ts:30 contains "quote range"
+- tests/e2e/protected-routes.spec.ts:30 contains "rough estimate"
+- tests/e2e/review-route.spec.ts:34 contains "free consultation"
+- tests/e2e/review-route.spec.ts:35 contains "quote range"
+- tests/e2e/review-route.spec.ts:35 contains "rough estimate"
+- tests/e2e/route-checks.spec.ts:43 contains "free consultation"
+- tests/e2e/route-checks.spec.ts:43 contains "quote range"
+- tests/e2e/route-checks.spec.ts:43 contains "rough estimate"
+- tests/e2e/v4-2-human-browser.spec.ts:14 contains "free consultation"
+- tests/e2e/v4-2-human-browser.spec.ts:14 contains "quote range"
+- tests/e2e/v4-2-human-browser.spec.ts:14 contains "price range"
+- tests/e2e/v4-2-human-browser.spec.ts:14 contains "rough estimate"
+- tests/e2e/v4-2-human-browser.spec.ts:14 contains "estimated price"
+- tests/e2e/v4-2-human-browser.spec.ts:14 contains "package price"
+- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "free consultation"
+- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "quote range"
+- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "price range"
+- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "rough estimate"
+- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "estimated price"
+- tests/e2e/v4-3-auth-boss-write.spec.ts:12 contains "package price"
+- tests/replay/generate_limm_v9_quality_variations.mjs:26 contains "free consultation"
+- tests/replay/generate_limm_v9_quality_variations.mjs:34 contains "package price"
+- tests/replay/generated/limm_replay_1000.json:28 contains "free consultation"
+- tests/replay/generated/limm_replay_1000.json:43 contains "quote range"
+- tests/replay/generated/limm_replay_1000.json:42 contains "price range"
+- tests/replay/generated/limm_replay_1000.json:44 contains "rough estimate"
+- tests/replay/generated/limm_replay_v9_10000.json:44 contains "free consultation"
+- tests/replay/generated/limm_replay_v9_10000.json:52 contains "package price"
+- tests/replay/limm_replay_golden_100.json:27 contains "free consultation"
+- tests/replay/limm_replay_golden_100.json:42 contains "quote range"
+- tests/replay/limm_replay_golden_100.json:41 contains "price range"
+- tests/replay/limm_replay_golden_100.json:43 contains "rough estimate"
+- tests/replay/limm_replay_v9_golden_300.json:44 contains "free consultation"
+- tests/replay/limm_replay_v9_golden_300.json:52 contains "package price"
+- tests/replay/limm_replay_v9_live_angry_flow.json:15 contains "free consultation"
+- tests/replay/limm_replay_v9_live_angry_flow.json:23 contains "package price"
+- tests/replay/limm_replay_v9_singlish_variations.json:32 contains "free consultation"
+- tests/replay/limm_replay_v9_singlish_variations.json:40 contains "package price"
+- tests/v3_foundation_cases.md:10 contains "quote range"
 - node_modules is present in the working folder
 - .next is present in the working folder
 

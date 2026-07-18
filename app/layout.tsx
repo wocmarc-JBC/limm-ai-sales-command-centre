@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PwaBootstrap } from "@/components/PwaBootstrap";
 import { Shell } from "@/components/Shell";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "LIMM Works Command Centre",
@@ -29,11 +31,15 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const vercelObservabilityEnabled = process.env.VERCEL === "1";
+
   return (
     <html lang="en">
       <body>
         <PwaBootstrap />
         <Shell>{children}</Shell>
+        {vercelObservabilityEnabled ? <Analytics /> : null}
+        {vercelObservabilityEnabled ? <SpeedInsights /> : null}
       </body>
     </html>
   );
