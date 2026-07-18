@@ -8,6 +8,7 @@ import { listFollowUps } from "@/lib/data/followups-repository";
 import { listQuotationPackages } from "@/lib/data/quotation-repository";
 import { getSalesCollectionData } from "@/lib/data/sales-collection-repository";
 import { safeSingaporeDateLabel, singaporeNow } from "@/lib/date-safety";
+import { buildOperatorPriorityQueue, type OperatorPriorityItem } from "@/lib/operator-advantage";
 
 const toneClasses = {
   red: "border-command-red/60 bg-command-red/10 text-command-red",
@@ -64,6 +65,12 @@ function groupCount(items: BossBriefItem[]) {
   return items.reduce((sum, item) => sum + item.count, 0);
 }
 
+function operatorPriorityTone(urgency: OperatorPriorityItem["urgency"]) {
+  if (urgency === "Critical") return "border-command-red/45 bg-command-red/10 text-command-red";
+  if (urgency === "High") return "border-command-amber/45 bg-command-amber/10 text-command-amber";
+  return "border-command-cyan/40 bg-command-cyan/10 text-command-cyan";
+}
+
 export default async function BossDailyBriefPage() {
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
   const [{ leads, projects, payments }, followUps, auditLogs] = await Promise.all([
@@ -88,6 +95,7 @@ export default async function BossDailyBriefPage() {
   ];
   const clearItems = briefItems.filter((item) => item.count === 0);
   const deliveryMoneyRiskCount = groupCount(monitoring);
+  const operatorQueue = buildOperatorPriorityQueue(leads, followUps, singaporeNow(), 5);
 
   return (
     <>
@@ -99,6 +107,44 @@ export default async function BossDailyBriefPage() {
           Command Core
         </a>
       </PageHeader>
+
+      <section className="mission-panel mb-6 overflow-hidden rounded-2xl" data-testid="operator-priority-cockpit" aria-labelledby="operator-priority-title">
+        <div className="flex flex-col gap-3 border-b border-command-line bg-command-panel2/70 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-command-gold">Operator advantage</p>
+            <h2 id="operator-priority-title" className="mt-1 text-xl font-semibold tracking-[-0.02em] text-command-text">Do this next</h2>
+            <p className="mt-1 text-sm text-command-muted">Ranked from live CRM facts. No message is sent and no client promise is made here.</p>
+          </div>
+          <a href="/inbox?view=waiting" className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-command-gold/45 bg-command-gold/10 px-3 py-2 text-sm font-semibold text-command-gold transition hover:border-command-gold hover:bg-command-gold/15">
+            Work priority queue
+          </a>
+        </div>
+        {operatorQueue.length ? (
+          <ol className="divide-y divide-command-line/70">
+            {operatorQueue.map((item, index) => (
+              <li key={item.leadId} data-testid="operator-priority-item" className="group grid gap-3 px-4 py-3 transition hover:bg-white/[0.025] sm:grid-cols-[2.25rem_minmax(0,1fr)_auto] sm:items-center sm:px-5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-command-line bg-command-bg text-sm font-bold tabular-nums text-command-gold" aria-label={`Priority ${index + 1}`}>
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-command-text">{item.action}</h3>
+                    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.13em] ${operatorPriorityTone(item.urgency)}`}>{item.urgency}</span>
+                    <span className="text-[10px] tabular-nums text-command-subtle">Score {item.score}</span>
+                  </div>
+                  <p className="mt-0.5 truncate text-sm text-command-muted"><span className="font-semibold text-command-text">{item.clientName}</span> · {item.reason}</p>
+                  <p className="mt-0.5 text-[10px] text-command-subtle">{item.ageLabel}</p>
+                </div>
+                <a href={item.href} className="inline-flex min-h-10 items-center justify-center rounded-xl border border-command-line bg-command-card px-3 py-2 text-xs font-semibold text-command-muted transition group-hover:border-command-gold/45 group-hover:text-command-text">
+                  Open chat <span className="ml-2" aria-hidden="true">→</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="px-5 py-6 text-sm text-command-green">No active sales action is waiting. The priority queue is clear.</div>
+        )}
+      </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
         <MetricCard

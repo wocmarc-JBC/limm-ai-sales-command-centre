@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync } from "node:fs";
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+const bundledChromium = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?.trim()
+  || (process.platform === "linux" && existsSync("/tmp/chromium") ? "/tmp/chromium" : "");
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -21,11 +24,15 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     actionTimeout: 10_000,
-    navigationTimeout: 20_000
+    navigationTimeout: 20_000,
+    launchOptions: bundledChromium
+      ? { executablePath: bundledChromium, args: ["--no-sandbox", "--disable-dev-shm-usage"] }
+      : undefined
   },
   projects: [
     {
       name: "desktop-chromium",
+      testIgnore: /boss-ops-quotation-data-hygiene\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] }
     },
     {
@@ -42,12 +49,17 @@ export default defineConfig({
       name: "mobile-chromium",
       testMatch: /v4-2-human-browser\.spec\.ts/,
       use: { ...devices["Pixel 5"] }
+    },
+    {
+      name: "boss-ops-chromium",
+      testMatch: /boss-ops-quotation-data-hygiene\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] }
     }
   ],
   webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER === "1"
     ? undefined
     : {
-        command: `${JSON.stringify(process.execPath)} node_modules/next/dist/bin/next dev -p ${port}`,
+        command: `${JSON.stringify(process.execPath)} node_modules/next/dist/bin/next dev -H 127.0.0.1 -p ${port}`,
         url: baseURL,
         reuseExistingServer: true,
         timeout: 120_000

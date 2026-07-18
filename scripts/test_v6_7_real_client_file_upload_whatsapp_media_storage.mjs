@@ -122,7 +122,7 @@ for (const phrase of [
 }
 
 assert(exists("app/upload/[token]/page.tsx"), "Secure public token upload page must exist.");
-for (const phrase of ["LIMM Works secure upload", "uploadClientFileByTokenAction", "accept=\"image/jpeg,image/png,image/webp,image/heic,application/pdf\"", "Files are stored privately"]) {
+for (const phrase of ["LIMM Works secure upload", "uploadClientFileByTokenAction", "accept=\"image/*,.pdf,application/pdf\"", "Files are stored privately"]) {
   assert(uploadPage.includes(phrase), `Upload page missing ${phrase}`);
 }
 assert(!/SUPABASE_SERVICE_ROLE_KEY|WHATSAPP_ACCESS_TOKEN/.test(uploadPage), "Upload page must not reference secrets.");
@@ -143,7 +143,7 @@ for (const phrase of [
 for (const forbidden of ["Coming soon", "Storage disabled", "Client file upload is not enabled yet.", "Daniel Tan", "Apex Clinic", "Mock folder", "fake upload"]) {
   assert(!clientFilesPage.includes(forbidden), `Client Files page must not show old/mock wording: ${forbidden}`);
 }
-assert(shellChrome.includes('{ href: "/client-files", label: "Client Files" }'), "Client Files nav must be active now that real storage exists.");
+assert(shellChrome.includes('href: "/client-files"') && shellChrome.includes('label: "Client Files"'), "Client Files nav must be active now that real storage exists.");
 
 for (const phrase of [
   "Files / Meeting Prep Documents",

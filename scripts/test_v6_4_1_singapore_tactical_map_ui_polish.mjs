@@ -19,7 +19,7 @@ function assert(condition, message) {
 const mapComponent = read("components/SingaporeMissionMap.tsx");
 const svgMapComponent = read("components/SingaporeSvgMap.tsx");
 const geoMapComponent = read("components/SingaporeGeoMap.tsx");
-const dashboard = read("app/page.tsx");
+const commandCore = read("app/command-core/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const audit = read("scripts/audit_v3_package.mjs");
 const packageJson = read("package.json");
@@ -57,12 +57,12 @@ for (const legend of [
 assert(mapComponent.includes("tactical-area-halo"), "Heatmap halos must be visually integrated.");
 assert(mapComponent.includes("mission-map-pin"), "Clickable mission pins must be visually integrated.");
 assert(mapComponent.includes("href={pin.href || \"#\"}"), "Pins must retain clickable href behavior.");
-assert(mapComponent.includes("areaSelectHref(activeFilter, area.area)"), "Area zones must be selectable from the dashboard map.");
+assert(mapComponent.includes("selectArea(area.area)") && mapComponent.includes("onClick={() => selectArea"), "Area zones must be selectable from the Command Core map.");
 assert(mapComponent.includes("map-area-summary-panel"), "Area summary mini panel must exist.");
 assert(mapComponent.includes("Click a zone or pin to inspect area activity."), "Area summary empty instruction must exist.");
 assert(mapComponent.includes("View leads in area") && mapComponent.includes("View follow-ups"), "Area summary action buttons must exist.");
 
-assert(dashboard.includes("selectedMapArea") && dashboard.includes("selectedArea={selectedMapArea}"), "Dashboard must pass selected map area to the map component.");
+assert(commandCore.includes("CommandCoreMissionMap") && commandCore.includes("buildSingaporeMissionMapData"), "Command Core must build and render the interactive mission map.");
 assert(!mapComponent.includes("projectAddress"), "Dashboard map must not render projectAddress.");
 assert(!mapComponent.includes("project_address"), "Dashboard map must not render raw project_address.");
 
@@ -90,7 +90,7 @@ assert(audit.includes("scripts/test_v6_4_1_singapore_tactical_map_ui_polish.mjs"
 assert(packageJson.includes('"test:v6.4.1"'), "package.json must expose v6.4.1 test script.");
 assert(docs.toLowerCase().includes("singapore silhouette") && docs.toLowerCase().includes("live retest checklist"), "v6.4.1 docs must explain tactical map polish and live retest.");
 
-assert(clientFilesPage.includes("Coming Soon") || clientFilesPage.includes("coming soon") || clientFilesPage.includes("not enabled"), "Client Files must remain Coming Soon / not live.");
+assert(clientFilesPage.includes("Real client storage") && clientFilesPage.includes("listAllLeadFiles"), "Client Files must use the later repository-backed real storage implementation.");
 assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX/i.test(mapComponent + svgMapComponent + geoMapComponent), "No external geocoding or map API key should be added.");
 assert(whatsappRoute.includes("whatsapp_webhook_received_start") && whatsappRoute.includes("handleWhatsAppInboundMessage"), "WhatsApp webhook must remain intact.");
 for (const phrase of ["messaging_product", "recipient_type", "preview_url", "body"]) {
@@ -98,7 +98,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
 }
 
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
-const checkedSources = [mapComponent, svgMapComponent, geoMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [mapComponent, svgMapComponent, geoMapComponent, commandCore, health, docs, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",

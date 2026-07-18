@@ -4,14 +4,20 @@ import type { Route } from "next";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { AppIcon, type AppIconName } from "@/components/AppIcon";
+import { OPERATOR_COMMAND_EVENT, type OperatorCommand } from "@/lib/operator-commands";
 
 export type CommandPaletteItem = {
-  href: Route;
+  href?: Route;
+  action?: OperatorCommand;
   label: string;
   group: string;
   icon: AppIconName;
   keywords?: string;
 };
+
+function normalizedCommandText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
 
 export function CommandPalette({
   open,
@@ -33,9 +39,13 @@ export function CommandPalette({
   const [activeIndex, setActiveIndex] = useState(0);
 
   const filteredItems = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = normalizedCommandText(query);
     if (!normalizedQuery) return items;
-    return items.filter((item) => `${item.label} ${item.group} ${item.keywords ?? ""}`.toLowerCase().includes(normalizedQuery));
+    const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+    return items.filter((item) => {
+      const searchable = normalizedCommandText(`${item.label} ${item.group} ${item.keywords ?? ""}`);
+      return queryTokens.every((token) => searchable.includes(token));
+    });
   }, [items, query]);
 
   useEffect(() => {
@@ -65,7 +75,13 @@ export function CommandPalette({
 
   function openItem(item: CommandPaletteItem) {
     onClose();
-    router.push(item.href);
+    if (item.action) {
+      window.requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent(OPERATOR_COMMAND_EVENT, { detail: { command: item.action } }));
+      });
+      return;
+    }
+    if (item.href) router.push(item.href);
   }
 
   function handleDialogKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -149,7 +165,7 @@ export function CommandPalette({
             const active = index === activeIndex;
             return (
               <button
-                key={`${item.group}-${item.href}`}
+                key={`${item.group}-${item.href ?? item.action}`}
                 id={`command-palette-option-${index}`}
                 type="button"
                 role="option"
@@ -166,7 +182,7 @@ export function CommandPalette({
                   <span className="block truncate text-sm font-semibold text-command-text">{item.label}</span>
                   <span className="block truncate text-[10px] uppercase tracking-[0.14em] text-command-subtle">{item.group}</span>
                 </span>
-                <span className="text-sm text-command-subtle" aria-hidden="true">↵</span>
+                <span className="text-sm text-command-subtle" aria-hidden="true">{item.action ? "→" : "↵"}</span>
               </button>
             );
           }) : (

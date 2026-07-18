@@ -15,7 +15,7 @@ function assert(condition, message) {
 const mapComponent = read("components/SingaporeMissionMap.tsx");
 const svgMapComponent = read("components/SingaporeSvgMap.tsx");
 const geoMapComponent = read("components/SingaporeGeoMap.tsx");
-const dashboard = read("app/page.tsx");
+const commandCore = read("app/command-core/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const audit = read("scripts/audit_v3_package.mjs");
 const packageJson = read("package.json");
@@ -39,15 +39,15 @@ assert(!mapComponent.includes("Add property area or postal code to leads to acti
 assert(!mapComponent.includes("left-1/2 top-1/2 z-20 w-[min(24rem,calc(100%-2rem))]"), "Large centered empty-state card must be removed.");
 assert(mapComponent.includes("No mapped leads yet"), "Small empty-state status badge must exist.");
 assert(mapComponent.includes("Add property area or postal code to activate location intelligence."), "Small empty-state helper text must exist.");
-assert(mapComponent.indexOf("<SingaporeSvgMap />") < mapComponent.indexOf("{!hasMapData ?"), "Map base must render before no-data helper labels.");
-assert(mapComponent.includes("data.areaSummaries.map") && mapComponent.includes("data.pins.map"), "Hybrid heatmap and pins must remain supported.");
+assert(mapComponent.indexOf("<SingaporeSvgMap />") < mapComponent.indexOf("{mapStatusBadge ?"), "Map base must render before no-data helper labels.");
+assert(mapComponent.includes("displayedAreaSummaries.map") && mapComponent.includes("data.pins.map"), "Hybrid heatmap and pins must remain supported.");
 assert(mapComponent.includes("href={pin.href || \"#\"}"), "Pins must retain clickable href behavior.");
-assert(mapComponent.includes("areaSelectHref(activeFilter, area.area)"), "Area zones must remain clickable/selectable.");
+assert(mapComponent.includes("selectArea(area.area)") && mapComponent.includes("onClick={() => selectArea"), "Area zones must remain clickable/selectable.");
 assert(mapComponent.includes("map-area-summary-panel"), "Area summary panel must remain available.");
 
 assert(!mapComponent.includes("projectAddress"), "Dashboard map must not render projectAddress.");
 assert(!mapComponent.includes("project_address"), "Dashboard map must not render raw project_address.");
-assert(dashboard.includes("SingaporeMissionMap") && dashboard.includes("selectedArea={selectedMapArea}"), "Dashboard must render map and selected area support.");
+assert(commandCore.includes("CommandCoreMissionMap") && commandCore.includes("buildSingaporeMissionMapData"), "Command Core must render the interactive map and build its live data.");
 
 for (const field of [
   'version: "v6_4_2_accurate_singapore_map_no_overlay"',
@@ -73,14 +73,14 @@ assert(docs.toLowerCase().includes("accurate singapore map") && docs.toLowerCase
 
 assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(mapComponent + svgMapComponent + geoMapComponent), "No external geocoding or map API key should be added.");
 assert(!/demo pin|sample pin|fake pin|fake map/i.test(mapComponent + svgMapComponent + geoMapComponent), "Map component must not include fake/demo map data.");
-assert(clientFilesPage.includes("Coming Soon") || clientFilesPage.includes("coming soon") || clientFilesPage.includes("not enabled"), "Client Files must remain Coming Soon / not live.");
+assert(clientFilesPage.includes("Real client storage") && clientFilesPage.includes("listAllLeadFiles"), "Client Files must use the later repository-backed real storage implementation.");
 assert(whatsappRoute.includes("whatsapp_webhook_received_start") && whatsappRoute.includes("handleWhatsAppInboundMessage"), "WhatsApp webhook must remain intact.");
 for (const phrase of ["messaging_product", "recipient_type", "preview_url", "body"]) {
   assert(whatsappAdapter.includes(phrase), `Known-good WhatsApp payload shape missing ${phrase}`);
 }
 
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
-const checkedSources = [mapComponent, svgMapComponent, geoMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [mapComponent, svgMapComponent, geoMapComponent, commandCore, health, docs, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",

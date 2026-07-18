@@ -17,6 +17,8 @@ const shell = read("components/ShellChrome.tsx");
 const leadCard = read("components/LeadCard.tsx");
 const leadsPage = read("app/leads/page.tsx");
 const followups = read("app/followups/page.tsx");
+const followupSummaryRepo = read("lib/data/phase3-summaries-repository.ts");
+const followupActions = read("components/FollowUpSummaryActions.tsx");
 const clientFiles = read("app/client-files/page.tsx");
 const salesCollection = read("app/sales-collection/page.tsx");
 const map = read("components/SingaporeMissionMap.tsx");
@@ -25,22 +27,24 @@ const whatsappRoute = read("app/api/whatsapp/webhook/route.ts");
 const whatsappAdapter = read("lib/adapters/whatsapp-adapter.ts");
 
 for (const phrase of [
-  "LIMM Mission Control",
-  "MarcusTodayPanel",
-  "MissionRadarPanel",
-  "SingaporeMissionMap",
-  "Main Action Queue",
-  "Recent WhatsApp Leads",
-  "System Core",
-  "Quick Actions"
+  "Boss Daily Brief",
+  "Operator advantage",
+  "Do this next",
+  "buildOperatorPriorityQueue",
+  "Work priority queue",
+  "Must Handle Now",
+  "Sales To Push",
+  "Delivery / Money Risk"
 ]) {
   assert(dashboard.includes(phrase), `dashboard boss-first command centre missing ${phrase}`);
 }
 
-assert(shell.includes("md:h-screen") && shell.includes("md:overflow-y-auto") && shell.includes("md:overscroll-contain"), "sidebar must remain desktop-scrollable.");
-assert(shell.includes("Command") && shell.includes("Sales") && shell.includes("Accounts") && shell.includes("Operations") && shell.includes("System"), "sidebar must remain grouped.");
+assert(shell.includes("lg:h-screen") && shell.includes("lg:overflow-y-auto") && shell.includes("lg:overscroll-contain"), "sidebar must remain desktop-scrollable.");
+for (const group of ["Today", "Sales Pipeline", "Delivery", "Money", "Admin"]) {
+  assert(shell.includes(`title: "${group}"`), `sidebar must retain the ${group} group.`);
+}
 
-for (const phrase of ["compactPriorityBadges", "visibleBadges", "hiddenBadgeCount", "+{hiddenBadgeCount} more signals", "Open Lead"]) {
+for (const phrase of ["compactPriorityBadges", "visibleBadges", "hiddenSignalCount", "+{hiddenSignalCount} more signals", "Open WhatsApp Chat", "View Details"]) {
   assert(leadCard.includes(phrase), `lead card UI polish missing ${phrase}`);
 }
 assert(leadCard.includes("formatFullPhoneForProtectedApp"), "protected lead cards must keep full phone display.");
@@ -50,12 +54,14 @@ for (const phrase of ["Inbox Clear", "No leads in this view.", "Use the filter c
   assert(leadsPage.includes(phrase), `lead inbox empty state missing ${phrase}`);
 }
 
-for (const phrase of ["pageSize = 20", "FollowUpActionButton", "Load More", "Show Test Follow-Ups"]) {
+for (const phrase of ["listFollowUpProtectionSummaries(80)", "FollowUpSummaryActions", "Latest-message read model only", "No auto follow-up messages are sent"]) {
   assert(followups.includes(phrase), `follow-up performance/UI preservation missing ${phrase}`);
 }
+assert(followupSummaryRepo.includes("listLatestLeadMessagesForInbox") && followupSummaryRepo.includes(".slice(0, limit)"), "follow-up read model must stay bounded to latest messages.");
+assert(followupActions.includes("pending !== null") && followupActions.includes("/api/followups/status"), "follow-up actions must retain pending feedback and persistence.");
 
-for (const phrase of ["Coming soon", "Client file upload is not enabled yet.", "No fake folders", "No real client files"]) {
-  assert(clientFiles.includes(phrase), `client files coming-soon safety missing ${phrase}`);
+for (const phrase of ["Real client storage", "listAllLeadFiles", "listLeadUploadLinks", "No files received yet"]) {
+  assert(clientFiles.includes(phrase), `client files real-storage safety missing ${phrase}`);
 }
 
 assert(salesCollection.includes("Manual non-GST tracking"), "sales collection must remain non-GST manual tracking.");
@@ -94,7 +100,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
   assert(whatsappAdapter.includes(phrase), `known-good WhatsApp adapter payload regressed: missing ${phrase}`);
 }
 
-const checked = [dashboard, shell, leadCard, leadsPage, followups, clientFiles, salesCollection, map, health, whatsappRoute, whatsappAdapter].join("\n");
+const checked = [dashboard, shell, leadCard, leadsPage, followups, followupSummaryRepo, followupActions, clientFiles, salesCollection, map, health, whatsappRoute, whatsappAdapter].join("\n");
 const wrongPhoneNumberId = "115395" + "2887800145";
 for (const forbidden of [
   wrongPhoneNumberId,

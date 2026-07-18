@@ -24,6 +24,8 @@ const clientFiles = read("app/client-files/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const followups = read("app/followups/page.tsx");
 const followupRepo = read("lib/data/followups-repository.ts");
+const followupSummaryRepo = read("lib/data/phase3-summaries-repository.ts");
+const followupActions = read("components/FollowUpSummaryActions.tsx");
 const cleanupRules = read("lib/test-lead-cleanup.ts");
 const cleanupPanel = read("components/CleanupPanel.tsx");
 const whatsappRoute = read("app/api/whatsapp/webhook/route.ts");
@@ -32,24 +34,21 @@ const packageJson = read("package.json");
 const docs = read("docs/V6_1_7_MISSION_CONTROL_UI_REFINEMENT.md");
 
 for (const phrase of [
-  "LIMM Mission Control",
-  "Marcus Today",
-  "What must Marcus do now?",
-  "Top {Math.min(items.length, 5)}",
-  ".slice(0, 5)",
-  "Focus Mode",
-  "Full Cockpit",
-  "Sticky top command bar",
-  "Search lead / phone / scope",
-  "Clean Test Data",
-  "Compact System Core status strip",
-  "Mission Radar",
-  "All clear: no urgent leads",
-  "Action queue clear."
+  "Boss Daily Brief",
+  "Operator advantage",
+  "Do this next",
+  "buildOperatorPriorityQueue",
+  "operatorQueue.map",
+  "Work priority queue",
+  "Must Handle Now",
+  "Sales To Push",
+  "Delivery / Money Risk",
+  "No active sales action is waiting",
+  "clear module"
 ]) {
   assert(dashboard.includes(phrase), `dashboard missing v6.1.7 refinement marker: ${phrase}`);
 }
-assert(dashboard.includes('listFollowUps({ status: "active", pageSize: 20 })'), "dashboard must preserve bounded follow-up fetch.");
+assert(dashboard.includes('listFollowUps({ status: "active", pageSize: 80'), "dashboard must preserve an explicitly bounded follow-up fetch.");
 assert(!dashboard.includes("buildTestLeadCleanupPlan") && !dashboard.includes("listLeadMessages"), "dashboard must not scan cleanup or load heavy message history on page load.");
 assert(!dashboard.includes("Client Files"), "dashboard must not surface Client Files before real storage exists.");
 
@@ -60,7 +59,8 @@ for (const phrase of [
   "fullPhone",
   "Next Action",
   "Last WhatsApp message",
-  "Open Lead",
+  "Open WhatsApp Chat",
+  "View Details",
   "Take Over",
   "Pause Bot",
   "command-hover-lift",
@@ -92,8 +92,8 @@ for (const phrase of [
   assert(globals.includes(phrase), `global cockpit styling missing: ${phrase}`);
 }
 
-for (const phrase of ["Coming soon", "Client file upload is not enabled yet.", "No fake folders", "No real client files"]) {
-  assert(clientFiles.includes(phrase), `Client Files coming-soon page missing ${phrase}`);
+for (const phrase of ["Real client storage", "listAllLeadFiles", "listLeadUploadLinks", "No files received yet", "Create an upload link"]) {
+  assert(clientFiles.includes(phrase), `Client Files repository-backed page missing ${phrase}`);
 }
 for (const forbidden of ["Daniel Tan", "Apex Clinic", "Mock folder", "Placeholder only", "Create Upload Link Later"]) {
   assert(!clientFiles.includes(forbidden), `Client Files must not show fake/mock wording: ${forbidden}`);
@@ -126,9 +126,11 @@ for (const field of [
   assert(health.includes(field), `health route missing v6.1.7 proof field: ${field}`);
 }
 
-for (const phrase of ["pageSize = 20", "Show Test Follow-Ups", "Load More", "submitFollowUpStatusAction", "FollowUpActionButton"]) {
-  assert(followups.includes(phrase), `v6.1.5 follow-up UI behavior regressed: missing ${phrase}`);
+for (const phrase of ["listFollowUpProtectionSummaries(80)", "Latest-message read model only", "No auto follow-up messages are sent", "FollowUpSummaryActions"]) {
+  assert(followups.includes(phrase), `bounded follow-up UI behavior regressed: missing ${phrase}`);
 }
+assert(followupSummaryRepo.includes("listLatestLeadMessagesForInbox") && followupSummaryRepo.includes("isActiveProductionLeadForDailyScreens") && followupSummaryRepo.includes(".slice(0, limit)"), "follow-up read model must stay bounded and production-only.");
+assert(followupActions.includes("pending !== null") && followupActions.includes("/api/followups/status"), "follow-up actions must retain pending-state and persisted API behavior.");
 for (const phrase of ["isTestFollowUp", "filterAndPageFollowUps", "range(0, fetchLimit - 1)", "hideTestFollowUp"]) {
   assert(followupRepo.includes(phrase), `v6.1.5 follow-up repository behavior regressed: missing ${phrase}`);
 }
@@ -146,7 +148,7 @@ assert(packageJson.includes("test:v6.1.6") && packageJson.includes("test:v6.1.5"
 assert(exists("docs/V6_1_7_MISSION_CONTROL_UI_REFINEMENT.md"), "v6.1.7 docs must exist.");
 assert(docs.includes("Marcus Today") && docs.includes("Focus Mode") && docs.includes("Lead Heat Meter"), "v6.1.7 docs must explain UI refinements.");
 
-const checkedSources = [dashboard, leadCard, leadDetail, globals, clientFiles, health, followups, followupRepo, cleanupPanel, cleanupRules, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [dashboard, leadCard, leadDetail, globals, clientFiles, health, followups, followupRepo, followupSummaryRepo, followupActions, cleanupPanel, cleanupRules, whatsappRoute, whatsappAdapter].join("\n");
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,

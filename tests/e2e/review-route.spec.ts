@@ -6,7 +6,7 @@ const reviewRouteEnabled = process.env.NEXT_PUBLIC_ENABLE_REVIEW_ROUTE === "true
 const qaE2EMode = process.env.QA_E2E_MODE === "true" || process.env.QA_E2E_MODE === "1";
 
 test("review route is disabled by default unless explicitly enabled", async ({ page }) => {
-  await page.goto("/review-chatgpt-ui");
+  await page.goto("/review-chatgpt-ui", { waitUntil: "domcontentloaded" });
 
   if (!reviewRouteEnabled) {
     await expect(page.locator("body")).not.toContainText("Mock UI Review Mode");
@@ -15,7 +15,7 @@ test("review route is disabled by default unless explicitly enabled", async ({ p
     await expect(page.locator("body")).not.toContainText(/No Live Actions|Demo Data Only|Commercial clinic/i);
 
     fs.mkdirSync(path.join(process.cwd(), "screenshots"), { recursive: true });
-    await page.screenshot({ path: "screenshots/review-route-disabled.png", fullPage: true });
+    await page.screenshot({ path: "screenshots/review-route-disabled.png", fullPage: false });
     return;
   }
 
@@ -45,5 +45,5 @@ test("review route is disabled by default unless explicitly enabled", async ({ p
   expect(links.every((href) => href.startsWith("#"))).toBeTruthy();
 
   fs.mkdirSync(path.join(process.cwd(), "screenshots"), { recursive: true });
-  await page.screenshot({ path: "screenshots/review-route.png", fullPage: true });
+  await page.screenshot({ path: "screenshots/review-route.png", fullPage: false });
 });

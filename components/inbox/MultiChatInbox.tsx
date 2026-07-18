@@ -20,15 +20,27 @@ import {
   moveLeadToQuotationReadinessAction,
   pauseBotForLeadAction,
   reclassifyWhatsAppConversationAction,
+  restoreInboxConversationsAction,
   resumeBotForLeadAction,
   updateLeadStatusAction
 } from "@/lib/actions";
 import { InboxSpamDialog } from "@/components/inbox/InboxSpamDialog";
+import { InboxOperatorBrief } from "@/components/inbox/InboxOperatorBrief";
 import { sortInboxLatestFirst } from "@/lib/inbox-conversation-order";
 import { getInboxQueueState, type InboxPrimaryStatus } from "@/lib/inbox-queue";
 import { collapseHistoricalDuplicateAiMessages } from "@/lib/inbox-message-display";
 import type { Lead, LeadMessage } from "@/lib/types";
 import { isSilentCaptureMessage, latestSilentCapture, silentCaptureSummary } from "@/lib/whatsapp-silent-capture";
+import {
+  buildConversationBrief,
+  getOperatorSlaState,
+  INBOX_VIEW_FILTERS,
+  parseSavedInboxViews,
+  saveInboxView,
+  type InboxViewFilter,
+  type SavedInboxView
+} from "@/lib/operator-advantage";
+import { OPERATOR_COMMAND_EVENT, type OperatorCommand } from "@/lib/operator-commands";
 
 export type MultiChatSummary = {
   id: string;
@@ -99,6 +111,7 @@ type MultiChatInboxProps = {
   conversations: MultiChatConversation[];
   canManageSpam: boolean;
   selectedLeadId?: string;
+  initialFilter?: InboxViewFilter;
   manualReplyStatus?: string;
   manualReplyError?: string;
 };
@@ -121,18 +134,10 @@ type SendState = {
   startedAt: number;
 };
 
-const filters = [
-  "All",
-  "Unread",
-  "Waiting for Marcus",
-  "Waiting for client",
-  "New leads",
-  "Bot active",
-  "Human takeover",
-  "Failed send"
-] as const;
+const filters = INBOX_VIEW_FILTERS;
 
 const INBOX_FILTER_STORAGE_KEY = "limm-inbox-filter-v10.4";
+const INBOX_SAVED_VIEWS_STORAGE_KEY = "limm-inbox-saved-views-v10.6";
 
 const quickReplies = [
   {
@@ -308,6 +313,13 @@ function chatStatusDotTone(chat: MultiChatSummary) {
   return "bg-command-green";
 }
 
+function slaTextTone(status: ReturnType<typeof getOperatorSlaState>["status"]) {
+  if (status === "breached") return "text-command-red";
+  if (status === "due") return "text-command-amber";
+  if (status === "on-track") return "text-command-green";
+  return "text-command-subtle";
+}
+
 function chatInitials(chat: MultiChatSummary) {
   const source = (chat.displayName || chat.phone || "Client").trim();
   const words = source.split(/\s+/).filter(Boolean);
@@ -329,9 +341,19 @@ function formatQueueTimestamp(value: string) {
   });
 }
 
-function matchesFilter(chat: MultiChatSummary, filter: (typeof filters)[number]) {
+function formatQueueSyncLabel(lastSyncAt: number | null, clock: number | null, status: "live" | "recovering") {
+  if (status === "recovering") return "Reconnecting · queue remains usable";
+  if (!lastSyncAt || !clock) return "Server snapshot · newest activity first";
+  const seconds = Math.max(0, Math.floor((clock - lastSyncAt) / 1000));
+  if (seconds < 10) return "Live · synced just now";
+  if (seconds < 60) return `Live · synced ${seconds}s ago`;
+  return `Live · synced ${Math.floor(seconds / 60)}m ago`;
+}
+
+function matchesFilter(chat: MultiChatSummary, filter: InboxViewFilter, clock: number | null) {
   if (filter === "All") return true;
   if (filter === "Unread") return chat.unreadCount > 0;
+  if (filter === "Response overdue") return clock !== null && getOperatorSlaState(chat, clock).status === "breached";
   if (filter === "Waiting for Marcus") return chat.primaryStatus === "Waiting for Marcus";
   if (filter === "Waiting for client") return chat.primaryStatus === "Waiting for client";
   if (filter === "New leads") return chat.primaryStatus === "New lead";
@@ -417,6 +439,7 @@ const ChatRow = memo(function ChatRow({
   selected,
   selectionMode,
   spamPending,
+  clock,
   onSelect,
   onToggleSelected,
   onMarkSpam
@@ -427,10 +450,12 @@ const ChatRow = memo(function ChatRow({
   selected: boolean;
   selectionMode: boolean;
   spamPending: boolean;
+  clock: number | null;
   onSelect: (leadId: string) => void;
   onToggleSelected: (leadId: string) => void;
   onMarkSpam: (chat: MultiChatSummary) => void;
 }) {
+  const sla = getOperatorSlaState(chat, clock ?? 0);
   return (
     <div
       data-testid="inbox-chat-row"
@@ -471,6 +496,7 @@ const ChatRow = memo(function ChatRow({
           <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-command-subtle">
             <span className={`h-2 w-2 shrink-0 rounded-full ${chatStatusDotTone(chat)}`} aria-hidden="true" />
             <span className="truncate">{chatStatusLabel(chat)}</span>
+            {sla.status !== "inactive" ? <span className={`shrink-0 ${slaTextTone(sla.status)}`}>· {sla.label}</span> : null}
             {!chat.intentClassified ? <span className="truncate text-command-amber">· Unclassified</span> : null}
             {chat.floorPlanReceived || chat.sitePhotosReceived ? <span className="shrink-0 text-command-green">· Files</span> : null}
           </span>
@@ -1003,7 +1029,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
             {conversation.lead.botPaused ? (
               <form action={resumeBotForLeadAction}>
                 <input type="hidden" name="lead_id" value={conversation.lead.id} />
-                <button className="w-full rounded-md border border-command-green/45 bg-command-green/10 px-3 py-2 font-semibold text-command-green transition hover:bg-command-green/15" type="submit">
+                <button data-testid="inbox-automation-control" className="w-full rounded-md border border-command-green/45 bg-command-green/10 px-3 py-2 font-semibold text-command-green transition hover:bg-command-green/15" type="submit">
                   Resume bot
                 </button>
               </form>
@@ -1011,7 +1037,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
               <form action={pauseBotForLeadAction}>
                 <input type="hidden" name="lead_id" value={conversation.lead.id} />
                 <input type="hidden" name="reason" value="Paused from WhatsApp Sales Inbox." />
-                <button className="w-full rounded-md border border-command-cyan/45 bg-command-cyan/10 px-3 py-2 font-semibold text-command-cyan transition hover:bg-command-cyan/15" type="submit">
+                <button data-testid="inbox-automation-control" className="w-full rounded-md border border-command-cyan/45 bg-command-cyan/10 px-3 py-2 font-semibold text-command-cyan transition hover:bg-command-cyan/15" type="submit">
                   Pause bot
                 </button>
               </form>
@@ -1070,7 +1096,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
   );
 });
 
-export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
+export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, initialFilter, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
   const firstVisibleConversation = conversations[0];
   const initialLeadId = selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)
     ? selectedLeadId
@@ -1086,7 +1112,11 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   const [activeLeadId, setActiveLeadId] = useState(() => initialSelectedLeadIdRef.current);
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
-  const [filter, setFilter] = useState<(typeof filters)[number]>("All");
+  const [filter, setFilter] = useState<InboxViewFilter>(initialFilter ?? "All");
+  const [savedViews, setSavedViews] = useState<SavedInboxView[]>([]);
+  const [clock, setClock] = useState<number | null>(null);
+  const [queueSyncStatus, setQueueSyncStatus] = useState<"live" | "recovering">("live");
+  const [lastQueueSyncAt, setLastQueueSyncAt] = useState<number | null>(null);
   const [contextOpen, setContextOpen] = useState(false);
   const [mobilePane, setMobilePane] = useState<"queue" | "chat">(selectedLeadId ? "chat" : "queue");
   const [selectionMode, setSelectionMode] = useState(false);
@@ -1097,6 +1127,11 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   const [errorByLeadId, setErrorByLeadId] = useState<Record<string, string>>({});
   const [spamPendingLeadIds, setSpamPendingLeadIds] = useState<string[]>([]);
   const [spamNotice, setSpamNotice] = useState<{ tone: "success" | "error"; message: string } | null>(null);
+  const [recentSpamRemoval, setRecentSpamRemoval] = useState<{
+    summaries: MultiChatSummary[];
+    conversations: MultiChatConversation[];
+  } | null>(null);
+  const [undoSpamPending, setUndoSpamPending] = useState(false);
   const [draftSeeds, setDraftSeeds] = useState<Record<string, { id: string; text: string }>>({});
   const [olderMessages, setOlderMessages] = useState<Record<string, LeadMessage[]>>({});
   const [olderState, setOlderState] = useState<Record<string, { hasOlder: boolean; cursor: string | null }>>({});
@@ -1108,6 +1143,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   const detailsDrawerRef = useRef<HTMLDivElement>(null);
   const previousDrawerFocusRef = useRef<HTMLElement | null>(null);
   const filterPreferenceReadyRef = useRef(false);
+  const savedViewsReadyRef = useRef(false);
   const stickToLatestRef = useRef(true);
   const conversationCacheRef = useRef(conversationCache);
 
@@ -1116,20 +1152,38 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   }, [conversationCache]);
 
   useEffect(() => {
-    const savedFilter = window.localStorage.getItem(INBOX_FILTER_STORAGE_KEY);
-    if (savedFilter && filters.includes(savedFilter as (typeof filters)[number])) {
-      setFilter(savedFilter as (typeof filters)[number]);
+    if (initialFilter) {
+      setFilter(initialFilter);
+    } else {
+      const savedFilter = window.localStorage.getItem(INBOX_FILTER_STORAGE_KEY);
+      if (savedFilter && filters.includes(savedFilter as InboxViewFilter)) {
+        setFilter(savedFilter as InboxViewFilter);
+      }
     }
+    setSavedViews(parseSavedInboxViews(window.localStorage.getItem(INBOX_SAVED_VIEWS_STORAGE_KEY)));
     const timer = window.setTimeout(() => {
       filterPreferenceReadyRef.current = true;
+      savedViewsReadyRef.current = true;
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [initialFilter]);
 
   useEffect(() => {
     if (!filterPreferenceReadyRef.current) return;
     window.localStorage.setItem(INBOX_FILTER_STORAGE_KEY, filter);
   }, [filter]);
+
+  useEffect(() => {
+    if (!savedViewsReadyRef.current) return;
+    window.localStorage.setItem(INBOX_SAVED_VIEWS_STORAGE_KEY, JSON.stringify(savedViews));
+  }, [savedViews]);
+
+  useEffect(() => {
+    const updateClock = () => setClock(Date.now());
+    updateClock();
+    const timer = window.setInterval(updateClock, 15000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!contextOpen) return;
@@ -1218,11 +1272,21 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(async () => {
+    let active = true;
+    let inFlight = false;
+    let controller: AbortController | null = null;
+    const pollQueue = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      controller = new AbortController();
       try {
-        const response = await fetch("/api/inbox/conversations", { cache: "no-store" });
+        const response = await fetch("/api/inbox/conversations", { cache: "no-store", signal: controller.signal });
         const data = await response.json().catch(() => ({}));
-        if (!data?.ok || !Array.isArray(data.conversations)) return;
+        if (!active) return;
+        if (!data?.ok || !Array.isArray(data.conversations)) {
+          setQueueSyncStatus("recovering");
+          return;
+        }
         const nextSummaries = data.conversations as MultiChatSummary[];
         setChatSummaries(nextSummaries);
         setConversationMap((current) => {
@@ -1232,11 +1296,20 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
           }
           return next;
         });
-      } catch {
-        // Keep the inbox responsive; the next lightweight poll can recover.
+        setQueueSyncStatus("live");
+        setLastQueueSyncAt(Date.now());
+      } catch (error) {
+        if (active && !(error instanceof DOMException && error.name === "AbortError")) setQueueSyncStatus("recovering");
+      } finally {
+        inFlight = false;
       }
-    }, 15000);
-    return () => window.clearInterval(timer);
+    };
+    const timer = window.setInterval(() => void pollQueue(), 15000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      controller?.abort();
+    };
   }, []);
 
   const activeLeadStillListed = activeLeadId ? chatSummaries.some((summary) => summary.id === activeLeadId) : false;
@@ -1347,9 +1420,10 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   );
   const queueCounters = useMemo(() => ({
     waitingForMarcus: visibleChatSummaries.filter((chat) => chat.primaryStatus === "Waiting for Marcus").length,
+    responseOverdue: clock === null ? 0 : visibleChatSummaries.filter((chat) => getOperatorSlaState(chat, clock).status === "breached").length,
     newLeads: visibleChatSummaries.filter((chat) => chat.primaryStatus === "New lead").length,
     failedSends: visibleChatSummaries.filter((chat) => chat.primaryStatus === "Failed send").length
-  }), [visibleChatSummaries]);
+  }), [clock, visibleChatSummaries]);
 
   const filteredConversations = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
@@ -1362,9 +1436,23 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
         chat.scopeSummary,
         chat.status
       ].join(" ").toLowerCase();
-      return matchesFilter(chat, filter) && (!needle || haystack.includes(needle));
+      return matchesFilter(chat, filter, clock) && (!needle || haystack.includes(needle));
     }));
-  }, [deferredSearch, filter, visibleChatSummaries]);
+  }, [clock, deferredSearch, filter, visibleChatSummaries]);
+
+  const saveCurrentView = useCallback(() => {
+    setSavedViews((current) => saveInboxView(current, filter, search));
+  }, [filter, search]);
+
+  const applySavedView = useCallback((view: SavedInboxView) => {
+    setFilter(view.filter);
+    setSearch(view.search);
+    setMobilePane("queue");
+  }, []);
+
+  const removeSavedView = useCallback((viewId: string) => {
+    setSavedViews((current) => current.filter((view) => view.id !== viewId));
+  }, []);
 
   const selectedVisibleCount = filteredConversations.filter((chat) => selectedSpamLeadIds.includes(chat.id)).length;
   const allVisibleSelected = filteredConversations.length > 0 && selectedVisibleCount === filteredConversations.length;
@@ -1388,7 +1476,10 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
     setMobilePane("chat");
     stickToLatestRef.current = true;
     if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `/inbox?lead=${encodeURIComponent(leadId)}`);
+      const nextUrl = new URL(window.location.href);
+      nextUrl.pathname = "/inbox";
+      nextUrl.searchParams.set("lead", leadId);
+      window.history.replaceState(null, "", `${nextUrl.pathname}${nextUrl.search}`);
     }
     const cached = conversationCacheRef.current[leadId];
     if (!cached) {
@@ -1451,17 +1542,46 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
       setActiveLeadId(nextLeadId);
       setMobilePane(nextLeadId ? "chat" : "queue");
       stickToLatestRef.current = true;
-      window.history.replaceState(null, "", nextLeadId ? `/inbox?lead=${encodeURIComponent(nextLeadId)}` : "/inbox");
+      const nextUrl = new URL(window.location.href);
+      nextUrl.pathname = "/inbox";
+      if (nextLeadId) nextUrl.searchParams.set("lead", nextLeadId);
+      else nextUrl.searchParams.delete("lead");
+      window.history.replaceState(null, "", `${nextUrl.pathname}${nextUrl.search}`);
       if (nextLeadId && !conversationCacheRef.current[nextLeadId]) void loadConversation(nextLeadId);
     }
   }, [activeLeadId, chatSummaries, loadConversation]);
+
+  const restoreConversationsLocally = useCallback((
+    summaries: MultiChatSummary[],
+    restoredConversations: MultiChatConversation[]
+  ) => {
+    if (!summaries.length) return;
+    const restoredIds = new Set(summaries.map((summary) => summary.id));
+    setChatSummaries((current) => sortQueue([
+      ...summaries,
+      ...current.filter((summary) => !restoredIds.has(summary.id))
+    ]));
+    if (restoredConversations.length) {
+      setConversationMap((current) => ({
+        ...current,
+        ...Object.fromEntries(restoredConversations.map((conversation) => [conversation.lead.id, conversation]))
+      }));
+      const fetchedAt = new Date().toISOString();
+      setConversationCache((current) => ({
+        ...current,
+        ...Object.fromEntries(restoredConversations.map((conversation) => [conversation.lead.id, { fetchedAt }]))
+      }));
+    }
+  }, []);
 
   const confirmSpamRemoval = useCallback(async () => {
     const targets = spamConfirmation;
     if (!canManageSpam || !targets.length || spamPendingLeadIds.length) return;
     const leadIds = targets.map((chatToRemove) => chatToRemove.id);
+    const targetConversations = targets.flatMap((target) => conversationMap[target.id] ? [conversationMap[target.id]] : []);
     setSpamPendingLeadIds(leadIds);
     setSpamNotice(null);
+    setRecentSpamRemoval(null);
     try {
       let removedLeadIds: string[] = [];
       let failedLeadIds: string[] = [];
@@ -1483,18 +1603,23 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
 
       removeConversationsLocally(removedLeadIds);
       if (!removedLeadIds.length) throw new Error("The spam action could not be completed.");
+      const removedSet = new Set(removedLeadIds);
+      setRecentSpamRemoval({
+        summaries: targets.filter((target) => removedSet.has(target.id)),
+        conversations: targetConversations.filter((conversation) => removedSet.has(conversation.lead.id))
+      });
       if (failedLeadIds.length) {
         setSpamNotice({
           tone: "error",
-          message: `${removedLeadIds.length} removed as spam; ${failedLeadIds.length} could not be removed. Removed conversations are recoverable from Leads → Show Spam.`
+          message: `${removedLeadIds.length} removed as spam; ${failedLeadIds.length} could not be removed. Undo here, or recover later from Leads → Show Spam.`
         });
       } else {
         const label = targets[0]?.displayName || targets[0]?.phone || "Conversation";
         setSpamNotice({
           tone: "success",
           message: leadIds.length === 1
-            ? `${label} was removed from the inbox as spam. You can restore it from Leads → Show Spam.`
-            : `${leadIds.length} conversations were removed as spam. You can restore them from Leads → Show Spam.`
+            ? `${label} was removed from the inbox as spam. Undo here; it remains recoverable from Leads → Show Spam.`
+            : `${leadIds.length} conversations were removed from the inbox as spam. Undo here; they remain recoverable from Leads → Show Spam.`
         });
         cancelSpamSelection();
       }
@@ -1507,7 +1632,42 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
       setSpamPendingLeadIds([]);
       setSpamConfirmation([]);
     }
-  }, [cancelSpamSelection, canManageSpam, removeConversationsLocally, spamConfirmation, spamPendingLeadIds.length]);
+  }, [cancelSpamSelection, canManageSpam, conversationMap, removeConversationsLocally, spamConfirmation, spamPendingLeadIds.length]);
+
+  const undoSpamRemoval = useCallback(async () => {
+    const snapshot = recentSpamRemoval;
+    if (!canManageSpam || !snapshot?.summaries.length || undoSpamPending) return;
+    const leadIds = snapshot.summaries.map((summary) => summary.id);
+    setUndoSpamPending(true);
+    try {
+      const result = await restoreInboxConversationsAction(leadIds);
+      if (result.code === "permission_denied") throw new Error("Boss or admin permission is required.");
+      const restoredSet = new Set(result.restoredLeadIds);
+      const restoredSummaries = snapshot.summaries.filter((summary) => restoredSet.has(summary.id));
+      const restoredConversations = snapshot.conversations.filter((conversation) => restoredSet.has(conversation.lead.id));
+      restoreConversationsLocally(restoredSummaries, restoredConversations);
+      if (!restoredSummaries.length) throw new Error("The spam removal could not be undone.");
+      const remainingSummaries = snapshot.summaries.filter((summary) => !restoredSet.has(summary.id));
+      const remainingIds = new Set(remainingSummaries.map((summary) => summary.id));
+      setRecentSpamRemoval(remainingSummaries.length ? {
+        summaries: remainingSummaries,
+        conversations: snapshot.conversations.filter((conversation) => remainingIds.has(conversation.lead.id))
+      } : null);
+      setSpamNotice({
+        tone: result.failedLeadIds.length ? "error" : "success",
+        message: result.failedLeadIds.length
+          ? `${restoredSummaries.length} restored; ${result.failedLeadIds.length} still need attention.`
+          : `${restoredSummaries.length === 1 ? "Conversation" : `${restoredSummaries.length} conversations`} restored to the inbox.`
+      });
+    } catch (error) {
+      setSpamNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "The spam removal could not be undone."
+      });
+    } finally {
+      setUndoSpamPending(false);
+    }
+  }, [canManageSpam, recentSpamRemoval, restoreConversationsLocally, undoSpamPending]);
 
   useEffect(() => {
     const candidates = waitingChats
@@ -1530,6 +1690,40 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
     const next = waitingChats[(activeIndex + 1 + waitingChats.length) % waitingChats.length];
     selectConversation(next.id);
   }, [activeLeadId, selectConversation, waitingChats]);
+
+  useEffect(() => {
+    const handleOperatorCommand = (event: Event) => {
+      const command = (event as CustomEvent<{ command?: OperatorCommand }>).detail?.command;
+      if (!command) return;
+      if (command === "focus_inbox_reply") {
+        setMobilePane("chat");
+        window.requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>("#manual_reply_body")?.focus());
+        return;
+      }
+      if (command === "open_inbox_details") {
+        setContextOpen(true);
+        return;
+      }
+      if (command === "next_waiting_chat") {
+        nextWaitingChat();
+        return;
+      }
+      if (command === "review_inbox_automation") {
+        setContextOpen(true);
+        window.setTimeout(() => document.querySelector<HTMLElement>('[data-testid="inbox-automation-control"]')?.focus(), 120);
+        return;
+      }
+      if (command === "remove_inbox_spam" && canManageSpam && activeConversation) {
+        markConversationSpam(activeConversation.summary);
+        return;
+      }
+      if (command === "open_active_lead" && activeLeadId) {
+        window.location.assign(`/leads/${encodeURIComponent(activeLeadId)}`);
+      }
+    };
+    window.addEventListener(OPERATOR_COMMAND_EVENT, handleOperatorCommand);
+    return () => window.removeEventListener(OPERATOR_COMMAND_EVENT, handleOperatorCommand);
+  }, [activeConversation, activeLeadId, canManageSpam, markConversationSpam, nextWaitingChat]);
 
   useEffect(() => {
     const handleShortcut = (event: globalThis.KeyboardEvent) => {
@@ -1716,6 +1910,16 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
     });
   }, []);
 
+  const operatorBrief = useMemo(() => activeConversation ? buildConversationBrief({
+    lead: activeConversation.lead,
+    context: activeConversation.context,
+    messages: activeMessages
+  }) : null, [activeConversation, activeMessages]);
+  const activeSla = useMemo(
+    () => activeConversation ? getOperatorSlaState(activeConversation.summary, clock ?? 0) : null,
+    [activeConversation, clock]
+  );
+
   const loadEarlierMessages = async () => {
     if (!activeConversation || !activeOlderState.hasOlder || !activeOlderState.cursor || loadingOlder) return;
     setLoadingOlder(true);
@@ -1747,8 +1951,18 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
     return (
       <section className="mission-panel rounded-3xl shadow-premium">
         {spamNotice ? (
-          <div role="status" className={`border-b px-5 py-3 text-sm ${spamNotice.tone === "success" ? "border-command-green/30 bg-command-green/10 text-command-green" : "border-command-red/30 bg-command-red/10 text-command-red"}`}>
-            {spamNotice.message}
+          <div role="status" className={`flex items-center justify-between gap-3 border-b px-5 py-3 text-sm ${spamNotice.tone === "success" ? "border-command-green/30 bg-command-green/10 text-command-green" : "border-command-red/30 bg-command-red/10 text-command-red"}`}>
+            <span>{spamNotice.message}</span>
+            <div className="flex shrink-0 items-center gap-3">
+              {recentSpamRemoval?.summaries.length ? (
+                <button type="button" onClick={() => void undoSpamRemoval()} disabled={undoSpamPending} data-testid="inbox-spam-undo" className="font-semibold underline underline-offset-2 disabled:cursor-wait disabled:opacity-60">
+                  {undoSpamPending ? "Restoring…" : "Undo"}
+                </button>
+              ) : null}
+              <button type="button" onClick={() => { setSpamNotice(null); setRecentSpamRemoval(null); }} className="font-semibold underline underline-offset-2">
+                Dismiss
+              </button>
+            </div>
           </div>
         ) : null}
         <div className="p-8">
@@ -1776,12 +1990,15 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
     shortLabel: string;
     value: number;
     tone: string;
-    targetFilter: (typeof filters)[number];
+    targetFilter: InboxViewFilter;
   }> = [
     { label: "Waiting", shortLabel: "Wait", value: queueCounters.waitingForMarcus, tone: "text-command-gold", targetFilter: "Waiting for Marcus" },
+    { label: "Overdue", shortLabel: "Late", value: queueCounters.responseOverdue, tone: "text-command-red", targetFilter: "Response overdue" },
     { label: "New", shortLabel: "New", value: queueCounters.newLeads, tone: "text-command-cyan", targetFilter: "New leads" },
     { label: "Failed", shortLabel: "Fail", value: queueCounters.failedSends, tone: "text-command-red", targetFilter: "Failed send" }
   ];
+  const currentViewId = `${filter.toLowerCase()}::${search.trim().replace(/\s+/g, " ").toLowerCase()}`;
+  const canSaveCurrentView = (filter !== "All" || Boolean(search.trim())) && !savedViews.some((view) => view.id === currentViewId);
   const spamDialogLabel = spamConfirmation[0]?.displayName || spamConfirmation[0]?.phone || "this conversation";
   const automationStatusLabel = activeConversation.lead.botPaused ? "Bot paused" : "Bot active";
   const chatHeaderStatus = [
@@ -1797,7 +2014,9 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
           <div className="flex min-w-0 items-center gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-command-gold">Queue health</p>
-              <p className="hidden text-[10px] text-command-subtle sm:block">Live · newest activity first</p>
+              <p className={`hidden text-[10px] sm:block ${queueSyncStatus === "recovering" ? "text-command-amber" : "text-command-subtle"}`} data-testid="inbox-queue-sync-health">
+                {formatQueueSyncLabel(lastQueueSyncAt, clock, queueSyncStatus)}
+              </p>
               <span className="sr-only">Newest client activity stays at the top.</span>
             </div>
             <div className="hidden items-center gap-2 border-l border-command-line pl-3 text-[9px] text-command-subtle xl:flex" aria-label="Inbox keyboard shortcuts">
@@ -1806,6 +2025,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
               <span><kbd className="text-command-muted">R</kbd> reply</span>
               <span><kbd className="text-command-muted">D</kbd> details</span>
               <span><kbd className="text-command-muted">/</kbd> search</span>
+              <span><kbd className="text-command-muted">⌘K</kbd> actions</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -1837,9 +2057,16 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
             }`}
           >
             <span>{spamNotice.message}</span>
-            <button type="button" onClick={() => setSpamNotice(null)} className="shrink-0 font-semibold underline underline-offset-2">
-              Dismiss
-            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              {recentSpamRemoval?.summaries.length ? (
+                <button type="button" onClick={() => void undoSpamRemoval()} disabled={undoSpamPending} data-testid="inbox-spam-undo" className="font-semibold underline underline-offset-2 disabled:cursor-wait disabled:opacity-60">
+                  {undoSpamPending ? "Restoring…" : "Undo"}
+                </button>
+              ) : null}
+              <button type="button" onClick={() => { setSpamNotice(null); setRecentSpamRemoval(null); }} className="font-semibold underline underline-offset-2">
+                Dismiss
+              </button>
+            </div>
           </div>
         ) : null}
         <div data-testid="inbox-layout" data-mobile-pane={mobilePane} className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
@@ -1893,12 +2120,33 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                   <span className="sr-only">Filter conversations</span>
                   <select
                     value={filter}
-                    onChange={(event) => setFilter(event.target.value as (typeof filters)[number])}
+                    onChange={(event) => setFilter(event.target.value as InboxViewFilter)}
                     className="w-[6.75rem] rounded-xl border border-command-line bg-command-bg/80 px-2 py-2 text-xs font-semibold text-command-muted outline-none focus:border-command-gold/60"
                   >
                     {filters.map((item) => <option key={item} value={item}>{item}</option>)}
                   </select>
                 </label>
+              </div>
+              <div className="mt-2 flex min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5" data-testid="inbox-saved-views">
+                <button
+                  type="button"
+                  onClick={saveCurrentView}
+                  disabled={!canSaveCurrentView}
+                  className="inline-flex min-h-7 shrink-0 items-center rounded-lg border border-command-line bg-command-bg/70 px-2 py-1 text-[10px] font-semibold text-command-muted transition hover:border-command-gold/45 hover:text-command-text disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Save the current inbox filter and search"
+                >
+                  + Save view
+                </button>
+                {savedViews.map((view) => (
+                  <span key={view.id} className="inline-flex shrink-0 overflow-hidden rounded-lg border border-command-line bg-command-card">
+                    <button type="button" onClick={() => applySavedView(view)} className="min-h-7 max-w-40 truncate px-2 py-1 text-[10px] font-semibold text-command-muted transition hover:text-command-text" title={`Apply ${view.label}`}>
+                      {view.label}
+                    </button>
+                    <button type="button" onClick={() => removeSavedView(view.id)} className="min-h-7 border-l border-command-line px-1.5 text-[11px] text-command-subtle transition hover:bg-command-red/10 hover:text-command-red" aria-label={`Delete saved view ${view.label}`}>
+                      ×
+                    </button>
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -1929,6 +2177,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                   selected={selectedSpamLeadIds.includes(item.id)}
                   selectionMode={selectionMode}
                   spamPending={spamPendingLeadIds.includes(item.id)}
+                  clock={clock}
                   onSelect={selectConversation}
                   onToggleSelected={toggleSpamSelection}
                   onMarkSpam={markConversationSpam}
@@ -2013,6 +2262,10 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
               </div>
             ) : null}
 
+            {operatorBrief && activeSla ? (
+              <InboxOperatorBrief brief={operatorBrief} sla={activeSla} onOpenDetails={() => setContextOpen(true)} />
+            ) : null}
+
             <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5">
               {activeMessagesNewestFirst.length ? (
                 <div className="mx-auto max-w-4xl space-y-3.5">
@@ -2076,7 +2329,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
 
       {contextOpen ? (
         <div className="fixed inset-0 z-[60]" data-testid="inbox-details-drawer">
-          <button type="button" onClick={() => setContextOpen(false)} className="absolute inset-0 h-full w-full bg-black/60 backdrop-blur-sm" aria-label="Close conversation details" />
+          <button type="button" onClick={() => setContextOpen(false)} className="absolute inset-0 h-full w-full bg-black/60 backdrop-blur-sm" aria-label="Dismiss conversation details" />
           <div ref={detailsDrawerRef} className="absolute inset-y-0 right-0 w-full border-l border-command-line bg-command-panel2 shadow-premium sm:w-[26rem] lg:w-[28rem]" role="dialog" aria-modal="true" aria-label="Conversation details">
             <LeadContextPanel
               conversation={activeConversation}

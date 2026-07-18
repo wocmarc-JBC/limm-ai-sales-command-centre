@@ -5,10 +5,11 @@ import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preferen
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
-import { compareInboxLatestActivity } from "@/lib/inbox-conversation-order";
+import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
+import { inboxViewFilterFromParam } from "@/lib/operator-advantage";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 import Link from "next/link";
@@ -22,7 +23,7 @@ function hasWhatsAppContactOrMessages(lead: Lead, messages: LeadMessage[]) {
 }
 
 function leadLastActivityAt(lead: Lead, messages: LeadMessage[]) {
-  return latestWhatsAppMessage(messages)?.createdAt ?? lead.updatedAt ?? lead.createdAt;
+  return latestWhatsAppMessage(messages)?.createdAt ?? inboxLeadFallbackActivityAt(lead);
 }
 
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): MultiChatSummary {
@@ -45,7 +46,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): M
     propertyType: lead.propertyType,
     scopeSummary: lead.scopeSummary,
     lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
-    lastActivityAt: latestMessage?.createdAt ?? lead.updatedAt ?? lead.createdAt,
+    lastActivityAt: latestMessage?.createdAt ?? inboxLeadFallbackActivityAt(lead),
     primaryStatus: queue.primaryStatus,
     unreadCount: queue.unreadCount,
     failedSend: queue.failedSend,
@@ -64,6 +65,7 @@ export default async function WhatsAppInboxPage({
     lead?: string;
     manualReplyStatus?: string;
     manualReplyError?: string;
+    view?: string;
   }>;
 }) {
   const searchParams = await searchParamsPromise;
@@ -185,6 +187,7 @@ export default async function WhatsAppInboxPage({
         conversations={conversations}
         canManageSpam={canManageSpam}
         selectedLeadId={searchParams?.lead}
+        initialFilter={inboxViewFilterFromParam(searchParams?.view)}
         manualReplyStatus={searchParams?.manualReplyStatus}
         manualReplyError={searchParams?.manualReplyError}
       />

@@ -14,6 +14,7 @@ const summaryDir = path.join(root, "test-results", "v4_2_qa_summary");
 const outputFile = path.join(summaryDir, "playwright-output.txt");
 const port = process.env.PLAYWRIGHT_PORT ?? "3100";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+const qaE2EMode = process.env.QA_E2E_MODE ?? "1";
 
 function writeFailureReport(reason, status = 1, output = "") {
   fs.mkdirSync(summaryDir, { recursive: true });
@@ -46,6 +47,24 @@ if (!fs.existsSync(nextCli)) {
     "Next.js package is not installed. Run: npm.cmd install, then npx.cmd playwright install chromium.",
     1
   );
+}
+
+const buildResult = spawnSync(process.execPath, [nextCli, "build"], {
+  cwd: root,
+  encoding: "utf8",
+  maxBuffer: 50 * 1024 * 1024,
+  shell: false,
+  env: {
+    ...process.env,
+    QA_E2E_MODE: qaE2EMode,
+    NEXT_TELEMETRY_DISABLED: "1"
+  }
+});
+const buildOutput = `${buildResult.stdout ?? ""}${buildResult.stderr ?? ""}`;
+if (buildResult.stdout) process.stdout.write(buildResult.stdout);
+if (buildResult.stderr) process.stderr.write(buildResult.stderr);
+if (buildResult.status !== 0) {
+  writeFailureReport("Next.js production build failed before browser QA.", buildResult.status ?? 1, buildOutput);
 }
 
 fs.mkdirSync(screenshotDir, { recursive: true });
@@ -99,10 +118,10 @@ let server = null;
 let serverOutput = "";
 let result;
 try {
-  server = spawn(process.execPath, [nextCli, "dev", "-p", port], {
+  server = spawn(process.execPath, [nextCli, "start", "-H", "127.0.0.1", "-p", port], {
     cwd: root,
     shell: false,
-    env: { ...process.env, PLAYWRIGHT_PORT: port }
+    env: { ...process.env, PLAYWRIGHT_PORT: port, QA_E2E_MODE: qaE2EMode }
   });
   server.stdout.on("data", (chunk) => {
     serverOutput += chunk.toString();
@@ -124,6 +143,7 @@ try {
       PLAYWRIGHT_PORT: port,
       PLAYWRIGHT_BASE_URL: baseURL,
       PLAYWRIGHT_SKIP_WEB_SERVER: "1",
+      QA_E2E_MODE: qaE2EMode,
       V4_2_QA_RUN_ID: runId,
       V4_2_SCREENSHOT_DIR: screenshotDir,
       V4_2_QA_SUMMARY_DIR: summaryDir
@@ -139,7 +159,7 @@ try {
   stopServer(server);
 }
 
-const output = `${serverOutput}\n${result?.stdout ?? ""}${result?.stderr ?? ""}`;
+const output = `${buildOutput}\n${serverOutput}\n${result?.stdout ?? ""}${result?.stderr ?? ""}`;
 fs.mkdirSync(summaryDir, { recursive: true });
 fs.writeFileSync(outputFile, output, "utf8");
 if (result?.stdout) process.stdout.write(result.stdout);

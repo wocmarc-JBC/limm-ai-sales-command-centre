@@ -80,7 +80,7 @@ let serverOutput = "";
 let result;
 
 try {
-  server = spawn(process.execPath, [nextCli, "dev", "-p", port], {
+  server = spawn(process.execPath, [nextCli, "dev", "-H", "127.0.0.1", "-p", port], {
     cwd: root,
     shell: false,
     env: { ...process.env, PLAYWRIGHT_PORT: port }

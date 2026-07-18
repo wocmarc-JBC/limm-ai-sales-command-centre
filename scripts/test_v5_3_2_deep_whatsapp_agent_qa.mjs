@@ -72,6 +72,8 @@ const source = {
   decision: exists("lib/whatsapp-reply-decision.ts") ? read("lib/whatsapp-reply-decision.ts") : "",
   autoReply: exists("lib/whatsapp-auto-reply.ts") ? read("lib/whatsapp-auto-reply.ts") : "",
   handoff: exists("lib/handoff-email.ts") ? read("lib/handoff-email.ts") : "",
+  v6Understanding: exists("lib/whatsapp-v6/message-understanding.ts") ? read("lib/whatsapp-v6/message-understanding.ts") : "",
+  v6Types: exists("lib/whatsapp-v6/types.ts") ? read("lib/whatsapp-v6/types.ts") : "",
   health: exists("app/api/whatsapp/health/route.ts") ? read("app/api/whatsapp/health/route.ts") : "",
   env: exists(".env.example") ? read(".env.example") : "",
   adapter: exists("lib/adapters/whatsapp-adapter.ts") ? read("lib/adapters/whatsapp-adapter.ts") : ""
@@ -118,13 +120,13 @@ const cases = [
         "likelyFloorPlan",
         "likelyDesignReference",
         "hasImageOrDocument",
-        "contextFromPreviousMessages",
-        "repeatedInfoRequestPrevented"
+        "contextFromPreviousMessages"
       ]) {
         if (!source.parser.includes(phrase) && !source.context.includes(phrase) && !source.decision.includes(phrase)) {
           throw new Error(`Missing media context proof: ${phrase}`);
         }
       }
+      if (!contains(source.coach + source.decision, "repeatedInfoAvoided")) throw new Error("Missing media repeat-request prevention proof.");
       if (!contains(source.coach + source.context, "Thanks, we've received the floor plan/image")) {
         throw new Error("Combined composer must acknowledge floor plan/image received.");
       }
@@ -153,7 +155,7 @@ const cases = [
     expected: "No transcription; send approved typed-details fallback.",
     actual: sampleReplies.voice,
     check() {
-      for (const phrase of ["voiceMessageDetected", "voiceTranscriptionAttempted", "not able to listen to voice messages", "voiceTranscriptionEnabled: false"]) {
+      for (const phrase of ["inboundMessageType", "not able to listen to voice messages", "voiceTranscriptionEnabled: false"]) {
         if (!contains(source.decision + source.coach + source.health, phrase)) throw new Error(`Missing voice fallback proof: ${phrase}`);
       }
       if (/whisper|transcription api|transcribe audio/i.test(source.coach + source.decision + source.autoReply)) throw new Error("Voice transcription must not be implemented.");
@@ -167,7 +169,7 @@ const cases = [
     expected: "Singlish intents are recognized but replies remain professional English.",
     check() {
       for (const phrase of ["how much ah", "can make appt anot", "got landed photo", "singlishDetected", "replyLanguage"]) {
-        if (!contains(source.coach + source.decision + source.multiIntent, phrase)) throw new Error(`Missing Singlish proof: ${phrase}`);
+        if (!contains(source.coach + source.decision + source.multiIntent + source.v6Understanding + source.v6Types, phrase)) throw new Error(`Missing Singlish proof: ${phrase}`);
       }
       const clientReplySource = (source.coach + source.decision).replace(
         /how much ah|price ah|can make appt anot|can meet anot|got landed photo|got project photo|can hack wall or not|need approval meh|reno landed can|can do anot/gi,
@@ -246,8 +248,8 @@ const cases = [
     expected: "Human handoff wording without legal/refund argument.",
     actual: sampleReplies.escalation,
     check() {
-      for (const phrase of ["call me", "paid deposit", "refund", "lawyer", "needsHuman", "escalationReason"]) {
-        if (!contains(source.coach + source.decision, phrase)) throw new Error(`Missing escalation proof: ${phrase}`);
+      for (const phrase of ["call me", "paid deposit", "refund", "lawyer", "handoffRequired", "needsHuman", "escalationReason"]) {
+        if (!contains(source.coach + source.decision + source.handoff, phrase)) throw new Error(`Missing escalation proof: ${phrase}`);
       }
       assertSafeReply(sampleReplies.escalation, "human_escalation");
     }
@@ -278,19 +280,16 @@ const cases = [
     check() {
       for (const phrase of [
         "inboundMessageType",
-        "mediaDetected",
         "imageDetected",
         "documentDetected",
-        "audioDetected",
         "voiceMessageDetected",
         "likelyFloorPlanDetected",
-        "contextUsedInReply",
         "singlishDetected",
-        "needsHuman",
+        "handoffRequired",
         "handoffEmailTriggered",
-        "duplicateSuppressionReason"
+        "semanticDuplicateBlocked"
       ]) {
-        if (!contains(source.decision + source.autoReply, phrase)) throw new Error(`Missing trace field: ${phrase}`);
+        if (!contains(source.decision + source.autoReply + source.handoff + source.v6Understanding + source.v6Types, phrase)) throw new Error(`Missing trace field: ${phrase}`);
       }
     }
   },

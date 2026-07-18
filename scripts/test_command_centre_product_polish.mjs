@@ -30,9 +30,10 @@ check("publishes the v10.4.0 product-polish release", () => {
   assert.ok(major > 10 || (major === 10 && minor >= 4));
   assert.ok(packageJson.scripts["test:v10.4.0"]?.includes("test_command_centre_product_polish.mjs"));
   assert.ok(packageJson.scripts["test:v10.4.0"]?.includes("test:v10.3.0"));
-  const currentReleaseTest = packageJson.scripts["test:v10.5.0"] ?? "";
-  assert.ok(packageJson.scripts.verify.includes("test:v10.5.0"));
-  assert.ok(currentReleaseTest.includes("test:v10.4.0"));
+  const currentReleaseTest = packageJson.scripts["test:v10.6.0"] ?? packageJson.scripts["test:v10.5.0"] ?? "";
+  assert.ok(packageJson.scripts.verify.includes(packageJson.scripts["test:v10.6.0"] ? "test:v10.6.0" : "test:v10.5.0"));
+  assert.ok(currentReleaseTest.includes("test:v10.5.0") || currentReleaseTest.includes("test:v10.4.0"));
+  assert.ok(packageJson.scripts["test:v10.5.0"]?.includes("test:v10.4.0"));
   for (const marker of [
     "v10_4_0_command_centre_product_polish",
     'uiVersion: "v10.4.0"',

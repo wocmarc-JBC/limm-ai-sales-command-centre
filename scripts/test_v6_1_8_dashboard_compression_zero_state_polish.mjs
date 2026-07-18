@@ -22,52 +22,40 @@ const health = read("app/api/whatsapp/health/route.ts");
 const clientFiles = read("app/client-files/page.tsx");
 const followups = read("app/followups/page.tsx");
 const followupRepo = read("lib/data/followups-repository.ts");
+const followupSummaryRepo = read("lib/data/phase3-summaries-repository.ts");
+const followupActions = read("components/FollowUpSummaryActions.tsx");
 const cleanupRules = read("lib/test-lead-cleanup.ts");
 const packageJson = read("package.json");
 const docs = read("docs/V6_1_8_DASHBOARD_COMPRESSION_ZERO_STATE_POLISH.md");
 const whatsappRoute = read("app/api/whatsapp/webhook/route.ts");
 const whatsappAdapter = read("lib/adapters/whatsapp-adapter.ts");
 
-for (const phrase of ["md:h-screen", "md:overflow-y-auto", "md:overscroll-contain", "thin-scrollbar", "md:bottom-0"]) {
+for (const phrase of ["lg:h-screen", "lg:overflow-y-auto", "lg:overscroll-contain", "thin-scrollbar", "lg:bottom-0"]) {
   assert(shell.includes(phrase), `sidebar must be independently scrollable on desktop: missing ${phrase}`);
 }
-assert(shell.includes("overflow-x-auto") && shell.includes("md:overflow-visible"), "mobile sidebar must keep horizontal nav behavior.");
+assert(shell.includes("fixed inset-x-0 bottom-0") && shell.includes("lg:hidden"), "mobile navigation must stay reachable as a fixed bottom bar.");
 
 for (const phrase of [
-  "MissionRadarPanel",
-  "Mission Radar",
-  "Highest Priority",
-  "radar-ring",
-  "Hot Leads",
-  "Needs Marcus",
-  "Follow-Up Due",
-  "Appointment Requests",
-  "Bot Paused",
-  "Hacking / Approval Risk",
-  "Test Data Detected",
-  "Email Handoff Pending",
-  "Gold = Hot / priority",
-  "Cyan = system / bot",
-  "Amber = follow-up",
-  "Red = risk",
-  "Green = clear",
-  "Open Priority Lead"
+  "buildOperatorPriorityQueue",
+  "Operator advantage",
+  "Do this next",
+  "Work priority queue",
+  "Score {item.score}",
+  "Open chat",
+  "Must Handle Now",
+  "Sales To Push",
+  "Delivery / Money Risk",
+  "No message is sent and no client promise is made here"
 ]) {
-  assert(dashboard.includes(phrase), `useful Mission Radar missing ${phrase}`);
+  assert(dashboard.includes(phrase), `ranked operator cockpit missing ${phrase}`);
 }
-assert(dashboard.includes("h-80") && dashboard.includes("max-w-[26rem]"), "Mission Radar must remain grand, not tiny.");
-assert(dashboard.includes("primary?.href") && dashboard.includes("primary?.actionLabel"), "Mission Radar must expose one contextual action button.");
-assert(dashboard.includes("radarItems") && dashboard.includes("count:"), "Mission Radar must be driven by operational counts.");
-
-const whatNowCount = (dashboard.match(/What must Marcus do now\?/g) ?? []).length;
-assert(whatNowCount === 1, `duplicate What must Marcus do now? copy should be removed; found ${whatNowCount}`);
-assert(dashboard.includes("Next Best Action"), "Marcus Today should use compact Next Best Action copy.");
-assert(dashboard.includes(".filter((card) => card.value > 0)"), "zero-count mission cards must be compacted/hidden.");
+assert(dashboard.includes("buildOperatorPriorityQueue(leads, followUps, singaporeNow(), 5)"), "operator cockpit must remain deliberately capped to five priorities.");
+assert(dashboard.includes("visibleItems = group.items.filter((item) => item.count > 0)"), "zero-count mission items must be compacted/hidden.");
 assert(!dashboard.includes("No urgent leads right now when Marcus Today is clear."), "repeated old zero-state cards must be removed.");
 assert(!dashboard.includes("No follow-ups overdue means the active queue is current."), "repeated old zero-state cards must be removed.");
 assert(!dashboard.includes("No appointment requests now unless a lead asks for a slot."), "repeated old zero-state cards must be removed.");
-assert(dashboard.includes("All clear: no urgent leads"), "dashboard must keep a compact all-clear zero state.");
-assert(dashboard.includes("Action queue clear."), "empty action queue must be compact.");
+assert(dashboard.includes("All clear: no active pressure in this group."), "dashboard must keep a compact all-clear zero state.");
+assert(dashboard.includes("No active sales action is waiting. The priority queue is clear."), "empty action queue must be compact.");
 assert(!dashboard.includes("Collections Due\", value: 0"), "zero-count collection card must not be forced into the dashboard.");
 
 for (const field of [
@@ -87,16 +75,18 @@ for (const field of [
   assert(health.includes(field), `health missing v6.1.8 proof field: ${field}`);
 }
 
-for (const phrase of ["Coming soon", "Client file upload is not enabled yet.", "No fake folders", "No real client files"]) {
-  assert(clientFiles.includes(phrase), `Client Files coming-soon page missing ${phrase}`);
+for (const phrase of ["Real client storage", "listAllLeadFiles", "listLeadUploadLinks", "No files received yet", "Create an upload link"]) {
+  assert(clientFiles.includes(phrase), `Client Files repository-backed page missing ${phrase}`);
 }
 for (const forbidden of ["Daniel Tan", "Apex Clinic", "Mock folder", "Placeholder only", "Create Upload Link Later"]) {
   assert(!clientFiles.includes(forbidden), `Client Files must not show fake/mock wording: ${forbidden}`);
 }
 
-for (const phrase of ["pageSize = 20", "Show Test Follow-Ups", "Load More", "submitFollowUpStatusAction", "FollowUpActionButton"]) {
-  assert(followups.includes(phrase), `v6.1.5 follow-up behavior regressed: missing ${phrase}`);
+for (const phrase of ["listFollowUpProtectionSummaries(80)", "Latest-message read model only", "No auto follow-up messages are sent", "FollowUpSummaryActions"]) {
+  assert(followups.includes(phrase), `bounded follow-up behavior regressed: missing ${phrase}`);
 }
+assert(followupSummaryRepo.includes("listLatestLeadMessagesForInbox") && followupSummaryRepo.includes("isActiveProductionLeadForDailyScreens") && followupSummaryRepo.includes(".slice(0, limit)"), "follow-up read model must stay bounded and production-only.");
+assert(followupActions.includes("pending !== null") && followupActions.includes("/api/followups/status"), "follow-up actions must retain pending-state and persisted API behavior.");
 for (const phrase of ["isTestFollowUp", "filterAndPageFollowUps", "range(0, fetchLimit - 1)", "hideTestFollowUp"]) {
   assert(followupRepo.includes(phrase), `v6.1.5 follow-up repository behavior regressed: missing ${phrase}`);
 }
@@ -111,7 +101,7 @@ assert(packageJson.includes("test_v6_1_8_dashboard_compression_zero_state_polish
 assert(exists("docs/V6_1_8_DASHBOARD_COMPRESSION_ZERO_STATE_POLISH.md"), "v6.1.8 docs must exist.");
 assert(docs.includes("Scrollable Sidebar") && docs.includes("Mission Radar") && docs.includes("Zero-State Polish"), "v6.1.8 docs must explain the requested refinements.");
 
-const checkedSources = [dashboard, shell, health, clientFiles, followups, followupRepo, cleanupRules, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [dashboard, shell, health, clientFiles, followups, followupRepo, followupSummaryRepo, followupActions, cleanupRules, whatsappRoute, whatsappAdapter].join("\n");
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,

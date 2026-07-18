@@ -18,7 +18,9 @@ function assert(condition, message) {
 
 const followupsPage = read("app/followups/page.tsx");
 const followupsRepo = read("lib/data/followups-repository.ts");
-const followupButton = read("components/FollowUpActionButton.tsx");
+const followupButton = read("components/FollowUpSummaryActions.tsx");
+const followupSummaryRepo = read("lib/data/phase3-summaries-repository.ts");
+const followupStatusRoute = read("app/api/followups/status/route.ts");
 const cleanupPanel = read("components/CleanupPanel.tsx");
 const cleanupRules = read("lib/test-lead-cleanup.ts");
 const actions = read("lib/actions.ts");
@@ -32,29 +34,27 @@ const whatsappAdapter = read("lib/adapters/whatsapp-adapter.ts");
 const docs = read("docs/V6_1_5_PERFORMANCE_FOLLOWUP_TEST_CLEANUP.md");
 
 for (const phrase of [
-  "listFollowUpsPage",
-  "const pageSize = 20",
-  "Active",
-  "Due Today",
+  "listFollowUpProtectionSummaries",
+  "listFollowUpProtectionSummaries(80)",
+  "Needs Marcus reply",
+  "Follow-up due",
   "Overdue",
-  "Snoozed",
-  "Completed",
-  "Show Test Follow-Ups",
-  "Show All",
-  "Search client / phone / scope",
-  "Load More",
-  "No active follow-ups now.",
-  "Cleanup Test Data"
+  "Waiting for client",
+  "High-intent idle",
+  "Failed send",
+  "Search client / phone / message",
+  "Latest-message read model only",
+  "No active follow-up signals now.",
+  "No auto follow-up messages are sent"
 ]) {
   assert(followupsPage.includes(phrase), `Follow-Up Queue missing ${phrase}`);
 }
-assert(followupsPage.includes("includeTest: showTest"), "Follow-Up Queue must hide test follow-ups unless Show Test Follow-Ups is enabled.");
-assert(followupsPage.includes("includeCompleted: status === \"completed\" || status === \"all\""), "Follow-Up Queue must hide completed rows by default.");
-assert(followupsPage.includes("submitFollowUpStatusAction") && followupsPage.includes("await updateFollowUpStatusAction(formData)"), "Follow-Up buttons must be wired through a void-returning server action wrapper.");
-for (const phrase of ["Completing...", "Snoozing...", "Saving...", 'value="Completed"', 'value="Snoozed"', 'value="No Reply"']) {
-  assert(followupsPage.includes(phrase), `Follow-Up action UI missing ${phrase}`);
+assert(followupSummaryRepo.includes("isActiveProductionLeadForDailyScreens") && followupSummaryRepo.includes("listLatestLeadMessagesForInbox") && followupSummaryRepo.includes(".slice(0, limit)"), "Follow-Up Queue must use a bounded, production-only latest-message read model.");
+assert(followupButton.includes('pending !== null') && followupButton.includes("disabled={!canMarkDone") && followupButton.includes("disabled={!canSnooze"), "Follow-Up action buttons must expose pending/loading and capability states.");
+for (const phrase of ["Saving...", "Snoozing...", "Mark Follow-Up Done", "Snooze Follow-Up", "/api/followups/status"]) {
+  assert(followupButton.includes(phrase), `Follow-Up action UI missing ${phrase}`);
 }
-assert(followupButton.includes("useFormStatus") && followupButton.includes("pending") && followupButton.includes("disabled={pending}"), "Follow-Up action button must expose pending/loading state.");
+assert(followupStatusRoute.includes("getCurrentProfile") && followupStatusRoute.includes("updateFollowUpStatus") && followupStatusRoute.includes("markLeadFollowedUp"), "Follow-Up action API must authenticate and persist both follow-up and lead-summary actions.");
 
 for (const phrase of [
   "ListFollowUpsOptions",
@@ -127,10 +127,10 @@ assert(!/const cleanupLeads = await listLeads/.test(settings), "Settings must no
 
 assert(!dashboard.includes("listLeadMessages"), "Dashboard must not fetch all messages for cleanup scan.");
 assert(!dashboard.includes("buildTestLeadCleanupPlan"), "Dashboard must not build cleanup plan on page load.");
-assert(dashboard.includes('listFollowUps({ status: "active", pageSize: 20 })'), "Dashboard must limit active follow-up fetch.");
-assert(dashboard.includes("/settings?cleanup=scan#test-lead-cleanup"), "Dashboard must route cleanup to explicit scan page.");
+assert(dashboard.includes('listFollowUps({ status: "active", pageSize: 80'), "Dashboard must keep the active follow-up fetch explicitly bounded.");
+assert(settings.includes("/settings?cleanup=scan#test-lead-cleanup"), "Settings must route cleanup to an explicit scan page.");
 assert(leadsRepo.includes("scoreTestLead") && leadsRepo.includes("!options?.includeTest"), "Lead repository must hide test leads by default.");
-assert(reports.includes("listFollowUps()"), "Reports must read follow-ups through repository defaults so test/completed rows remain filtered.");
+assert(reports.includes("listFollowUps({ includeTest: showTestDemoRecords })"), "Reports must read follow-ups through repository defaults while explicitly controlling test/demo visibility.");
 
 for (const field of [
   'version: "v6_3_sales_collection_command_centre"',
@@ -164,6 +164,8 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
 const sourceSafety = [
   followupsPage,
   followupsRepo,
+  followupSummaryRepo,
+  followupStatusRoute,
   cleanupPanel,
   cleanupRules,
   actions,

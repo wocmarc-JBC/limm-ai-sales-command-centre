@@ -4,6 +4,7 @@ import { listLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
+import { inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
@@ -32,7 +33,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
     propertyType: lead.propertyType,
     scopeSummary: lead.scopeSummary,
     lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
-    lastActivityAt: latestMessage?.createdAt ?? lead.updatedAt ?? lead.createdAt,
+    lastActivityAt: latestMessage?.createdAt ?? inboxLeadFallbackActivityAt(lead),
     primaryStatus: queue.primaryStatus,
     unreadCount: queue.unreadCount,
     failedSend: queue.failedSend,

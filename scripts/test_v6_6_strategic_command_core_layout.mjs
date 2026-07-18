@@ -28,7 +28,7 @@ const salesCollection = read("app/sales-collection/page.tsx");
 const packageJson = read("package.json");
 
 assert(exists("app/command-core/page.tsx"), "/command-core route must exist.");
-assert(shell.includes("/command-core") && shell.includes("Command Core Beta"), "sidebar must include Command Core Beta link.");
+assert(shell.includes("/command-core") && shell.includes("Command Core"), "sidebar must include the promoted Command Core link.");
 
 for (const phrase of [
   "command-core-resource-bar",
@@ -52,7 +52,9 @@ for (const phrase of [
   "Follow up quote",
   "Check overdue collection",
   "Handle risk / complaint",
-  "Clean test data",
+  "Resolve failed WhatsApp send",
+  "Protect follow-up queue",
+  "Quotation-ready lead",
   "Review hot lead",
   "Pause/resume bot",
   "All clear. No urgent decisions right now."
@@ -72,7 +74,7 @@ for (const phrase of [
   "data-map-same-size-as-dashboard=\"true\"",
   "[&_.singapore-map-wide-layout]:w-full",
   "Command Core",
-  "SingaporeMissionMap",
+  "CommandCoreMissionMap",
   "buildSingaporeMissionMapData",
   "Singapore operating picture"
 ]) {
@@ -89,7 +91,8 @@ for (const phrase of [
   "Select a lead, area, or mission item to inspect.",
   "Top Lead Inspector",
   "formatFullPhoneForProtectedApp",
-  "Open Lead"
+  "Open WhatsApp Chat",
+  "View Lead Details"
 ]) {
   assert(commandCore.includes(phrase), `right inspector panel missing ${phrase}`);
 }
@@ -106,14 +109,14 @@ for (const phrase of [
   assert(commandCore.includes(phrase), `bottom timeline missing ${phrase}`);
 }
 
-for (const phrase of ["listLeads()", "listFollowUps", "listProjectAccounts", "listPaymentRecords"]) {
+for (const phrase of ["getSalesCollectionData", "listFollowUps", "listAllLeadFiles", "listLatestLeadMessagesForInbox"]) {
   assert(commandCore.includes(phrase), `command core must use repository data: missing ${phrase}`);
 }
-assert(commandCore.includes("listLeads({ includeTest: true })") && commandCore.includes("testLeadCount"), "test data may be counted for cleanup only.");
+assert(commandCore.includes("getShowTestDemoRecordsPreference") && commandCore.includes("includeTestDemo: showTestDemoRecords"), "test/demo data must only appear through the explicit operator preference.");
 assert(!commandCore.includes("Daniel Tan") && !commandCore.includes("Apex Clinic") && !commandCore.includes("fake revenue"), "command core must not include fake client/financial data.");
 assert(!commandCore.includes("Client Files"), "command core must not display Client Files unless real storage exists.");
 
-assert(dashboard.includes("LIMM Mission Control") && dashboard.includes("MissionRadarPanel"), "current dashboard route must remain present.");
+assert(dashboard.includes("Boss Daily Brief") && dashboard.includes("buildOperatorPriorityQueue"), "current ranked operator dashboard route must remain present.");
 assert(mapGeometry.includes("sourceDatasetId === \"d_4765db0e87b9c86336792efe8a1f7a66\""), "official Singapore planning-area geometry must remain preserved.");
 assert(mapGeometry.includes("data\\.gov\\.sg") && mapGeometry.includes("URA"), "official Singapore map source proof must remain.");
 assert(mapData.includes("data.gov.sg / URA") && mapData.includes("d_4765db0e87b9c86336792efe8a1f7a66"), "local official Singapore map asset proof must remain.");

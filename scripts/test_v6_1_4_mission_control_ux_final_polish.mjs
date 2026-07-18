@@ -32,41 +32,38 @@ const v6Understanding = read("lib/whatsapp-v6/message-understanding.ts");
 const v6Composer = read("lib/whatsapp-v6/natural-reply-composer.ts");
 
 for (const phrase of [
-  "LIMM Mission Control",
-  "What must Marcus do now?",
-  "Marcus Today",
-  "Clear these first",
-  "Search lead / phone / scope",
-  "Focus Mode",
-  "Full Cockpit",
-  "Main Action Queue",
-  "Recent WhatsApp Leads",
-  "System Core",
-  "Quick Actions"
+  "Boss Daily Brief",
+  "Operator advantage",
+  "Do this next",
+  "Work priority queue",
+  "Must Handle Now",
+  "Sales To Push",
+  "Delivery / Money Risk",
+  "Open WhatsApp Inbox",
+  "Command Core"
 ]) {
   assert(dashboard.includes(phrase), `dashboard missing ${phrase}`);
 }
 
-assert(dashboard.includes("priorityCount") && dashboard.includes("Today's command priority"), "dashboard must show concise command priority");
+assert(dashboard.includes("buildOperatorPriorityQueue") && dashboard.includes("operatorQueue"), "dashboard must show a ranked operator priority queue");
 assert(
   (dashboard.includes("Collections Due") && dashboard.includes("Accounts module on hold")) ||
     (shell.includes('href: "/sales-collection"') && shell.includes('href: "/targets"')),
   "dashboard must keep accounts compact, or expose the v6.3 accounts routes in sidebar without dashboard clutter"
 );
-assert(dashboard.includes("/settings?cleanup=scan#test-lead-cleanup"), "dashboard must include explicit cleanup scan action without dumping raw test data");
+assert(shell.includes("/settings/production-data-cleanup") && shell.includes("Production Data Cleanup"), "operator navigation must include explicit cleanup access without dumping raw test data");
 assert(!dashboard.includes("raw command") && !dashboard.includes("health JSON") && !dashboard.includes("Daniel Tan") && !dashboard.includes("Apex Clinic"), "dashboard must not show debug or mock client-file clutter");
 assert(!dashboard.includes("Client Files"), "dashboard must not promote fake client files");
 
-for (const group of ["Command", "Sales", "Accounts", "Operations", "System"]) {
+for (const group of ["Today", "Sales Pipeline", "Delivery", "Money", "Admin"]) {
   assert(shell.includes(`title: "${group}"`), `sidebar missing ${group} group`);
 }
-for (const item of ["Mission Queue", "Sales Pipeline", "Sales & Collection", "Targets", "Client Files", "Cleanup", "Health / Diagnostics"]) {
+for (const item of ["WhatsApp Inbox", "Sales Pipeline", "Collection Queue", "Targets", "Client Files", "Production Data Cleanup", "Health Diagnostics"]) {
   assert(shell.includes(item), `sidebar missing grouped item ${item}`);
 }
-assert(shell.includes("disabled: true") && shell.includes("soon"), "sidebar must show unfinished modules as disabled/coming soon");
 assert(shell.includes("pathname.startsWith"), "sidebar must highlight active routes");
 
-for (const phrase of ["Next Action", "Last Message", "Risk", "Missing", "Open", "Take Over", "Pause Bot"]) {
+for (const phrase of ["Next Action", "Last WhatsApp message", "Risk", "missing info", "Open WhatsApp Chat", "Take Over", "Pause Bot"]) {
   assert(leadCard.includes(phrase), `clean lead card missing ${phrase}`);
 }
 assert(!leadCard.includes("Mission Brief") && !leadCard.includes("Info Collected") && !leadCard.includes("Quotation readiness"), "lead cards must be simplified and not show bulky debug-style blocks");
@@ -75,8 +72,8 @@ assert(leadDisplay.includes("formatLeadDisplayName") && leadDisplay.includes("Un
 assert(leadDisplay.includes("marcus|fio|fion"), "display name cleaner must preserve Marcus/Fio/Fion");
 assert(leadRepo.includes("scoreTestLead") && leadRepo.includes("!options?.includeTest"), "test/generated leads must be hidden from active lists by default");
 
-assert(clientFiles.includes("Client file upload is not enabled yet."), "Client Files page must be disabled until real storage exists");
-assert(clientFiles.includes("No fake folders") && clientFiles.includes("No real client files"), "Client Files page must explicitly avoid fake/mock file data");
+assert(clientFiles.includes("Real client storage") && clientFiles.includes("listAllLeadFiles") && clientFiles.includes("listLeadUploadLinks"), "Client Files page must use the real repository-backed storage added after v6.1.4");
+assert(clientFiles.includes("No files received yet") && clientFiles.includes("Create an upload link"), "Client Files page must show a truthful zero state without fake file data");
 assert(!clientFiles.includes("Daniel Tan") && !clientFiles.includes("Apex Clinic") && !clientFiles.includes("Mock folder") && !clientFiles.includes("Create Upload Link Later"), "Client Files page must not show mock clients or fake upload actions");
 
 assert(cleanupPanel.includes("Live Test Lead Cleanup") && cleanupPanel.includes("Soft Delete Test Leads"), "cleanup access must remain in app");

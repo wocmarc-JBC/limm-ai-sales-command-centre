@@ -80,6 +80,8 @@ export const dynamic = "force-dynamic";
 // uiVersion: "v10.4.0"
 // version: "v10_5_0_command_centre_10_quality"
 // uiVersion: "v10.5.0"
+// version: "v10_6_0_operator_advantage"
+// uiVersion: "v10.6.0"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -108,10 +110,10 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v10_5_0_command_centre_10_quality",
+      version: "v10_6_0_operator_advantage",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.5.0",
+      uiVersion: "v10.6.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -170,6 +172,14 @@ export async function GET() {
       inboxRememberedFilterAvailable: true,
       inboxAccessibleDetailsFocusTrapAvailable: true,
       commandCentreGlobalCommandPaletteAvailable: true,
+      operatorPriorityCockpitAvailable: true,
+      operatorContextActionPaletteAvailable: true,
+      operatorConversationBriefAvailable: true,
+      operatorResponseTargetMinutes: 60,
+      operatorSavedInboxViewsAvailable: true,
+      operatorSpamUndoAvailable: true,
+      operatorQueueSyncHealthAvailable: true,
+      operatorInboxInitialBundleBudgetKb: 140,
       commandCentreSkipNavigationAvailable: true,
       commandCentreSemanticHeadingHierarchyAvailable: true,
       commandCoreDeferredMapBundleAvailable: true,
@@ -598,10 +608,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v10_5_0_command_centre_10_quality",
+      version: "v10_6_0_operator_advantage",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.5.0",
+      uiVersion: "v10.6.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -656,6 +666,14 @@ export async function GET() {
       inboxRememberedFilterAvailable: true,
       inboxAccessibleDetailsFocusTrapAvailable: true,
       commandCentreGlobalCommandPaletteAvailable: true,
+      operatorPriorityCockpitAvailable: true,
+      operatorContextActionPaletteAvailable: true,
+      operatorConversationBriefAvailable: true,
+      operatorResponseTargetMinutes: 60,
+      operatorSavedInboxViewsAvailable: true,
+      operatorSpamUndoAvailable: true,
+      operatorQueueSyncHealthAvailable: true,
+      operatorInboxInitialBundleBudgetKb: 140,
       commandCentreSkipNavigationAvailable: true,
       commandCentreSemanticHeadingHierarchyAvailable: true,
       commandCoreDeferredMapBundleAvailable: true,

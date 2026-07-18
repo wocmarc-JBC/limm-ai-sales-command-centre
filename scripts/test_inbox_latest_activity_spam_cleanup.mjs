@@ -34,7 +34,7 @@ function check(name, fn) {
   checks.push(name);
 }
 
-const { compareInboxLatestActivity, sortInboxLatestFirst } = loadTypeScriptCommonJs("lib/inbox-conversation-order.ts");
+const { compareInboxLatestActivity, inboxLeadFallbackActivityAt, sortInboxLatestFirst } = loadTypeScriptCommonJs("lib/inbox-conversation-order.ts");
 
 check("sorts every conversation strictly by latest activity", () => {
   const input = [
@@ -74,6 +74,19 @@ check("sorting does not mutate caller state", () => {
   ];
   sortInboxLatestFirst(input);
   assert.deepEqual(input.map((item) => item.id), ["old", "new"]);
+});
+
+check("CRM-only updates do not overtake the last known conversation activity", () => {
+  assert.equal(inboxLeadFallbackActivityAt({
+    createdAt: "2026-01-01T00:00:00.000Z",
+    lastReplyAt: "2026-02-01T00:00:00.000Z",
+    updatedAt: "2026-07-18T00:00:00.000Z"
+  }), "2026-02-01T00:00:00.000Z");
+  assert.equal(inboxLeadFallbackActivityAt({
+    createdAt: "2026-01-01T00:00:00.000Z",
+    lastReplyAt: null,
+    updatedAt: "2026-03-01T00:00:00.000Z"
+  }), "2026-03-01T00:00:00.000Z");
 });
 
 const inboxPage = read("app/inbox/page.tsx");

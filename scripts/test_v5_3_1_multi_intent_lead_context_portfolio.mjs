@@ -187,7 +187,7 @@ for (const phrase of [
   "humanFollowUpTaskSkippedReason",
   "combinedReplyUsed"
 ]) {
-  assert(decision.includes(phrase), `Black box reply trace missing ${phrase}`);
+  assert(`${decision}\n${coach}`.includes(phrase), `Reply trace contract missing ${phrase}`);
 }
 
 for (const field of [

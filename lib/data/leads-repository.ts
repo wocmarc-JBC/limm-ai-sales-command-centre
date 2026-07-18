@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from "./supabase-server";
 import { buildLeadFacts, leadFactsToLeadPatch } from "@/lib/lead-facts";
 import { buildQuoteApprovalGate, isQuoteSentPatch } from "@/lib/boss-ops";
 import { isProductionHiddenLead } from "@/lib/production-visibility";
+import { calculateLeadLevel, missionForLead } from "@/lib/sales-control";
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
 import {
   classifyConversationIntent,
@@ -885,6 +886,18 @@ export async function softDeleteLead(id: string, reason: string, actorName = "Ma
 
 export async function restoreLead(id: string, actorName = "Marcus") {
   const now = new Date().toISOString();
+  const existing = await getLeadById(id);
+  const restoringLegacySpamClassification = Boolean(
+    existing?.isSpam &&
+    !existing.isTest &&
+    (existing.leadLevel === "Spam/Test" || existing.missionCategory === "Test/Spam Cleanup")
+  );
+  const restoredLead = existing ? {
+    ...existing,
+    deletedAt: null,
+    archivedAt: null,
+    isSpam: false
+  } : null;
   return updateLead(
     id,
     {
@@ -895,12 +908,16 @@ export async function restoreLead(id: string, actorName = "Marcus") {
       archivedBy: "",
       archivedReason: "",
       isSpam: false,
+      ...(restoringLegacySpamClassification && restoredLead ? {
+        leadLevel: calculateLeadLevel(restoredLead),
+        missionCategory: missionForLead(restoredLead)
+      } : {}),
       restoredAt: now,
       restoredBy: actorName
     },
     "lead_restored",
     "Lead restored to active command queues.",
-    { restoredAt: now }
+    { restoredAt: now, restoredFromSpam: Boolean(existing?.isSpam), repairedLegacySpamClassification: restoringLegacySpamClassification }
   );
 }
 
@@ -909,7 +926,7 @@ export async function markLeadAsTest(id: string) {
 }
 
 export async function markLeadAsSpam(id: string) {
-  return updateLead(id, { isSpam: true, leadLevel: "Spam/Test", missionCategory: "Test/Spam Cleanup" }, "lead_marked_spam", "Lead marked as spam and hidden from active queue.");
+  return updateLead(id, { isSpam: true }, "lead_marked_spam", "Lead marked as spam and hidden from active queue.");
 }
 
 export async function markLeadAsDuplicate(id: string, duplicateOf: string) {

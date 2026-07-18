@@ -15,7 +15,7 @@ function assert(condition, message) {
 const mapComponent = read("components/SingaporeMissionMap.tsx");
 const svgMapComponent = read("components/SingaporeSvgMap.tsx");
 const geoMapComponent = read("components/SingaporeGeoMap.tsx");
-const dashboard = read("app/page.tsx");
+const commandCore = read("app/command-core/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const audit = read("scripts/audit_v3_package.mjs");
 const packageJson = read("package.json");
@@ -41,7 +41,7 @@ for (const phrase of [
   "const [zoom, setZoom]",
   "boundedZoom",
   "boundedPan",
-  "onWheel={handleWheel}",
+  'addEventListener("wheel", handleNativeWheel, { passive: false })',
   "onPointerDown={handlePointerDown}",
   "onPointerMove={handlePointerMove}",
   "onPointerUp={handlePointerEnd}",
@@ -83,7 +83,7 @@ assert(mapComponent.includes("Gold = won / hot lead") && mapComponent.includes("
 
 assert(mapComponent.includes("No mapped leads yet"), "Empty state must keep small no-data badge.");
 assert(mapComponent.includes("Add property area or postal code to activate location intelligence."), "Empty state must keep small helper.");
-assert(mapComponent.indexOf("<SingaporeSvgMap />") < mapComponent.indexOf("{!hasMapData ?"), "Map base and HQ must render before no-data helper labels.");
+assert(mapComponent.indexOf("<SingaporeSvgMap />") < mapComponent.indexOf("{mapStatusBadge ?"), "Map base and HQ must render before no-data helper labels.");
 assert(!mapComponent.includes("Singapore Mission Map ready"), "Blocking empty-state title must not return.");
 assert(!mapComponent.includes("left-1/2 top-1/2"), "Centered blocking overlay positioning must not return.");
 assert(!/demo pin|sample pin|fake pin|fake map/i.test(mapComponent), "Map component must not include fake/demo map data.");
@@ -108,7 +108,7 @@ for (const field of [
   assert(health.includes(field), `Health endpoint missing v6.4.3 proof field: ${field}`);
 }
 
-assert(dashboard.includes("SingaporeMissionMap") && dashboard.includes("selectedArea={selectedMapArea}"), "Dashboard must still render the map with selected area support.");
+assert(commandCore.includes("CommandCoreMissionMap") && commandCore.includes("buildSingaporeMissionMapData"), "Command Core must still build and render the interactive map.");
 assert(!mapComponent.includes("projectAddress") && !mapComponent.includes("project_address"), "Dashboard map must not render exact/full addresses.");
 assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(mapComponent + svgMapComponent + geoMapComponent), "No external geocoding or map API key should be added.");
 
@@ -119,13 +119,13 @@ assert(packageJson.includes("test:v6.4.3") && packageJson.includes("verify:all")
 assert(devBrain.includes("scripts/test_v6_4_3_singapore_map_zoom_hq_redesign.mjs"), "Dev Brain QA must run the v6.4.3 test.");
 assert(docs.includes("v6_4_3_singapore_map_zoom_hq_redesign") && docs.includes("LIMM HQ") && docs.includes("Sentosa"), "v6.4.3 docs must explain zoom/HQ/Sentosa redesign.");
 
-assert(clientFilesPage.includes("Coming Soon") || clientFilesPage.includes("coming soon") || clientFilesPage.includes("not enabled"), "Client Files must remain Coming Soon / not live.");
+assert(clientFilesPage.includes("Real client storage") && clientFilesPage.includes("listAllLeadFiles"), "Client Files must use the later repository-backed real storage implementation.");
 assert(whatsappRoute.includes("whatsapp_webhook_received_start") && whatsappRoute.includes("handleWhatsAppInboundMessage"), "WhatsApp webhook must remain intact.");
 for (const phrase of ["messaging_product", "recipient_type", "preview_url", "body"]) {
   assert(whatsappAdapter.includes(phrase), `Known-good WhatsApp payload shape missing ${phrase}`);
 }
 
-const checkedSources = [mapComponent, svgMapComponent, geoMapComponent, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [mapComponent, svgMapComponent, geoMapComponent, commandCore, health, docs, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",

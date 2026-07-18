@@ -25,7 +25,7 @@ const whatsappRoute = read("app/api/whatsapp/webhook/route.ts");
 const salesCollection = read("app/sales-collection/page.tsx");
 
 assert(exists("app/command-core/page.tsx"), "/command-core route must exist.");
-assert(dashboard.includes("LIMM Mission Control") && dashboard.includes("SingaporeMissionMap"), "existing dashboard must remain preserved.");
+assert(dashboard.includes("Boss Daily Brief") && dashboard.includes("buildOperatorPriorityQueue"), "existing ranked operator dashboard must remain preserved.");
 
 for (const phrase of [
   "command-core-resource-bar",
@@ -48,7 +48,7 @@ for (const phrase of [
   "data-map-same-size-as-dashboard=\"true\"",
   "[&_.singapore-map-wide-layout]:w-full",
   "[&_.singapore-tactical-map]:md:min-h-[42rem]",
-  "SingaporeMissionMap"
+  "CommandCoreMissionMap"
 ]) {
   assert(commandCore.includes(phrase), `full-width map hero proof missing ${phrase}`);
 }

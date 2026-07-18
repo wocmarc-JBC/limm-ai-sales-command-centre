@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppIcon } from "@/components/AppIcon";
 import { CommandPalette, type CommandPaletteItem } from "@/components/CommandPalette";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { can } from "@/lib/auth/roles";
 import type { AuthContext } from "@/lib/auth/session";
 import { getSupabaseBrowserClient } from "@/lib/data/supabase-browser";
 import { isReviewRouteEnabled } from "@/lib/review-route";
@@ -67,7 +68,7 @@ const mobileNavItems = [
   { href: "/settings", label: "Admin", icon: "settings" }
 ] as const;
 
-const commandPaletteItems: CommandPaletteItem[] = [
+const baseCommandPaletteItems: CommandPaletteItem[] = [
   ...appNavGroups.flatMap((group) => group.items.map((item) => ({
     href: item.href,
     label: item.label,
@@ -81,6 +82,13 @@ const commandPaletteItems: CommandPaletteItem[] = [
   { href: "/qa-centre", label: "QA Centre", group: "Quality", icon: "audit", keywords: "simulation replay reply testing" },
   { href: "/health", label: "Health Diagnostics", group: "Quality", icon: "reports", keywords: "read only production proof" },
   { href: "/settings/production-data-cleanup", label: "Production Data Cleanup", group: "Admin", icon: "hygiene", keywords: "soft archive protected cleanup" }
+];
+
+const operatorQueueCommandItems: CommandPaletteItem[] = [
+  { href: "/inbox?view=waiting", label: "Work Next Waiting Chat", group: "Inbox Action", icon: "inbox", keywords: "reply needs Marcus next queue" },
+  { href: "/inbox?view=overdue", label: "Recover Response-Overdue Chats", group: "Inbox Action", icon: "followups", keywords: "sla late reply attention" },
+  { href: "/inbox?view=failed", label: "Recover Failed Sends", group: "Inbox Action", icon: "audit", keywords: "delivery retry error" },
+  { href: "/inbox?view=new", label: "Review New Leads", group: "Inbox Action", icon: "leads", keywords: "fresh unread conversations" }
 ];
 
 const reviewNavItems = [
@@ -199,6 +207,19 @@ export function ShellChrome({
     ? `px-2.5 pb-24 ${mobileTopPadding} sm:px-4 lg:ml-56 lg:px-4 lg:pb-6 lg:pt-5 xl:px-5`
     : `mx-auto max-w-[1600px] px-4 pb-24 ${mobileTopPadding} md:px-6 lg:ml-56 lg:pb-10 lg:pt-6 xl:px-8`;
   const closeCommandPalette = useCallback(() => setCommandPaletteOpen(false), []);
+  const commandPaletteItems = useMemo(() => {
+    const contextualItems: CommandPaletteItem[] = isInboxRoute ? [
+      { action: "focus_inbox_reply", label: "Reply to Active Chat", group: "Active Chat", icon: "inbox", keywords: "focus composer write" },
+      { action: "next_waiting_chat", label: "Open Next Waiting Chat", group: "Active Chat", icon: "followups", keywords: "next needs Marcus" },
+      { action: "open_inbox_details", label: "Open Conversation Brief", group: "Active Chat", icon: "review", keywords: "context lead facts" },
+      { action: "review_inbox_automation", label: "Review Bot Control", group: "Active Chat", icon: "settings", keywords: "pause resume takeover" },
+      { action: "open_active_lead", label: "Open Full Active Lead", group: "Active Chat", icon: "leads", keywords: "crm record detail" }
+    ] : [];
+    if (isInboxRoute && auth.profile && can(auth.profile.role, "soft_delete_leads")) {
+      contextualItems.push({ action: "remove_inbox_spam", label: "Review Active Chat as Spam", group: "Active Chat", icon: "hygiene", keywords: "remove recover undo" });
+    }
+    return [...baseCommandPaletteItems, ...operatorQueueCommandItems, ...contextualItems];
+  }, [auth.profile, isInboxRoute]);
 
   useEffect(() => {
     if (auth.mode === "Mock Mode") {
@@ -239,7 +260,7 @@ export function ShellChrome({
       </a>
       <aside className="thin-scrollbar fixed inset-x-0 top-0 z-40 border-b border-command-line bg-command-bg/95 px-4 py-2 shadow-command backdrop-blur-xl lg:bottom-0 lg:left-0 lg:right-auto lg:h-screen lg:w-56 lg:overflow-y-auto lg:overscroll-contain lg:border-b-0 lg:border-r lg:px-3 lg:py-4">
         {qaE2eMode ? (
-          <div className="mb-2 rounded-lg border border-command-amber/50 bg-command-amber/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-command-amber lg:mb-3" data-testid="qa-e2e-banner">
+          <div className="mb-2 break-all rounded-lg border border-command-amber/50 bg-command-amber/10 px-3 py-1.5 text-[10px] font-semibold uppercase leading-4 tracking-[0.13em] text-command-amber lg:mb-3" data-testid="qa-e2e-banner">
             QA / staging dry-run {qaRunId ? `- ${qaRunId}` : ""}
           </div>
         ) : null}

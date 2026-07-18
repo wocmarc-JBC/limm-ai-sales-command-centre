@@ -5,7 +5,7 @@ import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
-import { compareInboxLatestActivity } from "@/lib/inbox-conversation-order";
+import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { buildLeadFacts } from "@/lib/lead-facts";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
@@ -20,7 +20,7 @@ function hasWhatsAppContactOrMessages(lead: Lead, messages: LeadMessage[]) {
 }
 
 function leadLastActivityAt(lead: Lead, messages: LeadMessage[]) {
-  return latestWhatsAppMessage(messages)?.createdAt ?? lead.updatedAt ?? lead.createdAt;
+  return latestWhatsAppMessage(messages)?.createdAt ?? inboxLeadFallbackActivityAt(lead);
 }
 
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
@@ -42,7 +42,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
     propertyType: facts.propertyType.value || lead.propertyType,
     scopeSummary: facts.scopeSummary.value || lead.scopeSummary,
     lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
-    lastActivityAt: latestMessage?.createdAt ?? lead.updatedAt ?? lead.createdAt,
+    lastActivityAt: latestMessage?.createdAt ?? inboxLeadFallbackActivityAt(lead),
     primaryStatus: queue.primaryStatus,
     unreadCount: queue.unreadCount,
     failedSend: queue.failedSend,

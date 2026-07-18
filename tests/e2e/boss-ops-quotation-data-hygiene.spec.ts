@@ -126,7 +126,7 @@ test.describe("boss ops quotation workflow and data hygiene QA", () => {
     fs.mkdirSync(artifactDir, { recursive: true });
     const jsonPath = path.join(artifactDir, "e2e-test-report.json");
     const mdPath = path.join(artifactDir, "e2e-test-report.md");
-    fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), "utf8");
+    fs.writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     fs.writeFileSync(
       mdPath,
       [
@@ -162,7 +162,7 @@ test.describe("boss ops quotation workflow and data hygiene QA", () => {
         ``,
         `## Known Limitations`,
         ...report.knownTodos.map((item) => `- ${item}`)
-      ].join("\n"),
+      ].join("\n") + "\n",
       "utf8"
     );
   });
@@ -309,7 +309,9 @@ test.describe("boss ops quotation workflow and data hygiene QA", () => {
     await expect(condoCard).toContainText("Condo/MCST approval missing");
     await expect(condoCard).toContainText("Protection not arranged");
     await page.getByTestId("confirm-mcst_approval_confirmed-project-qa-lead-condo-mcst").click();
+    await expect(condoCard).not.toContainText("Condo/MCST approval missing");
     await page.getByTestId("confirm-protection_arranged-project-qa-lead-condo-mcst").click();
+    await expect(condoCard).not.toContainText("Protection not arranged");
     report.buttonsTested.push("Confirm MCST approval", "Confirm protection arranged");
     await page.goto("/delivery", { waitUntil: "domcontentloaded" });
     const updatedCondoCard = page.locator("article").filter({ hasText: "QA_TEST_CONDO_MCST" }).first();

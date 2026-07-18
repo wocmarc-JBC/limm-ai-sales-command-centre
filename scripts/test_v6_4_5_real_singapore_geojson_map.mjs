@@ -52,7 +52,7 @@ const health = read("app/api/whatsapp/health/route.ts");
 const packageJson = read("package.json");
 const devBrain = read("scripts/dev_brain_qa.mjs");
 const audit = read("scripts/audit_v3_package.mjs");
-const dashboard = read("app/page.tsx");
+const commandCore = read("app/command-core/page.tsx");
 const clientFilesPage = read("app/client-files/page.tsx");
 const whatsappRoute = read("app/api/whatsapp/webhook/route.ts");
 const whatsappAdapter = read("lib/adapters/whatsapp-adapter.ts");
@@ -106,11 +106,11 @@ assert(!missionMap.includes("Singapore Mission Map ready"), "Blocking map overla
 assert(!missionMap.includes("left-1/2 top-1/2"), "Large centered blocking overlay must not return.");
 assert(missionMap.includes("data-testid=\"map-zoom-in\"") && missionMap.includes("data-testid=\"map-zoom-reset\""), "Zoom/reset controls must remain.");
 assert(missionMap.includes("Gold = won / hot lead") && missionMap.includes("Amber = follow-up / appointment"), "Legend must remain.");
-assert(dashboard.includes("SingaporeMissionMap") && dashboard.includes("selectedArea={selectedMapArea}"), "Dashboard must still render selected-area map support.");
+assert(commandCore.includes("CommandCoreMissionMap") && commandCore.includes("buildSingaporeMissionMapData"), "Command Core must still build and render the interactive map.");
 
 assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(svgMap + geoMap + missionMap + geometry), "No external map/geocoding API should be added.");
 assert(!missionMap.includes("projectAddress") && !missionMap.includes("project_address"), "Dashboard map must remain privacy-safe and avoid full addresses.");
-assert(clientFilesPage.includes("Coming Soon") || clientFilesPage.includes("coming soon") || clientFilesPage.includes("not enabled"), "Client Files must remain Coming Soon / not live.");
+assert(clientFilesPage.includes("Real client storage") && clientFilesPage.includes("listAllLeadFiles"), "Client Files must use the later repository-backed real storage implementation.");
 
 for (const field of [
   'version: "v6_4_6_official_singapore_planning_area_map"',
@@ -148,7 +148,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
 }
 
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
-const scannedSources = [assetPath, svgMap, geoMap, geometry, missionMap, dashboard, health, whatsappRoute, whatsappAdapter].join("\n");
+const scannedSources = [assetPath, svgMap, geoMap, geometry, missionMap, commandCore, health, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",

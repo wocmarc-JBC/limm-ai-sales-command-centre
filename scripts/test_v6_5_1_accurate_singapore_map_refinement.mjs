@@ -33,7 +33,7 @@ function collectPositions(value, positions = []) {
   return positions;
 }
 
-function project({ lat, lng }, bounds, viewBox = { width: 900, height: 520, padding: 34 }) {
+function project({ lat, lng }, bounds, viewBox = { width: 900, height: 560, padding: 28 }) {
   const geoWidth = bounds.east - bounds.west;
   const geoHeight = bounds.north - bounds.south;
   const scale = Math.min((viewBox.width - viewBox.padding * 2) / geoWidth, (viewBox.height - viewBox.padding * 2) / geoHeight);
@@ -62,7 +62,7 @@ assert(geoMap.includes("data-map-source=\"/maps/singapore.geojson\""), "Map must
 assert(geoMap.includes("real-singapore-outline"), "Real Singapore outline class must exist.");
 assert(!geoMap.includes("M58 313 L78 286"), "Old hand-tuned mainland path must not return.");
 assert(geometry.includes("buildSingaporeGeoPaths"), "New map path must be generated from GeoJSON geometry.");
-assert(geoMap.includes("data-testid=\"sentosa-outline\""), "Sentosa outline must be testable.");
+assert(geoMap.includes("data-official-planning-area-map") && geoMap.includes("singapore-geojson-feature"), "Official planning-area geometry must remain testable.");
 assert(!/ellipse|rounded-\[48%_52%_45%_55%]/i.test(svgMap + geoMap + missionMap), "Map must not use oval/blob placeholders.");
 
 const positions = collectPositions(asset.features.map((feature) => feature.geometry.coordinates));
@@ -72,26 +72,19 @@ const bounds = {
   south: Math.min(...positions.map(([, lat]) => lat)),
   north: Math.max(...positions.map(([, lat]) => lat))
 };
-const sentosa = asset.features.find((feature) => /Sentosa/i.test(feature.properties?.name ?? ""));
-assert(sentosa, "Sentosa feature must exist in the real GeoJSON asset.");
-const sentosaPositions = collectPositions(sentosa.geometry.coordinates);
-const sentosaBounds = {
-  west: Math.min(...sentosaPositions.map(([lng]) => lng)),
-  east: Math.max(...sentosaPositions.map(([lng]) => lng)),
-  south: Math.min(...sentosaPositions.map(([, lat]) => lat)),
-  north: Math.max(...sentosaPositions.map(([, lat]) => lat))
-};
-const sentosaWidth = sentosaBounds.east - sentosaBounds.west;
-const sentosaHeight = sentosaBounds.north - sentosaBounds.south;
-assert(sentosaWidth > sentosaHeight * 1.5, "Sentosa should be a slim island shape, not a round oval.");
-assert(sentosaWidth < (bounds.east - bounds.west) * 0.14, "Sentosa is oversized against the main Singapore map.");
+const standaloneSentosa = asset.features.find((feature) => /^Sentosa$/i.test(feature.properties?.name ?? ""));
+assert(!standaloneSentosa, "Official planning-area data must not be supplemented with a fake standalone Sentosa feature.");
+const southernIslands = asset.features.find((feature) => /^Southern Islands$/i.test(feature.properties?.name ?? ""));
+assert(southernIslands, "Official planning-area data must preserve the Southern Islands feature that contains Sentosa.");
+const southernIslandPositions = collectPositions(southernIslands.geometry.coordinates);
+assert(southernIslandPositions.length > 100, "Southern Islands must retain detailed official geometry instead of an oval placeholder.");
 
 const hqLat = numberFrom(/lat:\s*([0-9.]+)/, geometry, "HQ lat");
 const hqLng = numberFrom(/lng:\s*([0-9.]+)/, geometry, "HQ lng");
 const hqPoint = project({ lat: hqLat, lng: hqLng }, bounds);
-assert(hqPoint.x >= 420 && hqPoint.x <= 560, `HQ marker should sit around central Singapore horizontally, got ${hqPoint.x.toFixed(2)}.`);
-assert(hqPoint.y >= 315 && hqPoint.y <= 395, `HQ marker should sit around Orchard/Dhoby Ghaut, not below island, got ${hqPoint.y.toFixed(2)}.`);
-assert(hqPoint.y < 405, "HQ marker must not project below the central mainland.");
+assert(hqPoint.x >= 395 && hqPoint.x <= 475, `HQ marker should sit around central Singapore horizontally, got ${hqPoint.x.toFixed(2)}.`);
+assert(hqPoint.y >= 270 && hqPoint.y <= 330, `HQ marker should sit around Orchard/Dhoby Ghaut, not below island, got ${hqPoint.y.toFixed(2)}.`);
+assert(hqPoint.y < 340, "HQ marker must not project below the central mainland.");
 
 for (const label of ["Orchard", "Bukit Timah", "Serangoon", "Tampines", "East Coast", "Jurong", "Woodlands", "CBD"]) {
   assert(geometry.includes(label), `Missing faint area label: ${label}`);
@@ -109,7 +102,9 @@ for (const field of [
   'salesBrainVersion: "v6.5.1"',
   "realSingaporeOutlineAvailable: true",
   "hqMarkerCentralSingaporeCalibrated: true",
-  "sentosaScaledShapeRefined: true",
+  "officialSingaporePlanningAreaMapAvailable",
+  "fakeSentosaRemoved: true",
+  "sentosaScaledShapeRefined: false",
   "mapAreaLabelsAvailable: true",
   "largeMapHelperBoxRemoved: true",
   "privacySafeMapDisplayAvailable",

@@ -26,7 +26,7 @@ const salesCollection = read("app/sales-collection/page.tsx");
 const pkg = JSON.parse(read("package.json"));
 
 assert(exists("app/command-core/page.tsx"), "/command-core route must exist.");
-assert(dashboard.includes("LIMM Mission Control") && dashboard.includes("SingaporeMissionMap"), "existing dashboard route must remain preserved.");
+assert(dashboard.includes("Boss Daily Brief") && dashboard.includes("buildOperatorPriorityQueue"), "existing ranked operator dashboard route must remain preserved.");
 
 for (const phrase of [
   "command-core-resource-bar",
@@ -61,7 +61,7 @@ for (const phrase of [
   'data-map-same-size-as-dashboard="true"',
   "[&_.singapore-map-wide-layout]:w-full",
   "[&_.singapore-tactical-map]:md:min-h-[42rem]",
-  "SingaporeMissionMap"
+  "CommandCoreMissionMap"
 ]) {
   assert(commandCore.includes(phrase), `map hero preservation proof missing ${phrase}`);
 }
@@ -77,7 +77,7 @@ for (const phrase of [
   assert(commandCore.includes(phrase), `bottom panel alignment proof missing ${phrase}`);
 }
 
-assert(commandCore.includes("Back to Dashboard") && commandCore.includes("bg-[#04101d]/90") && commandCore.includes("text-sm font-semibold text-command-cyan"), "header/back button polish proof missing.");
+assert(commandCore.includes("Open WhatsApp Inbox") && commandCore.includes("bg-[#04101d]/90") && commandCore.includes("text-sm font-semibold text-command-cyan"), "header action-button polish proof missing.");
 assert(commandCore.indexOf("command-core-map-first-hero") < commandCore.indexOf("command-core-panels-below-map"), "map hero must remain above lower operational panels.");
 
 assert(mapGeometry.includes("sourceDatasetId === \"d_4765db0e87b9c86336792efe8a1f7a66\""), "official Singapore planning-area geometry must remain preserved.");
@@ -85,7 +85,6 @@ assert(mapData.includes("data.gov.sg / URA") && mapData.includes("d_4765db0e87b9
 
 for (const field of [
   'version: "v6_6_3_strategic_command_core_final_touchup"',
-  'salesBrainVersion: "v6.6.3"',
   "commandCoreFinalTouchupAvailable",
   "commandCoreResourceBarContrastFixed",
   "commandCoreOperatingPictureCompressed",

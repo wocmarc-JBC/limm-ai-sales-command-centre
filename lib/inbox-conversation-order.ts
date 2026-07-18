@@ -3,6 +3,14 @@ export type InboxActivityItem = {
   lastActivityAt: string;
 };
 
+export function inboxLeadFallbackActivityAt(lead: {
+  createdAt: string;
+  updatedAt?: string;
+  lastReplyAt?: string | null;
+}) {
+  return lead.lastReplyAt || lead.updatedAt || lead.createdAt;
+}
+
 function activityTime(value: string) {
   const parsed = new Date(value).getTime();
   return Number.isNaN(parsed) ? 0 : parsed;

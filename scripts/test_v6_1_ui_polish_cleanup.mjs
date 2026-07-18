@@ -229,20 +229,20 @@ for (const field of [
   assert(health.includes(field), `health endpoint missing ${field}`);
 }
 
-for (const color of ["#05070A", "#090D12", "#101820", "#D6A84F", "#F5C542", "#F8F3E7", "#22D3EE"]) {
+for (const color of ["#05070A", "#090E14", "#0E151D", "#DDB35D", "#F1C968", "#F7F2E8", "#55C7D9"]) {
   assert(tailwind.includes(color), `premium palette missing ${color}`);
 }
 assert(globals.includes("font-size: 16px"), "base font size must be readable at 16px");
 assert(globals.includes(".premium-card") && globals.includes(".mission-panel") && globals.includes(".radar-ring"), "premium mission-control styles must exist");
-assert(dashboard.includes("LIMM Mission Control"), "dashboard must use Mission Control header");
-assert(dashboard.includes("What must Marcus do now?"), "dashboard must answer boss-first action question");
-assert(dashboard.includes("Deep QA and diagnostics stay in Settings and Reports"), "main dashboard must hide system/debug clutter");
+assert(dashboard.includes("Boss Daily Brief"), "dashboard must use the current boss brief header");
+assert(dashboard.includes("Do this next"), "dashboard must answer the boss-first action question");
+assert(dashboard.includes("No message is sent and no client promise is made here"), "main dashboard must keep recommendations operator-safe");
 assert(!dashboard.includes("System Health"), "main dashboard must not show system health metric");
 assert(!dashboard.includes("Mission Queue"), "main dashboard must not show dense mission queue grid");
-assert(dashboard.includes("System Core") && dashboard.includes("Quick Actions"), "dashboard must keep system core compact and action-first");
+assert(dashboard.includes("Must Handle Now") && dashboard.includes("Sales To Push"), "dashboard must keep operational priorities compact and action-first");
 assert(leadInbox.includes("show_test") && leadInbox.includes("Show Test Leads") && leadInbox.includes("Archived / Deleted") && leadInbox.includes("Show Spam") && leadInbox.includes("Show All"), "lead inbox must include active/test/archive/spam/all filters");
 assert(leadCard.includes("Open") && leadCard.includes("Pause Bot") && leadCard.includes("Take Over"), "lead cards must include clearer quick actions");
-assert(leadCard.includes("text-xl") && leadCard.includes("text-base"), "lead cards should use larger readable text");
+assert(leadCard.includes("text-2xl") && leadCard.includes("text-base"), "lead cards should use larger readable text");
 assert(leadCard.includes("formatLeadDisplayName"), "lead cards must clean generated/test display names");
 assert(leadDisplay.includes("formatLeadDisplayName") && leadDisplay.includes("Unknown WhatsApp Lead") && leadDisplay.includes("maskPhone") && leadDisplay.includes("containsProtectedName"), "lead display cleanup helper missing expected generated-name handling");
 assert(leadDetail.includes('id="bot-controls"'), "lead detail must anchor bot controls from cards");

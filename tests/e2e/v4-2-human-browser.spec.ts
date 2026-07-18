@@ -112,7 +112,9 @@ async function assertNoHorizontalScroll(page: Page) {
 async function screenshot(page: Page, projectName: string, name: string) {
   ensureDirs();
   const file = path.join(screenshotDir, `${projectName}-${name}.png`);
-  await page.screenshot({ path: file, fullPage: true });
+  // Keep route evidence deterministic. Long responsive pages can produce very large
+  // bitmaps and make Chromium wait on off-screen font/layout work indefinitely.
+  await page.screenshot({ path: file, fullPage: false });
   return path.relative(process.cwd(), file);
 }
 

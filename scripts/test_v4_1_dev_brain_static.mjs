@@ -90,11 +90,19 @@ const browserSpec = read("tests/e2e/v4-2-human-browser.spec.ts");
 for (const phrase of ["v4_2_browser_human_test", "route human check", "review route detailed", "authenticated boss flow", "desktop", "tablet", "mobile"]) {
   assert(browserSpec.includes(phrase), `v4.2 browser human spec missing ${phrase}`);
 }
+assert(browserSpec.includes("fullPage: false"), "v4.2 route screenshots must stay viewport-sized so responsive evidence remains deterministic.");
 
 const browserRunner = read("scripts/run_playwright_if_available.mjs");
 for (const phrase of ["generate_v4_2_browser_report.mjs", "V4_2_QA_RUN_ID", "V4_2_SCREENSHOT_DIR", "process.execPath", "npm.cmd install", "npx.cmd playwright install chromium"]) {
   assert(browserRunner.includes(phrase), `v4.2 browser runner missing ${phrase}`);
 }
+assert(browserRunner.includes('"-H", "127.0.0.1"'), "v4.2 browser runner must bind Next.js explicitly for restricted CI network-interface environments.");
+assert(browserRunner.includes('process.env.QA_E2E_MODE ?? "1"'), "v4.2 browser runner must default to isolated QA mode so Mock Mode route checks match the live application behavior.");
+assert(browserRunner.includes('[nextCli, "build"]') && browserRunner.includes('[nextCli, "start"'), "v4.2 browser QA must verify the production Next.js bundle instead of relying on the long-running development compiler.");
+const playwrightConfig = read("playwright.config.ts");
+assert(playwrightConfig.includes("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH") && playwrightConfig.includes('existsSync("/tmp/chromium")'), "Playwright config must support the managed Chromium executable without relying on a locked home cache.");
+assert(playwrightConfig.includes("-H 127.0.0.1"), "Playwright-managed Next.js server must bind explicitly for restricted CI environments.");
+assert(playwrightConfig.includes('name: "boss-ops-chromium"') && playwrightConfig.includes("testIgnore: /boss-ops-quotation-data-hygiene"), "Stateful boss-ops browser QA must run in its own final project so route smoke tests keep a clean mock server.");
 
 const mockData = read("lib/mock-data.ts");
 assert(/division:\s*"LIMM Works"[\s\S]{0,260}propertyType:\s*"Old inter-terrace"/.test(mockData), "Landed kitchen extension scenario missing or misclassified.");

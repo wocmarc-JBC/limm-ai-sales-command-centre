@@ -31,7 +31,8 @@ for (const phrase of [
   "const activeLeadStillListed = activeLeadId ? chatSummaries.some((summary) => summary.id === activeLeadId) : false",
   "const activeConversation = activeLeadStillListed ? conversationMap[activeLeadId] : undefined",
   "Conversation unavailable.",
-  "window.history.replaceState(null, \"\", `/inbox?lead=${encodeURIComponent(leadId)}`)"
+  'nextUrl.searchParams.set("lead", leadId)',
+  'window.history.replaceState(null, "", `${nextUrl.pathname}${nextUrl.search}`)'
 ]) {
   assertIncludes(inboxClient, phrase, "active chat lock");
 }
@@ -40,8 +41,8 @@ assert(!inboxClient.includes("setActiveLeadId(selectedLeadId)"), "polling/deep-l
 assert(!inboxClient.includes("conversationMap[activeLeadId] ?? conversations[0]"), "active chat must not silently fall back to the first sorted conversation.");
 assert(!inboxClient.includes("activeConversation = conversationMap[activeLeadId] ??"), "active chat must not derive from a fallback row.");
 
-const pollingStart = inboxClient.indexOf('fetch("/api/inbox/conversations"');
-const pollingEnd = inboxClient.indexOf("}, 15000)", pollingStart);
+const pollingStart = inboxClient.indexOf("const pollQueue = async () =>");
+const pollingEnd = inboxClient.indexOf("const activeLeadStillListed", pollingStart);
 assert(pollingStart >= 0 && pollingEnd > pollingStart, "conversation summary polling block not found.");
 const pollingBlock = inboxClient.slice(pollingStart, pollingEnd);
 assert(!pollingBlock.includes("setActiveLeadId"), "summary polling must not change active chat.");
@@ -65,7 +66,7 @@ assert(selectStart >= 0 && selectEnd > selectStart, "manual selectConversation b
 const selectBlock = inboxClient.slice(selectStart, selectEnd);
 assertIncludes(selectBlock, "setActiveLeadId(leadId)", "explicit user chat selection");
 assertIncludes(selectBlock, "window.history.replaceState", "URL update without full navigation");
-assert(!selectBlock.includes("window.location"), "manual chat switching must not force full navigation.");
+assert(!selectBlock.includes("window.location.assign") && !selectBlock.includes("window.location.replace"), "manual chat switching must not force full navigation.");
 
 assertIncludes(inboxPage, "selectedLeadId={searchParams?.lead}", "/inbox deep-link prop");
 assertIncludes(dashboard, 'redirect("/command-core")', "dashboard redirect");

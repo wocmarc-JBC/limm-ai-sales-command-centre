@@ -16,7 +16,7 @@ const missionMapComponent = read("components/SingaporeMissionMap.tsx");
 const svgMapComponent = read("components/SingaporeSvgMap.tsx");
 const geoMapComponent = read("components/SingaporeGeoMap.tsx");
 const geometry = read("lib/singapore-map-geometry.ts");
-const dashboard = read("app/page.tsx");
+const commandCore = read("app/command-core/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const audit = read("scripts/audit_v3_package.mjs");
 const packageJson = read("package.json");
@@ -51,7 +51,7 @@ for (const phrase of [
   "const [pan, setPan]",
   "boundedZoom",
   "boundedPan",
-  "onWheel={handleWheel}",
+  'addEventListener("wheel", handleNativeWheel, { passive: false })',
   "onPointerDown={handlePointerDown}",
   "onPointerMove={handlePointerMove}",
   "data-testid=\"map-zoom-in\"",
@@ -65,7 +65,7 @@ for (const phrase of [
 assert(missionMapComponent.includes("No mapped leads yet"), "Small no-data badge must exist.");
 assert(missionMapComponent.includes("Add property area or postal code to activate location intelligence."), "Small helper must exist.");
 assert(!missionMapComponent.includes("max-w-[17rem] rounded-xl border border-command-cyan/20"), "Large helper box must not return.");
-assert(missionMapComponent.indexOf("<SingaporeSvgMap />") < missionMapComponent.indexOf("{!hasMapData ?"), "Map base must render before no-data helper labels.");
+assert(missionMapComponent.indexOf("<SingaporeSvgMap />") < missionMapComponent.indexOf("{mapStatusBadge ?"), "Map base must render before no-data helper labels.");
 assert(!missionMapComponent.includes("Singapore Mission Map ready"), "Blocking empty-state title must not return.");
 assert(!missionMapComponent.includes("left-1/2 top-1/2"), "Large centered blocking overlay must not return.");
 
@@ -76,11 +76,11 @@ assert(missionMapComponent.includes("Gold = won / hot lead"), "Gold legend label
 assert(missionMapComponent.includes("Amber = follow-up / appointment"), "Amber legend label must exist.");
 assert(missionMapComponent.indexOf("#FFD54A") !== missionMapComponent.indexOf("#FF8A00"), "Gold and amber colours must be distinct.");
 
-assert(missionMapComponent.includes("data.areaSummaries.map"), "Area heatmap summaries must remain.");
+assert(missionMapComponent.includes("displayedAreaSummaries.map"), "Area heatmap summaries must remain.");
 assert(missionMapComponent.includes("data.pins.map"), "Clickable pins must remain.");
 assert(missionMapComponent.includes("href={pin.href || \"#\"}"), "Pins must remain clickable.");
-assert(missionMapComponent.includes("areaSelectHref(activeFilter, area.area)"), "Area zones must remain clickable/selectable.");
-assert(dashboard.includes("SingaporeMissionMap") && dashboard.includes("selectedArea={selectedMapArea}"), "Dashboard must still render selected-area map support.");
+assert(missionMapComponent.includes("selectArea(area.area)") && missionMapComponent.includes("onClick={() => selectArea"), "Area zones must remain clickable/selectable.");
+assert(commandCore.includes("CommandCoreMissionMap") && commandCore.includes("buildSingaporeMissionMapData"), "Command Core must still build and render the interactive map.");
 
 assert(!missionMapComponent.includes("projectAddress") && !missionMapComponent.includes("project_address"), "Dashboard map must not render full project/client address fields.");
 assert(!/fetch\(|googleapis|maps\.google|mapbox|geocode|GOOGLE_MAPS|MAPBOX|api[_-]?key/i.test(missionMapComponent + svgMapComponent + geoMapComponent + geometry), "No external geocoding or map API key should be added.");
@@ -123,7 +123,7 @@ for (const phrase of ["messaging_product", "recipient_type", "preview_url", "bod
 }
 
 const wrongWhatsAppPhoneNumberId = "115395" + "2887800145";
-const checkedSources = [missionMapComponent, svgMapComponent, geoMapComponent, geometry, dashboard, health, docs, whatsappRoute, whatsappAdapter].join("\n");
+const checkedSources = [missionMapComponent, svgMapComponent, geoMapComponent, geometry, commandCore, health, docs, whatsappRoute, whatsappAdapter].join("\n");
 for (const forbidden of [
   wrongWhatsAppPhoneNumberId,
   "free consultation",

@@ -32,7 +32,7 @@ for (const route of routes) {
     });
     page.on("pageerror", (error) => errors.push(error.message));
 
-    const response = await page.goto(route.path);
+    const response = await page.goto(route.path, { waitUntil: "domcontentloaded" });
     expect(response?.status()).toBeLessThan(500);
     if (qaE2EMode && route.path !== "/login") {
       await expect(page.locator("body")).not.toContainText("Login required");
@@ -52,7 +52,7 @@ test("route coverage: /review-chatgpt-ui production lockdown", async ({ page }) 
   });
   page.on("pageerror", (error) => errors.push(error.message));
 
-  const response = await page.goto("/review-chatgpt-ui");
+  const response = await page.goto("/review-chatgpt-ui", { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBeLessThan(500);
   await expect(page.locator("body")).not.toContainText(/free consultation|quote range|rough estimate|price estimate/i);
 

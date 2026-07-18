@@ -29,7 +29,9 @@ const detailApi = read("app/api/inbox/conversations/[leadId]/route.ts");
 const summariesApi = read("app/api/inbox/conversations/route.ts");
 
 assertIncludes(inboxPage, "WhatsApp Inbox", "/inbox page route");
-assertIncludes(inboxClient, "Live · newest activity first", "deduplicated main inbox header");
+for (const phrase of ["formatQueueSyncLabel", "Server snapshot · newest activity first", "Live · synced", "Reconnecting · queue remains usable"]) {
+  assertIncludes(inboxClient, phrase, "truthful queue health header");
+}
 
 for (const phrase of [
   "setActiveLeadId(leadId)",

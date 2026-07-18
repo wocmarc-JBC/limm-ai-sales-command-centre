@@ -20,7 +20,7 @@ const location = read("lib/singapore-location.ts");
 const missionMap = read("lib/mission-map.ts");
 const mapComponent = read("components/SingaporeMissionMap.tsx");
 const svgMapComponent = read("components/SingaporeSvgMap.tsx");
-const dashboard = read("app/page.tsx");
+const commandCore = read("app/command-core/page.tsx");
 const leadDetail = read("app/leads/[id]/page.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const types = read("lib/types.ts");
@@ -103,8 +103,8 @@ assert(!mapComponent.includes("projectAddress"), "Dashboard map component must n
 assert(!mapComponent.includes("project_address"), "Dashboard map component must not render raw project_address values.");
 assert(leadDetail.includes("Location Intelligence"), "Protected lead detail should expose location intelligence when stored.");
 assert(leadDetail.includes("Stored address / area note"), "Full stored address/area note must stay on protected lead detail, not dashboard map.");
-assert(dashboard.includes("SingaporeMissionMap") && dashboard.includes("buildSingaporeMissionMapData"), "Dashboard must render the Singapore Mission Map component.");
-assert(dashboard.includes("listProjectAccounts") && dashboard.includes("listPaymentRecords"), "Dashboard map must include v6.3 won/collection layers.");
+assert(commandCore.includes("CommandCoreMissionMap") && commandCore.includes("buildSingaporeMissionMapData"), "Command Core must render the Singapore Mission Map component.");
+assert(commandCore.includes("getSalesCollectionData") && commandCore.includes("projects") && commandCore.includes("payments"), "Command Core map must include the repository-backed won/collection layers.");
 
 for (const field of [
   "propertyArea",
@@ -162,7 +162,7 @@ const scannedSources = [
   location,
   missionMap,
   mapComponent,
-  dashboard,
+  commandCore,
   leadDetail,
   health,
   migration,

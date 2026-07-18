@@ -1636,6 +1636,49 @@ export async function markInboxConversationsSpamAction(leadIdsInput: string[]) {
   } as const;
 }
 
+export async function restoreInboxConversationsAction(leadIdsInput: string[]) {
+  const leadIds = Array.from(new Set(
+    (Array.isArray(leadIdsInput) ? leadIdsInput : [])
+      .filter((leadId): leadId is string => typeof leadId === "string")
+      .map((leadId) => leadId.trim())
+      .filter(Boolean)
+  )).slice(0, 30);
+  if (!leadIds.length) {
+    return { ok: false, code: "missing_lead_ids", restoredLeadIds: [], failedLeadIds: [] } as const;
+  }
+
+  const permission = await requirePermission("restore_leads");
+  if (!permission.ok) {
+    return { ok: false, code: "permission_denied", restoredLeadIds: [], failedLeadIds: leadIds } as const;
+  }
+
+  const restoredLeadIds: string[] = [];
+  const failedLeadIds: string[] = [];
+  const actor = permission.auth.profile?.fullName ?? "Marcus";
+  for (let offset = 0; offset < leadIds.length; offset += 5) {
+    const batch = leadIds.slice(offset, offset + 5);
+    const results = await Promise.all(batch.map(async (leadId) => {
+      try {
+        const restored = await restoreLead(leadId, actor);
+        return { leadId, restored: Boolean(restored) };
+      } catch {
+        return { leadId, restored: false };
+      }
+    }));
+    for (const result of results) {
+      (result.restored ? restoredLeadIds : failedLeadIds).push(result.leadId);
+    }
+  }
+  if (restoredLeadIds.length) revalidateBulkLeadPaths(restoredLeadIds);
+
+  return {
+    ok: failedLeadIds.length === 0,
+    code: failedLeadIds.length ? "partial_failure" : "restored",
+    restoredLeadIds,
+    failedLeadIds
+  } as const;
+}
+
 export async function markLeadSpamAction(formData: FormData) {
   const permission = await requirePermission("soft_delete_leads");
   if (!permission.ok) return;
