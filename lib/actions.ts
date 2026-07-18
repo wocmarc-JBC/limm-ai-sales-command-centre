@@ -1568,6 +1568,20 @@ export async function markLeadTestAction(formData: FormData) {
   revalidateLeadPaths(leadId);
 }
 
+export async function markInboxConversationSpamAction(leadIdInput: string) {
+  const leadId = leadIdInput.trim();
+  if (!leadId) return { ok: false, code: "missing_lead_id" } as const;
+
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) return { ok: false, code: "permission_denied" } as const;
+
+  const lead = await getLeadById(leadId);
+  if (!lead) return { ok: false, code: "lead_not_found" } as const;
+  if (!lead.isSpam) await markLeadAsSpam(leadId);
+  revalidateLeadPaths(leadId);
+  return { ok: true, leadId } as const;
+}
+
 export async function markLeadSpamAction(formData: FormData) {
   const permission = await requirePermission("soft_delete_leads");
   if (!permission.ok) return;

@@ -29,7 +29,7 @@ const detailApi = read("app/api/inbox/conversations/[leadId]/route.ts");
 const summariesApi = read("app/api/inbox/conversations/route.ts");
 
 assertIncludes(inboxPage, "LIMM WhatsApp Inbox", "/inbox page route");
-assertIncludes(inboxClient, "LIMM WhatsApp Inbox", "main inbox header");
+assertIncludes(inboxClient, "Live conversation queue", "deduplicated main inbox header");
 
 for (const phrase of [
   "setActiveLeadId(leadId)",
@@ -68,7 +68,7 @@ assert(!sendApi.includes("redirect("), "JSON inbox send API must not redirect.")
 assert(!sendApi.includes("revalidatePath"), "JSON inbox send API must not revalidate the whole route.");
 
 for (const phrase of [
-  "listLeads({ includeTest: true })",
+  "listLeads({ includeTest: showTestDemoRecords, includeNonSales: true })",
   "listLatestLeadMessagesForInbox(leadIds, 3)",
   "listLeadMessagesPage(selectedLead.id, 30)",
   "hasWhatsAppContactOrMessages",

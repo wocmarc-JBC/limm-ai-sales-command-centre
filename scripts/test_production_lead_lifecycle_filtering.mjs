@@ -55,12 +55,14 @@ for (const name of ["marcus", "fio", "lee", "semon"]) {
 
 for (const [source, label] of [
   [inboxPage, "/inbox page"],
-  [conversationsApi, "/api/inbox/conversations"],
-  [commandCore, "/command-core"]
+  [conversationsApi, "/api/inbox/conversations"]
 ]) {
-  assertIncludes(source, "listLeads({ includeTest: true })", `${label} source includes legacy-flagged records before lifecycle filtering`);
+  assertIncludes(source, "listLeads({ includeTest: showTestDemoRecords, includeNonSales: true })", `${label} uses the admin visibility preference before lifecycle filtering`);
   assertIncludes(source, "isActiveProductionLeadForDailyScreens", `${label} production lifecycle filter`);
 }
+assertIncludes(commandCore, "getShowTestDemoRecordsPreference", "/command-core uses the admin test/demo visibility preference");
+assertIncludes(commandCore, "getSalesCollectionData(undefined, { includeTestDemo: showTestDemoRecords })", "/command-core visibility-aware lead source");
+assertIncludes(commandCore, "isActiveProductionLeadForDailyScreens", "/command-core production lifecycle filter");
 
 assertIncludes(inboxPage, "hasWhatsAppContactOrMessages", "/inbox active WhatsApp definition");
 assertIncludes(conversationsApi, "hasWhatsAppContactOrMessages", "/api/inbox active WhatsApp definition");

@@ -1,11 +1,13 @@
 import { MultiChatInbox, type MultiChatConversation, type MultiChatSummary } from "@/components/inbox/MultiChatInbox";
 import { PageHeader } from "@/components/PageHeader";
+import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
-import { getInboxQueueState, inboxQueuePriority, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
+import { compareInboxLatestActivity } from "@/lib/inbox-conversation-order";
+import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
@@ -18,6 +20,10 @@ function latestWhatsAppMessage(messages: LeadMessage[]) {
 
 function hasWhatsAppContactOrMessages(lead: Lead, messages: LeadMessage[]) {
   return Boolean(lead.phone?.trim()) || messages.length > 0;
+}
+
+function leadLastActivityAt(lead: Lead, messages: LeadMessage[]) {
+  return latestWhatsAppMessage(messages)?.createdAt ?? lead.updatedAt ?? lead.createdAt;
 }
 
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): MultiChatSummary {
@@ -64,6 +70,7 @@ export default async function WhatsAppInboxPage({
   const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   if (!auth.authenticated) return null;
+  const canManageSpam = Boolean(auth.profile && can(auth.profile.role, "soft_delete_leads"));
 
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
   const [leads, allFiles] = await Promise.all([
@@ -72,10 +79,15 @@ export default async function WhatsAppInboxPage({
   ]);
   const leadIds = leads.map((lead) => lead.id);
   const summaryMessagesByLead = await listLatestLeadMessagesForInbox(leadIds, 3);
-  const activeLeadPool = leads.filter((lead) => hasWhatsAppContactOrMessages(
-    lead,
-    summaryMessagesByLead.get(lead.id) ?? []
-  ) && (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? [])));
+  const activeLeadPool = leads
+    .filter((lead) => hasWhatsAppContactOrMessages(
+      lead,
+      summaryMessagesByLead.get(lead.id) ?? []
+    ) && (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? [])))
+    .sort((a, b) => compareInboxLatestActivity(
+      { id: a.id, lastActivityAt: leadLastActivityAt(a, summaryMessagesByLead.get(a.id) ?? []) },
+      { id: b.id, lastActivityAt: leadLastActivityAt(b, summaryMessagesByLead.get(b.id) ?? []) }
+    ));
   const selectedLeadFromQuery = searchParams?.lead
     ? activeLeadPool.find((lead) => lead.id === searchParams.lead)
     : undefined;
@@ -140,11 +152,7 @@ export default async function WhatsAppInboxPage({
       oldestMessageCursor: selected ? selectedPage.oldestCursor : null,
       auditTrail: []
     };
-  }).sort((a, b) => {
-    const priority = inboxQueuePriority(a.summary) - inboxQueuePriority(b.summary);
-    if (priority !== 0) return priority;
-    return new Date(b.summary.lastActivityAt).getTime() - new Date(a.summary.lastActivityAt).getTime();
-  });
+  }).sort((a, b) => compareInboxLatestActivity(a.summary, b.summary));
 
   return (
     <>
@@ -164,6 +172,7 @@ export default async function WhatsAppInboxPage({
       </PageHeader>
       <MultiChatInbox
         conversations={conversations}
+        canManageSpam={canManageSpam}
         selectedLeadId={searchParams?.lead}
         manualReplyStatus={searchParams?.manualReplyStatus}
         manualReplyError={searchParams?.manualReplyError}

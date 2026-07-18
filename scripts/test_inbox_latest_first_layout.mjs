@@ -36,7 +36,7 @@ assert(messageListIndex > composerIndex, "message list must appear after compose
 assert(latestLabelIndex > composerIndex, "latest messages label must appear below composer.");
 
 assertIncludes(inboxClient, "function sortMessagesNewestFirst", "newest-first sorting helper");
-assertIncludes(inboxClient, "const activeMessagesNewestFirst = useMemo(() => sortMessagesNewestFirst(activeMessages), [activeMessages])", "newest-first active messages");
+assertIncludes(inboxClient, "() => sortMessagesNewestFirst(collapseHistoricalDuplicateAiMessages(activeMessages))", "newest-first active messages with safe duplicate display collapse");
 assertIncludes(inboxClient, "activeMessagesNewestFirst.map((message) =>", "newest-first message rendering");
 assertIncludes(inboxClient, "stickToLatestRef", "latest-first scroll guard");
 assertIncludes(inboxClient, "messagePaneRef.current?.scrollTo({ top: 0", "latest-first scroll position");

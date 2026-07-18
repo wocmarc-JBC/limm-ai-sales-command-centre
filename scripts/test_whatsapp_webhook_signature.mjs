@@ -168,7 +168,11 @@ check("documents a blank server-only app-secret variable", () => {
 
 const packageJson = JSON.parse(read("package.json"));
 check("locks the v10.2.2 patched dependency baseline", () => {
-  assert.equal(packageJson.version, "10.2.2");
+  const [major, minor, patch] = packageJson.version.split(".").map(Number);
+  assert.ok(
+    major > 10 || (major === 10 && (minor > 2 || (minor === 2 && patch >= 2))),
+    `Expected application version 10.2.2 or newer, received ${packageJson.version}.`
+  );
   assert.match(packageJson.dependencies.next, /15\.5\.(?:1[6-9]|[2-9]\d)/);
   assert.match(packageJson.dependencies.react, /19\.2\./);
   assert.match(packageJson.dependencies["react-dom"], /19\.2\./);

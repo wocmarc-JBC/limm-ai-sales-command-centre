@@ -72,7 +72,7 @@ for (const source of [inboxPage, summariesApi, detailApi]) {
 }
 
 for (const phrase of [
-  "return inboxQueuePriority(chat)",
+  "return sortInboxLatestFirst(chats)",
   "return chat.primaryStatus || \"Bot active\"",
   "filter === \"Waiting for Marcus\") return chat.primaryStatus === \"Waiting for Marcus\"",
   "filter === \"Waiting for client\") return chat.primaryStatus === \"Waiting for client\"",
@@ -86,10 +86,8 @@ for (const phrase of [
   assertIncludes(inboxClient, phrase, "client queue status logic");
 }
 
-assert(
-  /const priority = chatPriority\(a\) - chatPriority\(b\)/.test(inboxClient),
-  "client queue sort must use queue priority before latest activity."
-);
+assert(!inboxClient.includes("inboxQueuePriority"), "status priority must not override latest chat activity in the client queue.");
+assert(inboxPage.includes("compareInboxLatestActivity"), "server inbox must sort strictly by latest chat activity.");
 assert(
   /primaryStatus: "Waiting for client"[\s\S]*botPaused: true/.test(inboxClient),
   "successful manual send must immediately show Waiting for client and human takeover state."

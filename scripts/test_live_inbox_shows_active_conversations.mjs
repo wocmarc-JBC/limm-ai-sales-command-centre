@@ -60,7 +60,8 @@ for (const [source, label] of [
   [inboxPage, "inbox page active source"],
   [conversationsApi, "inbox API active source"]
 ]) {
-  assertIncludes(source, "listLeads({ includeTest: true })", label);
+  assertIncludes(source, "getShowTestDemoRecordsPreference", label);
+  assertIncludes(source, "listLeads({ includeTest: showTestDemoRecords, includeNonSales: true })", label);
   assertNotIncludes(source, "includeInactive: true", label);
   assertIncludes(source, "hasWhatsAppContactOrMessages", label);
   assertIncludes(source, "isActiveProductionLeadForDailyScreens", label);

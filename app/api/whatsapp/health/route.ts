@@ -72,6 +72,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v10.2.1"
 // version: "v10_2_2_webhook_auth_dependency_hardening"
 // securityVersion: "v10.2.2"
+// version: "v10_2_3_inbox_latest_activity_spam_cleanup"
+// uiVersion: "v10.2.3"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -100,9 +102,10 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v10_2_2_webhook_auth_dependency_hardening",
+      version: "v10_2_3_inbox_latest_activity_spam_cleanup",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
+      uiVersion: "v10.2.3",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -144,6 +147,9 @@ export async function GET() {
       legacyReplyLogicQuarantined: true,
       singleReplyCoreOnly: true,
       manualWhatsappOutboundReplyAvailable: true,
+      inboxLatestActivityFirstAvailable: true,
+      inboxQuickSpamRemovalAvailable: true,
+      inboxQuickSpamRemovalRecoverable: true,
       bossDailyBriefAvailable: true,
       bossOpsNavigationGroupsAvailable: true,
       riskBadgesAvailable: true,
@@ -564,9 +570,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v10_2_2_webhook_auth_dependency_hardening",
+      version: "v10_2_3_inbox_latest_activity_spam_cleanup",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
+      uiVersion: "v10.2.3",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -604,6 +611,9 @@ export async function GET() {
       legacyReplyLogicQuarantined: false,
       singleReplyCoreOnly: false,
       manualWhatsappOutboundReplyAvailable: false,
+      inboxLatestActivityFirstAvailable: true,
+      inboxQuickSpamRemovalAvailable: true,
+      inboxQuickSpamRemovalRecoverable: true,
       bossDailyBriefAvailable: false,
       bossOpsNavigationGroupsAvailable: false,
       riskBadgesAvailable: false,

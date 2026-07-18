@@ -5,7 +5,8 @@ import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
-import { getInboxQueueState, inboxQueuePriority, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
+import { compareInboxLatestActivity } from "@/lib/inbox-conversation-order";
+import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { buildLeadFacts } from "@/lib/lead-facts";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
@@ -16,6 +17,10 @@ function latestWhatsAppMessage(messages: LeadMessage[]) {
 
 function hasWhatsAppContactOrMessages(lead: Lead, messages: LeadMessage[]) {
   return Boolean(lead.phone?.trim()) || messages.length > 0;
+}
+
+function leadLastActivityAt(lead: Lead, messages: LeadMessage[]) {
+  return latestWhatsAppMessage(messages)?.createdAt ?? lead.updatedAt ?? lead.createdAt;
 }
 
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
@@ -67,6 +72,10 @@ export async function GET() {
       lead,
       summaryMessagesByLead.get(lead.id) ?? []
     ) && (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? [])))
+    .sort((a, b) => compareInboxLatestActivity(
+      { id: a.id, lastActivityAt: leadLastActivityAt(a, summaryMessagesByLead.get(a.id) ?? []) },
+      { id: b.id, lastActivityAt: leadLastActivityAt(b, summaryMessagesByLead.get(b.id) ?? []) }
+    ))
     .slice(0, 30);
   const conversations = activeLeads
     .map((lead) => buildSummary(
@@ -74,11 +83,7 @@ export async function GET() {
       summaryMessagesByLead.get(lead.id) ?? [],
       allFiles.filter((file) => file.leadId === lead.id)
     ))
-    .sort((a, b) => {
-      const priority = inboxQueuePriority(a) - inboxQueuePriority(b);
-      if (priority !== 0) return priority;
-      return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
-    });
+    .sort(compareInboxLatestActivity);
 
   return NextResponse.json({
     ok: true,

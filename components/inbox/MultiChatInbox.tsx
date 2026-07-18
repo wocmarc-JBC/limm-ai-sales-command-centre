@@ -13,6 +13,7 @@ import {
   type KeyboardEvent
 } from "react";
 import {
+  markInboxConversationSpamAction,
   markBossApprovalNeededAction,
   markLeadNotSuitableAction,
   moveLeadToQuotationReadinessAction,
@@ -21,7 +22,8 @@ import {
   resumeBotForLeadAction,
   updateLeadStatusAction
 } from "@/lib/actions";
-import { getInboxQueueState, inboxQueuePriority, type InboxPrimaryStatus } from "@/lib/inbox-queue";
+import { sortInboxLatestFirst } from "@/lib/inbox-conversation-order";
+import { getInboxQueueState, type InboxPrimaryStatus } from "@/lib/inbox-queue";
 import { collapseHistoricalDuplicateAiMessages } from "@/lib/inbox-message-display";
 import type { Lead, LeadMessage } from "@/lib/types";
 import { isSilentCaptureMessage, latestSilentCapture, silentCaptureSummary } from "@/lib/whatsapp-silent-capture";
@@ -93,6 +95,7 @@ export type MultiChatConversation = {
 
 type MultiChatInboxProps = {
   conversations: MultiChatConversation[];
+  canManageSpam: boolean;
   selectedLeadId?: string;
   manualReplyStatus?: string;
   manualReplyError?: string;
@@ -168,16 +171,15 @@ const quickReplies = [
 
 const SEND_TIMEOUT_MS = 15000;
 
-function chatPriority(chat: MultiChatSummary) {
-  return inboxQueuePriority(chat);
+function sortQueue(chats: MultiChatSummary[]) {
+  return sortInboxLatestFirst(chats);
 }
 
-function sortQueue(chats: MultiChatSummary[]) {
-  return [...chats].sort((a, b) => {
-    const priority = chatPriority(a) - chatPriority(b);
-    if (priority !== 0) return priority;
-    return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
-  });
+function withoutRecordKey<T>(record: Record<string, T>, key: string) {
+  if (!(key in record)) return record;
+  const next = { ...record };
+  delete next[key];
+  return next;
 }
 
 function formatTimestamp(value: string) {
@@ -386,55 +388,82 @@ function randomClientTempId() {
 const ChatRow = memo(function ChatRow({
   chat,
   active,
-  onSelect
+  canManageSpam,
+  spamPending,
+  onSelect,
+  onMarkSpam
 }: {
   chat: MultiChatSummary;
   active: boolean;
+  canManageSpam: boolean;
+  spamPending: boolean;
   onSelect: (leadId: string) => void;
+  onMarkSpam: (chat: MultiChatSummary) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(chat.id)}
-      className={`block w-full rounded-xl border border-l-4 p-3.5 text-left transition hover:border-command-cyan/50 ${chatAccentTone(chat)} ${
+    <div
+      data-testid="inbox-chat-row"
+      data-last-activity-at={chat.lastActivityAt}
+      className={`overflow-hidden rounded-xl border border-l-4 transition hover:border-command-cyan/50 ${chatAccentTone(chat)} ${
         active
           ? "border-command-gold/70 bg-command-gold/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
           : "border-command-line bg-command-bg/50"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-command-text">{chat.displayName || chat.phone}</p>
-          <p className="mt-1 text-xs text-command-muted">{chat.phone || "Phone pending"}</p>
+      <button
+        type="button"
+        onClick={() => onSelect(chat.id)}
+        className="block w-full p-3.5 pb-2 text-left"
+        aria-label={`Open conversation with ${chat.displayName || chat.phone}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-command-text">{chat.displayName || chat.phone}</p>
+            <p className="mt-1 text-xs text-command-muted">{chat.phone || "Phone pending"}</p>
+          </div>
+          {chat.unreadCount > 0 ? (
+            <span className="rounded-full bg-command-gold px-2 py-0.5 text-xs font-bold text-black">{chat.unreadCount}</span>
+          ) : null}
         </div>
-        {chat.unreadCount > 0 ? (
-          <span className="rounded-full bg-command-gold px-2 py-0.5 text-xs font-bold text-black">{chat.unreadCount}</span>
-        ) : null}
-      </div>
-      <p className="mt-2 line-clamp-2 text-sm leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview)}</p>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>
-            {chatStatusLabel(chat)}
-          </span>
-          {!chat.intentClassified ? (
-            <span className="rounded-full border border-command-amber/40 bg-command-amber/10 px-2 py-0.5 text-[10px] font-semibold text-command-amber">
-              Legacy · unclassified
+        <p className="mt-2 line-clamp-2 text-sm leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview)}</p>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>
+              {chatStatusLabel(chat)}
             </span>
-          ) : !chat.leadEligible ? (
-            <span className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-2 py-0.5 text-[10px] font-semibold text-command-cyan">
-              {humanize(chat.conversationIntent)}
+            {!chat.intentClassified ? (
+              <span className="rounded-full border border-command-amber/40 bg-command-amber/10 px-2 py-0.5 text-[10px] font-semibold text-command-amber">
+                Legacy · unclassified
+              </span>
+            ) : !chat.leadEligible ? (
+              <span className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-2 py-0.5 text-[10px] font-semibold text-command-cyan">
+                {humanize(chat.conversationIntent)}
+              </span>
+            ) : null}
+          </div>
+          {chat.floorPlanReceived || chat.sitePhotosReceived ? (
+            <span className="rounded-full border border-command-green/35 bg-command-green/10 px-2 py-0.5 text-[10px] text-command-green">
+              Files
             </span>
           ) : null}
         </div>
-        {chat.floorPlanReceived || chat.sitePhotosReceived ? (
-          <span className="rounded-full border border-command-green/35 bg-command-green/10 px-2 py-0.5 text-[10px] text-command-green">
-            Files
-          </span>
+      </button>
+      <div className="flex items-center justify-between gap-3 px-3.5 pb-3">
+        <time className="text-xs text-command-subtle" dateTime={chat.lastActivityAt}>{formatTimestamp(chat.lastActivityAt)}</time>
+        {canManageSpam ? (
+          <button
+            type="button"
+            onClick={() => onMarkSpam(chat)}
+            disabled={spamPending}
+            data-testid="inbox-mark-spam"
+            className="rounded-md border border-command-red/35 bg-command-red/10 px-2.5 py-1 text-[11px] font-semibold text-command-red transition hover:border-command-red/65 hover:bg-command-red/15 disabled:cursor-wait disabled:opacity-60"
+            aria-label={`Remove ${chat.displayName || chat.phone} as spam`}
+          >
+            {spamPending ? "Removing..." : "Spam"}
+          </button>
         ) : null}
       </div>
-      <p className="mt-3 text-xs text-command-subtle">{formatTimestamp(chat.lastActivityAt)}</p>
-    </button>
+    </div>
   );
 });
 
@@ -765,8 +794,8 @@ const LeadContextPanel = memo(function LeadContextPanel({
   }, [conversation.lead.id]);
 
   return (
-    <aside className="border-t border-command-line bg-command-panel2/95 xl:border-l xl:border-t-0">
-      <div className="flex items-center justify-between border-b border-command-line px-4 py-3">
+    <aside className="border-t border-command-line bg-command-panel2/95 xl:flex xl:min-h-0 xl:flex-col xl:border-l xl:border-t-0">
+      <div className="flex shrink-0 items-center justify-between border-b border-command-line px-4 py-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Conversation Context</p>
           <p className="mt-1 text-base font-semibold text-command-text">{!context.intentClassified ? "Classification pending" : context.leadEligible ? "Sales details" : "Non-sales routing"}</p>
@@ -779,7 +808,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
           Collapse
         </button>
       </div>
-      <div className="max-h-[calc(100vh-14rem)] overflow-y-auto p-4">
+      <div className="max-h-[calc(100vh-14rem)] overflow-y-auto p-4 xl:min-h-0 xl:flex-1 xl:max-h-none">
         <div className="rounded-2xl border border-command-line bg-command-bg/65 p-4">
           <div className="flex flex-wrap gap-2">
             <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${chatStatusTone(chat)}`}>{chatStatusLabel(chat)}</span>
@@ -965,7 +994,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
   );
 });
 
-export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
+export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, manualReplyStatus, manualReplyError }: MultiChatInboxProps) {
   const firstVisibleConversation = conversations[0];
   const initialLeadId = selectedLeadId && conversations.some((item) => item.lead.id === selectedLeadId)
     ? selectedLeadId
@@ -982,10 +1011,12 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
-  const [contextOpen, setContextOpen] = useState(true);
+  const [contextOpen, setContextOpen] = useState(false);
   const [optimisticReplies, setOptimisticReplies] = useState<Record<string, LeadMessage[]>>({});
   const [sendingByLeadId, setSendingByLeadId] = useState<Record<string, SendState>>({});
   const [errorByLeadId, setErrorByLeadId] = useState<Record<string, string>>({});
+  const [spamPendingLeadId, setSpamPendingLeadId] = useState("");
+  const [spamNotice, setSpamNotice] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const [draftSeeds, setDraftSeeds] = useState<Record<string, { id: string; text: string }>>({});
   const [olderMessages, setOlderMessages] = useState<Record<string, LeadMessage[]>>({});
   const [olderState, setOlderState] = useState<Record<string, { hasOlder: boolean; cursor: string | null }>>({});
@@ -1000,13 +1031,9 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
   }, [conversationCache]);
 
   const patchSummary = useCallback((leadId: string, patch: Partial<MultiChatSummary>) => {
-    setChatSummaries((current) => current
-      .map((summary) => summary.id === leadId ? { ...summary, ...patch } : summary)
-      .sort((a, b) => {
-        const priority = chatPriority(a) - chatPriority(b);
-        if (priority !== 0) return priority;
-        return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
-      }));
+    setChatSummaries((current) => sortQueue(
+      current.map((summary) => summary.id === leadId ? { ...summary, ...patch } : summary)
+    ));
     setConversationMap((current) => {
       const conversation = current[leadId];
       if (!conversation) return current;
@@ -1225,6 +1252,58 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     }
   }, [loadConversation]);
 
+  const markConversationSpam = useCallback(async (chatToRemove: MultiChatSummary) => {
+    if (!canManageSpam || spamPendingLeadId) return;
+    const label = chatToRemove.displayName || chatToRemove.phone || "this conversation";
+    const confirmed = window.confirm(
+      `Remove ${label} from the inbox as spam? This is recoverable from Leads → Show Spam.`
+    );
+    if (!confirmed) return;
+
+    setSpamPendingLeadId(chatToRemove.id);
+    setSpamNotice(null);
+    try {
+      const result = await markInboxConversationSpamAction(chatToRemove.id);
+      if (!result.ok) {
+        throw new Error(result.code === "permission_denied" ? "Boss or admin permission is required." : "The spam action could not be completed.");
+      }
+
+      const ordered = sortQueue(chatSummaries);
+      const removedIndex = ordered.findIndex((summary) => summary.id === chatToRemove.id);
+      const remaining = ordered.filter((summary) => summary.id !== chatToRemove.id);
+      setChatSummaries(remaining);
+      setConversationMap((current) => withoutRecordKey(current, chatToRemove.id));
+      setConversationCache((current) => withoutRecordKey(current, chatToRemove.id));
+      setOptimisticReplies((current) => withoutRecordKey(current, chatToRemove.id));
+      setSendingByLeadId((current) => withoutRecordKey(current, chatToRemove.id));
+      setErrorByLeadId((current) => withoutRecordKey(current, chatToRemove.id));
+      setDraftSeeds((current) => withoutRecordKey(current, chatToRemove.id));
+      setOlderMessages((current) => withoutRecordKey(current, chatToRemove.id));
+      setOlderState((current) => withoutRecordKey(current, chatToRemove.id));
+
+      if (activeLeadId === chatToRemove.id) {
+        const nextIndex = Math.max(0, Math.min(removedIndex, remaining.length - 1));
+        const nextLeadId = remaining[nextIndex]?.id ?? "";
+        setActiveLeadId(nextLeadId);
+        stickToLatestRef.current = true;
+        window.history.replaceState(null, "", nextLeadId ? `/inbox?lead=${encodeURIComponent(nextLeadId)}` : "/inbox");
+        if (nextLeadId && !conversationCacheRef.current[nextLeadId]) void loadConversation(nextLeadId);
+      }
+
+      setSpamNotice({
+        tone: "success",
+        message: `${label} was removed from the inbox as spam. You can restore it from Leads → Show Spam.`
+      });
+    } catch (error) {
+      setSpamNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "The spam action could not be completed."
+      });
+    } finally {
+      setSpamPendingLeadId("");
+    }
+  }, [activeLeadId, canManageSpam, chatSummaries, loadConversation, spamPendingLeadId]);
+
   useEffect(() => {
     const candidates = waitingChats
       .filter((summary) => summary.id !== activeLeadId && !conversationCacheRef.current[summary.id])
@@ -1441,8 +1520,8 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
       <div className="border-b border-command-line bg-command-panel2/90 px-5 py-3.5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Daily WhatsApp Sales Inbox</p>
-            <h1 className="mt-1 text-2xl font-semibold text-command-text">LIMM WhatsApp Inbox</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Live conversation queue</p>
+            <p className="mt-1 text-sm font-medium text-command-muted">Newest client activity stays at the top.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {counterItems.map((item) => (
@@ -1454,17 +1533,33 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
           </div>
         </div>
       </div>
-      <div className={`grid min-h-[calc(100vh-9rem)] grid-cols-1 ${
+      {spamNotice ? (
+        <div
+          role="status"
+          className={`flex items-center justify-between gap-3 border-b px-5 py-3 text-sm ${
+            spamNotice.tone === "success"
+              ? "border-command-green/30 bg-command-green/10 text-command-green"
+              : "border-command-red/30 bg-command-red/10 text-command-red"
+          }`}
+        >
+          <span>{spamNotice.message}</span>
+          <button type="button" onClick={() => setSpamNotice(null)} className="shrink-0 font-semibold underline underline-offset-2">
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+      <div data-testid="inbox-layout" className={`grid min-h-[38rem] grid-cols-1 xl:h-[calc(100dvh-12rem)] xl:min-h-0 ${
         contextOpen
-          ? "xl:grid-cols-[20rem_minmax(0,1fr)_19rem] 2xl:grid-cols-[20rem_minmax(40rem,1fr)_20rem]"
-          : "xl:grid-cols-[20rem_minmax(0,1fr)]"
+          ? "xl:grid-cols-[18rem_minmax(0,1fr)_18rem] 2xl:grid-cols-[20rem_minmax(40rem,1fr)_20rem]"
+          : "xl:grid-cols-[19rem_minmax(0,1fr)]"
       }`}>
-        <aside className="border-b border-command-line bg-command-panel2/95 xl:border-b-0 xl:border-r">
-          <div className="p-4">
+        <aside className="border-b border-command-line bg-command-panel2/95 xl:flex xl:min-h-0 xl:flex-col xl:border-b-0 xl:border-r">
+          <div className="shrink-0 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Queue</p>
                 <h2 className="mt-1 text-xl font-semibold text-command-text">Conversations</h2>
+                <p className="mt-1 text-xs text-command-muted">Latest chat first</p>
               </div>
               <button
                 type="button"
@@ -1497,13 +1592,16 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
               ))}
             </div>
           </div>
-          <div className="max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto px-3 pb-4">
+          <div data-testid="inbox-conversation-list" className="max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto px-3 pb-4 xl:min-h-0 xl:flex-1 xl:max-h-none">
             {filteredConversations.map((item) => (
               <ChatRow
                 key={item.id}
                 chat={item}
                 active={item.id === activeLeadId}
+                canManageSpam={canManageSpam}
+                spamPending={spamPendingLeadId === item.id}
                 onSelect={selectConversation}
+                onMarkSpam={markConversationSpam}
               />
             ))}
             {filteredConversations.length === 0 ? (
@@ -1514,7 +1612,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
           </div>
         </aside>
 
-        <main className="flex min-h-[calc(100vh-9rem)] flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.08),transparent_28%),linear-gradient(180deg,rgba(9,13,18,0.98),rgba(5,7,10,0.99))]">
+        <main data-testid="inbox-active-chat" className="flex min-h-[42rem] flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.08),transparent_28%),linear-gradient(180deg,rgba(9,13,18,0.98),rgba(5,7,10,0.99))] xl:min-h-0">
           <header className="border-b border-command-line bg-command-panel/95 px-5 py-3.5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -1535,6 +1633,16 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
                 >
                   View full lead
                 </Link>
+                {canManageSpam ? (
+                  <button
+                    type="button"
+                    onClick={() => void markConversationSpam(chat)}
+                    disabled={Boolean(spamPendingLeadId)}
+                    className="rounded-full border border-command-red/45 bg-command-red/10 px-3 py-1.5 text-command-red transition hover:border-command-red/70 hover:bg-command-red/15 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {spamPendingLeadId === chat.id ? "Removing spam..." : "Remove spam"}
+                  </button>
+                ) : null}
                 {!contextOpen ? (
                   <button
                     type="button"
@@ -1576,7 +1684,7 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
             onSendSettled={handleSendSettled}
           />
 
-          <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="flex-1 overflow-y-auto px-5 py-5">
+          <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
             {activeMessagesNewestFirst.length ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">

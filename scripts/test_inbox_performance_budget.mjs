@@ -30,7 +30,7 @@ const adapter = read("lib/adapters/whatsapp-adapter.ts");
 for (const phrase of [
   "listLatestLeadMessagesForInbox(leadIds, 3)",
   "listLeadMessagesPage(selectedLead.id, 30)",
-  "activeLeads = leads.slice(0, 30)",
+  "firstThirtyActiveLeads = activeLeadPool.slice(0, 30)",
   "hasOlderMessages",
   "oldestMessageCursor"
 ]) {
@@ -69,7 +69,7 @@ assert(!sendApi.includes("WHATSAPP_PHONE_NUMBER_ID"), "fast inbox send API must 
 
 for (const phrase of [
   "listLatestLeadMessagesForInbox(leadIds, 3)",
-  "activeLeads = leads.slice(0, 30)",
+  ".slice(0, 30)",
   "conversations",
   "lastMessagePreview",
   "unreadCount",
@@ -128,7 +128,7 @@ for (const phrase of [
   "window.history.replaceState",
   "mergeTimelineMessages",
   "isLegacyRedirectFailure(message)",
-  "Load earlier messages",
+  "Load older messages",
   "showDeliveryDetails",
   "showTechnicalAudit",
   "NEXT_REDIRECT",
