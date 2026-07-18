@@ -57,6 +57,7 @@ import {
   setLeadConversationIntentOverride,
   softDeleteLead,
   takeOverLead,
+  updateConversationRouting,
   updateLeadSalesTracking,
   updateLeadIntakeProfile,
   updateLeadStatus
@@ -98,9 +99,11 @@ import { setShowTestDemoRecordsPreference } from "@/lib/data-visibility-preferen
 import { getProductionLeadVisibilityReasons } from "@/lib/production-visibility";
 import {
   WHATSAPP_CONVERSATION_INTENTS,
+  classifyConversationIntent,
   isSalesEligibleLead,
   type ConversationIntent
 } from "@/lib/whatsapp-intent-gate";
+import { identifyLatestUnansweredQuestion } from "@/lib/whatsapp-conversation-safety";
 import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan, isProtectedLead } from "@/lib/test-lead-cleanup";
 import type { Permission } from "@/lib/auth/roles";
 import type { AiDraftReviewStatus, ApprovalStatus, Division, FollowUpStatus, LeadCategory, LeadFileCategory, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
@@ -1464,6 +1467,48 @@ export async function setLeadConversationIntentOverrideAction(formData: FormData
     intent,
     permission.auth.profile?.fullName ?? "Marcus"
   );
+  revalidateLeadPaths(leadId);
+  revalidatePath("/followups");
+  revalidatePath("/quotation-readiness");
+  revalidatePath("/reports");
+}
+
+export async function reclassifyWhatsAppConversationAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  if (!leadId) return;
+  const lead = await getLeadById(leadId);
+  if (!lead) return;
+  const messages = (await listLeadMessages(leadId))
+    .filter((message) => message.channel === "whatsapp" && (message.direction === "inbound" || message.direction === "outbound"))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .slice(-10);
+  const latestInbound = [...messages].reverse().find((message) => message.direction === "inbound");
+  if (!latestInbound) return;
+  const classificationLead = { ...lead, botPaused: false };
+  const gate = classifyConversationIntent({
+    currentMessageText: latestInbound.body,
+    currentMessageType: typeof latestInbound.metadata?.messageType === "string" ? latestInbound.metadata.messageType : "text",
+    recentMessages: messages,
+    lead: classificationLead,
+    botPaused: false
+  });
+  const latestUnansweredQuestion = identifyLatestUnansweredQuestion({
+    messages,
+    currentMessageText: latestInbound.body,
+    currentProviderMessageId: latestInbound.providerMessageId,
+    currentCreatedAt: latestInbound.createdAt
+  });
+  await updateConversationRouting(lead, gate, latestUnansweredQuestion, {
+    auditActorType: "boss",
+    auditActorName: permission.auth.profile?.fullName ?? "Marcus",
+    manualHistoryReclassification: true,
+    sourceMessageId: latestInbound.id,
+    sourceProviderMessageId: latestInbound.providerMessageId ?? "",
+    messageCount: messages.length,
+    noReplySent: true
+  });
   revalidateLeadPaths(leadId);
   revalidatePath("/followups");
   revalidatePath("/quotation-readiness");

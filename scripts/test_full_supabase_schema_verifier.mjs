@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -17,6 +18,15 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+
+const intentGateMigration = fs.readFileSync(
+  path.join(root, "supabase", "migrations", "027_v10_2_intent_gate_conversation_safety.sql"),
+  "utf8"
+);
+assert(
+  /information_schema\.columns[\s\S]+column_name = 'intake_profile'[\s\S]+execute \$intent_gate_backfill_sql\$/i.test(intentGateMigration),
+  "Migration 027 must guard its optional intake_profile backfill for older live schemas."
+);
 
 function completeSnapshot() {
   return {
@@ -149,6 +159,13 @@ const missingTableResult = analyzeSchemaSnapshot(missingTableSnapshot);
 assert(!missingTableResult.ok, "Missing table should fail schema analysis.");
 assert(missingTableResult.missingTables.includes("quotation_packages"), "Missing table detection must report quotation_packages.");
 assert(missingTableResult.likelyMigrationFiles.includes("024_quotation_packages.sql"), "Missing quotation_packages should hint migration 024.");
+
+const missingConcurrencySnapshot = completeSnapshot();
+missingConcurrencySnapshot.tables = missingConcurrencySnapshot.tables.filter((table) => table !== "whatsapp_conversation_reply_leases");
+const missingConcurrencyResult = analyzeSchemaSnapshot(missingConcurrencySnapshot);
+assert(!missingConcurrencyResult.ok, "Missing WhatsApp conversation lease table should fail schema analysis.");
+assert(missingConcurrencyResult.missingTables.includes("whatsapp_conversation_reply_leases"), "Missing concurrency table must be reported.");
+assert(missingConcurrencyResult.likelyMigrationFiles.includes("028_v10_2_1_whatsapp_conversation_concurrency.sql"), "Missing concurrency table should hint migration 028.");
 
 const missingIndexSnapshot = completeSnapshot();
 missingIndexSnapshot.indexes = missingIndexSnapshot.indexes.filter((index) => index !== "leads_active_command_queue_idx");

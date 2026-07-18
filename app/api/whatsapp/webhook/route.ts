@@ -72,6 +72,9 @@ function autoReplyResponseFromResult(result: Awaited<ReturnType<typeof handleWha
   if (result.status === "auto_reply_failed") {
     return { ok: true, autoReply: "send_failed_logged", leadId: result.leadId };
   }
+  if (result.status === "auto_reply_coalesced") {
+    return { ok: true, autoReply: "coalesced_without_send", leadId: result.leadId };
+  }
   if (result.status === "auto_reply_disabled" || result.status === "saved_inbound") {
     return { ok: true, autoReply: "disabled", leadId: result.leadId };
   }

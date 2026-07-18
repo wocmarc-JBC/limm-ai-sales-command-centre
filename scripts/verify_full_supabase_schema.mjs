@@ -49,7 +49,9 @@ export const requiredTables = [
   "quotation_packages",
   "project_accounts",
   "payment_records",
-  "monthly_targets"
+  "monthly_targets",
+  "whatsapp_conversation_reply_leases",
+  "whatsapp_reply_reservations"
 ];
 
 export const requiredColumnsByTable = {
@@ -209,6 +211,29 @@ export const requiredColumnsByTable = {
     "is_test",
     "created_at",
     "updated_at"
+  ],
+  whatsapp_conversation_reply_leases: [
+    "lead_id",
+    "owner_token",
+    "lease_expires_at",
+    "cooldown_until",
+    "pending_inbound_count",
+    "last_inbound_at",
+    "last_acquired_at",
+    "updated_at"
+  ],
+  whatsapp_reply_reservations: [
+    "id",
+    "lead_id",
+    "owner_token",
+    "inbound_provider_message_id",
+    "reply_signature",
+    "reservation_bucket",
+    "status",
+    "outbound_provider_message_id",
+    "failure_reason",
+    "reserved_at",
+    "completed_at"
   ]
 };
 
@@ -226,7 +251,10 @@ export const requiredIndexes = [
   "quotation_packages_lead_number_version_idx",
   "project_accounts_location_idx",
   "project_accounts_is_test_idx",
-  "payment_records_is_test_idx"
+  "payment_records_is_test_idx",
+  "whatsapp_reply_reservations_signature_bucket_uidx",
+  "whatsapp_reply_reservations_lead_reserved_idx",
+  "whatsapp_reply_reservations_status_idx"
 ];
 
 export const rlsRequiredTables = [
@@ -235,7 +263,14 @@ export const rlsRequiredTables = [
   "audit_logs",
   "quotation_packages",
   "lead_files",
-  "lead_upload_links"
+  "lead_upload_links",
+  "whatsapp_conversation_reply_leases",
+  "whatsapp_reply_reservations"
+];
+
+export const serviceRoleOnlyRlsTables = [
+  "whatsapp_conversation_reply_leases",
+  "whatsapp_reply_reservations"
 ];
 
 export const requiredStorageBuckets = ["client-files"];
@@ -248,6 +283,20 @@ const migrationHints = [
   { matchType: "table", name: "lead_files", file: "020_v6_7_client_file_uploads.sql" },
   { matchType: "table", name: "lead_upload_links", file: "020_v6_7_client_file_uploads.sql" },
   { matchType: "table", name: "quotation_readiness", file: "011_quotation_readiness.sql" },
+  { matchType: "table", name: "whatsapp_conversation_reply_leases", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
+  { matchType: "table", name: "whatsapp_reply_reservations", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
+  ...["lead_id", "owner_token", "lease_expires_at", "cooldown_until", "pending_inbound_count", "last_inbound_at", "last_acquired_at", "updated_at"].map((name) => ({
+    matchType: "column",
+    table: "whatsapp_conversation_reply_leases",
+    name,
+    file: "028_v10_2_1_whatsapp_conversation_concurrency.sql"
+  })),
+  ...["id", "lead_id", "owner_token", "inbound_provider_message_id", "reply_signature", "reservation_bucket", "status", "outbound_provider_message_id", "failure_reason", "reserved_at", "completed_at"].map((name) => ({
+    matchType: "column",
+    table: "whatsapp_reply_reservations",
+    name,
+    file: "028_v10_2_1_whatsapp_conversation_concurrency.sql"
+  })),
   ...projectAccountLocationColumns.map((name) => ({
     matchType: "column",
     table: "project_accounts",
@@ -321,6 +370,9 @@ const migrationHints = [
   { matchType: "index", name: "project_accounts_location_idx", file: "026_project_accounts_location_fields.sql" },
   { matchType: "index", name: "project_accounts_is_test_idx", file: "025_qa_downstream_test_flags.sql" },
   { matchType: "index", name: "payment_records_is_test_idx", file: "025_qa_downstream_test_flags.sql" },
+  { matchType: "index", name: "whatsapp_reply_reservations_signature_bucket_uidx", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
+  { matchType: "index", name: "whatsapp_reply_reservations_lead_reserved_idx", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
+  { matchType: "index", name: "whatsapp_reply_reservations_status_idx", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
   { matchType: "bucket", name: "client-files", file: "020_v6_7_client_file_uploads.sql" }
 ];
 
@@ -357,7 +409,9 @@ export function analyzeSchemaSnapshot(snapshot) {
 
   const missingIndexes = requiredIndexes.filter((index) => !indexSet.has(index));
   const missingRls = rlsRequiredTables.filter((table) => !rlsEnabled.has(table));
-  const missingPolicies = rlsRequiredTables.filter((table) => Number(policyCounts[table] ?? 0) < 1);
+  const missingPolicies = rlsRequiredTables.filter(
+    (table) => !serviceRoleOnlyRlsTables.includes(table) && Number(policyCounts[table] ?? 0) < 1
+  );
   const missingStorageBuckets = requiredStorageBuckets.filter((bucket) => !bucketSet.has(bucket));
 
   const hints = unique([

@@ -397,6 +397,33 @@ where table_schema = 'public'
   );
 ```
 
+## 028_v10_2_1_whatsapp_conversation_concurrency.sql
+
+Purpose: Add the cross-instance single-flight lease, burst cooldown, and atomic pre-send reply reservation required by v10.2.1 WhatsApp conversation safety.
+Dependencies: migrations 002 and 027.
+Safe to re-run: Yes. Tables, indexes, policies, grants, and functions are additive or replaced idempotently.
+Verification query:
+
+```sql
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+  and table_name in (
+    'whatsapp_conversation_reply_leases',
+    'whatsapp_reply_reservations'
+  );
+
+select routine_name
+from information_schema.routines
+where routine_schema = 'public'
+  and routine_name in (
+    'acquire_whatsapp_conversation_reply_lease',
+    'release_whatsapp_conversation_reply_lease',
+    'reserve_whatsapp_conversation_reply',
+    'whatsapp_conversation_concurrency_schema_ready'
+  );
+```
+
 ## After All Migrations
 
 Run:

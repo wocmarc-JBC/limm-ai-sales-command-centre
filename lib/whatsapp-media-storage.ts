@@ -7,7 +7,7 @@ import {
   uploadLeadFile,
   validateLeadFileUpload
 } from "@/lib/data/lead-files-repository";
-import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
+import { getWhatsAppAccessToken, getWhatsAppRuntime } from "@/lib/whatsapp-config";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
 import type { LeadFile } from "@/lib/types";
 
@@ -35,7 +35,7 @@ function safeFileName(message: ParsedWhatsAppMessage) {
 
 async function fetchWhatsAppMediaBuffer(mediaId: string) {
   const runtime = getWhatsAppRuntime();
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const token = getWhatsAppAccessToken();
   if (!token || !runtime.phoneNumberIdConfigured) throw new Error("WhatsApp media credentials are not configured.");
 
   const metadataResponse = await fetch(`https://graph.facebook.com/${runtime.graphVersion}/${encodeURIComponent(mediaId)}`, {

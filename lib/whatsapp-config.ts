@@ -27,6 +27,10 @@ export function normalizeWhatsAppPhone(value = "") {
   return value.replace(/[^\d]/g, "");
 }
 
+export function getWhatsAppAccessToken() {
+  return process.env.WHATSAPP_ACCESS_TOKEN ?? "";
+}
+
 export function getWhatsAppRuntime(): WhatsAppRuntime {
   const liveInboundEnabled = flag("WHATSAPP_LIVE_INBOUND_ENABLED", false);
   const testAutoReplyEnabled = flag("WHATSAPP_TEST_AUTO_REPLY_ENABLED", false);

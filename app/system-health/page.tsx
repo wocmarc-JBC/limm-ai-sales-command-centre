@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getDataMode } from "@/lib/data/data-source";
 import { listAuditLogs } from "@/lib/data/audit-repository";
+import { getWhatsAppConversationConcurrencyHealth } from "@/lib/data/whatsapp-conversation-lock-repository";
 import { getHandoffEmailRuntime } from "@/lib/handoff-email";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
@@ -50,15 +51,24 @@ export default async function SystemHealthPage() {
   const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
   const dataMode = getDataMode();
   const intentMetrics = buildIntentGateObservabilitySnapshot(await listAuditLogs());
+  const conversationConcurrency = await getWhatsAppConversationConcurrencyHealth().catch(() => ({
+    databaseConnected: false,
+    migration027Ready: false,
+    migration028Ready: false,
+    reason: "health_check_failed"
+  }));
   const schemaRows = schemaSummaryRows();
   const schemaWarning = schemaRows.some(([, value]) => !["None reported", "Not run in this runtime"].includes(value) && value.length > 0);
   const rows = [
-    ["App version", process.env.npm_package_version ?? "10.2.0"],
+    ["App version", process.env.npm_package_version ?? "10.2.1"],
     ["Commit", process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "Not available locally"],
     ["Data mode", dataMode],
     ["Supabase mode", auth.mode],
     ["Current role", auth.profile.role],
     ["WhatsApp health", whatsapp.statusLabel],
+    ["WhatsApp concurrency safety", conversationConcurrency.migration027Ready && conversationConcurrency.migration028Ready ? "Ready" : "Migration required"],
+    ["Intent migration 027", boolLabel(conversationConcurrency.migration027Ready)],
+    ["Concurrency migration 028", boolLabel(conversationConcurrency.migration028Ready)],
     ["WhatsApp live inbound", boolLabel(whatsapp.liveInboundEnabled)],
     ["OpenAI WhatsApp reply", openAiWhatsApp.enabled ? "Enabled" : "Off"],
     ["Price guide automation", "Off"],
@@ -113,7 +123,7 @@ export default async function SystemHealthPage() {
         <div className="rounded-lg border border-command-line bg-command-card p-6 shadow-premium">
           <p className="text-xs uppercase tracking-[0.24em] text-command-gold">Schema verifier</p>
           <h2 className="mt-1 text-2xl font-semibold">Database compatibility</h2>
-          <p className="mt-2 text-command-muted">This page does not connect to the database directly. Use the read-only CLI verifier and publish its summary through environment metadata if needed.</p>
+          <p className="mt-2 text-command-muted">WhatsApp migration readiness above is checked live. Use the read-only CLI verifier here for the complete application schema.</p>
           <div className="mt-5 divide-y divide-command-line">
             {schemaRows.map(([label, value]) => (
               <div key={label} className="grid gap-2 py-3 sm:grid-cols-[14rem_1fr]">
@@ -125,7 +135,7 @@ export default async function SystemHealthPage() {
         </div>
       </section>
       <section className="mt-5 rounded-lg border border-command-cyan/35 bg-command-card p-6 shadow-premium">
-        <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">v10.2 Conversation Safety</p>
+        <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">v10.2.1 Conversation Safety</p>
         <h2 className="mt-1 text-2xl font-semibold">Intent gate observability</h2>
         <p className="mt-2 text-command-muted">Read-only metrics from the latest {intentMetrics.sampleSize} classified inbound audit events available to this session.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

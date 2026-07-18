@@ -17,10 +17,12 @@ import {
   markLeadNotSuitableAction,
   moveLeadToQuotationReadinessAction,
   pauseBotForLeadAction,
+  reclassifyWhatsAppConversationAction,
   resumeBotForLeadAction,
   updateLeadStatusAction
 } from "@/lib/actions";
 import { getInboxQueueState, inboxQueuePriority, type InboxPrimaryStatus } from "@/lib/inbox-queue";
+import { collapseHistoricalDuplicateAiMessages } from "@/lib/inbox-message-display";
 import type { Lead, LeadMessage } from "@/lib/types";
 import { isSilentCaptureMessage, latestSilentCapture, silentCaptureSummary } from "@/lib/whatsapp-silent-capture";
 
@@ -31,6 +33,7 @@ export type MultiChatSummary = {
   status: string;
   conversationIntent: NonNullable<Lead["conversationIntent"]>;
   conversationRoute: NonNullable<Lead["conversationRoute"]>;
+  intentClassified: boolean;
   leadEligible: boolean;
   intentConfidence: number;
   botPaused: boolean;
@@ -52,6 +55,7 @@ export type MultiChatSummary = {
 export type MultiChatContext = {
   conversationIntent: NonNullable<Lead["conversationIntent"]>;
   conversationRoute: NonNullable<Lead["conversationRoute"]>;
+  intentClassified: boolean;
   leadEligible: boolean;
   intentConfidence: number;
   propertyType: string;
@@ -413,7 +417,11 @@ const ChatRow = memo(function ChatRow({
           <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>
             {chatStatusLabel(chat)}
           </span>
-          {!chat.leadEligible ? (
+          {!chat.intentClassified ? (
+            <span className="rounded-full border border-command-amber/40 bg-command-amber/10 px-2 py-0.5 text-[10px] font-semibold text-command-amber">
+              Legacy · unclassified
+            </span>
+          ) : !chat.leadEligible ? (
             <span className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-2 py-0.5 text-[10px] font-semibold text-command-cyan">
               {humanize(chat.conversationIntent)}
             </span>
@@ -442,6 +450,9 @@ const MessageBubble = memo(function MessageBubble({
   const silentCapture = isSilentCaptureMessage(message) ? silentCaptureSummary(message) : null;
   const error = metadataString(message, "error");
   const showFailure = messageStatus(message) === "Failed" && !isNextRedirectOnly(error);
+  const collapsedDuplicateCount = typeof message.metadata?.uiCollapsedDuplicateCount === "number"
+    ? message.metadata.uiCollapsedDuplicateCount
+    : 1;
   return (
     <article className={`flex ${internal ? "justify-center" : outbound ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[86%] rounded-2xl border px-3.5 py-2.5 text-sm leading-6 shadow-sm md:max-w-[68%] ${internal ? "text-center text-sm" : ""} ${bubbleTone(message)}`}>
@@ -465,6 +476,11 @@ const MessageBubble = memo(function MessageBubble({
           <time dateTime={message.createdAt}>{formatTimestamp(message.createdAt)}</time>
           {message.metadata?.manualReply ? <span>Manual reply</span> : outbound ? <span>AI/system reply</span> : null}
         </div>
+        {collapsedDuplicateCount > 1 ? (
+          <div className="mt-2 rounded-lg border border-command-amber/35 bg-command-amber/10 px-2.5 py-1.5 text-xs leading-5 text-command-amber">
+            Historical duplicate ×{collapsedDuplicateCount}. Identical AI sends are collapsed here; raw Meta IDs remain in Delivery Details.
+          </div>
+        ) : null}
         {showFailure ? (
           <div className="mt-3 rounded-lg border border-command-red/40 bg-command-red/10 p-2 text-xs leading-5 text-command-red">
             <p>WhatsApp send failed: {error || "Check Technical Audit for details."}</p>
@@ -512,10 +528,11 @@ function ReplyComposer({
   const reply = drafts[leadId] ?? "";
   const isSending = Boolean(sendingState);
   const canSend = reply.trim().length > 0 && !isSending;
+  const salesDraftingEnabled = conversation.context.intentClassified && conversation.context.leadEligible;
 
   useEffect(() => {
     setAiDraft("");
-  }, [leadId, conversation.context.leadEligible]);
+  }, [leadId, salesDraftingEnabled]);
 
   useEffect(() => {
     if (!draftSeed?.text) return;
@@ -645,7 +662,7 @@ function ReplyComposer({
 
   return (
     <div className="border-b border-command-line bg-command-panel/95 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur">
-      {conversation.context.leadEligible ? (
+      {salesDraftingEnabled ? (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             {quickReplies.map((item) => (
@@ -684,7 +701,9 @@ function ReplyComposer({
         </>
       ) : (
         <div className="mb-3 rounded-xl border border-command-cyan/25 bg-command-cyan/5 px-3 py-2 text-xs leading-5 text-command-muted">
-          Non-sales route. Sales quick replies and AI drafting are disabled; operators can still write a manual reply when needed.
+          {conversation.context.intentClassified
+            ? "Non-sales route. Sales quick replies and AI drafting are disabled; operators can still write a manual reply when needed."
+            : "Legacy conversation awaiting intent classification. Sales quick replies and AI drafting are disabled; operators can still write a manual reply."}
         </div>
       )}
       <form ref={formRef} onSubmit={handleSubmit}>
@@ -736,6 +755,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
   const [showTechnicalAudit, setShowTechnicalAudit] = useState(false);
   const chat = conversation.summary;
   const context = conversation.context;
+  const salesContextAvailable = context.intentClassified && context.leadEligible;
   const recentSilentCapture = latestSilentCapture(activeMessages);
   const recentSilentCaptureSummary = recentSilentCapture ? silentCaptureSummary(recentSilentCapture) : null;
 
@@ -749,7 +769,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
       <div className="flex items-center justify-between border-b border-command-line px-4 py-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Conversation Context</p>
-          <p className="mt-1 text-base font-semibold text-command-text">{context.leadEligible ? "Sales details" : "Non-sales routing"}</p>
+          <p className="mt-1 text-base font-semibold text-command-text">{!context.intentClassified ? "Classification pending" : context.leadEligible ? "Sales details" : "Non-sales routing"}</p>
         </div>
         <button
           type="button"
@@ -770,11 +790,19 @@ const LeadContextPanel = memo(function LeadContextPanel({
           <p className="mt-3 text-lg font-semibold text-command-text">{chat.displayName}</p>
           <p className="mt-1 text-sm text-command-muted">{chat.phone || "Phone pending"}</p>
           <dl className="mt-4 space-y-2 border-t border-command-line pt-3 text-sm">
-            <div className="flex justify-between gap-3"><dt className="text-command-muted">Intent</dt><dd className="text-right text-command-text">{humanize(context.conversationIntent)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-command-muted">Route</dt><dd className="text-right text-command-text">{humanize(context.conversationRoute)}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-command-muted">Sales eligible</dt><dd className="text-right text-command-text">{context.leadEligible ? "Yes" : "No"}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-command-muted">Confidence</dt><dd className="text-right text-command-text">{Math.round(context.intentConfidence * 100)}%</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-command-muted">Intent</dt><dd className="text-right text-command-text">{context.intentClassified ? humanize(context.conversationIntent) : "Legacy — not yet classified"}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-command-muted">Route</dt><dd className="text-right text-command-text">{context.intentClassified ? humanize(context.conversationRoute) : "Pending classification"}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-command-muted">Sales eligible</dt><dd className="text-right text-command-text">{context.intentClassified ? context.leadEligible ? "Yes" : "No" : "Not yet decided"}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-command-muted">Confidence</dt><dd className="text-right text-command-text">{context.intentClassified ? `${Math.round(context.intentConfidence * 100)}%` : "Pending"}</dd></div>
           </dl>
+          {!context.intentClassified ? (
+            <form action={reclassifyWhatsAppConversationAction} className="mt-4 border-t border-command-line pt-3">
+              <input type="hidden" name="lead_id" value={conversation.lead.id} />
+              <button type="submit" className="w-full rounded-lg border border-command-amber/45 bg-command-amber/10 px-3 py-2 text-sm font-semibold text-command-amber transition hover:bg-command-amber/15">
+                Classify from conversation history
+              </button>
+            </form>
+          ) : null}
         </div>
 
         <div className="mt-4 rounded-2xl border border-command-gold/35 bg-command-gold/10 p-4">
@@ -793,7 +821,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
         ) : null}
 
         <div className="mt-4 grid gap-3">
-          {context.leadEligible ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+          {salesContextAvailable ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Project basics</p>
             <dl className="mt-3 space-y-3 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Status</dt><dd className="text-right text-command-text">{conversation.lead.status}</dd></div>
@@ -806,7 +834,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
             <p className="mt-3 text-sm leading-6 text-command-text">{context.scopeSummary || "Scope pending"}</p>
           </section> : null}
 
-          {context.leadEligible ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+          {salesContextAvailable ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Files / photos</p>
             <dl className="mt-3 space-y-3 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Floor plan</dt><dd className="text-right text-command-text">{context.floorPlanStatus}</dd></div>
@@ -815,7 +843,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
             </dl>
           </section> : null}
 
-          {context.leadEligible && (context.missingFields.length || context.conflictFields.length) ? (
+          {salesContextAvailable && (context.missingFields.length || context.conflictFields.length) ? (
             <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Lead Facts</p>
               {context.missingFields.length ? (
@@ -827,7 +855,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
             </section>
           ) : null}
 
-          {context.leadEligible ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+          {salesContextAvailable ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Appointment</p>
             <p className="mt-2 text-sm leading-6 text-command-text">{context.appointmentPreference}</p>
           </section> : null}
@@ -841,7 +869,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
         <details className="mt-4 rounded-xl border border-command-line bg-command-bg/55 p-4">
           <summary className="cursor-pointer text-sm font-semibold text-command-text">Lead Actions</summary>
           <div className="mt-4 grid gap-2 text-sm">
-            {context.leadEligible ? <><form action={markBossApprovalNeededAction}>
+            {salesContextAvailable ? <><form action={markBossApprovalNeededAction}>
               <input type="hidden" name="lead_id" value={conversation.lead.id} />
               <button className="w-full rounded-md border border-command-gold/60 bg-command-gold/12 px-3 py-2 font-semibold text-command-gold transition hover:bg-command-gold/18" type="submit">
                 Approve Reply
@@ -1059,7 +1087,10 @@ export function MultiChatInbox({ conversations, selectedLeadId, manualReplyStatu
     ...(activeConversation?.messages ?? []),
     ...(activeConversation ? optimisticReplies[activeConversation.lead.id] ?? [] : [])
   ]), [activeConversation, olderMessages, optimisticReplies]);
-  const activeMessagesNewestFirst = useMemo(() => sortMessagesNewestFirst(activeMessages), [activeMessages]);
+  const activeMessagesNewestFirst = useMemo(
+    () => sortMessagesNewestFirst(collapseHistoricalDuplicateAiMessages(activeMessages)),
+    [activeMessages]
+  );
   const latestVisibleMessageId = activeMessagesNewestFirst[0]?.id ?? "";
   const latestPersistedCursor = useMemo(() => {
     const persisted = activeConversation?.messages.filter((message) => !message.id.startsWith("optimistic-")) ?? [];

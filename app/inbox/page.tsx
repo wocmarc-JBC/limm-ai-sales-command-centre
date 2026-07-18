@@ -31,6 +31,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): M
     status: lead.status,
     conversationIntent: lead.conversationIntent ?? "genuine_new_renovation_lead",
     conversationRoute: lead.conversationRoute ?? "sales_lead",
+    intentClassified: Boolean(lead.intentClassifiedAt),
     leadEligible: lead.leadEligible !== false,
     intentConfidence: lead.intentConfidence ?? 0,
     botPaused: Boolean(lead.botPaused),
@@ -111,6 +112,7 @@ export default async function WhatsAppInboxPage({
       context: {
         conversationIntent: lead.conversationIntent ?? "genuine_new_renovation_lead",
         conversationRoute: lead.conversationRoute ?? "sales_lead",
+        intentClassified: Boolean(lead.intentClassifiedAt),
         leadEligible: lead.leadEligible !== false,
         intentConfidence: lead.intentConfidence ?? 0,
         propertyType: facts.propertyType.value || "Not provided yet",
@@ -127,8 +129,10 @@ export default async function WhatsAppInboxPage({
         missingFields: facts.missingFields,
         conflictFields: facts.conflictFields,
         notes: lead.stageNotes || lead.conversationSummary || facts.scopeSummary.value || "No extra notes yet.",
-        nextAction: facts.nextAction,
-        nextReason: facts.nextActionReason
+        nextAction: lead.intentClassifiedAt ? facts.nextAction : "Classify conversation history before sales follow-up.",
+        nextReason: lead.intentClassifiedAt
+          ? facts.nextActionReason
+          : "This legacy row has compatibility defaults, not a completed v10.2 intent decision."
       },
       hasOlderMessages: selected ? selectedPage.hasOlder : false,
       oldestMessageCursor: selected ? selectedPage.oldestCursor : null,

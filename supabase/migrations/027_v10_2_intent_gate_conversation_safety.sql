@@ -17,28 +17,44 @@ alter table if exists public.leads
 
 -- Preserve classifications written to the additive intake-profile fallback when
 -- application code reached production before this migration was applied.
-update public.leads
-set
-  conversation_intent = coalesce(nullif(intake_profile #>> '{trace,intentGate,conversationIntent}', ''), conversation_intent),
-  lead_eligible = case
-    when intake_profile #>> '{trace,intentGate,leadEligible}' in ('true', 'false')
-      then (intake_profile #>> '{trace,intentGate,leadEligible}')::boolean
-    else lead_eligible
-  end,
-  conversation_route = coalesce(nullif(intake_profile #>> '{trace,intentGate,conversationRoute}', ''), conversation_route),
-  intent_confidence = case
-    when intake_profile #>> '{trace,intentGate,confidence}' ~ '^(0(\.[0-9]+)?|1(\.0+)?)$'
-      then (intake_profile #>> '{trace,intentGate,confidence}')::numeric
-    else intent_confidence
-  end,
-  intent_reason_codes = coalesce(intake_profile #> '{trace,intentGate,reasonCodes}', intent_reason_codes),
-  intent_classifier_version = coalesce(nullif(intake_profile #>> '{trace,intentGate,classifierVersion}', ''), intent_classifier_version),
-  intent_classified_at = coalesce(nullif(intake_profile #>> '{trace,intentGate,classifiedAt}', '')::timestamptz, intent_classified_at),
-  non_sales_acknowledged_at = coalesce(nullif(intake_profile #>> '{trace,intentGate,nonSalesAcknowledgedAt}', '')::timestamptz, non_sales_acknowledged_at),
-  latest_unanswered_question = coalesce(intake_profile #> '{trace,intentGate,latestUnansweredQuestion}', latest_unanswered_question),
-  conversation_safety_state = coalesce(intake_profile #> '{trace,intentGate,conversationSafetyState}', conversation_safety_state)
-where coalesce(intake_profile #>> '{trace,intentGate,classifierVersion}', '') <> ''
-  and intent_classifier_version = '';
+-- Some older live schemas predate migration 022. The intent columns are still
+-- valid there; only the optional fallback backfill must be skipped.
+do $intent_gate_backfill$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'leads'
+      and column_name = 'intake_profile'
+  ) then
+    execute $intent_gate_backfill_sql$
+      update public.leads
+      set
+        conversation_intent = coalesce(nullif(intake_profile #>> '{trace,intentGate,conversationIntent}', ''), conversation_intent),
+        lead_eligible = case
+          when intake_profile #>> '{trace,intentGate,leadEligible}' in ('true', 'false')
+            then (intake_profile #>> '{trace,intentGate,leadEligible}')::boolean
+          else lead_eligible
+        end,
+        conversation_route = coalesce(nullif(intake_profile #>> '{trace,intentGate,conversationRoute}', ''), conversation_route),
+        intent_confidence = case
+          when intake_profile #>> '{trace,intentGate,confidence}' ~ '^(0(\.[0-9]+)?|1(\.0+)?)$'
+            then (intake_profile #>> '{trace,intentGate,confidence}')::numeric
+          else intent_confidence
+        end,
+        intent_reason_codes = coalesce(intake_profile #> '{trace,intentGate,reasonCodes}', intent_reason_codes),
+        intent_classifier_version = coalesce(nullif(intake_profile #>> '{trace,intentGate,classifierVersion}', ''), intent_classifier_version),
+        intent_classified_at = coalesce(nullif(intake_profile #>> '{trace,intentGate,classifiedAt}', '')::timestamptz, intent_classified_at),
+        non_sales_acknowledged_at = coalesce(nullif(intake_profile #>> '{trace,intentGate,nonSalesAcknowledgedAt}', '')::timestamptz, non_sales_acknowledged_at),
+        latest_unanswered_question = coalesce(intake_profile #> '{trace,intentGate,latestUnansweredQuestion}', latest_unanswered_question),
+        conversation_safety_state = coalesce(intake_profile #> '{trace,intentGate,conversationSafetyState}', conversation_safety_state)
+      where coalesce(intake_profile #>> '{trace,intentGate,classifierVersion}', '') <> ''
+        and intent_classifier_version = ''
+    $intent_gate_backfill_sql$;
+  end if;
+end
+$intent_gate_backfill$;
 
 do $$
 begin

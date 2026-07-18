@@ -29,6 +29,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
     status: lead.status,
     conversationIntent: lead.conversationIntent ?? "genuine_new_renovation_lead",
     conversationRoute: lead.conversationRoute ?? "sales_lead",
+    intentClassified: Boolean(lead.intentClassifiedAt),
     leadEligible: lead.leadEligible !== false,
     intentConfidence: lead.intentConfidence ?? 0,
     botPaused: Boolean(lead.botPaused),

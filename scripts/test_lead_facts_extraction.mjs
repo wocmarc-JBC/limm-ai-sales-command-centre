@@ -58,11 +58,11 @@ function lead(overrides = {}) {
   };
 }
 
-function message(body, metadata = {}, id = `msg-${Math.random()}`) {
+function message(body, metadata = {}, id = `msg-${Math.random()}`, direction = "inbound") {
   return {
     id,
     leadId: "lead-1",
-    direction: "inbound",
+    direction,
     channel: "whatsapp",
     body,
     safeToSend: false,
@@ -116,5 +116,21 @@ const patch = leadFactsToLeadPatch(lead(), facts);
 assert.equal(patch.propertyType, "landed", "patch should map property type");
 assert.equal(patch.postalCode, "808123", "patch should map postal code");
 assert.ok(patch.intakeProfile?.trace?.leadFacts, "patch should persist facts in intakeProfile trace");
+
+const inboundOnlyFacts = buildLeadFacts(lead(), [
+  message("Thanks. Is this a landed project with kitchen and bathroom renovation? Please share your budget.", {}, "ai-outbound", "outbound")
+]);
+assert.equal(inboundOnlyFacts.propertyType.value, "", "outbound AI prompts must never become client property facts");
+assert.equal(inboundOnlyFacts.scopeSummary.value, "", "outbound AI prompts must never become client scope facts");
+assert.equal(inboundOnlyFacts.budgetExpectation.value, "", "outbound AI prompts must never become client budget facts");
+assert.equal(inboundOnlyFacts.conflictFields.length, 0, "outbound AI prompts must never create client fact conflicts");
+
+const additiveScopeFacts = buildLeadFacts(lead(), [
+  message("We want to renovate the kitchen.", {}, "scope-kitchen"),
+  message("Bathroom also.", {}, "scope-bathroom")
+]);
+assert.match(additiveScopeFacts.scopeSummary.value, /kitchen/i, "first scope item should remain captured");
+assert.match(additiveScopeFacts.scopeSummary.value, /bathroom/i, "later additive scope item should be merged");
+assert.ok(!additiveScopeFacts.conflictFields.includes("scope"), "additive scope details must not be flagged as contradictory");
 
 console.log("PASS test_lead_facts_extraction");

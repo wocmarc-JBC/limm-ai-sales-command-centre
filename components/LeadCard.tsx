@@ -170,7 +170,7 @@ export function LeadCard({ lead, latestWhatsAppMessage }: { lead: Lead; latestWh
           <div className="rounded-2xl border border-command-line bg-command-bg/55 p-4 text-sm">
             <dl className="grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-command-muted">Question category</dt>
+                <dt className="text-command-muted">Question category:</dt>
                 <dd className="mt-1 font-semibold text-command-text">{questionCategory ?? "No matched category"}</dd>
               </div>
               <div>

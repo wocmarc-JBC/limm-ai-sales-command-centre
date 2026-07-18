@@ -20,6 +20,13 @@ import {
   updateConversationRouting,
   updateLeadFactsFromEvidence
 } from "@/lib/data/leads-repository";
+import {
+  acquireWhatsAppConversationReplyLease,
+  completeWhatsAppConversationReplyReservation,
+  newWhatsAppReplyLeaseOwnerToken,
+  releaseWhatsAppConversationReplyLease,
+  reserveWhatsAppConversationReply
+} from "@/lib/data/whatsapp-conversation-lock-repository";
 import { getWhatsAppRuntime, normalizeWhatsAppPhone } from "@/lib/whatsapp-config";
 import { processWhatsAppHandoffEmail } from "@/lib/handoff-email";
 import { storeWhatsAppMediaForLead } from "@/lib/whatsapp-media-storage";
@@ -31,7 +38,19 @@ import {
 // Compatibility audit marker: buildWhatsAppReplyDecision delegates to the
 // orchestrator; the live webhook intentionally calls the orchestrator directly.
 import { classifyConversationIntent, WHATSAPP_INTENT_CONTEXT_MESSAGE_LIMIT } from "@/lib/whatsapp-intent-gate";
-import { applySemanticDuplicateGuard, identifyLatestUnansweredQuestion } from "@/lib/whatsapp-conversation-safety";
+import {
+  applySemanticDuplicateGuard,
+  identifyLatestUnansweredQuestion,
+  isDirectClientQuestion,
+  replySemanticSignature
+} from "@/lib/whatsapp-conversation-safety";
+import {
+  findNewInboundProviderIds,
+  latestInboundMessage,
+  settleWhatsAppInboundBurst,
+  WHATSAPP_REPLY_COOLDOWN_SECONDS,
+  WHATSAPP_REPLY_NO_SEND_COOLDOWN_SECONDS
+} from "@/lib/whatsapp-conversation-concurrency";
 import { validateWhatsAppAutoReply, WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY } from "@/lib/whatsapp-safety";
 import { buildSilentCaptureNoteFromDecision } from "@/lib/whatsapp-silent-capture";
 
@@ -46,6 +65,7 @@ export type WhatsAppInboundHandleResult = {
     | "auto_reply_sent"
     | "auto_reply_blocked"
     | "auto_reply_disabled"
+    | "auto_reply_coalesced"
     | "auto_reply_silent_capture"
     | "auto_reply_failed";
   reason: string;
@@ -324,14 +344,14 @@ export async function handleWhatsAppInboundMessage(
     });
   }
 
-  const intentGate = classifyConversationIntent({
+  let intentGate = classifyConversationIntent({
     currentMessageText: inboundBody,
     currentMessageType: message.type,
     recentMessages,
     lead,
     botPaused: lead.botPaused
   });
-  const latestUnansweredQuestion = identifyLatestUnansweredQuestion({
+  let latestUnansweredQuestion = identifyLatestUnansweredQuestion({
     messages: recentMessages,
     currentMessageText: message.text || message.caption,
     currentProviderMessageId: providerMessageId,
@@ -531,6 +551,134 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
+  const replyLeaseOwnerToken = newWhatsAppReplyLeaseOwnerToken();
+  let replyLeaseCooldownSeconds = WHATSAPP_REPLY_NO_SEND_COOLDOWN_SECONDS;
+  let replyReservationId = "";
+  let replyInboundBody = inboundBody;
+  let replyInboundMessageType = message.type;
+  let replyTriggerProviderMessageId = providerMessageId;
+  let replyLease;
+  try {
+    replyLease = await acquireWhatsAppConversationReplyLease({
+      leadId: lead.id,
+      ownerToken: replyLeaseOwnerToken,
+      directQuestion: isDirectClientQuestion(inboundBody)
+    });
+  } catch (error) {
+    logWhatsAppError("conversation_reply_lease_acquire", {
+      providerMessageId,
+      leadId: lead.id,
+      reason: safeError(error)
+    });
+    await auditWhatsApp({
+      action: "whatsapp_conversation_reply_lease_failed_safe_suppression",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply was suppressed because the cross-instance conversation lease was unavailable.",
+      metadata: { providerMessageId, reason: safeError(error), failClosed: true }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Conversation safety lease unavailable; no auto-reply was sent.",
+      reply: ""
+    };
+  }
+
+  if (!replyLease.acquired) {
+    logWhatsApp("whatsapp_inbound_coalesced_without_send", {
+      providerMessageId,
+      leadId: lead.id,
+      leaseReason: replyLease.reason
+    });
+    await auditWhatsApp({
+      action: "whatsapp_inbound_coalesced_without_send",
+      leadId: lead.id,
+      summary: "Inbound WhatsApp message was saved but did not start another reply while the conversation lease or cooldown was active.",
+      metadata: {
+        providerMessageId,
+        leaseReason: replyLease.reason,
+        leaseExpiresAt: replyLease.leaseExpiresAt,
+        rawInboundPreserved: true,
+        noAdditionalReply: true
+      }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_coalesced",
+      reason: `Inbound message coalesced: ${replyLease.reason}.`,
+      reply: ""
+    };
+  }
+
+  try {
+    await settleWhatsAppInboundBurst();
+    try {
+      recentMessages = await listRecentLeadMessagesForWebhook(lead.id, WHATSAPP_INTENT_CONTEXT_MESSAGE_LIMIT);
+    } catch (error) {
+      logWhatsAppError("post_lease_context_refresh", { providerMessageId, leadId: lead.id, reason: safeError(error) });
+      throw error;
+    }
+    const latestPlanningInbound = latestInboundMessage(recentMessages);
+    const latestPlanningInboundIdentity = latestPlanningInbound?.providerMessageId || latestPlanningInbound?.id || "";
+    const currentInboundIdentity = providerMessageId || savedInboundMessage.id;
+    if (latestPlanningInbound && latestPlanningInboundIdentity !== currentInboundIdentity) {
+      const latestLeadState = await getLeadById(lead.id);
+      if (!latestLeadState) throw new Error("Lead state unavailable while consolidating the inbound WhatsApp burst.");
+      lead = latestLeadState;
+      replyInboundBody = latestPlanningInbound.body;
+      replyInboundMessageType = typeof latestPlanningInbound.metadata?.messageType === "string"
+        ? latestPlanningInbound.metadata.messageType
+        : "text";
+      replyTriggerProviderMessageId = latestPlanningInbound.providerMessageId || providerMessageId;
+      intentGate = classifyConversationIntent({
+        currentMessageText: replyInboundBody,
+        currentMessageType: replyInboundMessageType,
+        recentMessages,
+        lead,
+        botPaused: lead.botPaused
+      });
+      latestUnansweredQuestion = identifyLatestUnansweredQuestion({
+        messages: recentMessages,
+        currentMessageText: replyInboundBody,
+        currentProviderMessageId: replyTriggerProviderMessageId,
+        currentCreatedAt: latestPlanningInbound.createdAt
+      });
+      const consolidatedLead = await updateConversationRouting(lead, intentGate, latestUnansweredQuestion, {
+        providerMessageId: replyTriggerProviderMessageId,
+        rawInboundMessageId: latestPlanningInbound.id,
+        burstConsolidationOwnerProviderMessageId: providerMessageId,
+        burstReclassifiedFromLatestInbound: true,
+        noStaleFirstMessagePlanning: true
+      });
+      if (consolidatedLead) lead = consolidatedLead;
+      if (intentGate.shouldExtractLeadFacts) {
+        const updatedLead = await updateLeadFactsFromEvidence(lead, [latestPlanningInbound], [], {
+          providerMessageId: replyTriggerProviderMessageId,
+          source: "whatsapp_inbound_burst_consolidation",
+          liveExtraction: true,
+          conversationIntent: intentGate.conversationIntent,
+          leadEligible: intentGate.leadEligible
+        });
+        if (updatedLead) lead = updatedLead;
+      }
+      await auditWhatsApp({
+        action: "whatsapp_inbound_burst_reclassified_from_latest_message",
+        leadId: lead.id,
+        summary: "The conversation lease owner consolidated the inbound burst and replanned from the newest client message.",
+        metadata: {
+          providerMessageId,
+          replyTriggerProviderMessageId,
+          conversationIntent: intentGate.conversationIntent,
+          leadEligible: intentGate.leadEligible,
+          rawInboundPreserved: true,
+          noStaleFirstMessagePlanning: true
+        }
+      });
+    }
+    const replyPlanningMessages = [...recentMessages];
+
   const recentReplyCount = await countRecentWhatsAppAutoReplies(lead.id, tenMinutesAgoIso());
   const rateLimitWarning = recentReplyCount >= 3;
   if (rateLimitWarning) {
@@ -546,15 +694,15 @@ export async function handleWhatsAppInboundMessage(
   logWhatsApp("whatsapp_reply_decision_started", { providerMessageId, leadId: lead.id });
   logWhatsApp("whatsapp_auto_reply_generate_started", { providerMessageId, leadId: lead.id });
   const decision = orchestrateWhatsAppConversationReply({
-    inboundMessageText: message.text || message.caption,
-    inboundMessageType: message.type,
+    inboundMessageText: replyInboundBody,
+    inboundMessageType: replyInboundMessageType,
     lead,
     previousMessages: recentMessages,
     autoReplyEnabled: runtime.testAutoReplyEnabled && runtime.autoReplyModeAllowed && runtime.credentialsReady,
     openAiEnabled: false,
     calendarEventId: "",
     rateLimitExceeded: rateLimitWarning,
-    providerMessageId,
+    providerMessageId: replyTriggerProviderMessageId,
     intentGateDecision: intentGate,
     latestUnansweredQuestion
   });
@@ -565,11 +713,11 @@ export async function handleWhatsAppInboundMessage(
     (decision.replySource === "safe_fallback" ||
       decision.noSilenceGuardResult === "used" ||
       (decision.replySource as string) === "no_silence_fallback");
-  const traceId = `${providerMessageId}:${lead.id}`;
+  const traceId = `${replyTriggerProviderMessageId}:${lead.id}`;
   const handoffEmail = await processWhatsAppHandoffEmail({
     lead,
     phone: senderPhone,
-    latestMessage: inboundBody,
+    latestMessage: replyInboundBody,
     recentMessages,
     decision,
     botReply: reply,
@@ -578,6 +726,7 @@ export async function handleWhatsAppInboundMessage(
   Object.assign(decision.blackBoxTrace, handoffEmail.trace);
   let brainMetadata = {
     providerMessageId,
+    replyTriggerProviderMessageId,
     ...decision.blackBoxTrace
   };
   if (handoffEmail.triggered) {
@@ -745,7 +894,7 @@ export async function handleWhatsAppInboundMessage(
         intentional_no_reply_reason: "semantic_duplicate_reply",
         final_send_result: "semantic_duplicate_blocked_after_safety_rewrite"
       });
-      brainMetadata = { providerMessageId, ...decision.blackBoxTrace };
+      brainMetadata = { providerMessageId, replyTriggerProviderMessageId, ...decision.blackBoxTrace };
       await auditWhatsApp({
         action: "whatsapp_semantic_duplicate_blocked",
         leadId: lead.id,
@@ -774,6 +923,7 @@ export async function handleWhatsAppInboundMessage(
     }
     brainMetadata = {
       providerMessageId,
+      replyTriggerProviderMessageId,
       ...decision.blackBoxTrace
     };
   }
@@ -887,11 +1037,198 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
+  let finalReplyMessages: Awaited<ReturnType<typeof listRecentLeadMessagesForWebhook>>;
+  try {
+    finalReplyMessages = await listRecentLeadMessagesForWebhook(lead.id, WHATSAPP_INTENT_CONTEXT_MESSAGE_LIMIT);
+  } catch (error) {
+    logWhatsAppError("final_conversation_context_refresh", {
+      providerMessageId,
+      leadId: lead.id,
+      reason: safeError(error)
+    });
+    await auditWhatsApp({
+      action: "whatsapp_final_context_unavailable_safe_suppression",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply was suppressed because the final conversation state could not be verified before send.",
+      metadata: { ...brainMetadata, providerMessageId, reason: safeError(error), failClosed: true }
+    });
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      noReplySafetySuppression: true,
+      suppressionReason: "final_conversation_context_unavailable"
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Final conversation state could not be verified; no auto-reply was sent.",
+      reply: ""
+    };
+  }
+
+  const newerInboundProviderIds = findNewInboundProviderIds(replyPlanningMessages, finalReplyMessages);
+  if (newerInboundProviderIds.length) {
+    Object.assign(decision.blackBoxTrace, {
+      newerInboundDuringPlanning: true,
+      newerInboundProviderIds,
+      final_send_result: "newer_inbound_coalesced_without_send"
+    });
+    brainMetadata = { providerMessageId, replyTriggerProviderMessageId, ...decision.blackBoxTrace };
+    logWhatsApp("whatsapp_newer_inbound_during_planning_safe_suppression", {
+      providerMessageId,
+      leadId: lead.id,
+      newerInboundCount: newerInboundProviderIds.length
+    });
+    await auditWhatsApp({
+      action: "whatsapp_newer_inbound_during_planning_safe_suppression",
+      leadId: lead.id,
+      summary: "A stale WhatsApp reply was suppressed because newer client messages arrived while it was being planned.",
+      metadata: { ...brainMetadata, rawInboundPreserved: true, noStaleReply: true }
+    });
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      noReplySafetySuppression: true,
+      unrelatedReplyBlocked: true,
+      suppressionReason: "newer_inbound_during_reply_planning"
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_coalesced",
+      reason: "Newer inbound messages arrived during planning; stale reply suppressed.",
+      reply: ""
+    };
+  }
+
+  const finalSemanticGuard = applySemanticDuplicateGuard(reply, finalReplyMessages);
+  Object.assign(decision.blackBoxTrace, {
+    finalPreSendSemanticGuard: finalSemanticGuard,
+    finalReplyHash: finalSemanticGuard.candidateSignature
+  });
+  brainMetadata = { providerMessageId, replyTriggerProviderMessageId, ...decision.blackBoxTrace };
+  if (finalSemanticGuard.blocked) {
+    await auditWhatsApp({
+      action: "whatsapp_final_semantic_duplicate_blocked",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply was suppressed by the final pre-send semantic duplicate check.",
+      metadata: { ...brainMetadata, final_send_result: "semantic_duplicate_blocked_before_reservation" }
+    });
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      semanticDuplicateBlocked: true,
+      noReplySafetySuppression: true,
+      suppressionReason: "final_pre_send_semantic_duplicate"
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Final pre-send semantic duplicate reply was safely suppressed.",
+      reply: ""
+    };
+  }
+
+  const finalReplySignature = replySemanticSignature(reply);
+  try {
+    const reservation = await reserveWhatsAppConversationReply({
+      leadId: lead.id,
+      ownerToken: replyLeaseOwnerToken,
+      inboundProviderMessageId: replyTriggerProviderMessageId,
+      replySignature: finalReplySignature
+    });
+    if (!reservation.reserved || !reservation.reservationId) {
+      await auditWhatsApp({
+        action: "whatsapp_reply_reservation_blocked_safe_suppression",
+        leadId: lead.id,
+        summary: "WhatsApp auto-reply was suppressed because the atomic send reservation was not granted.",
+        metadata: {
+          ...brainMetadata,
+          reservationReason: reservation.reason,
+          replySignature: finalReplySignature,
+          final_send_result: "reply_reservation_not_granted"
+        }
+      });
+      await recordConversationSafetyOutcomeSafely({
+        lead,
+        providerMessageId,
+        conversationIntent: decision.conversationIntent,
+        semanticDuplicateBlocked: reservation.reason === "duplicate_reply_reservation",
+        noReplySafetySuppression: true,
+        suppressionReason: reservation.reason
+      });
+      return {
+        providerMessageId,
+        leadId: lead.id,
+        status: "auto_reply_coalesced",
+        reason: `Atomic reply reservation not granted: ${reservation.reason}.`,
+        reply: ""
+      };
+    }
+    replyReservationId = reservation.reservationId;
+    decision.replySignature = finalReplySignature;
+    Object.assign(decision.blackBoxTrace, {
+      replyReservationId,
+      replyReservationGranted: true,
+      finalReplyHash: finalReplySignature
+    });
+    brainMetadata = { providerMessageId, replyTriggerProviderMessageId, ...decision.blackBoxTrace };
+  } catch (error) {
+    logWhatsAppError("conversation_reply_reservation", {
+      providerMessageId,
+      leadId: lead.id,
+      reason: safeError(error)
+    });
+    await auditWhatsApp({
+      action: "whatsapp_reply_reservation_failed_safe_suppression",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply was suppressed because the atomic send reservation was unavailable.",
+      metadata: { ...brainMetadata, reason: safeError(error), failClosed: true }
+    });
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      noReplySafetySuppression: true,
+      suppressionReason: "reply_reservation_unavailable"
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Atomic reply reservation unavailable; no auto-reply was sent.",
+      reply: ""
+    };
+  }
+
+  let externalSendCompleted = false;
   try {
     logWhatsApp("whatsapp_auto_reply_send_payload_summary", getWhatsAppSendPayloadSummary(senderPhone, reply));
     logWhatsApp("whatsapp_auto_reply_send_started", { providerMessageId, leadId: lead.id });
     const sent = await adapter.sendReply(senderPhone, reply);
+    externalSendCompleted = true;
+    replyLeaseCooldownSeconds = WHATSAPP_REPLY_COOLDOWN_SECONDS;
     logWhatsApp("whatsapp_auto_reply_sent", { providerMessageId, leadId: lead.id, outboundProviderMessageId: sent.providerMessageId || "" });
+    try {
+      await completeWhatsAppConversationReplyReservation({
+        reservationId: replyReservationId,
+        status: "sent",
+        outboundProviderMessageId: sent.providerMessageId || undefined
+      });
+    } catch (error) {
+      logWhatsAppError("reply_reservation_completion", {
+        providerMessageId,
+        leadId: lead.id,
+        reservationId: replyReservationId,
+        reason: safeError(error),
+        externalSendCompleted: true
+      });
+    }
     await saveLeadMessage({
       leadId: lead.id,
       direction: "outbound",
@@ -900,7 +1237,8 @@ export async function handleWhatsAppInboundMessage(
       providerMessageId: sent.providerMessageId || undefined,
       whatsappStatus: "sent",
       metadata: {
-        inboundProviderMessageId: providerMessageId,
+        inboundProviderMessageId: replyTriggerProviderMessageId,
+        leaseOwnerInboundProviderMessageId: providerMessageId,
         outboundProviderMessageId: sent.providerMessageId,
         mode: sent.mode,
         ...decision.blackBoxTrace,
@@ -930,6 +1268,68 @@ export async function handleWhatsAppInboundMessage(
     };
   } catch (error) {
     const sendError = safeSendErrorMetadata(error);
+    if (externalSendCompleted) {
+      logWhatsAppError("auto_reply_post_send_persistence", {
+        providerMessageId,
+        leadId: lead.id,
+        reason: safeError(error),
+        externalSendCompleted: true,
+        reservationId: replyReservationId
+      });
+      try {
+        await auditWhatsApp({
+          action: "whatsapp_auto_reply_post_send_persistence_failed",
+          leadId: lead.id,
+          summary: "Meta accepted the WhatsApp reply, but a later local persistence step failed and needs operator review.",
+          metadata: {
+            ...brainMetadata,
+            providerMessageId,
+            replyTriggerProviderMessageId,
+            reservationId: replyReservationId,
+            reason: safeError(error),
+            externalSendCompleted: true,
+            final_send_result: "sent_post_send_persistence_failed"
+          }
+        });
+      } catch (auditError) {
+        logWhatsAppError("auto_reply_post_send_persistence_audit", {
+          providerMessageId,
+          leadId: lead.id,
+          reason: safeError(auditError),
+          externalSendCompleted: true
+        });
+      }
+      await recordConversationSafetyOutcomeSafely({
+        lead,
+        providerMessageId,
+        conversationIntent: decision.conversationIntent,
+        acknowledgementIntent: decision.acknowledgementIntent,
+        replySent: true,
+        replySignature: decision.replySignature || String(decision.blackBoxTrace.finalReplyHash ?? "")
+      });
+      return {
+        providerMessageId,
+        leadId: lead.id,
+        status: "auto_reply_sent",
+        reason: "WhatsApp auto-reply was sent, but post-send persistence needs operator review.",
+        reply
+      };
+    }
+    try {
+      await completeWhatsAppConversationReplyReservation({
+        reservationId: replyReservationId,
+        status: "failed",
+        failureReason: safeError(error)
+      });
+    } catch (reservationError) {
+      logWhatsAppError("reply_reservation_completion", {
+        providerMessageId,
+        leadId: lead.id,
+        reservationId: replyReservationId,
+        reason: safeError(reservationError),
+        externalSendCompleted: false
+      });
+    }
     logWhatsApp("whatsapp_auto_reply_failed", {
       providerMessageId,
       leadId: lead.id,
@@ -954,7 +1354,8 @@ export async function handleWhatsAppInboundMessage(
       safeToSend: false,
       whatsappStatus: "failed",
       metadata: {
-        inboundProviderMessageId: providerMessageId,
+        inboundProviderMessageId: replyTriggerProviderMessageId,
+        leaseOwnerInboundProviderMessageId: providerMessageId,
         error: error instanceof Error ? error.message : "Unknown WhatsApp send failure",
         status: sendError.status,
         metaCode: sendError.metaCode,
@@ -1001,5 +1402,21 @@ export async function handleWhatsAppInboundMessage(
       reason: error instanceof Error ? error.message : "Unknown WhatsApp send failure",
       reply
     };
+  }
+  } finally {
+    try {
+      await releaseWhatsAppConversationReplyLease({
+        leadId: lead.id,
+        ownerToken: replyLeaseOwnerToken,
+        cooldownSeconds: replyLeaseCooldownSeconds
+      });
+    } catch (error) {
+      logWhatsAppError("conversation_reply_lease_release", {
+        providerMessageId,
+        leadId: lead.id,
+        reason: safeError(error),
+        leaseExpiresNaturally: true
+      });
+    }
   }
 }

@@ -7,6 +7,7 @@ import { getLimmInstagramUrl } from "@/lib/whatsapp-lead-context";
 import { singaporeOfficialPlanningAreaMapAvailable } from "@/lib/singapore-map-geometry";
 import { questionBankStats } from "@/lib/whatsapp-question-bank";
 import { getClientFilesStorageRuntime } from "@/lib/data/lead-files-repository";
+import { getWhatsAppConversationConcurrencyHealth } from "@/lib/data/whatsapp-conversation-lock-repository";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,6 +68,8 @@ export const dynamic = "force-dynamic";
 // version: "v10_boss_operations_command_centre_pwa"
 // version: "v10_2_0_intent_gate_conversation_safety"
 // salesBrainVersion: "v10.2.0"
+// version: "v10_2_1_conversation_concurrency_safety"
+// salesBrainVersion: "v10.2.1"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -88,12 +91,27 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     const clientFilesStorage = getClientFilesStorageRuntime();
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
+    const concurrencySafety = await getWhatsAppConversationConcurrencyHealth();
     return NextResponse.json({
       ok: true,
-      version: "v10_2_0_intent_gate_conversation_safety",
-      salesBrainVersion: "v10.2.0",
+      version: "v10_2_1_conversation_concurrency_safety",
+      salesBrainVersion: "v10.2.1",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
+      crossInstanceConversationLeaseAvailable: concurrencySafety.migration028Ready,
+      atomicReplyReservationAvailable: concurrencySafety.migration028Ready,
+      finalPreSendContextRefreshAvailable: true,
+      newerInboundStaleReplySuppressionAvailable: true,
+      inboundBurstSettleAvailable: true,
+      historicalDuplicateDisplayCollapseAvailable: true,
+      legacyIntentClassificationLabelsAvailable: true,
+      leadFactsInboundEvidenceOnly: true,
+      databaseConnected: concurrencySafety.databaseConnected,
+      migration027Ready: concurrencySafety.migration027Ready,
+      migration028Ready: concurrencySafety.migration028Ready,
+      whatsappProductionSafetyReady:
+        concurrencySafety.databaseConnected && concurrencySafety.migration027Ready && concurrencySafety.migration028Ready,
+      whatsappProductionSafetyReason: concurrencySafety.reason,
       intentGateAvailable: true,
       leadEligibilityGateAvailable: true,
       nonSalesRoutingAvailable: true,
@@ -533,10 +551,23 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v10_2_0_intent_gate_conversation_safety",
-      salesBrainVersion: "v10.2.0",
+      version: "v10_2_1_conversation_concurrency_safety",
+      salesBrainVersion: "v10.2.1",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
+      crossInstanceConversationLeaseAvailable: false,
+      atomicReplyReservationAvailable: false,
+      finalPreSendContextRefreshAvailable: false,
+      newerInboundStaleReplySuppressionAvailable: false,
+      inboundBurstSettleAvailable: false,
+      historicalDuplicateDisplayCollapseAvailable: false,
+      legacyIntentClassificationLabelsAvailable: false,
+      leadFactsInboundEvidenceOnly: false,
+      databaseConnected: false,
+      migration027Ready: false,
+      migration028Ready: false,
+      whatsappProductionSafetyReady: false,
+      whatsappProductionSafetyReason: "health_check_failed",
       intentGateAvailable: false,
       leadEligibilityGateAvailable: false,
       nonSalesRoutingAvailable: false,

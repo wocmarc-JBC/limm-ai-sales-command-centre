@@ -167,6 +167,31 @@ function mergeBooleanFact(current: LeadFactValue<boolean>, incoming: LeadFactVal
   return mergeFact(current, incoming, field, conflicts);
 }
 
+function mergeScopeFact(current: LeadFactValue<string>, incoming: LeadFactValue<string>): LeadFactValue<string> {
+  if (incoming.confidence === "none" || !incoming.value.trim()) return current;
+  if (current.confidence === "none" || !current.value.trim()) return incoming;
+  if (current.verifiedByMarcus || current.confidence === "verified") return current;
+
+  const mergedLabels: string[] = [];
+  const seen = new Set<string>();
+  for (const value of [...current.value.split(","), ...incoming.value.split(",")]) {
+    const label = normalizeText(value);
+    const key = label.toLowerCase();
+    if (!label || seen.has(key)) continue;
+    seen.add(key);
+    mergedLabels.push(label);
+  }
+  const preferredEvidence = confidenceRank[incoming.confidence] > confidenceRank[current.confidence] ? incoming : current;
+  const confidence = confidenceRank[incoming.confidence] > confidenceRank[current.confidence]
+    ? incoming.confidence
+    : current.confidence;
+  return {
+    ...preferredEvidence,
+    value: mergedLabels.join(", "),
+    confidence
+  };
+}
+
 function detectPropertyType(text: string, source?: ExtractSource): LeadFactValue<string> {
   const lower = text.toLowerCase();
   if (/\b(landed|terrace|inter[-\s]?terrace|semi[-\s]?d|detached|bungalow|a&a|addition|alteration)\b/.test(lower)) return fact("landed", "high", source);
@@ -320,7 +345,7 @@ function applyExtractedFacts(base: LeadFacts, extracted: Partial<LeadFacts>) {
   base.addressRaw = mergeFact(base.addressRaw, extracted.addressRaw ?? emptyFact(""), "address", conflicts);
   base.postalCode = mergeFact(base.postalCode, extracted.postalCode ?? emptyFact(""), "postal_code", conflicts);
   base.area = mergeFact(base.area, extracted.area ?? emptyFact(""), "area", conflicts);
-  base.scopeSummary = mergeFact(base.scopeSummary, extracted.scopeSummary ?? emptyFact(""), "scope", conflicts);
+  base.scopeSummary = mergeScopeFact(base.scopeSummary, extracted.scopeSummary ?? emptyFact(""));
   base.appointmentPreference = mergeFact(base.appointmentPreference, extracted.appointmentPreference ?? emptyFact(""), "appointment_preference", conflicts);
   base.budgetExpectation = mergeFact(base.budgetExpectation, extracted.budgetExpectation ?? emptyFact(""), "budget_expectation", conflicts);
   base.floorPlanReceived = mergeBooleanFact(base.floorPlanReceived, extracted.floorPlanReceived ?? emptyFact(false), "floor_plan", conflicts);
@@ -344,7 +369,7 @@ export function buildLeadFacts(lead: Lead, messages: LeadMessage[] = [], files: 
   const facts = seedFactsFromLead(lead);
   const sortedMessages = [...messages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   for (const message of sortedMessages) {
-    if (message.channel !== "whatsapp" || message.direction === "internal") continue;
+    if (message.channel !== "whatsapp" || message.direction !== "inbound") continue;
     const metadata = message.metadata ?? {};
     applyExtractedFacts(facts, extractLeadFactsFromText(normalizeMessageText(message), {
       sourceMessageId: message.id,

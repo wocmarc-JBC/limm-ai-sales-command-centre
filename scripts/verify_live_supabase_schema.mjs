@@ -20,7 +20,9 @@ const requiredTables = [
   "audit_logs",
   "settings",
   "message_templates",
-  "lead_outcomes"
+  "lead_outcomes",
+  "whatsapp_conversation_reply_leases",
+  "whatsapp_reply_reservations"
 ];
 
 const requiredColumns = {
@@ -32,7 +34,9 @@ const requiredColumns = {
   appointment_rules: ["id", "appointment_type", "allowed_days", "standard_slots", "minimum_notice_hours", "max_per_day", "buffer_minutes", "same_day_rule", "public_holiday_rule", "boss_approval_required", "active"],
   quotation_readiness: ["id", "lead_id", "readiness_score", "missing_info", "quote_preparation_checklist", "boss_review_required", "status", "updated_at"],
   audit_logs: ["id", "actor", "actor_type", "actor_name", "actor_email", "actor_id", "action", "entity_type", "entity_id", "before_data", "after_data", "metadata", "created_at"],
-  settings: ["key", "value", "updated_at"]
+  settings: ["key", "value", "updated_at"],
+  whatsapp_conversation_reply_leases: ["lead_id", "owner_token", "lease_expires_at", "cooldown_until", "pending_inbound_count", "last_inbound_at", "last_acquired_at", "updated_at"],
+  whatsapp_reply_reservations: ["id", "lead_id", "owner_token", "inbound_provider_message_id", "reply_signature", "reservation_bucket", "status", "outbound_provider_message_id", "failure_reason", "reserved_at", "completed_at"]
 };
 
 function read(relativePath) {
@@ -81,6 +85,10 @@ function localStaticChecks() {
   const intentGateMigration = read("supabase/migrations/027_v10_2_intent_gate_conversation_safety.sql");
   for (const phrase of ["conversation_intent", "lead_eligible", "conversation_route", "conversation_safety_state", "leads_sales_eligible_active_idx"]) {
     if (!intentGateMigration.includes(phrase)) failures.push(`Intent gate migration missing: ${phrase}`);
+  }
+  const concurrencyMigration = read("supabase/migrations/028_v10_2_1_whatsapp_conversation_concurrency.sql");
+  for (const phrase of ["whatsapp_conversation_reply_leases", "whatsapp_reply_reservations", "acquire_whatsapp_conversation_reply_lease", "release_whatsapp_conversation_reply_lease", "reserve_whatsapp_conversation_reply", "whatsapp_conversation_concurrency_schema_ready"]) {
+    if (!concurrencyMigration.includes(phrase)) failures.push(`Conversation concurrency migration missing: ${phrase}`);
   }
   return failures;
 }
