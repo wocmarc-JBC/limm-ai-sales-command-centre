@@ -155,21 +155,27 @@ export default async function WhatsAppInboxPage({
 
   return (
     <>
-      <header className="mb-3 flex min-h-12 items-center justify-between gap-4">
+      <header className="mb-3 flex min-h-11 items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-command-cyan">Operator console</p>
-          <h1 className="truncate text-xl font-semibold text-command-text sm:text-2xl">LIMM WhatsApp Inbox</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="truncate text-xl font-semibold tracking-[-0.02em] text-command-text sm:text-2xl">WhatsApp Inbox</h1>
+            <span className="hidden items-center gap-1.5 rounded-full border border-command-green/25 bg-command-green/10 px-2 py-0.5 text-[10px] font-semibold text-command-green sm:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-command-green" aria-hidden="true" />
+              Live
+            </span>
+          </div>
+          <p className="hidden text-[11px] text-command-subtle sm:block">Operator console · newest client activity first</p>
         </div>
-        <nav className="flex shrink-0 items-center gap-1 text-sm font-semibold" aria-label="Inbox links">
+        <nav className="flex shrink-0 items-center gap-1 text-xs font-semibold sm:text-sm" aria-label="Inbox links">
           <Link
             href="/leads"
-            className="rounded-lg px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text"
+            className="inline-flex min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text"
           >
-            Lead list
+            Leads
           </Link>
           <Link
             href="/settings"
-            className="hidden rounded-lg px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text sm:inline-flex"
+            className="hidden min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text sm:inline-flex"
           >
             Settings
           </Link>

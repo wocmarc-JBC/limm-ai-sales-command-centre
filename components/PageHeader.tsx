@@ -8,12 +8,12 @@ export function PageHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">{eyebrow}</p> : null}
-        <h2 className="mt-1 text-2xl font-semibold text-command-text md:text-3xl">{title}</h2>
+    <header className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0">
+        {eyebrow ? <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-command-gold">{eyebrow}</p> : null}
+        <h2 className="mt-0.5 truncate text-2xl font-semibold tracking-[-0.02em] text-command-text md:text-[1.75rem]">{title}</h2>
       </div>
-      {children ? <div className="flex flex-wrap gap-2">{children}</div> : null}
+      {children ? <div className="thin-scrollbar flex max-w-full gap-2 overflow-x-auto pb-1 [&>*]:shrink-0">{children}</div> : null}
     </header>
   );
 }

@@ -87,7 +87,16 @@ assert(!/from\s+["']@\/lib\/actions["']|from\s+["']@\/lib\/data\/.*repository|fr
 assert(reviewRoute.includes("(Preview Only)") && reviewRoute.includes("Client Files Preview"), "Review route preview-only controls or files section missing.");
 assert(!/reviewNavItems[\s\S]{0,900}href:\s*["']\/(leads|appointments|settings|audit-log)/.test(shellChrome), "Review route nav links to protected routes.");
 
-assert(/auth\.profile\s*&&\s*auth\.authenticated[\s\S]{0,260}<LogoutButton/.test(shellChrome), "Logout must only render for authenticated profile.");
+const authenticatedShellBranchStart = shellChrome.indexOf("if (auth.profile && auth.authenticated && clientAuthenticated)");
+const logoutButtonIndex = shellChrome.indexOf("<LogoutButton", authenticatedShellBranchStart);
+const unauthenticatedShellBranchStart = shellChrome.indexOf('    <div className="rounded-xl border border-command-line bg-command-card', logoutButtonIndex);
+assert(
+  authenticatedShellBranchStart >= 0
+    && logoutButtonIndex > authenticatedShellBranchStart
+    && unauthenticatedShellBranchStart > logoutButtonIndex
+    && shellChrome.indexOf("<LogoutButton", logoutButtonIndex + 1) === -1,
+  "Logout must only render for authenticated profile."
+);
 assert(shellChrome.includes("isLoginRoute") && shellChrome.includes("Secure sign-in"), "Login route shell must avoid protected-page warning copy.");
 const loginText = read("app/login/page.tsx") + read("components/auth/LoginForm.tsx");
 assert(loginText.includes("Sign in to Command Centre"), "Login page missing clean title.");

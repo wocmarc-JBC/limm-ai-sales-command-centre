@@ -37,12 +37,12 @@ export function AuthGate({
 
   if (mode === "Supabase Mode" && !authenticated && pathname !== "/login" && !isTemporaryReviewRoute && !isTokenUploadRoute) {
     return (
-      <main className="px-4 pb-10 pt-28 md:px-8 lg:ml-64 lg:pt-8">
-        <div className="rounded border border-command-line bg-command-panel p-6 shadow-command">
+      <main className="px-4 pb-10 pt-20 md:px-6 lg:ml-56 lg:pt-6">
+        <div className="rounded-2xl border border-command-line bg-command-panel p-6 shadow-command">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Supabase Mode</p>
           <h2 className="mt-2 text-2xl font-semibold">Login required</h2>
           <p className="mt-3 text-command-muted">This Command Centre is protected when Supabase is configured.</p>
-          <Link href="/login" className="mt-5 inline-flex rounded border border-command-cyan bg-command-cyan px-4 py-2 text-sm font-semibold text-black">
+          <Link href="/login" className="mt-5 inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-sm font-semibold text-black">
             Go to Login
           </Link>
         </div>

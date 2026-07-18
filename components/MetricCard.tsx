@@ -10,16 +10,16 @@ export function MetricCard({
   detail?: string;
 }) {
   const tones = {
-    neutral: "border-command-line",
-    good: "border-command-green/55",
-    warn: "border-command-gold/65",
-    danger: "border-command-red/65"
+    neutral: "border-command-line before:bg-command-subtle",
+    good: "border-command-green/45 before:bg-command-green",
+    warn: "border-command-gold/50 before:bg-command-gold",
+    danger: "border-command-red/50 before:bg-command-red"
   };
   return (
-    <section className={`rounded-lg border ${tones[tone]} bg-command-card p-5 shadow-premium`}>
-      <p className="text-sm font-medium text-command-muted">{label}</p>
-      <p className="mt-2 text-4xl font-semibold text-command-text">{value}</p>
-      {detail ? <p className="mt-3 text-sm leading-6 text-command-muted">{detail}</p> : null}
+    <section className={`relative overflow-hidden rounded-2xl border ${tones[tone]} bg-command-card p-4 shadow-command before:absolute before:inset-y-0 before:left-0 before:w-0.5`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-command-muted">{label}</p>
+      <p className="mt-1.5 text-3xl font-semibold tabular-nums tracking-[-0.03em] text-command-text">{value}</p>
+      {detail ? <p className="mt-2 text-[13px] leading-5 text-command-muted">{detail}</p> : null}
     </section>
   );
 }

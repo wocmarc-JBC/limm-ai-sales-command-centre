@@ -79,6 +79,7 @@ check("sorting does not mutate caller state", () => {
 const inboxPage = read("app/inbox/page.tsx");
 const conversationsApi = read("app/api/inbox/conversations/route.ts");
 const inboxClient = read("components/inbox/MultiChatInbox.tsx");
+const globalStyles = read("app/globals.css");
 const actions = read("lib/actions.ts");
 const leadsRepository = read("lib/data/leads-repository.ts");
 const health = read("app/api/whatsapp/health/route.ts");
@@ -142,7 +143,9 @@ check("removing the active spam chat preserves operator continuity", () => {
 
 check("desktop panes use bounded independent scrolling and start chat-focused", () => {
   assert.ok(inboxClient.includes('useState(false)'));
-  assert.ok(inboxClient.includes("lg:h-[calc(100dvh-8.5rem)]"));
+  assert.ok(inboxClient.includes("inbox-product-frame"));
+  assert.ok(globalStyles.includes("height: calc(100dvh - 5.65rem)"));
+  assert.ok(globalStyles.includes("min-height: 32rem"));
   assert.ok(inboxClient.includes('data-testid="inbox-details-drawer"'));
   assert.ok(inboxClient.includes("min-h-0 flex-1 overflow-y-auto"));
 });

@@ -374,7 +374,16 @@ assert(shellChrome.includes("No Live Actions"), "Review shell header must show N
 assert(shellChrome.includes("Demo Data Only"), "Review shell header must show Demo Data Only.");
 assert(!reviewRoute.includes("Login required"), "Review route body must not show protected login copy.");
 assert(!reviewRoute.includes("Logout"), "Review route body must not show logout.");
-assert(/auth\.profile\s*&&\s*auth\.authenticated\s*&&\s*clientAuthenticated[\s\S]{0,700}<LogoutButton/.test(shellChrome), "Logout must only render for an authenticated profile.");
+const authenticatedShellBranchStart = shellChrome.indexOf("if (auth.profile && auth.authenticated && clientAuthenticated)");
+const logoutButtonIndex = shellChrome.indexOf("<LogoutButton", authenticatedShellBranchStart);
+const unauthenticatedShellBranchStart = shellChrome.indexOf('    <div className="rounded-xl border border-command-line bg-command-card', logoutButtonIndex);
+assert(
+  authenticatedShellBranchStart >= 0
+    && logoutButtonIndex > authenticatedShellBranchStart
+    && unauthenticatedShellBranchStart > logoutButtonIndex
+    && shellChrome.indexOf("<LogoutButton", logoutButtonIndex + 1) === -1,
+  "Logout must only render for an authenticated profile."
+);
 assert(shellChrome.includes("reviewNavItems"), "Review route must use dedicated review nav items.");
 assert(shellChrome.includes("#dashboard") && shellChrome.includes("#client-files"), "Review nav must use internal anchors.");
 assert(!/reviewNavItems[\s\S]{0,900}href:\s*["']\/(leads|appointments|settings|audit-log)/.test(shellChrome), "Review nav must not link to protected app routes.");

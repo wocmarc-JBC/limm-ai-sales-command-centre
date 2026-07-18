@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/data/supabase-browser";
 
-export function LogoutButton({ mode }: { mode: "Mock Mode" | "Supabase Mode" }) {
+export function LogoutButton({
+  mode,
+  compact = false
+}: {
+  mode: "Mock Mode" | "Supabase Mode";
+  compact?: boolean;
+}) {
   const router = useRouter();
 
   async function logout() {
@@ -15,7 +21,11 @@ export function LogoutButton({ mode }: { mode: "Mock Mode" | "Supabase Mode" }) 
   }
 
   return (
-    <button onClick={logout} className="mt-2 rounded border border-command-line bg-command-panel2 px-3 py-2 text-xs text-command-muted transition hover:text-command-text">
+    <button
+      type="button"
+      onClick={logout}
+      className={`${compact ? "w-full justify-center" : "mt-2"} inline-flex min-h-10 items-center rounded-xl border border-command-line bg-command-panel2 px-3 py-2 text-xs font-semibold text-command-muted transition hover:border-command-gold/50 hover:text-command-text`}
+    >
       Logout
     </button>
   );

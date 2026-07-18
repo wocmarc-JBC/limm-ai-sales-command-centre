@@ -132,6 +132,8 @@ const filters = [
   "Failed send"
 ] as const;
 
+const INBOX_FILTER_STORAGE_KEY = "limm-inbox-filter-v10.4";
+
 const quickReplies = [
   {
     label: "Ask property type",
@@ -279,7 +281,7 @@ function senderLabel(message: LeadMessage) {
 function bubbleTone(message: LeadMessage) {
   if (message.direction === "inbound") return "rounded-bl-md border-command-line bg-command-panel2/95 text-command-text";
   if (message.direction === "internal") return "border-command-line bg-command-bg/70 text-command-muted";
-  if (message.metadata?.manualReply) return "rounded-br-md border-command-green/35 bg-command-green/12 text-command-text";
+  if (message.metadata?.manualReply) return "rounded-br-md border-command-green/35 bg-command-green/10 text-command-text";
   return "rounded-br-md border-command-cyan/35 bg-command-cyan/10 text-command-text";
 }
 
@@ -290,7 +292,7 @@ function chatStatusLabel(chat: MultiChatSummary) {
 function chatStatusTone(chat: MultiChatSummary) {
   const label = chatStatusLabel(chat);
   if (label === "Failed send") return "border-command-red/50 bg-command-red/10 text-command-red";
-  if (label === "Waiting for Marcus") return "border-command-gold/60 bg-command-gold/12 text-command-gold";
+  if (label === "Waiting for Marcus") return "border-command-gold/60 bg-command-gold/10 text-command-gold";
   if (label === "Waiting for client") return "border-command-amber/50 bg-command-amber/10 text-command-amber";
   if (label === "Human takeover") return "border-command-cyan/45 bg-command-cyan/10 text-command-cyan";
   if (label === "Closed / Done") return "border-command-line bg-command-bg/60 text-command-muted";
@@ -433,12 +435,13 @@ const ChatRow = memo(function ChatRow({
     <div
       data-testid="inbox-chat-row"
       data-last-activity-at={chat.lastActivityAt}
-      className={`group relative border-b border-command-line/70 transition ${
+      data-active={active ? "true" : "false"}
+      className={`group relative border-b border-command-line/60 transition ${
         selected
           ? "bg-command-red/10"
           : active
-            ? "bg-command-gold/10 shadow-[inset_3px_0_0_#D6A84F]"
-            : "bg-transparent hover:bg-white/[0.035]"
+            ? "bg-command-gold/10 shadow-[inset_3px_0_0_#DDB35D]"
+            : "bg-transparent hover:bg-white/[0.04]"
       }`}
     >
       <button
@@ -446,7 +449,7 @@ const ChatRow = memo(function ChatRow({
         onClick={() => selectionMode ? onToggleSelected(chat.id) : onSelect(chat.id)}
         aria-label={selectionMode ? `Select ${chat.displayName || chat.phone}` : `Open conversation with ${chat.displayName || chat.phone}`}
         aria-pressed={selectionMode ? selected : undefined}
-        className={`flex w-full items-start gap-3 px-3 py-3.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-command-gold ${canManageSpam && !selectionMode ? "pr-14" : ""}`}
+        className={`flex min-h-[5.25rem] w-full items-start gap-3 px-3 py-3 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-command-gold ${canManageSpam && !selectionMode ? "pr-[3.75rem]" : ""}`}
       >
         {selectionMode ? (
           <span className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${selected ? "border-command-red bg-command-red text-white" : "border-command-line bg-command-bg text-transparent"}`} aria-hidden="true">
@@ -455,25 +458,25 @@ const ChatRow = memo(function ChatRow({
             </svg>
           </span>
         ) : (
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-command-panel text-sm font-semibold text-command-gold ring-1 ring-command-line" aria-hidden="true">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-command-gold ring-1 ${active ? "bg-command-gold/10 ring-command-gold/35" : "bg-command-panel ring-command-line"}`} aria-hidden="true">
             {chatInitials(chat)}
           </span>
         )}
         <span className="min-w-0 flex-1">
           <span className="flex items-start justify-between gap-3">
-            <span className="truncate text-[15px] font-semibold leading-5 text-command-text">{chat.displayName || chat.phone}</span>
+            <span className="truncate text-[15px] font-semibold leading-5 tracking-[-0.01em] text-command-text">{chat.displayName || chat.phone}</span>
             <time className="shrink-0 text-[11px] text-command-subtle" dateTime={chat.lastActivityAt}>{formatQueueTimestamp(chat.lastActivityAt)}</time>
           </span>
-          <span className="mt-1 block truncate text-sm leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview, 72)}</span>
-          <span className="mt-2 flex min-w-0 items-center gap-2 text-[11px] text-command-subtle">
+          <span className="mt-0.5 block truncate text-[13px] leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview, 72)}</span>
+          <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-command-subtle">
             <span className={`h-2 w-2 shrink-0 rounded-full ${chatStatusDotTone(chat)}`} aria-hidden="true" />
             <span className="truncate">{chatStatusLabel(chat)}</span>
-            {!chat.intentClassified ? <span className="truncate text-command-amber">Unclassified</span> : null}
-            {chat.floorPlanReceived || chat.sitePhotosReceived ? <span className="shrink-0 text-command-green">Files</span> : null}
+            {!chat.intentClassified ? <span className="truncate text-command-amber">· Unclassified</span> : null}
+            {chat.floorPlanReceived || chat.sitePhotosReceived ? <span className="shrink-0 text-command-green">· Files</span> : null}
           </span>
         </span>
         {chat.unreadCount > 0 ? (
-          <span className="mt-7 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-command-gold px-1.5 text-[11px] font-bold text-black">{chat.unreadCount}</span>
+          <span className="mt-6 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-command-gold px-1.5 text-[10px] font-bold text-black">{chat.unreadCount}</span>
         ) : null}
       </button>
       {canManageSpam && !selectionMode ? (
@@ -482,11 +485,18 @@ const ChatRow = memo(function ChatRow({
           onClick={() => onMarkSpam(chat)}
           disabled={spamPending}
           data-testid="inbox-mark-spam"
-          className="absolute bottom-3 right-2 rounded-lg px-2 py-1 text-[11px] font-semibold text-command-subtle opacity-70 transition hover:bg-command-red/10 hover:text-command-red group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-40"
+          className="absolute bottom-2.5 right-2 inline-flex min-h-7 items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold text-command-subtle opacity-80 transition hover:bg-command-red/10 hover:text-command-red group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-40"
           aria-label={`Remove ${chat.displayName || chat.phone} as spam`}
           title="Remove from inbox as spam"
         >
-          {spamPending ? "Removing…" : "Spam"}
+          {spamPending ? "Removing…" : (
+            <>
+              <svg viewBox="0 0 20 20" fill="none" className="h-3 w-3" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M3.5 5.5h13M8 3.5h4M6 5.5l.7 11h6.6l.7-11M8.5 8.5v5M11.5 8.5v5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Spam
+            </>
+          )}
         </button>
       ) : null}
     </div>
@@ -509,11 +519,11 @@ const MessageBubble = memo(function MessageBubble({
     ? message.metadata.uiCollapsedDuplicateCount
     : 1;
   return (
-    <article className={`flex ${internal ? "justify-center" : outbound ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[86%] rounded-2xl border px-3.5 py-2.5 text-sm leading-6 shadow-sm md:max-w-[68%] ${internal ? "text-center text-sm" : ""} ${bubbleTone(message)}`}>
+    <article data-message-direction={message.direction} className={`flex ${internal ? "justify-center" : outbound ? "justify-end" : "justify-start"}`}>
+      <div className={`max-w-[90%] rounded-2xl border px-3.5 py-2.5 text-sm leading-6 shadow-[0_8px_24px_rgba(0,0,0,0.14)] sm:max-w-[82%] md:max-w-[72%] ${internal ? "text-center text-sm" : ""} ${bubbleTone(message)}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 text-[10px]">
           <span className="font-semibold uppercase tracking-[0.14em] text-command-muted">{senderLabel(message)}</span>
-          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusTone(message)}`}>
+          <span className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold ${statusTone(message)}`}>
             {messageStatus(message)}
           </span>
         </div>
@@ -718,15 +728,15 @@ function ReplyComposer({
   };
 
   return (
-    <div data-testid="inbox-sticky-composer" className="shrink-0 border-t border-command-line bg-command-panel/95 px-3 py-3 shadow-[0_-14px_35px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:px-4">
+    <div data-testid="inbox-sticky-composer" className="shrink-0 border-t border-command-line bg-command-panel2/95 px-3 py-2.5 shadow-[0_-12px_30px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4 sm:py-3">
       {salesDraftingEnabled ? (
         <>
-          <div className="mb-2 flex items-center gap-2 overflow-x-auto pb-0.5">
+          <div className="thin-scrollbar mb-2 flex items-center gap-1 overflow-x-auto pb-0.5">
             <button
               type="button"
               onClick={() => setQuickRepliesOpen((open) => !open)}
               aria-expanded={quickRepliesOpen}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${quickRepliesOpen ? "bg-command-gold/15 text-command-gold" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+              className={`inline-flex min-h-8 shrink-0 items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${quickRepliesOpen ? "bg-command-gold/15 text-command-gold" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
             >
               Quick replies
             </button>
@@ -734,14 +744,17 @@ function ReplyComposer({
               type="button"
               onClick={() => setDraftToolsOpen((open) => !open)}
               aria-expanded={draftToolsOpen}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${draftToolsOpen ? "bg-command-cyan/12 text-command-cyan" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+              className={`inline-flex min-h-8 shrink-0 items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${draftToolsOpen ? "bg-command-cyan/10 text-command-cyan" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
             >
               AI draft
             </button>
-            <span className="ml-auto hidden shrink-0 text-[11px] text-command-subtle sm:inline">Review before sending</span>
+            <span className="ml-auto hidden shrink-0 items-center gap-1.5 text-[10px] text-command-subtle md:flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-command-green" aria-hidden="true" />
+              Manual review required
+            </span>
           </div>
           {quickRepliesOpen ? (
-            <div className="thin-scrollbar mb-2 flex max-h-24 gap-2 overflow-x-auto overflow-y-hidden rounded-xl bg-command-bg/55 p-2" data-testid="inbox-quick-replies">
+            <div className="thin-scrollbar mb-2 flex max-h-24 gap-2 overflow-x-auto overflow-y-hidden rounded-xl border border-command-line/60 bg-command-bg/55 p-2" data-testid="inbox-quick-replies">
               {quickReplies.map((item) => (
                 <button
                   key={item.label}
@@ -782,7 +795,8 @@ function ReplyComposer({
           ) : null}
         </>
       ) : (
-        <div className="mb-2 rounded-lg bg-command-cyan/5 px-3 py-2 text-xs leading-5 text-command-muted">
+        <div className="mb-2 flex items-start gap-2 rounded-xl border border-command-cyan/20 bg-command-cyan/5 px-3 py-2 text-[11px] leading-5 text-command-muted">
+          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-command-cyan" aria-hidden="true" />
           {conversation.context.intentClassified
             ? "Non-sales route. Sales quick replies and AI drafting are disabled; operators can still write a manual reply when needed."
             : "Legacy conversation awaiting intent classification. Sales quick replies and AI drafting are disabled; operators can still write a manual reply."}
@@ -799,21 +813,31 @@ function ReplyComposer({
             value={reply}
             onChange={(event) => setReply(event.target.value)}
             onKeyDown={handleKeyDown}
+            aria-keyshortcuts="Control+Enter Meta+Enter"
             placeholder="Type a WhatsApp reply…"
-            className="max-h-40 min-h-[58px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-4 py-3 text-[15px] leading-6 text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/70 focus:ring-2 focus:ring-command-gold/10"
+            className="max-h-40 min-h-[54px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-4 py-3 text-[15px] leading-6 text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/70 focus:ring-2 focus:ring-command-gold/10"
           />
           <button
             type="submit"
             disabled={!canSend}
             title={!reply.trim() ? "Type a WhatsApp reply before sending." : isSending ? "Sending WhatsApp reply now." : "Send WhatsApp reply"}
-            className="inline-flex min-h-[58px] min-w-[76px] items-center justify-center rounded-2xl border border-command-gold bg-command-gold px-4 py-2 text-sm font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:border-command-line disabled:bg-command-panel2 disabled:text-command-muted"
+            className="inline-flex min-h-[54px] min-w-[82px] items-center justify-center gap-1.5 rounded-2xl border border-command-gold bg-command-gold px-4 py-2 text-sm font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:border-command-line disabled:bg-command-panel disabled:text-command-subtle"
           >
-            {isSending ? "Sending..." : "Send"}
+            {isSending ? "Sending…" : (
+              <>
+                Send
+                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="m4 10 11-6-3.2 12-2.2-4.2L4 10Z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </>
+            )}
           </button>
         </div>
-        <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[11px] text-command-subtle">
-          <span>Ctrl+Enter or Cmd+Enter sends. Esc clears focus.</span>
-          {sendError ? <span className="text-right text-command-red">{sendError}</span> : null}
+        <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[10px] text-command-subtle">
+          <span className="hidden sm:inline">⌘/Ctrl + Enter to send · Esc to leave composer</span>
+          <span className="sm:hidden">Review before sending</span>
+          <span className="ml-auto tabular-nums">{reply.length}</span>
+          {sendError ? <span className="text-right text-command-red" role="alert">{sendError}</span> : null}
         </div>
       </form>
     </div>
@@ -843,7 +867,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
   }, [conversation.lead.id]);
 
   return (
-    <aside className="flex h-full min-h-0 flex-col bg-command-panel2/98" data-testid="inbox-context-panel">
+    <aside className="flex h-full min-h-0 flex-col bg-command-panel2/95" data-testid="inbox-context-panel">
       <div className="flex shrink-0 items-center justify-between border-b border-command-line px-4 py-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Conversation Context</p>
@@ -852,7 +876,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
         <button
           type="button"
           onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-command-muted transition hover:bg-command-bg hover:text-command-text"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-command-muted transition hover:bg-command-bg hover:text-command-text"
           aria-label="Close conversation details"
         >
           <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -952,7 +976,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
           <div className="mt-4 grid gap-2 text-sm">
             {salesContextAvailable ? <><form action={markBossApprovalNeededAction}>
               <input type="hidden" name="lead_id" value={conversation.lead.id} />
-              <button className="w-full rounded-md border border-command-gold/60 bg-command-gold/12 px-3 py-2 font-semibold text-command-gold transition hover:bg-command-gold/18" type="submit">
+              <button className="w-full rounded-md border border-command-gold/60 bg-command-gold/10 px-3 py-2 font-semibold text-command-gold transition hover:bg-command-gold/20" type="submit">
                 Approve Reply
               </button>
             </form>
@@ -1079,6 +1103,11 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [loadingConversationId, setLoadingConversationId] = useState("");
   const messagePaneRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const detailsButtonRef = useRef<HTMLButtonElement>(null);
+  const detailsDrawerRef = useRef<HTMLDivElement>(null);
+  const previousDrawerFocusRef = useRef<HTMLElement | null>(null);
+  const filterPreferenceReadyRef = useRef(false);
   const stickToLatestRef = useRef(true);
   const conversationCacheRef = useRef(conversationCache);
 
@@ -1087,12 +1116,56 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   }, [conversationCache]);
 
   useEffect(() => {
+    const savedFilter = window.localStorage.getItem(INBOX_FILTER_STORAGE_KEY);
+    if (savedFilter && filters.includes(savedFilter as (typeof filters)[number])) {
+      setFilter(savedFilter as (typeof filters)[number]);
+    }
+    const timer = window.setTimeout(() => {
+      filterPreferenceReadyRef.current = true;
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!filterPreferenceReadyRef.current) return;
+    window.localStorage.setItem(INBOX_FILTER_STORAGE_KEY, filter);
+  }, [filter]);
+
+  useEffect(() => {
     if (!contextOpen) return;
+    previousDrawerFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const drawer = detailsDrawerRef.current;
+    const detailsTrigger = detailsButtonRef.current;
+    const focusableSelector = "button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary";
+    const focusables = () => Array.from(drawer?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
+    window.requestAnimationFrame(() => focusables()[0]?.focus());
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") setContextOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setContextOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      const returnFocus = previousDrawerFocusRef.current?.isConnected
+        ? previousDrawerFocusRef.current
+        : detailsTrigger;
+      window.requestAnimationFrame(() => returnFocus?.focus());
+    };
   }, [contextOpen]);
 
   const patchSummary = useCallback((leadId: string, patch: Partial<MultiChatSummary>) => {
@@ -1451,12 +1524,61 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
     return () => window.clearTimeout(timer);
   }, [activeLeadId, loadConversation, waitingChats]);
 
-  const nextWaitingChat = () => {
+  const nextWaitingChat = useCallback(() => {
     if (!waitingChats.length) return;
     const activeIndex = waitingChats.findIndex((item) => item.id === activeLeadId);
     const next = waitingChats[(activeIndex + 1 + waitingChats.length) % waitingChats.length];
     selectConversation(next.id);
-  };
+  }, [activeLeadId, selectConversation, waitingChats]);
+
+  useEffect(() => {
+    const handleShortcut = (event: globalThis.KeyboardEvent) => {
+      if (contextOpen || event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target;
+      const typing = target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target instanceof HTMLSelectElement
+        || (target instanceof HTMLElement && target.isContentEditable);
+      const key = event.key.toLowerCase();
+
+      if (typing) return;
+      if (key === "escape") {
+        if (selectionMode) cancelSpamSelection();
+        else if (mobilePane === "chat") setMobilePane("queue");
+        return;
+      }
+      if (key === "/") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (key === "r") {
+        event.preventDefault();
+        document.querySelector<HTMLTextAreaElement>("#manual_reply_body")?.focus();
+        return;
+      }
+      if (key === "d") {
+        event.preventDefault();
+        setContextOpen(true);
+        return;
+      }
+      if (key === "n") {
+        event.preventDefault();
+        nextWaitingChat();
+        return;
+      }
+      if ((key === "j" || key === "k") && filteredConversations.length) {
+        event.preventDefault();
+        const currentIndex = filteredConversations.findIndex((item) => item.id === activeLeadId);
+        const delta = key === "j" ? 1 : -1;
+        const baseIndex = currentIndex < 0 ? 0 : currentIndex;
+        const nextIndex = (baseIndex + delta + filteredConversations.length) % filteredConversations.length;
+        selectConversation(filteredConversations[nextIndex].id);
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [activeLeadId, cancelSpamSelection, contextOpen, filteredConversations, mobilePane, nextWaitingChat, selectConversation, selectionMode]);
 
   const handleOptimisticReply = useCallback((leadId: string, message: LeadMessage) => {
     setOptimisticReplies((current) => ({
@@ -1670,14 +1792,21 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
 
   return (
     <>
-      <section className="overflow-hidden rounded-2xl border border-command-line bg-command-panel shadow-premium">
-        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-command-line bg-command-panel2/90 px-3 py-2 sm:px-4">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-gold">
-              <span className="sm:hidden">Live inbox</span>
-              <span className="hidden sm:inline">Live conversation queue</span>
-            </p>
-            <p className="hidden text-xs text-command-subtle sm:block">Newest client activity stays at the top.</p>
+      <section className="inbox-product-frame flex flex-col overflow-hidden rounded-2xl border border-command-line bg-command-panel shadow-command">
+        <div className={`${mobilePane === "chat" ? "hidden lg:flex" : "flex"} min-h-11 items-center justify-between gap-3 border-b border-command-line bg-command-panel2/90 px-3 py-1.5 sm:px-4`}>
+          <div className="flex min-w-0 items-center gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-command-gold">Queue health</p>
+              <p className="hidden text-[10px] text-command-subtle sm:block">Live · newest activity first</p>
+              <span className="sr-only">Newest client activity stays at the top.</span>
+            </div>
+            <div className="hidden items-center gap-2 border-l border-command-line pl-3 text-[9px] text-command-subtle xl:flex" aria-label="Inbox keyboard shortcuts">
+              <span><kbd className="text-command-muted">J/K</kbd> navigate</span>
+              <span><kbd className="text-command-muted">N</kbd> next</span>
+              <span><kbd className="text-command-muted">R</kbd> reply</span>
+              <span><kbd className="text-command-muted">D</kbd> details</span>
+              <span><kbd className="text-command-muted">/</kbd> search</span>
+            </div>
           </div>
           <div className="flex items-center gap-1">
             {priorityCounters.map((item) => (
@@ -1688,7 +1817,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                   setFilter(item.targetFilter);
                   setMobilePane("queue");
                 }}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition hover:bg-command-bg ${filter === item.targetFilter ? "bg-command-bg" : ""}`}
+                className={`inline-flex min-h-8 items-center rounded-lg px-2 py-1 text-[11px] font-semibold transition hover:bg-command-bg ${filter === item.targetFilter ? "bg-command-bg ring-1 ring-command-line" : ""}`}
                 title={`Show ${item.label.toLowerCase()} conversations`}
               >
                 <span className={item.tone}>{item.value}</span>
@@ -1713,22 +1842,22 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
             </button>
           </div>
         ) : null}
-        <div data-testid="inbox-layout" data-mobile-pane={mobilePane} className="grid h-[calc(100dvh-13.5rem)] min-h-[32rem] grid-cols-1 lg:h-[calc(100dvh-8.5rem)] lg:min-h-0 lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <div data-testid="inbox-layout" data-mobile-pane={mobilePane} className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
           <aside className={`${mobilePane === "queue" ? "flex" : "hidden"} min-h-0 flex-col bg-command-panel2/95 lg:flex lg:border-r lg:border-command-line`} data-testid="inbox-queue-pane">
-            <div className="shrink-0 border-b border-command-line/70 p-3">
+            <div className="shrink-0 border-b border-command-line/70 px-3 py-2.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <h2 className="text-lg font-semibold text-command-text">Conversations</h2>
-                    <span className="text-xs text-command-subtle">{visibleChatSummaries.length}</span>
+                    <h2 className="text-base font-semibold text-command-text">Conversations</h2>
+                    <span className="rounded-full bg-command-card px-2 py-0.5 text-[10px] tabular-nums text-command-subtle">{visibleChatSummaries.length}</span>
                   </div>
-                  <p className="text-xs text-command-subtle">Latest chat first</p>
+                  <p className="text-[10px] text-command-subtle">Latest chat first · view remembered</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={nextWaitingChat}
-                    className="rounded-lg px-2.5 py-2 text-xs font-semibold text-command-gold transition hover:bg-command-gold/10"
+                    className="inline-flex min-h-9 items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-command-gold transition hover:bg-command-gold/10"
                     title="Open the next conversation waiting for Marcus"
                     aria-label="Next waiting chat"
                   >
@@ -1738,7 +1867,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                     <button
                       type="button"
                       onClick={() => selectionMode ? cancelSpamSelection() : setSelectionMode(true)}
-                      className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition ${selectionMode ? "bg-command-red/10 text-command-red" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+                      className={`inline-flex min-h-9 items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${selectionMode ? "bg-command-red/10 text-command-red" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
                     >
                       {selectionMode ? "Cancel" : "Select"}
                     </button>
@@ -1752,10 +1881,12 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                     <circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" strokeLinecap="round" />
                   </svg>
                   <input
+                    ref={searchInputRef}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search conversations"
-                    className="w-full rounded-xl border border-command-line bg-command-bg/80 py-2 pl-9 pr-3 text-sm text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/60"
+                    placeholder="Search"
+                    aria-keyshortcuts="/"
+                    className="w-full rounded-xl border border-command-line bg-command-bg/80 py-2 pl-9 pr-3 text-sm text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/60 focus:ring-2 focus:ring-command-gold/10"
                   />
                 </label>
                 <label>
@@ -1763,7 +1894,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                   <select
                     value={filter}
                     onChange={(event) => setFilter(event.target.value as (typeof filters)[number])}
-                    className="max-w-[7.5rem] rounded-xl border border-command-line bg-command-bg/80 px-2.5 py-2 text-xs font-semibold text-command-muted outline-none focus:border-command-gold/60"
+                    className="w-[6.75rem] rounded-xl border border-command-line bg-command-bg/80 px-2 py-2 text-xs font-semibold text-command-muted outline-none focus:border-command-gold/60"
                   >
                     {filters.map((item) => <option key={item} value={item}>{item}</option>)}
                   </select>
@@ -1811,8 +1942,8 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
             </div>
           </aside>
 
-          <main data-testid="inbox-active-chat" className={`${mobilePane === "chat" ? "flex" : "hidden"} min-h-0 flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.055),transparent_32%),linear-gradient(180deg,rgba(9,13,18,0.98),rgba(5,7,10,0.99))] lg:flex`}>
-            <header className="flex min-h-[4.5rem] shrink-0 items-center justify-between gap-3 border-b border-command-line bg-command-panel/95 px-3 py-2.5 sm:px-4">
+          <main data-testid="inbox-active-chat" className={`${mobilePane === "chat" ? "flex" : "hidden"} min-h-0 flex-col bg-[radial-gradient(circle_at_top_left,rgba(221,179,93,0.045),transparent_34%),linear-gradient(180deg,rgba(9,14,20,0.99),rgba(5,7,10,0.99))] lg:flex`}>
+            <header className="flex min-h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-command-line bg-command-panel/95 px-3 py-2 sm:px-4">
               <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
@@ -1824,7 +1955,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                     <path d="m15 18-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-command-panel2 text-sm font-semibold text-command-gold ring-1 ring-command-line" aria-hidden="true">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-command-gold/10 text-sm font-semibold text-command-gold ring-1 ring-command-gold/30" aria-hidden="true">
                   {chatInitials(chat)}
                 </span>
                 <div className="min-w-0">
@@ -1854,10 +1985,12 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                   </button>
                 ) : null}
                 <button
+                  ref={detailsButtonRef}
                   type="button"
                   onClick={() => setContextOpen(true)}
-                  className="rounded-lg border border-command-line bg-command-bg/60 px-3 py-2 text-command-muted transition hover:border-command-gold/50 hover:text-command-text"
+                  className="inline-flex min-h-10 items-center rounded-xl border border-command-line bg-command-bg/60 px-3 py-2 text-command-muted transition hover:border-command-gold/50 hover:text-command-text"
                   aria-haspopup="dialog"
+                  aria-keyshortcuts="D"
                 >
                   Details
                 </button>
@@ -1885,8 +2018,8 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                 <div className="mx-auto max-w-4xl space-y-3.5">
                   <div className="flex items-center justify-between gap-3 pb-1">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-gold">Latest messages</p>
-                      <p className="text-xs text-command-subtle">Newest first. Older messages continue below.</p>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-command-gold">Latest messages</p>
+                      <p className="text-[10px] text-command-subtle">Newest first · older messages continue below</p>
                     </div>
                     <span className="text-xs text-command-subtle">{activeMessagesNewestFirst.length} shown</span>
                   </div>
@@ -1912,8 +2045,16 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
                   ) : null}
                 </div>
               ) : (
-                <div className="mx-auto max-w-4xl rounded-2xl bg-command-panel2/80 p-5 text-sm text-command-muted">
-                  No WhatsApp messages saved for this lead yet.
+                <div className="flex h-full min-h-48 items-center justify-center">
+                  <div className="max-w-sm text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-command-line bg-command-panel2 text-command-gold" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="1.6">
+                        <path d="M5 5h14v11H9l-4 3V5Z" strokeLinecap="round" strokeLinejoin="round" /><path d="M9 9h6M9 12h4" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold text-command-text">No saved messages yet</h3>
+                    <p className="mt-1 text-sm leading-6 text-command-muted">New WhatsApp messages for this lead will appear here automatically.</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -1935,8 +2076,8 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
 
       {contextOpen ? (
         <div className="fixed inset-0 z-[60]" data-testid="inbox-details-drawer">
-          <button type="button" onClick={() => setContextOpen(false)} className="absolute inset-0 h-full w-full bg-black/65 backdrop-blur-sm" aria-label="Close conversation details" />
-          <div className="absolute inset-y-0 right-0 w-full border-l border-command-line bg-command-panel2 shadow-premium sm:w-[26rem] lg:w-[28rem]" role="dialog" aria-modal="true" aria-label="Conversation details">
+          <button type="button" onClick={() => setContextOpen(false)} className="absolute inset-0 h-full w-full bg-black/60 backdrop-blur-sm" aria-label="Close conversation details" />
+          <div ref={detailsDrawerRef} className="absolute inset-y-0 right-0 w-full border-l border-command-line bg-command-panel2 shadow-premium sm:w-[26rem] lg:w-[28rem]" role="dialog" aria-modal="true" aria-label="Conversation details">
             <LeadContextPanel
               conversation={activeConversation}
               activeMessages={activeMessages}

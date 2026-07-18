@@ -28,8 +28,8 @@ const sendApi = read("app/api/inbox/send/route.ts");
 const detailApi = read("app/api/inbox/conversations/[leadId]/route.ts");
 const summariesApi = read("app/api/inbox/conversations/route.ts");
 
-assertIncludes(inboxPage, "LIMM WhatsApp Inbox", "/inbox page route");
-assertIncludes(inboxClient, "Live conversation queue", "deduplicated main inbox header");
+assertIncludes(inboxPage, "WhatsApp Inbox", "/inbox page route");
+assertIncludes(inboxClient, "Live · newest activity first", "deduplicated main inbox header");
 
 for (const phrase of [
   "setActiveLeadId(leadId)",
@@ -142,7 +142,7 @@ for (const phrase of [
   "window.clearTimeout(timeoutId)",
   "send_timeout",
   "finally executed",
-  "Ctrl+Enter or Cmd+Enter sends"
+  "⌘/Ctrl + Enter to send"
 ]) {
   assertIncludes(inboxClient, phrase, "isolated manual composer");
 }

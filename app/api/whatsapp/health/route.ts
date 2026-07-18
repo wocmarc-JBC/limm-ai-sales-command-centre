@@ -76,6 +76,8 @@ export const dynamic = "force-dynamic";
 // uiVersion: "v10.2.3"
 // version: "v10_3_0_inbox_operator_experience"
 // uiVersion: "v10.3.0"
+// version: "v10_4_0_command_centre_product_polish"
+// uiVersion: "v10.4.0"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -104,10 +106,10 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v10_3_0_inbox_operator_experience",
+      version: "v10_4_0_command_centre_product_polish",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.3.0",
+      uiVersion: "v10.4.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -157,6 +159,14 @@ export async function GET() {
       inboxBulkSpamRemovalAvailable: true,
       inboxMobileQueueChatFlowAvailable: true,
       inboxTabletFullWidthAvailable: true,
+      commandCentreUnifiedVisualSystemAvailable: true,
+      commandCentreCompactResponsiveShellAvailable: true,
+      commandCentreMobileIconNavigationAvailable: true,
+      commandCentreRouteLoadingErrorStatesAvailable: true,
+      commandCentreReducedMotionAvailable: true,
+      inboxKeyboardShortcutsAvailable: true,
+      inboxRememberedFilterAvailable: true,
+      inboxAccessibleDetailsFocusTrapAvailable: true,
       bossDailyBriefAvailable: true,
       bossOpsNavigationGroupsAvailable: true,
       riskBadgesAvailable: true,
@@ -577,10 +587,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v10_3_0_inbox_operator_experience",
+      version: "v10_4_0_command_centre_product_polish",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.3.0",
+      uiVersion: "v10.4.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -626,6 +636,14 @@ export async function GET() {
       inboxBulkSpamRemovalAvailable: true,
       inboxMobileQueueChatFlowAvailable: true,
       inboxTabletFullWidthAvailable: true,
+      commandCentreUnifiedVisualSystemAvailable: true,
+      commandCentreCompactResponsiveShellAvailable: true,
+      commandCentreMobileIconNavigationAvailable: true,
+      commandCentreRouteLoadingErrorStatesAvailable: true,
+      commandCentreReducedMotionAvailable: true,
+      inboxKeyboardShortcutsAvailable: true,
+      inboxRememberedFilterAvailable: true,
+      inboxAccessibleDetailsFocusTrapAvailable: true,
       bossDailyBriefAvailable: false,
       bossOpsNavigationGroupsAvailable: false,
       riskBadgesAvailable: false,

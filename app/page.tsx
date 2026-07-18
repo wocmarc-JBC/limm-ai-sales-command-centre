@@ -92,10 +92,10 @@ export default async function BossDailyBriefPage() {
   return (
     <>
       <PageHeader title="Boss Daily Brief" eyebrow={`Today / ${safeSingaporeDateLabel(singaporeNow())}`}>
-        <a href="/inbox" className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover">
+        <a href="/inbox" className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-3 py-2 text-sm font-semibold text-black transition hover:bg-command-goldHover sm:px-4 sm:text-base">
           Open WhatsApp Inbox
         </a>
-        <a href="/command-core" className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-text transition hover:border-command-cyan/60">
+        <a href="/command-core" className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-3 py-2 text-sm font-semibold text-command-text transition hover:border-command-gold/60 sm:px-4 sm:text-base">
           Command Core
         </a>
       </PageHeader>

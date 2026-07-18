@@ -7,5 +7,5 @@ export function StatusBadge({ label }: { label: string }) {
       : lower.includes("paused") || lower.includes("test") || lower.includes("archive") || lower.includes("spam")
         ? "border-command-gold/55 bg-command-gold/10 text-command-yellow"
         : "border-command-line bg-command-elevated text-command-muted";
-  return <span className={`rounded-md border px-2.5 py-1 text-[13px] font-semibold leading-5 ${tone}`}>{label}</span>;
+  return <span className={`inline-flex min-h-7 items-center rounded-full border px-2.5 py-1 text-xs font-semibold leading-4 ${tone}`}>{label}</span>;
 }

@@ -23,9 +23,12 @@ const health = read("app/api/whatsapp/health/route.ts");
 const packageJson = JSON.parse(read("package.json"));
 
 check("publishes the v10.3.0 operator-experience release", () => {
-  assert.equal(packageJson.version, "10.3.0");
+  assert.ok(Number(packageJson.version.split(".")[0]) >= 10);
+  assert.ok(Number(packageJson.version.split(".")[1]) >= 3);
   assert.ok(packageJson.scripts["test:v10.3.0"]?.includes("test_inbox_operator_experience.mjs"));
-  assert.ok(packageJson.scripts.verify.includes("test:v10.3.0"));
+  const currentReleaseTest = packageJson.scripts["test:v10.4.0"] ?? "";
+  assert.ok(packageJson.scripts.verify.includes("test:v10.4.0"));
+  assert.ok(currentReleaseTest.includes("test:v10.3.0"));
   for (const marker of [
     "v10_3_0_inbox_operator_experience",
     'uiVersion: "v10.3.0"',
@@ -60,7 +63,8 @@ check("keeps optional drafting tools collapsed until requested", () => {
 });
 
 check("opens details as an overlay without changing the two-column chat grid", () => {
-  assert.ok(inbox.includes('lg:grid-cols-[20rem_minmax(0,1fr)]'));
+  assert.ok(inbox.includes('lg:grid-cols-[18rem_minmax(0,1fr)]'));
+  assert.ok(inbox.includes('xl:grid-cols-[20rem_minmax(0,1fr)]'));
   assert.ok(inbox.includes('data-testid="inbox-details-drawer"'));
   assert.ok(inbox.includes('className="fixed inset-0 z-[60]"'));
   assert.ok(inbox.includes('role="dialog" aria-modal="true"'));
@@ -84,10 +88,10 @@ check("uses a dedicated mobile queue-to-chat flow", () => {
 });
 
 check("gives tablets the full canvas and exposes Inbox in mobile navigation", () => {
-  assert.ok(shell.includes("lg:ml-64"));
-  assert.ok(shell.includes("lg:w-64"));
+  assert.ok(shell.includes("lg:ml-56"));
+  assert.ok(shell.includes("lg:w-56"));
   assert.ok(shell.includes("lg:hidden"));
-  assert.ok(shell.includes('{ href: "/inbox", label: "Inbox" }'));
+  assert.ok(shell.includes('{ href: "/inbox", label: "Inbox", icon: "inbox" }'));
   assert.ok(shell.includes("grid-cols-6"));
   assert.equal(shell.includes("md:ml-64"), false);
 });
@@ -143,7 +147,7 @@ check("uses an accessible recovery-first confirmation dialog", () => {
 
 check("preserves strict newest-client ordering and fast chat switching", () => {
   assert.ok(inbox.includes("return sortInboxLatestFirst(chats)"));
-  assert.ok(inbox.includes("Newest client activity stays at the top."));
+  assert.ok(inbox.includes("newest activity first"));
   assert.ok(inbox.includes("Latest chat first"));
   assert.ok(inbox.includes("window.history.replaceState"));
   assert.ok(inbox.includes("conversationCacheRef"));

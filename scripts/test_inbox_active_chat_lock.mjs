@@ -53,7 +53,7 @@ const filteredBlock = inboxClient.slice(filteredStart, filteredEnd);
 assert(!filteredBlock.includes("setActiveLeadId"), "search/filter logic must not auto-open the first filtered result.");
 assert(!filteredBlock.includes("selectConversation"), "search/filter logic must not select a conversation.");
 
-const nextStart = inboxClient.indexOf("const nextWaitingChat = () =>");
+const nextStart = inboxClient.indexOf("const nextWaitingChat = useCallback(() =>");
 const nextEnd = inboxClient.indexOf("const handleOptimisticReply", nextStart);
 assert(nextStart >= 0 && nextEnd > nextStart, "next waiting chat block not found.");
 const nextBlock = inboxClient.slice(nextStart, nextEnd);

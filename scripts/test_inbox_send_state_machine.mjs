@@ -48,7 +48,8 @@ for (const phrase of [
   "debugInboxSendState(\"send started\"",
   "debugInboxSendState(\"api response received\"",
   "debugInboxSendState(\"finally executed\"",
-  "isSending ? \"Sending...\" : \"Send\""
+  "disabled={!canSend}",
+  "isSending ? \"Sending…\""
 ]) {
   assertIncludes(inboxClient, phrase, "inbox send state machine");
 }

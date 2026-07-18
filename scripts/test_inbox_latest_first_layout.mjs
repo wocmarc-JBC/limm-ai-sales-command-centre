@@ -56,7 +56,8 @@ const composer = inboxClient.slice(composerStart, composerEnd);
 assertIncludes(composer, 'fetch("/api/inbox/send"', "JSON inbox send path");
 assertIncludes(composer, "event.preventDefault()", "no full page reload send");
 assertIncludes(composer, "setReply(\"\")", "composer clears immediately");
-assertIncludes(composer, "isSending ? \"Sending...\" : \"Send\"", "button-only sending state");
+assertIncludes(composer, 'disabled={!canSend}', "button disabled while sending");
+assertIncludes(composer, 'isSending ? "Sending…"', "button-only sending state");
 assertIncludes(composer, "onClick={() => insertQuickReply(item.text)}", "quick replies insert text only");
 
 const quickReplyStart = composer.indexOf("const insertQuickReply");
