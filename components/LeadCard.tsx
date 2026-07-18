@@ -60,7 +60,7 @@ function leadHeatTone(lead: Lead) {
 }
 
 function compactPriorityBadges(lead: Lead, stage: string, leadLevel: string, isWhatsapp: boolean, questionCategory?: string) {
-  const badges = [
+  const badges = [...new Set([
     lead.needsMarcus || lead.bossApprovalNeeded ? "Needs Marcus" : "",
     lead.bossApprovalNeeded ? "Boss Review Required" : "",
     lead.botPaused ? "Bot Paused" : "",
@@ -71,7 +71,7 @@ function compactPriorityBadges(lead: Lead, stage: string, leadLevel: string, isW
     questionCategory ?? "",
     lead.isTest ? "Test Lead" : "",
     lead.deletedAt ? "Soft Deleted" : ""
-  ].filter(Boolean);
+  ].filter(Boolean))];
   return {
     visibleBadges: badges.slice(0, 3),
     hiddenBadgeCount: Math.max(0, badges.length - 3)

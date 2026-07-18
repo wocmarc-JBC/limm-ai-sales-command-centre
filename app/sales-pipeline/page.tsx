@@ -67,12 +67,12 @@ export default async function SalesPipelinePage() {
             <div className="mt-4 space-y-3">
               {group.leads.map((lead) => {
                 const riskBadges = getLeadRiskBadges(lead);
-                const prioritySignalSource = [
+                const prioritySignalSource = [...new Set([
                   lead.leadCategory,
                   lead.needsMarcus ? "Needs Marcus" : "",
                   lead.botPaused ? "Bot Paused" : "",
                   ...riskBadges.map((badge) => badge.label)
-                ].filter(Boolean);
+                ].filter(Boolean))];
                 const prioritySignals = prioritySignalSource.slice(0, 3);
                 const hiddenSignalCount = Math.max(0, prioritySignalSource.length - prioritySignals.length);
                 const latestMessage = latestWhatsAppMessages.get(lead.id);

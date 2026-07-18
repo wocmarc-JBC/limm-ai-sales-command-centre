@@ -41,8 +41,8 @@ export default async function SalesCollectionPage() {
         </p>
       </section>
 
-      <section className="mb-6 grid gap-4 lg:grid-cols-[20rem_1fr]">
-        <article className="mission-panel rounded-2xl p-5">
+      <section className="mb-6 grid min-w-0 gap-4 2xl:grid-cols-[20rem_minmax(0,1fr)]">
+        <article className="mission-panel min-w-0 rounded-2xl p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">JBC default schedule</p>
           <div className="mt-4 space-y-3 text-sm">
             {buildJbcDefaultPaymentSchedule(100).map((milestone) => (
@@ -57,7 +57,7 @@ export default async function SalesCollectionPage() {
           </p>
         </article>
 
-        <article className="mission-panel rounded-2xl p-5">
+        <article className="mission-panel min-w-0 rounded-2xl p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-amber">Daily collection page</p>

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type AppIconName =
+export type AppIconName =
   | "today"
   | "command"
   | "inbox"
@@ -20,6 +20,7 @@ type AppIconName =
   | "hygiene"
   | "install"
   | "audit"
+  | "search"
   | "chevron";
 
 type AppIconProps = {
@@ -47,6 +48,7 @@ const paths: Record<AppIconName, ReactNode> = {
   hygiene: <><path d="m6 18 9-9 3 3-9 9H6v-3Z" /><path d="m13 11-2-2 5-5 2 2-5 5ZM4 4l3 3M4 8l2-2" /></>,
   install: <><path d="M12 3v12M7 10l5 5 5-5" /><path d="M5 20h14" /></>,
   audit: <><path d="M7 3h10v18H7V3Z" /><path d="M10 8h4M10 12h4M10 16h2" /></>,
+  search: <><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></>,
   chevron: <path d="m9 7 5 5-5 5" />
 };
 

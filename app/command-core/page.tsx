@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { SingaporeMissionMap } from "@/components/SingaporeMissionMap";
+import { CommandCoreMissionMap } from "@/components/command-core/CommandCoreMissionMap";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listFollowUps } from "@/lib/data/followups-repository";
@@ -348,7 +348,7 @@ export default async function CommandCorePage() {
           data-map-uses-full-panel-width="true"
           data-map-same-size-as-dashboard="true"
         >
-          <SingaporeMissionMap data={missionMap} />
+          <CommandCoreMissionMap data={missionMap} />
         </div>
       </section>
 

@@ -26,10 +26,13 @@ const pageHeader = read("components/PageHeader.tsx");
 const metricCard = read("components/MetricCard.tsx");
 
 check("publishes the v10.4.0 product-polish release", () => {
-  assert.equal(packageJson.version, "10.4.0");
+  const [major, minor] = packageJson.version.split(".").map(Number);
+  assert.ok(major > 10 || (major === 10 && minor >= 4));
   assert.ok(packageJson.scripts["test:v10.4.0"]?.includes("test_command_centre_product_polish.mjs"));
   assert.ok(packageJson.scripts["test:v10.4.0"]?.includes("test:v10.3.0"));
-  assert.ok(packageJson.scripts.verify.includes("test:v10.4.0"));
+  const currentReleaseTest = packageJson.scripts["test:v10.5.0"] ?? "";
+  assert.ok(packageJson.scripts.verify.includes("test:v10.5.0"));
+  assert.ok(currentReleaseTest.includes("test:v10.4.0"));
   for (const marker of [
     "v10_4_0_command_centre_product_polish",
     'uiVersion: "v10.4.0"',

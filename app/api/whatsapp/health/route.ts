@@ -78,6 +78,8 @@ export const dynamic = "force-dynamic";
 // uiVersion: "v10.3.0"
 // version: "v10_4_0_command_centre_product_polish"
 // uiVersion: "v10.4.0"
+// version: "v10_5_0_command_centre_10_quality"
+// uiVersion: "v10.5.0"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -106,10 +108,10 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v10_4_0_command_centre_product_polish",
+      version: "v10_5_0_command_centre_10_quality",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.4.0",
+      uiVersion: "v10.5.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -167,6 +169,14 @@ export async function GET() {
       inboxKeyboardShortcutsAvailable: true,
       inboxRememberedFilterAvailable: true,
       inboxAccessibleDetailsFocusTrapAvailable: true,
+      commandCentreGlobalCommandPaletteAvailable: true,
+      commandCentreSkipNavigationAvailable: true,
+      commandCentreSemanticHeadingHierarchyAvailable: true,
+      commandCoreDeferredMapBundleAvailable: true,
+      commandCoreInitialBundleBudgetKb: 120,
+      commandCentreCrossRouteAccessibilityGateAvailable: true,
+      duplicatePrioritySignalsSuppressedAvailable: true,
+      collectionQueueOverflowContainedAvailable: true,
       bossDailyBriefAvailable: true,
       bossOpsNavigationGroupsAvailable: true,
       riskBadgesAvailable: true,
@@ -587,10 +597,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v10_4_0_command_centre_product_polish",
+      version: "v10_5_0_command_centre_10_quality",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.4.0",
+      uiVersion: "v10.5.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -644,6 +654,14 @@ export async function GET() {
       inboxKeyboardShortcutsAvailable: true,
       inboxRememberedFilterAvailable: true,
       inboxAccessibleDetailsFocusTrapAvailable: true,
+      commandCentreGlobalCommandPaletteAvailable: true,
+      commandCentreSkipNavigationAvailable: true,
+      commandCentreSemanticHeadingHierarchyAvailable: true,
+      commandCoreDeferredMapBundleAvailable: true,
+      commandCoreInitialBundleBudgetKb: 120,
+      commandCentreCrossRouteAccessibilityGateAvailable: true,
+      duplicatePrioritySignalsSuppressedAvailable: true,
+      collectionQueueOverflowContainedAvailable: true,
       bossDailyBriefAvailable: false,
       bossOpsNavigationGroupsAvailable: false,
       riskBadgesAvailable: false,

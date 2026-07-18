@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppIcon } from "@/components/AppIcon";
+import { CommandPalette, type CommandPaletteItem } from "@/components/CommandPalette";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import type { AuthContext } from "@/lib/auth/session";
@@ -65,6 +66,22 @@ const mobileNavItems = [
   { href: "/sales-collection", label: "Money", icon: "money" },
   { href: "/settings", label: "Admin", icon: "settings" }
 ] as const;
+
+const commandPaletteItems: CommandPaletteItem[] = [
+  ...appNavGroups.flatMap((group) => group.items.map((item) => ({
+    href: item.href,
+    label: item.label,
+    group: group.title,
+    icon: item.icon,
+    keywords: `${group.title} ${item.label}`
+  }))),
+  { href: "/leads/new", label: "Create Manual Lead", group: "Quick Action", icon: "leads", keywords: "add new client contact" },
+  { href: "/appointment-settings", label: "Appointment Settings", group: "Quick Action", icon: "appointments", keywords: "calendar availability rules" },
+  { href: "/system-health", label: "System Health", group: "Quick Action", icon: "audit", keywords: "diagnostics status" },
+  { href: "/qa-centre", label: "QA Centre", group: "Quality", icon: "audit", keywords: "simulation replay reply testing" },
+  { href: "/health", label: "Health Diagnostics", group: "Quality", icon: "reports", keywords: "read only production proof" },
+  { href: "/settings/production-data-cleanup", label: "Production Data Cleanup", group: "Admin", icon: "hygiene", keywords: "soft archive protected cleanup" }
+];
 
 const reviewNavItems = [
   { href: "#dashboard", label: "Dashboard" },
@@ -172,6 +189,8 @@ export function ShellChrome({
 }) {
   const pathname = usePathname();
   const [clientAuthenticated, setClientAuthenticated] = useState(auth.authenticated || auth.mode === "Mock Mode");
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const commandPaletteTriggerRef = useRef<HTMLButtonElement | null>(null);
   const isTemporaryReviewRoute = isReviewRouteEnabled() && pathname === "/review-chatgpt-ui";
   const isLoginRoute = pathname === "/login";
   const isInboxRoute = pathname.startsWith("/inbox");
@@ -179,6 +198,7 @@ export function ShellChrome({
   const mainClassName = isInboxRoute
     ? `px-2.5 pb-24 ${mobileTopPadding} sm:px-4 lg:ml-56 lg:px-4 lg:pb-6 lg:pt-5 xl:px-5`
     : `mx-auto max-w-[1600px] px-4 pb-24 ${mobileTopPadding} md:px-6 lg:ml-56 lg:pb-10 lg:pt-6 xl:px-8`;
+  const closeCommandPalette = useCallback(() => setCommandPaletteOpen(false), []);
 
   useEffect(() => {
     if (auth.mode === "Mock Mode") {
@@ -201,8 +221,22 @@ export function ShellChrome({
     };
   }, [auth.mode]);
 
+  useEffect(() => {
+    if (isTemporaryReviewRoute || isLoginRoute) return;
+    const handleCommandShortcut = (event: globalThis.KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey) || event.altKey) return;
+      event.preventDefault();
+      setCommandPaletteOpen((current) => !current);
+    };
+    document.addEventListener("keydown", handleCommandShortcut);
+    return () => document.removeEventListener("keydown", handleCommandShortcut);
+  }, [isLoginRoute, isTemporaryReviewRoute]);
+
   return (
     <div className="min-h-screen" data-qa-e2e={qaE2eMode ? "true" : "false"}>
+      <a href="#main-content" className="fixed left-3 top-3 z-[100] -translate-y-24 rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-sm font-semibold text-black shadow-premium transition focus:translate-y-0">
+        Skip to main content
+      </a>
       <aside className="thin-scrollbar fixed inset-x-0 top-0 z-40 border-b border-command-line bg-command-bg/95 px-4 py-2 shadow-command backdrop-blur-xl lg:bottom-0 lg:left-0 lg:right-auto lg:h-screen lg:w-56 lg:overflow-y-auto lg:overscroll-contain lg:border-b-0 lg:border-r lg:px-3 lg:py-4">
         {qaE2eMode ? (
           <div className="mb-2 rounded-lg border border-command-amber/50 bg-command-amber/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-command-amber lg:mb-3" data-testid="qa-e2e-banner">
@@ -212,9 +246,28 @@ export function ShellChrome({
         <div className="flex min-h-12 items-center justify-between gap-3 lg:block lg:min-h-0 lg:px-2">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-command-gold">LIMM Works</p>
-            <h1 className="truncate text-lg font-semibold leading-6 text-command-text lg:mt-0.5">Mission Control</h1>
+            <p className="truncate text-lg font-semibold leading-6 text-command-text lg:mt-0.5">Mission Control</p>
           </div>
-          <ShellStatus auth={auth} clientAuthenticated={clientAuthenticated} isTemporaryReviewRoute={isTemporaryReviewRoute} isLoginRoute={isLoginRoute} />
+          <div className="flex shrink-0 items-center gap-2 lg:block">
+            {!isTemporaryReviewRoute && !isLoginRoute ? (
+              <button
+                ref={commandPaletteTriggerRef}
+                type="button"
+                onClick={() => setCommandPaletteOpen(true)}
+                aria-label="Open command palette"
+                aria-keyshortcuts="Meta+K Control+K"
+                aria-expanded={commandPaletteOpen}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-command-line bg-command-card text-command-muted transition hover:border-command-gold/45 hover:bg-command-elevated hover:text-command-text lg:mt-4 lg:min-h-10 lg:h-auto lg:w-full lg:justify-between lg:gap-2 lg:px-3 lg:py-2"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <AppIcon name="search" className="h-[18px] w-[18px] text-command-gold" />
+                  <span className="hidden text-xs font-semibold lg:inline">Jump anywhere</span>
+                </span>
+                <kbd className="hidden rounded-md border border-command-line bg-command-bg px-1.5 py-0.5 text-[9px] font-semibold text-command-subtle xl:inline">⌘K</kbd>
+              </button>
+            ) : null}
+            <ShellStatus auth={auth} clientAuthenticated={clientAuthenticated} isTemporaryReviewRoute={isTemporaryReviewRoute} isLoginRoute={isLoginRoute} />
+          </div>
         </div>
         <nav className="thin-scrollbar mt-5 hidden space-y-4 overflow-visible pb-5 lg:block" aria-label="Primary navigation">
           {isTemporaryReviewRoute
@@ -265,8 +318,9 @@ export function ShellChrome({
         </nav>
       </aside>
       <AuthGate mode={auth.mode} initialAuthenticated={auth.authenticated}>
-        <main className={mainClassName}>{children}</main>
+        <main id="main-content" tabIndex={-1} className={`${mainClassName} focus:outline-none`}>{children}</main>
       </AuthGate>
+      <CommandPalette open={commandPaletteOpen && !isTemporaryReviewRoute && !isLoginRoute} items={commandPaletteItems} onClose={closeCommandPalette} triggerRef={commandPaletteTriggerRef} />
       {!isTemporaryReviewRoute && !isLoginRoute ? (
         <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-command-line bg-command-bg/95 px-1 pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-1.5 shadow-command backdrop-blur-xl lg:hidden" aria-label="Mobile navigation">
           {mobileNavItems.map((item) => {
