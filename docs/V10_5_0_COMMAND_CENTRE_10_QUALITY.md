@@ -7,6 +7,7 @@ This release closes the measurable gaps behind the final product-quality score w
 - Command Core initial JavaScript fell from 354 KB to 104 KB in the production build (about 71% lower).
 - The 3.3 MB Singapore planning-area asset now lives behind a deferred interactive-map boundary.
 - Every protected route has a real page-level `h1`, a keyboard skip link, and a focusable main landmark.
+- The unauthenticated Supabase gate preserves that same heading and skip-navigation contract.
 - `Command/Ctrl + K` opens a global, searchable command palette covering the complete operator navigation surface and key actions.
 - The command palette traps focus, supports arrows and Enter, closes with Escape, restores focus, and prevents background scrolling.
 - Production builds enforce a 120 KB gzip initial-JavaScript budget and a 10 KB route-chunk budget for Command Core.

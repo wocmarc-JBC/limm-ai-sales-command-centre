@@ -17,6 +17,7 @@ function check(name, run) {
 const packageJson = JSON.parse(read("package.json"));
 const health = read("app/api/whatsapp/health/route.ts");
 const shell = read("components/ShellChrome.tsx");
+const authGate = read("components/auth/AuthGate.tsx");
 const palette = read("components/CommandPalette.tsx");
 const pageHeader = read("components/PageHeader.tsx");
 const commandCorePage = read("app/command-core/page.tsx");
@@ -41,6 +42,7 @@ check("publishes the v10.5.0 measurable quality release", () => {
     "commandCoreDeferredMapBundleAvailable",
     "commandCoreInitialBundleBudgetKb",
     "commandCentreCrossRouteAccessibilityGateAvailable",
+    "commandCentreUnauthenticatedAccessibilityAvailable",
     "duplicatePrioritySignalsSuppressedAvailable",
     "collectionQueueOverflowContainedAvailable"
   ]) {
@@ -55,6 +57,9 @@ check("gives every protected route a semantic page heading and skip target", () 
   assert.ok(shell.includes("Skip to main content"));
   assert.ok(shell.includes('id="main-content" tabIndex={-1}'));
   assert.equal(/<h1[^>]*>Mission Control<\/h1>/.test(shell), false);
+  assert.ok(authGate.includes('<main id="main-content" tabIndex={-1}'));
+  assert.ok(authGate.includes('<h1 className="mt-2 text-2xl font-semibold">Login required</h1>'));
+  assert.equal(authGate.includes('<h2 className="mt-2 text-2xl font-semibold">Login required</h2>'), false);
 });
 
 check("provides a discoverable global keyboard command palette", () => {
