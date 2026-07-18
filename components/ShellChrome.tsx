@@ -58,6 +58,7 @@ const appNavGroups = [
 
 const mobileNavItems = [
   { href: "/", label: "Today" },
+  { href: "/inbox", label: "Inbox" },
   { href: "/sales-pipeline", label: "Pipeline" },
   { href: "/delivery", label: "Delivery" },
   { href: "/sales-collection", label: "Money" },
@@ -90,7 +91,7 @@ function ShellStatus({
 }) {
   if (isTemporaryReviewRoute) {
     return (
-      <div className="rounded-lg border border-command-gold/50 bg-command-card px-3 py-2 text-[13px] text-command-muted md:mt-5">
+      <div className="rounded-lg border border-command-gold/50 bg-command-card px-3 py-2 text-[13px] text-command-muted lg:mt-5">
         <p className="font-semibold text-command-gold">Mock UI Review Mode</p>
         <p>No Login Required</p>
         <p>No Live Actions</p>
@@ -101,13 +102,13 @@ function ShellStatus({
 
   if (isLoginRoute) {
     return (
-      <div className="rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted md:mt-5">
+      <div className="rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted lg:mt-5">
         <p>Secure sign-in</p>
       </div>
     );
   }
 
-  const statusCardClass = "rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted md:mt-5";
+  const statusCardClass = "rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted lg:mt-5";
 
   if (auth.profile && auth.authenticated && clientAuthenticated) {
     return (
@@ -119,7 +120,7 @@ function ShellStatus({
   }
 
   return (
-    <div className="rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted md:mt-5">
+    <div className="rounded-lg border border-command-line bg-command-card px-3 py-2 text-[13px] text-command-muted lg:mt-5">
       <p>Login required</p>
       <Link href="/login" className="mt-2 inline-flex rounded-md border border-command-gold bg-command-gold px-3 py-2 text-[13px] font-semibold text-black">
         Go to Login
@@ -143,9 +144,11 @@ export function ShellChrome({
   const [clientAuthenticated, setClientAuthenticated] = useState(auth.authenticated || auth.mode === "Mock Mode");
   const isTemporaryReviewRoute = isReviewRouteEnabled() && pathname === "/review-chatgpt-ui";
   const isLoginRoute = pathname === "/login";
-  const mainClassName = isTemporaryReviewRoute
-    ? "mx-auto max-w-[1440px] px-4 pb-28 pt-28 md:ml-64 md:px-8 md:pb-10 md:pt-8 xl:px-10"
-    : "mx-auto max-w-[1440px] px-4 pb-28 pt-28 md:ml-64 md:px-8 md:pb-10 md:pt-8 xl:px-10";
+  const isInboxRoute = pathname.startsWith("/inbox");
+  const mobileTopPadding = qaE2eMode ? "pt-44" : "pt-28";
+  const mainClassName = isInboxRoute
+    ? `px-3 pb-28 ${mobileTopPadding} sm:px-4 lg:ml-64 lg:px-4 lg:pb-8 lg:pt-6 xl:px-6`
+    : `mx-auto max-w-[1440px] px-4 pb-28 ${mobileTopPadding} md:px-8 lg:ml-64 lg:pb-10 lg:pt-8 xl:px-10`;
 
   useEffect(() => {
     if (auth.mode === "Mock Mode") {
@@ -170,20 +173,20 @@ export function ShellChrome({
 
   return (
     <div className="min-h-screen">
-      <aside className="thin-scrollbar fixed inset-x-0 top-0 z-20 border-b border-command-line bg-command-bg/90 px-4 py-3 shadow-command backdrop-blur-xl md:bottom-0 md:left-0 md:right-auto md:h-screen md:w-64 md:overflow-y-auto md:overscroll-contain md:border-b-0 md:border-r md:px-5 md:py-6">
+      <aside className="thin-scrollbar fixed inset-x-0 top-0 z-20 border-b border-command-line bg-command-bg/90 px-4 py-3 shadow-command backdrop-blur-xl lg:bottom-0 lg:left-0 lg:right-auto lg:h-screen lg:w-64 lg:overflow-y-auto lg:overscroll-contain lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
         {qaE2eMode ? (
           <div className="mb-4 rounded-xl border border-command-amber/60 bg-command-amber/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-command-amber" data-testid="qa-e2e-banner">
             QA / staging dry-run {qaRunId ? `- ${qaRunId}` : ""}
           </div>
         ) : null}
-        <div className="flex items-center justify-between gap-3 md:block">
+        <div className="flex items-center justify-between gap-3 lg:block">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-cyan">LIMM Works</p>
             <h1 className="mt-1 text-xl font-semibold leading-6 text-command-text">Mission Control</h1>
           </div>
           <ShellStatus auth={auth} clientAuthenticated={clientAuthenticated} isTemporaryReviewRoute={isTemporaryReviewRoute} isLoginRoute={isLoginRoute} />
         </div>
-        <nav className="thin-scrollbar mt-8 hidden space-y-5 overflow-visible pb-6 md:block">
+        <nav className="thin-scrollbar mt-8 hidden space-y-5 overflow-visible pb-6 lg:block">
           {isTemporaryReviewRoute
             ? reviewNavItems.map((item) => (
                 <a
@@ -230,7 +233,7 @@ export function ShellChrome({
         <main className={mainClassName}>{children}</main>
       </AuthGate>
       {!isTemporaryReviewRoute && !isLoginRoute ? (
-        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-command-line bg-command-bg/95 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-command backdrop-blur-xl md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-command-line bg-command-bg/95 px-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-command backdrop-blur-xl lg:hidden">
           {mobileNavItems.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (

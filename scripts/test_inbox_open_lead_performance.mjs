@@ -58,7 +58,7 @@ for (const forbidden of [
 for (const phrase of [
   "listLatestLeadMessagesForInbox(leadIds, 3)",
   "listLeadMessagesPage(selectedLead.id, 30)",
-  "activeLeads = leads.slice(0, 30)",
+  "firstThirtyActiveLeads = activeLeadPool.slice(0, 30)",
   "auditTrail: []"
 ]) {
   assertIncludes(inboxPage, phrase, "/inbox page");

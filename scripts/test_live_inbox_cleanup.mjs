@@ -47,7 +47,7 @@ for (const phrase of [
   "Queue",
   "Conversations",
   "Next waiting chat",
-  "Search name, phone, message, property",
+  "Search conversations",
   "Waiting for Marcus",
   "Waiting for client",
   "New leads",

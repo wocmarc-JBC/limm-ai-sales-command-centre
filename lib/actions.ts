@@ -1455,6 +1455,15 @@ function revalidateLeadPaths(leadId: string) {
   revalidatePath("/audit-log");
 }
 
+function revalidateBulkLeadPaths(leadIds: string[]) {
+  revalidatePath("/");
+  revalidatePath("/inbox");
+  revalidatePath("/leads");
+  for (const leadId of leadIds) revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/settings");
+  revalidatePath("/audit-log");
+}
+
 export async function setLeadConversationIntentOverrideAction(formData: FormData) {
   const permission = await requirePermission("update_leads");
   if (!permission.ok) return;
@@ -1580,6 +1589,51 @@ export async function markInboxConversationSpamAction(leadIdInput: string) {
   if (!lead.isSpam) await markLeadAsSpam(leadId);
   revalidateLeadPaths(leadId);
   return { ok: true, leadId } as const;
+}
+
+export async function markInboxConversationsSpamAction(leadIdsInput: string[]) {
+  const leadIds = Array.from(new Set(
+    (Array.isArray(leadIdsInput) ? leadIdsInput : [])
+      .filter((leadId): leadId is string => typeof leadId === "string")
+      .map((leadId) => leadId.trim())
+      .filter(Boolean)
+  )).slice(0, 30);
+  if (!leadIds.length) {
+    return { ok: false, code: "missing_lead_ids", removedLeadIds: [], failedLeadIds: [] } as const;
+  }
+
+  const permission = await requirePermission("soft_delete_leads");
+  if (!permission.ok) {
+    return { ok: false, code: "permission_denied", removedLeadIds: [], failedLeadIds: leadIds } as const;
+  }
+
+  const removedLeadIds: string[] = [];
+  const failedLeadIds: string[] = [];
+  const concurrency = 5;
+  for (let offset = 0; offset < leadIds.length; offset += concurrency) {
+    const batch = leadIds.slice(offset, offset + concurrency);
+    const results = await Promise.all(batch.map(async (leadId) => {
+      try {
+        const lead = await getLeadById(leadId);
+        if (!lead) return { leadId, removed: false };
+        if (!lead.isSpam) await markLeadAsSpam(leadId);
+        return { leadId, removed: true };
+      } catch {
+        return { leadId, removed: false };
+      }
+    }));
+    for (const result of results) {
+      (result.removed ? removedLeadIds : failedLeadIds).push(result.leadId);
+    }
+  }
+  if (removedLeadIds.length) revalidateBulkLeadPaths(removedLeadIds);
+
+  return {
+    ok: failedLeadIds.length === 0,
+    code: failedLeadIds.length ? "partial_failure" : "removed",
+    removedLeadIds,
+    failedLeadIds
+  } as const;
 }
 
 export async function markLeadSpamAction(formData: FormData) {

@@ -1,5 +1,4 @@
 import { MultiChatInbox, type MultiChatConversation, type MultiChatSummary } from "@/components/inbox/MultiChatInbox";
-import { PageHeader } from "@/components/PageHeader";
 import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
@@ -156,20 +155,26 @@ export default async function WhatsAppInboxPage({
 
   return (
     <>
-      <PageHeader title="LIMM WhatsApp Inbox" eyebrow="Operator console">
-        <Link
-          href="/leads"
-          className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-muted transition hover:border-command-gold/60"
-        >
-          Lead list
-        </Link>
-        <Link
-          href="/settings"
-          className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-muted transition hover:border-command-gold/60"
-        >
-          Settings
-        </Link>
-      </PageHeader>
+      <header className="mb-3 flex min-h-12 items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-command-cyan">Operator console</p>
+          <h1 className="truncate text-xl font-semibold text-command-text sm:text-2xl">LIMM WhatsApp Inbox</h1>
+        </div>
+        <nav className="flex shrink-0 items-center gap-1 text-sm font-semibold" aria-label="Inbox links">
+          <Link
+            href="/leads"
+            className="rounded-lg px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text"
+          >
+            Lead list
+          </Link>
+          <Link
+            href="/settings"
+            className="hidden rounded-lg px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text sm:inline-flex"
+          >
+            Settings
+          </Link>
+        </nav>
+      </header>
       <MultiChatInbox
         conversations={conversations}
         canManageSpam={canManageSpam}

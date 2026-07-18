@@ -31,9 +31,9 @@ const composerIndex = mainLayout.indexOf("<ReplyComposer");
 const messageListIndex = mainLayout.indexOf("ref={messagePaneRef}");
 const latestLabelIndex = mainLayout.indexOf("Latest messages");
 assert(headerIndex >= 0, "conversation header missing.");
-assert(composerIndex > headerIndex, "composer must appear after conversation header.");
-assert(messageListIndex > composerIndex, "message list must appear after composer.");
-assert(latestLabelIndex > composerIndex, "latest messages label must appear below composer.");
+assert(messageListIndex > headerIndex, "message list must appear after conversation header.");
+assert(composerIndex > messageListIndex, "sticky composer must appear below the message viewport.");
+assert(latestLabelIndex > headerIndex && latestLabelIndex < composerIndex, "latest messages label must stay inside the message viewport above the composer.");
 
 assertIncludes(inboxClient, "function sortMessagesNewestFirst", "newest-first sorting helper");
 assertIncludes(inboxClient, "() => sortMessagesNewestFirst(collapseHistoricalDuplicateAiMessages(activeMessages))", "newest-first active messages with safe duplicate display collapse");

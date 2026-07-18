@@ -123,7 +123,7 @@ check("spam cleanup is recoverable instead of a permanent delete", () => {
   assert.ok(leadsRepository.includes("isSpam: true"));
   assert.ok(leadsRepository.includes("isSpam: false"));
   assert.ok(inboxClient.includes("recoverable from Leads → Show Spam"));
-  assert.ok(inboxClient.includes("withoutRecordKey(current, chatToRemove.id)"));
+  assert.ok(inboxClient.includes("withoutRecordKeys(current, removed)"));
 });
 
 check("boss and admin see fast spam controls in both queue and active chat", () => {
@@ -131,7 +131,7 @@ check("boss and admin see fast spam controls in both queue and active chat", () 
   assert.ok(inboxPage.includes("canManageSpam={canManageSpam}"));
   assert.ok(inboxClient.includes("onMarkSpam={markConversationSpam}"));
   assert.ok(inboxClient.includes('aria-label={`Remove ${chat.displayName || chat.phone} as spam`}'));
-  assert.ok(inboxClient.includes('"Remove spam"'));
+  assert.ok(inboxClient.includes("Remove spam"));
 });
 
 check("removing the active spam chat preserves operator continuity", () => {
@@ -142,12 +142,14 @@ check("removing the active spam chat preserves operator continuity", () => {
 
 check("desktop panes use bounded independent scrolling and start chat-focused", () => {
   assert.ok(inboxClient.includes('useState(false)'));
-  assert.ok(inboxClient.includes("xl:h-[calc(100dvh-12rem)]"));
-  assert.ok(inboxClient.includes("xl:min-h-0 xl:flex-1 xl:max-h-none"));
+  assert.ok(inboxClient.includes("lg:h-[calc(100dvh-8.5rem)]"));
+  assert.ok(inboxClient.includes('data-testid="inbox-details-drawer"'));
+  assert.ok(inboxClient.includes("min-h-0 flex-1 overflow-y-auto"));
 });
 
-check("v10.2.3 publishes explicit inbox capability markers", () => {
-  assert.equal(packageJson.version, "10.2.3");
+check("v10.2.3 capabilities remain published in later releases", () => {
+  const [major, minor, patch] = packageJson.version.split(".").map(Number);
+  assert.ok(major > 10 || (major === 10 && (minor > 2 || (minor === 2 && patch >= 3))));
   assert.ok(packageJson.scripts["test:v10.2.3"]?.includes("test_inbox_latest_activity_spam_cleanup.mjs"));
   for (const marker of [
     "v10_2_3_inbox_latest_activity_spam_cleanup",

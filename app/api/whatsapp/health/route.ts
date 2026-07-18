@@ -74,6 +74,8 @@ export const dynamic = "force-dynamic";
 // securityVersion: "v10.2.2"
 // version: "v10_2_3_inbox_latest_activity_spam_cleanup"
 // uiVersion: "v10.2.3"
+// version: "v10_3_0_inbox_operator_experience"
+// uiVersion: "v10.3.0"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -102,10 +104,10 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v10_2_3_inbox_latest_activity_spam_cleanup",
+      version: "v10_3_0_inbox_operator_experience",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.2.3",
+      uiVersion: "v10.3.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -150,6 +152,11 @@ export async function GET() {
       inboxLatestActivityFirstAvailable: true,
       inboxQuickSpamRemovalAvailable: true,
       inboxQuickSpamRemovalRecoverable: true,
+      inboxStickyComposerAvailable: true,
+      inboxDetailsDrawerAvailable: true,
+      inboxBulkSpamRemovalAvailable: true,
+      inboxMobileQueueChatFlowAvailable: true,
+      inboxTabletFullWidthAvailable: true,
       bossDailyBriefAvailable: true,
       bossOpsNavigationGroupsAvailable: true,
       riskBadgesAvailable: true,
@@ -570,10 +577,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v10_2_3_inbox_latest_activity_spam_cleanup",
+      version: "v10_3_0_inbox_operator_experience",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v10.2.3",
+      uiVersion: "v10.3.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -614,6 +621,11 @@ export async function GET() {
       inboxLatestActivityFirstAvailable: true,
       inboxQuickSpamRemovalAvailable: true,
       inboxQuickSpamRemovalRecoverable: true,
+      inboxStickyComposerAvailable: true,
+      inboxDetailsDrawerAvailable: true,
+      inboxBulkSpamRemovalAvailable: true,
+      inboxMobileQueueChatFlowAvailable: true,
+      inboxTabletFullWidthAvailable: true,
       bossDailyBriefAvailable: false,
       bossOpsNavigationGroupsAvailable: false,
       riskBadgesAvailable: false,

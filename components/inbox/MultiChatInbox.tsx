@@ -13,6 +13,7 @@ import {
   type KeyboardEvent
 } from "react";
 import {
+  markInboxConversationsSpamAction,
   markInboxConversationSpamAction,
   markBossApprovalNeededAction,
   markLeadNotSuitableAction,
@@ -22,6 +23,7 @@ import {
   resumeBotForLeadAction,
   updateLeadStatusAction
 } from "@/lib/actions";
+import { InboxSpamDialog } from "@/components/inbox/InboxSpamDialog";
 import { sortInboxLatestFirst } from "@/lib/inbox-conversation-order";
 import { getInboxQueueState, type InboxPrimaryStatus } from "@/lib/inbox-queue";
 import { collapseHistoricalDuplicateAiMessages } from "@/lib/inbox-message-display";
@@ -175,10 +177,10 @@ function sortQueue(chats: MultiChatSummary[]) {
   return sortInboxLatestFirst(chats);
 }
 
-function withoutRecordKey<T>(record: Record<string, T>, key: string) {
-  if (!(key in record)) return record;
+function withoutRecordKeys<T>(record: Record<string, T>, keys: Set<string>) {
+  if (!keys.size) return record;
   const next = { ...record };
-  delete next[key];
+  for (const key of keys) delete next[key];
   return next;
 }
 
@@ -295,13 +297,34 @@ function chatStatusTone(chat: MultiChatSummary) {
   return "border-command-green/45 bg-command-green/10 text-command-green";
 }
 
-function chatAccentTone(chat: MultiChatSummary) {
+function chatStatusDotTone(chat: MultiChatSummary) {
   const label = chatStatusLabel(chat);
-  if (label === "Failed send") return "border-l-command-red";
-  if (label === "Waiting for Marcus") return "border-l-command-gold";
-  if (label === "Waiting for client") return "border-l-command-muted";
-  if (label === "Human takeover") return "border-l-command-bronze";
-  return "border-l-command-cyan";
+  if (label === "Failed send") return "bg-command-red";
+  if (label === "Waiting for Marcus") return "bg-command-gold";
+  if (label === "Waiting for client") return "bg-command-amber";
+  if (label === "Closed / Done") return "bg-command-subtle";
+  return "bg-command-green";
+}
+
+function chatInitials(chat: MultiChatSummary) {
+  const source = (chat.displayName || chat.phone || "Client").trim();
+  const words = source.split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "C";
+}
+
+function formatQueueTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) {
+    return date.toLocaleTimeString("en-SG", { hour: "2-digit", minute: "2-digit" });
+  }
+  return date.toLocaleDateString("en-SG", {
+    day: "2-digit",
+    month: "short",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "2-digit"
+  });
 }
 
 function matchesFilter(chat: MultiChatSummary, filter: (typeof filters)[number]) {
@@ -389,80 +412,83 @@ const ChatRow = memo(function ChatRow({
   chat,
   active,
   canManageSpam,
+  selected,
+  selectionMode,
   spamPending,
   onSelect,
+  onToggleSelected,
   onMarkSpam
 }: {
   chat: MultiChatSummary;
   active: boolean;
   canManageSpam: boolean;
+  selected: boolean;
+  selectionMode: boolean;
   spamPending: boolean;
   onSelect: (leadId: string) => void;
+  onToggleSelected: (leadId: string) => void;
   onMarkSpam: (chat: MultiChatSummary) => void;
 }) {
   return (
     <div
       data-testid="inbox-chat-row"
       data-last-activity-at={chat.lastActivityAt}
-      className={`overflow-hidden rounded-xl border border-l-4 transition hover:border-command-cyan/50 ${chatAccentTone(chat)} ${
-        active
-          ? "border-command-gold/70 bg-command-gold/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-          : "border-command-line bg-command-bg/50"
+      className={`group relative border-b border-command-line/70 transition ${
+        selected
+          ? "bg-command-red/10"
+          : active
+            ? "bg-command-gold/10 shadow-[inset_3px_0_0_#D6A84F]"
+            : "bg-transparent hover:bg-white/[0.035]"
       }`}
     >
       <button
         type="button"
-        onClick={() => onSelect(chat.id)}
-        className="block w-full p-3.5 pb-2 text-left"
-        aria-label={`Open conversation with ${chat.displayName || chat.phone}`}
+        onClick={() => selectionMode ? onToggleSelected(chat.id) : onSelect(chat.id)}
+        aria-label={selectionMode ? `Select ${chat.displayName || chat.phone}` : `Open conversation with ${chat.displayName || chat.phone}`}
+        aria-pressed={selectionMode ? selected : undefined}
+        className={`flex w-full items-start gap-3 px-3 py-3.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-command-gold ${canManageSpam && !selectionMode ? "pr-14" : ""}`}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-command-text">{chat.displayName || chat.phone}</p>
-            <p className="mt-1 text-xs text-command-muted">{chat.phone || "Phone pending"}</p>
-          </div>
-          {chat.unreadCount > 0 ? (
-            <span className="rounded-full bg-command-gold px-2 py-0.5 text-xs font-bold text-black">{chat.unreadCount}</span>
-          ) : null}
-        </div>
-        <p className="mt-2 line-clamp-2 text-sm leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview)}</p>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>
-              {chatStatusLabel(chat)}
-            </span>
-            {!chat.intentClassified ? (
-              <span className="rounded-full border border-command-amber/40 bg-command-amber/10 px-2 py-0.5 text-[10px] font-semibold text-command-amber">
-                Legacy · unclassified
-              </span>
-            ) : !chat.leadEligible ? (
-              <span className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-2 py-0.5 text-[10px] font-semibold text-command-cyan">
-                {humanize(chat.conversationIntent)}
-              </span>
-            ) : null}
-          </div>
-          {chat.floorPlanReceived || chat.sitePhotosReceived ? (
-            <span className="rounded-full border border-command-green/35 bg-command-green/10 px-2 py-0.5 text-[10px] text-command-green">
-              Files
-            </span>
-          ) : null}
-        </div>
-      </button>
-      <div className="flex items-center justify-between gap-3 px-3.5 pb-3">
-        <time className="text-xs text-command-subtle" dateTime={chat.lastActivityAt}>{formatTimestamp(chat.lastActivityAt)}</time>
-        {canManageSpam ? (
-          <button
-            type="button"
-            onClick={() => onMarkSpam(chat)}
-            disabled={spamPending}
-            data-testid="inbox-mark-spam"
-            className="rounded-md border border-command-red/35 bg-command-red/10 px-2.5 py-1 text-[11px] font-semibold text-command-red transition hover:border-command-red/65 hover:bg-command-red/15 disabled:cursor-wait disabled:opacity-60"
-            aria-label={`Remove ${chat.displayName || chat.phone} as spam`}
-          >
-            {spamPending ? "Removing..." : "Spam"}
-          </button>
+        {selectionMode ? (
+          <span className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${selected ? "border-command-red bg-command-red text-white" : "border-command-line bg-command-bg text-transparent"}`} aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth="2.2">
+              <path d="m4 10 4 4 8-9" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        ) : (
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-command-panel text-sm font-semibold text-command-gold ring-1 ring-command-line" aria-hidden="true">
+            {chatInitials(chat)}
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="flex items-start justify-between gap-3">
+            <span className="truncate text-[15px] font-semibold leading-5 text-command-text">{chat.displayName || chat.phone}</span>
+            <time className="shrink-0 text-[11px] text-command-subtle" dateTime={chat.lastActivityAt}>{formatQueueTimestamp(chat.lastActivityAt)}</time>
+          </span>
+          <span className="mt-1 block truncate text-sm leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview, 72)}</span>
+          <span className="mt-2 flex min-w-0 items-center gap-2 text-[11px] text-command-subtle">
+            <span className={`h-2 w-2 shrink-0 rounded-full ${chatStatusDotTone(chat)}`} aria-hidden="true" />
+            <span className="truncate">{chatStatusLabel(chat)}</span>
+            {!chat.intentClassified ? <span className="truncate text-command-amber">Unclassified</span> : null}
+            {chat.floorPlanReceived || chat.sitePhotosReceived ? <span className="shrink-0 text-command-green">Files</span> : null}
+          </span>
+        </span>
+        {chat.unreadCount > 0 ? (
+          <span className="mt-7 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-command-gold px-1.5 text-[11px] font-bold text-black">{chat.unreadCount}</span>
         ) : null}
-      </div>
+      </button>
+      {canManageSpam && !selectionMode ? (
+        <button
+          type="button"
+          onClick={() => onMarkSpam(chat)}
+          disabled={spamPending}
+          data-testid="inbox-mark-spam"
+          className="absolute bottom-3 right-2 rounded-lg px-2 py-1 text-[11px] font-semibold text-command-subtle opacity-70 transition hover:bg-command-red/10 hover:text-command-red group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-40"
+          aria-label={`Remove ${chat.displayName || chat.phone} as spam`}
+          title="Remove from inbox as spam"
+        >
+          {spamPending ? "Removing…" : "Spam"}
+        </button>
+      ) : null}
     </div>
   );
 });
@@ -552,6 +578,8 @@ function ReplyComposer({
 }) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [aiDraft, setAiDraft] = useState("");
+  const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
+  const [draftToolsOpen, setDraftToolsOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const leadId = conversation.lead.id;
   const reply = drafts[leadId] ?? "";
@@ -690,46 +718,71 @@ function ReplyComposer({
   };
 
   return (
-    <div className="border-b border-command-line bg-command-panel/95 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur">
+    <div data-testid="inbox-sticky-composer" className="shrink-0 border-t border-command-line bg-command-panel/95 px-3 py-3 shadow-[0_-14px_35px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:px-4">
       {salesDraftingEnabled ? (
         <>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            {quickReplies.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => insertQuickReply(item.text)}
-                className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-xs font-semibold text-command-muted transition hover:border-command-gold/60 hover:bg-command-gold/10 hover:text-command-text"
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="mb-2 flex items-center gap-2 overflow-x-auto pb-0.5">
+            <button
+              type="button"
+              onClick={() => setQuickRepliesOpen((open) => !open)}
+              aria-expanded={quickRepliesOpen}
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${quickRepliesOpen ? "bg-command-gold/15 text-command-gold" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+            >
+              Quick replies
+            </button>
+            <button
+              type="button"
+              onClick={() => setDraftToolsOpen((open) => !open)}
+              aria-expanded={draftToolsOpen}
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${draftToolsOpen ? "bg-command-cyan/12 text-command-cyan" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+            >
+              AI draft
+            </button>
+            <span className="ml-auto hidden shrink-0 text-[11px] text-command-subtle sm:inline">Review before sending</span>
           </div>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-command-cyan/20 bg-command-bg/55 px-3 py-2">
-            <p className="text-xs leading-5 text-command-muted">Draft only. Marcus must review, edit, and send manually.</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setAiDraft(buildAiDraft(conversation))}
-                className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-3 py-1.5 text-xs font-semibold text-command-cyan transition hover:bg-command-cyan/15"
-              >
-                Generate AI Draft
-              </button>
-              {aiDraft ? (
+          {quickRepliesOpen ? (
+            <div className="thin-scrollbar mb-2 flex max-h-24 gap-2 overflow-x-auto overflow-y-hidden rounded-xl bg-command-bg/55 p-2" data-testid="inbox-quick-replies">
+              {quickReplies.map((item) => (
                 <button
+                  key={item.label}
                   type="button"
-                  onClick={() => setReply(aiDraft)}
-                  className="rounded-full border border-command-gold/60 bg-command-gold/12 px-3 py-1.5 text-xs font-semibold text-command-gold transition hover:bg-command-gold/18"
+                  onClick={() => insertQuickReply(item.text)}
+                  className="shrink-0 rounded-full border border-command-line bg-command-panel2 px-3 py-1.5 text-xs font-semibold text-command-muted transition hover:border-command-gold/60 hover:text-command-text"
                 >
-                  Use draft
+                  {item.label}
                 </button>
-              ) : null}
+              ))}
             </div>
-          </div>
-          {aiDraft ? <p className="mb-3 max-h-24 overflow-y-auto rounded-xl border border-command-line bg-command-bg/55 p-3 text-sm leading-6 text-command-muted">{aiDraft}</p> : null}
+          ) : null}
+          {draftToolsOpen ? (
+            <div className="mb-2 rounded-xl border border-command-cyan/20 bg-command-cyan/5 p-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-command-muted">Draft only. Marcus reviews and sends manually.</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAiDraft(buildAiDraft(conversation))}
+                    className="rounded-lg border border-command-cyan/35 bg-command-cyan/10 px-3 py-1.5 text-xs font-semibold text-command-cyan transition hover:bg-command-cyan/15"
+                  >
+                    Generate AI Draft
+                  </button>
+                  {aiDraft ? (
+                    <button
+                      type="button"
+                      onClick={() => setReply(aiDraft)}
+                      className="rounded-lg border border-command-gold/45 bg-command-gold/10 px-3 py-1.5 text-xs font-semibold text-command-gold transition hover:bg-command-gold/15"
+                    >
+                      Use draft
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {aiDraft ? <p className="mt-2 max-h-24 overflow-y-auto rounded-lg bg-command-bg/60 p-2.5 text-sm leading-5 text-command-muted">{aiDraft}</p> : null}
+            </div>
+          ) : null}
         </>
       ) : (
-        <div className="mb-3 rounded-xl border border-command-cyan/25 bg-command-cyan/5 px-3 py-2 text-xs leading-5 text-command-muted">
+        <div className="mb-2 rounded-lg bg-command-cyan/5 px-3 py-2 text-xs leading-5 text-command-muted">
           {conversation.context.intentClassified
             ? "Non-sales route. Sales quick replies and AI drafting are disabled; operators can still write a manual reply when needed."
             : "Legacy conversation awaiting intent classification. Sales quick replies and AI drafting are disabled; operators can still write a manual reply."}
@@ -737,34 +790,30 @@ function ReplyComposer({
       )}
       <form ref={formRef} onSubmit={handleSubmit}>
         <label htmlFor="manual_reply_body" className="sr-only">Type WhatsApp reply</label>
-        <div className="flex gap-3">
+        <div className="flex items-end gap-2">
           <textarea
             id="manual_reply_body"
             name="manual_reply_body"
-            rows={4}
+            rows={2}
             required
             value={reply}
             onChange={(event) => setReply(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type WhatsApp reply..."
-            className="max-h-52 min-h-[88px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-4 py-3 text-base leading-7 text-command-text outline-none transition placeholder:text-command-muted focus:border-command-gold/70"
+            placeholder="Type a WhatsApp reply…"
+            className="max-h-40 min-h-[58px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-4 py-3 text-[15px] leading-6 text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/70 focus:ring-2 focus:ring-command-gold/10"
           />
-          <div className="flex min-w-28 flex-col justify-between gap-3">
-            <button
-              type="submit"
-              disabled={!canSend}
-              title={!reply.trim() ? "Type a WhatsApp reply before sending." : isSending ? "Sending WhatsApp reply now." : "Send WhatsApp reply"}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:border-command-line disabled:bg-command-panel2 disabled:text-command-muted"
-            >
-              {isSending ? "Sending..." : "Send"}
-            </button>
-            <p className="text-[11px] leading-5 text-command-muted">
-              Ctrl+Enter or Cmd+Enter sends. Esc clears focus.
-            </p>
-            {sendError ? (
-              <p className="text-xs leading-5 text-command-red">{sendError}</p>
-            ) : null}
-          </div>
+          <button
+            type="submit"
+            disabled={!canSend}
+            title={!reply.trim() ? "Type a WhatsApp reply before sending." : isSending ? "Sending WhatsApp reply now." : "Send WhatsApp reply"}
+            className="inline-flex min-h-[58px] min-w-[76px] items-center justify-center rounded-2xl border border-command-gold bg-command-gold px-4 py-2 text-sm font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:border-command-line disabled:bg-command-panel2 disabled:text-command-muted"
+          >
+            {isSending ? "Sending..." : "Send"}
+          </button>
+        </div>
+        <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[11px] text-command-subtle">
+          <span>Ctrl+Enter or Cmd+Enter sends. Esc clears focus.</span>
+          {sendError ? <span className="text-right text-command-red">{sendError}</span> : null}
         </div>
       </form>
     </div>
@@ -794,7 +843,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
   }, [conversation.lead.id]);
 
   return (
-    <aside className="border-t border-command-line bg-command-panel2/95 xl:flex xl:min-h-0 xl:flex-col xl:border-l xl:border-t-0">
+    <aside className="flex h-full min-h-0 flex-col bg-command-panel2/98" data-testid="inbox-context-panel">
       <div className="flex shrink-0 items-center justify-between border-b border-command-line px-4 py-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Conversation Context</p>
@@ -803,12 +852,15 @@ const LeadContextPanel = memo(function LeadContextPanel({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-full border border-command-line bg-command-bg px-3 py-1 text-xs font-semibold text-command-muted transition hover:border-command-gold/60"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-command-muted transition hover:bg-command-bg hover:text-command-text"
+          aria-label="Close conversation details"
         >
-          Collapse
+          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <path d="m7 7 10 10M17 7 7 17" strokeLinecap="round" />
+          </svg>
         </button>
       </div>
-      <div className="max-h-[calc(100vh-14rem)] overflow-y-auto p-4 xl:min-h-0 xl:flex-1 xl:max-h-none">
+      <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
         <div className="rounded-2xl border border-command-line bg-command-bg/65 p-4">
           <div className="flex flex-wrap gap-2">
             <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${chatStatusTone(chat)}`}>{chatStatusLabel(chat)}</span>
@@ -1012,10 +1064,14 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   const deferredSearch = useDeferredValue(search);
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const [contextOpen, setContextOpen] = useState(false);
+  const [mobilePane, setMobilePane] = useState<"queue" | "chat">(selectedLeadId ? "chat" : "queue");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedSpamLeadIds, setSelectedSpamLeadIds] = useState<string[]>([]);
+  const [spamConfirmation, setSpamConfirmation] = useState<MultiChatSummary[]>([]);
   const [optimisticReplies, setOptimisticReplies] = useState<Record<string, LeadMessage[]>>({});
   const [sendingByLeadId, setSendingByLeadId] = useState<Record<string, SendState>>({});
   const [errorByLeadId, setErrorByLeadId] = useState<Record<string, string>>({});
-  const [spamPendingLeadId, setSpamPendingLeadId] = useState("");
+  const [spamPendingLeadIds, setSpamPendingLeadIds] = useState<string[]>([]);
   const [spamNotice, setSpamNotice] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const [draftSeeds, setDraftSeeds] = useState<Record<string, { id: string; text: string }>>({});
   const [olderMessages, setOlderMessages] = useState<Record<string, LeadMessage[]>>({});
@@ -1029,6 +1085,15 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   useEffect(() => {
     conversationCacheRef.current = conversationCache;
   }, [conversationCache]);
+
+  useEffect(() => {
+    if (!contextOpen) return;
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setContextOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [contextOpen]);
 
   const patchSummary = useCallback((leadId: string, patch: Partial<MultiChatSummary>) => {
     setChatSummaries((current) => sortQueue(
@@ -1210,8 +1275,6 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
   const queueCounters = useMemo(() => ({
     waitingForMarcus: visibleChatSummaries.filter((chat) => chat.primaryStatus === "Waiting for Marcus").length,
     newLeads: visibleChatSummaries.filter((chat) => chat.primaryStatus === "New lead").length,
-    botActive: visibleChatSummaries.filter((chat) => chat.primaryStatus === "Bot active").length,
-    humanTakeover: visibleChatSummaries.filter((chat) => chat.botPaused).length,
     failedSends: visibleChatSummaries.filter((chat) => chat.primaryStatus === "Failed send").length
   }), [visibleChatSummaries]);
 
@@ -1230,6 +1293,18 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
     }));
   }, [deferredSearch, filter, visibleChatSummaries]);
 
+  const selectedVisibleCount = filteredConversations.filter((chat) => selectedSpamLeadIds.includes(chat.id)).length;
+  const allVisibleSelected = filteredConversations.length > 0 && selectedVisibleCount === filteredConversations.length;
+  const toggleSelectAllVisible = useCallback(() => {
+    const visibleIds = filteredConversations.map((chat) => chat.id);
+    setSelectedSpamLeadIds((current) => {
+      if (visibleIds.length && visibleIds.every((leadId) => current.includes(leadId))) {
+        return current.filter((leadId) => !visibleIds.includes(leadId));
+      }
+      return Array.from(new Set([...current, ...visibleIds]));
+    });
+  }, [filteredConversations]);
+
   const waitingChats = useMemo(
     () => visibleChatSummaries.filter((summary) => summary.primaryStatus === "Failed send" || summary.primaryStatus === "Waiting for Marcus"),
     [visibleChatSummaries]
@@ -1237,6 +1312,7 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
 
   const selectConversation = useCallback((leadId: string) => {
     setActiveLeadId(leadId);
+    setMobilePane("chat");
     stickToLatestRef.current = true;
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `/inbox?lead=${encodeURIComponent(leadId)}`);
@@ -1252,57 +1328,113 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
     }
   }, [loadConversation]);
 
-  const markConversationSpam = useCallback(async (chatToRemove: MultiChatSummary) => {
-    if (!canManageSpam || spamPendingLeadId) return;
-    const label = chatToRemove.displayName || chatToRemove.phone || "this conversation";
-    const confirmed = window.confirm(
-      `Remove ${label} from the inbox as spam? This is recoverable from Leads → Show Spam.`
-    );
-    if (!confirmed) return;
+  const markConversationSpam = useCallback((chatToRemove: MultiChatSummary) => {
+    if (!canManageSpam || spamPendingLeadIds.length) return;
+    setSpamConfirmation([chatToRemove]);
+  }, [canManageSpam, spamPendingLeadIds.length]);
 
-    setSpamPendingLeadId(chatToRemove.id);
+  const toggleSpamSelection = useCallback((leadId: string) => {
+    setSelectedSpamLeadIds((current) => current.includes(leadId)
+      ? current.filter((id) => id !== leadId)
+      : [...current, leadId]
+    );
+  }, []);
+
+  const cancelSpamSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedSpamLeadIds([]);
+  }, []);
+
+  const requestBulkSpamRemoval = useCallback(() => {
+    if (!canManageSpam || !selectedSpamLeadIds.length || spamPendingLeadIds.length) return;
+    const selected = visibleChatSummaries.filter((chat) => selectedSpamLeadIds.includes(chat.id));
+    if (selected.length) setSpamConfirmation(selected);
+  }, [canManageSpam, selectedSpamLeadIds, spamPendingLeadIds.length, visibleChatSummaries]);
+
+  const cancelSpamConfirmation = useCallback(() => {
+    if (!spamPendingLeadIds.length) setSpamConfirmation([]);
+  }, [spamPendingLeadIds.length]);
+
+  const removeConversationsLocally = useCallback((removedLeadIds: string[]) => {
+    const removed = new Set(removedLeadIds);
+    if (!removed.size) return;
+    const ordered = sortQueue(chatSummaries);
+    const removedIndex = ordered.findIndex((summary) => removed.has(summary.id));
+    const remaining = ordered.filter((summary) => !removed.has(summary.id));
+    setChatSummaries(remaining);
+    setConversationMap((current) => withoutRecordKeys(current, removed));
+    setConversationCache((current) => withoutRecordKeys(current, removed));
+    setOptimisticReplies((current) => withoutRecordKeys(current, removed));
+    setSendingByLeadId((current) => withoutRecordKeys(current, removed));
+    setErrorByLeadId((current) => withoutRecordKeys(current, removed));
+    setDraftSeeds((current) => withoutRecordKeys(current, removed));
+    setOlderMessages((current) => withoutRecordKeys(current, removed));
+    setOlderState((current) => withoutRecordKeys(current, removed));
+    setSelectedSpamLeadIds((current) => current.filter((leadId) => !removed.has(leadId)));
+
+    if (removed.has(activeLeadId)) {
+      const nextIndex = Math.max(0, Math.min(removedIndex, remaining.length - 1));
+      const nextLeadId = remaining[nextIndex]?.id ?? "";
+      setActiveLeadId(nextLeadId);
+      setMobilePane(nextLeadId ? "chat" : "queue");
+      stickToLatestRef.current = true;
+      window.history.replaceState(null, "", nextLeadId ? `/inbox?lead=${encodeURIComponent(nextLeadId)}` : "/inbox");
+      if (nextLeadId && !conversationCacheRef.current[nextLeadId]) void loadConversation(nextLeadId);
+    }
+  }, [activeLeadId, chatSummaries, loadConversation]);
+
+  const confirmSpamRemoval = useCallback(async () => {
+    const targets = spamConfirmation;
+    if (!canManageSpam || !targets.length || spamPendingLeadIds.length) return;
+    const leadIds = targets.map((chatToRemove) => chatToRemove.id);
+    setSpamPendingLeadIds(leadIds);
     setSpamNotice(null);
     try {
-      const result = await markInboxConversationSpamAction(chatToRemove.id);
-      if (!result.ok) {
-        throw new Error(result.code === "permission_denied" ? "Boss or admin permission is required." : "The spam action could not be completed.");
+      let removedLeadIds: string[] = [];
+      let failedLeadIds: string[] = [];
+      if (leadIds.length === 1) {
+        const result = await markInboxConversationSpamAction(leadIds[0]);
+        if (result.ok) removedLeadIds = [result.leadId];
+        else failedLeadIds = leadIds;
+        if (!result.ok && result.code === "permission_denied") {
+          throw new Error("Boss or admin permission is required.");
+        }
+      } else {
+        const result = await markInboxConversationsSpamAction(leadIds);
+        removedLeadIds = [...result.removedLeadIds];
+        failedLeadIds = [...result.failedLeadIds];
+        if (result.code === "permission_denied") {
+          throw new Error("Boss or admin permission is required.");
+        }
       }
 
-      const ordered = sortQueue(chatSummaries);
-      const removedIndex = ordered.findIndex((summary) => summary.id === chatToRemove.id);
-      const remaining = ordered.filter((summary) => summary.id !== chatToRemove.id);
-      setChatSummaries(remaining);
-      setConversationMap((current) => withoutRecordKey(current, chatToRemove.id));
-      setConversationCache((current) => withoutRecordKey(current, chatToRemove.id));
-      setOptimisticReplies((current) => withoutRecordKey(current, chatToRemove.id));
-      setSendingByLeadId((current) => withoutRecordKey(current, chatToRemove.id));
-      setErrorByLeadId((current) => withoutRecordKey(current, chatToRemove.id));
-      setDraftSeeds((current) => withoutRecordKey(current, chatToRemove.id));
-      setOlderMessages((current) => withoutRecordKey(current, chatToRemove.id));
-      setOlderState((current) => withoutRecordKey(current, chatToRemove.id));
-
-      if (activeLeadId === chatToRemove.id) {
-        const nextIndex = Math.max(0, Math.min(removedIndex, remaining.length - 1));
-        const nextLeadId = remaining[nextIndex]?.id ?? "";
-        setActiveLeadId(nextLeadId);
-        stickToLatestRef.current = true;
-        window.history.replaceState(null, "", nextLeadId ? `/inbox?lead=${encodeURIComponent(nextLeadId)}` : "/inbox");
-        if (nextLeadId && !conversationCacheRef.current[nextLeadId]) void loadConversation(nextLeadId);
+      removeConversationsLocally(removedLeadIds);
+      if (!removedLeadIds.length) throw new Error("The spam action could not be completed.");
+      if (failedLeadIds.length) {
+        setSpamNotice({
+          tone: "error",
+          message: `${removedLeadIds.length} removed as spam; ${failedLeadIds.length} could not be removed. Removed conversations are recoverable from Leads → Show Spam.`
+        });
+      } else {
+        const label = targets[0]?.displayName || targets[0]?.phone || "Conversation";
+        setSpamNotice({
+          tone: "success",
+          message: leadIds.length === 1
+            ? `${label} was removed from the inbox as spam. You can restore it from Leads → Show Spam.`
+            : `${leadIds.length} conversations were removed as spam. You can restore them from Leads → Show Spam.`
+        });
+        cancelSpamSelection();
       }
-
-      setSpamNotice({
-        tone: "success",
-        message: `${label} was removed from the inbox as spam. You can restore it from Leads → Show Spam.`
-      });
     } catch (error) {
       setSpamNotice({
         tone: "error",
         message: error instanceof Error ? error.message : "The spam action could not be completed."
       });
     } finally {
-      setSpamPendingLeadId("");
+      setSpamPendingLeadIds([]);
+      setSpamConfirmation([]);
     }
-  }, [activeLeadId, canManageSpam, chatSummaries, loadConversation, spamPendingLeadId]);
+  }, [cancelSpamSelection, canManageSpam, removeConversationsLocally, spamConfirmation, spamPendingLeadIds.length]);
 
   useEffect(() => {
     const candidates = waitingChats
@@ -1491,248 +1623,337 @@ export function MultiChatInbox({ conversations, canManageSpam, selectedLeadId, m
 
   if (!activeConversation) {
     return (
-      <section className="mission-panel rounded-3xl p-8 shadow-premium">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">WhatsApp Sales Inbox</p>
-        <h1 className="mt-2 text-3xl font-semibold text-command-text">
+      <section className="mission-panel rounded-3xl shadow-premium">
+        {spamNotice ? (
+          <div role="status" className={`border-b px-5 py-3 text-sm ${spamNotice.tone === "success" ? "border-command-green/30 bg-command-green/10 text-command-green" : "border-command-red/30 bg-command-red/10 text-command-red"}`}>
+            {spamNotice.message}
+          </div>
+        ) : null}
+        <div className="p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">WhatsApp Sales Inbox</p>
+          <h1 className="mt-2 text-3xl font-semibold text-command-text">
           {activeLeadId ? "Conversation unavailable." : "No active conversations yet."}
-        </h1>
-        <p className="mt-3 text-command-muted">
-          {activeLeadId
-            ? "The selected conversation is no longer in the active inbox. Choose another chat from the queue when ready."
-            : "New WhatsApp leads will appear here once inbound messages are saved."}
-        </p>
+          </h1>
+          <p className="mt-3 text-command-muted">
+            {activeLeadId
+              ? "The selected conversation is no longer in the active inbox. Refresh the queue or open another lead when ready."
+              : "New WhatsApp leads will appear here once inbound messages are saved."}
+          </p>
+          <Link href="/leads" className="mt-5 inline-flex rounded-xl border border-command-line bg-command-bg/60 px-4 py-2 text-sm font-semibold text-command-muted transition hover:border-command-gold/60 hover:text-command-text">
+            Open lead list
+          </Link>
+        </div>
       </section>
     );
   }
 
   const chat = activeConversation.summary;
   const conversationLoading = loadingConversationId === activeConversation.lead.id;
-  const counterItems = [
-    { label: "Waiting", value: queueCounters.waitingForMarcus, tone: "text-command-gold" },
-    { label: "New", value: queueCounters.newLeads, tone: "text-command-cyan" },
-    { label: "Bot Active", value: queueCounters.botActive, tone: "text-command-green" },
-    { label: "Human Takeover", value: queueCounters.humanTakeover, tone: "text-command-amber" },
-    { label: "Failed", value: queueCounters.failedSends, tone: "text-command-red" }
+  const priorityCounters: Array<{
+    label: string;
+    shortLabel: string;
+    value: number;
+    tone: string;
+    targetFilter: (typeof filters)[number];
+  }> = [
+    { label: "Waiting", shortLabel: "Wait", value: queueCounters.waitingForMarcus, tone: "text-command-gold", targetFilter: "Waiting for Marcus" },
+    { label: "New", shortLabel: "New", value: queueCounters.newLeads, tone: "text-command-cyan", targetFilter: "New leads" },
+    { label: "Failed", shortLabel: "Fail", value: queueCounters.failedSends, tone: "text-command-red", targetFilter: "Failed send" }
   ];
+  const spamDialogLabel = spamConfirmation[0]?.displayName || spamConfirmation[0]?.phone || "this conversation";
+  const automationStatusLabel = activeConversation.lead.botPaused ? "Bot paused" : "Bot active";
+  const chatHeaderStatus = [
+    chat.phone,
+    chatStatusLabel(chat),
+    automationStatusLabel === chatStatusLabel(chat) ? "" : automationStatusLabel
+  ].filter(Boolean).join(" · ");
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-command-line bg-command-panel shadow-premium">
-      <div className="border-b border-command-line bg-command-panel2/90 px-5 py-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Live conversation queue</p>
-            <p className="mt-1 text-sm font-medium text-command-muted">Newest client activity stays at the top.</p>
+    <>
+      <section className="overflow-hidden rounded-2xl border border-command-line bg-command-panel shadow-premium">
+        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-command-line bg-command-panel2/90 px-3 py-2 sm:px-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-gold">
+              <span className="sm:hidden">Live inbox</span>
+              <span className="hidden sm:inline">Live conversation queue</span>
+            </p>
+            <p className="hidden text-xs text-command-subtle sm:block">Newest client activity stays at the top.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {counterItems.map((item) => (
-              <div key={item.label} className="min-w-20 rounded-xl border border-command-line bg-command-bg/65 px-3 py-2">
-                <p className={`text-lg font-semibold leading-none ${item.tone}`}>{item.value}</p>
-                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-command-muted">{item.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      {spamNotice ? (
-        <div
-          role="status"
-          className={`flex items-center justify-between gap-3 border-b px-5 py-3 text-sm ${
-            spamNotice.tone === "success"
-              ? "border-command-green/30 bg-command-green/10 text-command-green"
-              : "border-command-red/30 bg-command-red/10 text-command-red"
-          }`}
-        >
-          <span>{spamNotice.message}</span>
-          <button type="button" onClick={() => setSpamNotice(null)} className="shrink-0 font-semibold underline underline-offset-2">
-            Dismiss
-          </button>
-        </div>
-      ) : null}
-      <div data-testid="inbox-layout" className={`grid min-h-[38rem] grid-cols-1 xl:h-[calc(100dvh-12rem)] xl:min-h-0 ${
-        contextOpen
-          ? "xl:grid-cols-[18rem_minmax(0,1fr)_18rem] 2xl:grid-cols-[20rem_minmax(40rem,1fr)_20rem]"
-          : "xl:grid-cols-[19rem_minmax(0,1fr)]"
-      }`}>
-        <aside className="border-b border-command-line bg-command-panel2/95 xl:flex xl:min-h-0 xl:flex-col xl:border-b-0 xl:border-r">
-          <div className="shrink-0 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-command-gold">Queue</p>
-                <h2 className="mt-1 text-xl font-semibold text-command-text">Conversations</h2>
-                <p className="mt-1 text-xs text-command-muted">Latest chat first</p>
-              </div>
+          <div className="flex items-center gap-1">
+            {priorityCounters.map((item) => (
               <button
+                key={item.label}
                 type="button"
-                onClick={nextWaitingChat}
-                className="rounded-xl border border-command-gold/60 bg-command-gold/12 px-3 py-2 text-xs font-semibold text-command-gold transition hover:bg-command-gold/18"
+                onClick={() => {
+                  setFilter(item.targetFilter);
+                  setMobilePane("queue");
+                }}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition hover:bg-command-bg ${filter === item.targetFilter ? "bg-command-bg" : ""}`}
+                title={`Show ${item.label.toLowerCase()} conversations`}
               >
-                Next waiting chat
+                <span className={item.tone}>{item.value}</span>
+                <span className="ml-1 text-command-muted sm:hidden">{item.shortLabel}</span>
+                <span className="ml-1 hidden text-command-muted sm:inline">{item.label}</span>
               </button>
-            </div>
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search name, phone, message, property..."
-              className="mt-4 w-full rounded-xl border border-command-line bg-command-bg/85 px-3 py-2.5 text-sm text-command-text outline-none transition placeholder:text-command-muted focus:border-command-gold/70"
-            />
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible">
-              {filters.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setFilter(item)}
-                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                    filter === item
-                      ? "border-command-gold bg-command-gold text-black"
-                      : "border-command-line bg-command-bg/65 text-command-muted hover:border-command-gold/60"
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div data-testid="inbox-conversation-list" className="max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto px-3 pb-4 xl:min-h-0 xl:flex-1 xl:max-h-none">
-            {filteredConversations.map((item) => (
-              <ChatRow
-                key={item.id}
-                chat={item}
-                active={item.id === activeLeadId}
-                canManageSpam={canManageSpam}
-                spamPending={spamPendingLeadId === item.id}
-                onSelect={selectConversation}
-                onMarkSpam={markConversationSpam}
-              />
             ))}
-            {filteredConversations.length === 0 ? (
-              <p className="rounded-2xl border border-command-line bg-command-bg/55 p-4 text-sm text-command-muted">
-                No chats match this search or filter.
-              </p>
-            ) : null}
           </div>
-        </aside>
-
-        <main data-testid="inbox-active-chat" className="flex min-h-[42rem] flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.08),transparent_28%),linear-gradient(180deg,rgba(9,13,18,0.98),rgba(5,7,10,0.99))] xl:min-h-0">
-          <header className="border-b border-command-line bg-command-panel/95 px-5 py-3.5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Active WhatsApp Chat</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-semibold text-command-text">{chat.displayName}</h2>
-                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>{chatStatusLabel(chat)}</span>
-                  <span className="rounded-full border border-command-line bg-command-bg/70 px-2.5 py-1 text-[11px] font-semibold text-command-muted">
-                    {activeConversation.lead.botPaused ? "Bot paused" : "Bot active"}
-                  </span>
+        </div>
+        {spamNotice ? (
+          <div
+            role="status"
+            className={`flex items-center justify-between gap-3 border-b px-4 py-2.5 text-sm ${
+              spamNotice.tone === "success"
+                ? "border-command-green/30 bg-command-green/10 text-command-green"
+                : "border-command-red/30 bg-command-red/10 text-command-red"
+            }`}
+          >
+            <span>{spamNotice.message}</span>
+            <button type="button" onClick={() => setSpamNotice(null)} className="shrink-0 font-semibold underline underline-offset-2">
+              Dismiss
+            </button>
+          </div>
+        ) : null}
+        <div data-testid="inbox-layout" data-mobile-pane={mobilePane} className="grid h-[calc(100dvh-13.5rem)] min-h-[32rem] grid-cols-1 lg:h-[calc(100dvh-8.5rem)] lg:min-h-0 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <aside className={`${mobilePane === "queue" ? "flex" : "hidden"} min-h-0 flex-col bg-command-panel2/95 lg:flex lg:border-r lg:border-command-line`} data-testid="inbox-queue-pane">
+            <div className="shrink-0 border-b border-command-line/70 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="text-lg font-semibold text-command-text">Conversations</h2>
+                    <span className="text-xs text-command-subtle">{visibleChatSummaries.length}</span>
+                  </div>
+                  <p className="text-xs text-command-subtle">Latest chat first</p>
                 </div>
-                <p className="mt-1 text-sm text-command-muted">{chat.phone}</p>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={nextWaitingChat}
+                    className="rounded-lg px-2.5 py-2 text-xs font-semibold text-command-gold transition hover:bg-command-gold/10"
+                    title="Open the next conversation waiting for Marcus"
+                    aria-label="Next waiting chat"
+                  >
+                    Next
+                  </button>
+                  {canManageSpam ? (
+                    <button
+                      type="button"
+                      onClick={() => selectionMode ? cancelSpamSelection() : setSelectionMode(true)}
+                      className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition ${selectionMode ? "bg-command-red/10 text-command-red" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+                    >
+                      {selectionMode ? "Cancel" : "Select"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 text-xs font-semibold">
+              <div className="mt-3 flex gap-2">
+                <label className="relative min-w-0 flex-1">
+                  <span className="sr-only">Search conversations</span>
+                  <svg viewBox="0 0 24 24" fill="none" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-command-subtle" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search conversations"
+                    className="w-full rounded-xl border border-command-line bg-command-bg/80 py-2 pl-9 pr-3 text-sm text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/60"
+                  />
+                </label>
+                <label>
+                  <span className="sr-only">Filter conversations</span>
+                  <select
+                    value={filter}
+                    onChange={(event) => setFilter(event.target.value as (typeof filters)[number])}
+                    className="max-w-[7.5rem] rounded-xl border border-command-line bg-command-bg/80 px-2.5 py-2 text-xs font-semibold text-command-muted outline-none focus:border-command-gold/60"
+                  >
+                    {filters.map((item) => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            {selectionMode ? (
+              <div className="flex shrink-0 items-center gap-2 border-b border-command-red/25 bg-command-red/5 px-3 py-2" data-testid="inbox-bulk-spam-toolbar">
+                <button type="button" onClick={toggleSelectAllVisible} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-command-muted hover:bg-command-bg hover:text-command-text">
+                  {allVisibleSelected ? "Clear all" : "Select all"}
+                </button>
+                <span className="min-w-0 flex-1 text-xs text-command-subtle">{selectedSpamLeadIds.length} selected</span>
+                <button
+                  type="button"
+                  onClick={requestBulkSpamRemoval}
+                  disabled={!selectedSpamLeadIds.length || Boolean(spamPendingLeadIds.length)}
+                  className="rounded-lg bg-command-red px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-command-red/90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Remove spam
+                </button>
+              </div>
+            ) : null}
+
+            <div data-testid="inbox-conversation-list" className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {filteredConversations.map((item) => (
+                <ChatRow
+                  key={item.id}
+                  chat={item}
+                  active={item.id === activeLeadId}
+                  canManageSpam={canManageSpam}
+                  selected={selectedSpamLeadIds.includes(item.id)}
+                  selectionMode={selectionMode}
+                  spamPending={spamPendingLeadIds.includes(item.id)}
+                  onSelect={selectConversation}
+                  onToggleSelected={toggleSpamSelection}
+                  onMarkSpam={markConversationSpam}
+                />
+              ))}
+              {filteredConversations.length === 0 ? (
+                <div className="m-4 rounded-2xl bg-command-bg/55 p-4 text-sm text-command-muted">
+                  No chats match this search or filter.
+                </div>
+              ) : null}
+            </div>
+          </aside>
+
+          <main data-testid="inbox-active-chat" className={`${mobilePane === "chat" ? "flex" : "hidden"} min-h-0 flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.055),transparent_32%),linear-gradient(180deg,rgba(9,13,18,0.98),rgba(5,7,10,0.99))] lg:flex`}>
+            <header className="flex min-h-[4.5rem] shrink-0 items-center justify-between gap-3 border-b border-command-line bg-command-panel/95 px-3 py-2.5 sm:px-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMobilePane("queue")}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-command-muted transition hover:bg-command-bg hover:text-command-text lg:hidden"
+                  aria-label="Back to conversations"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="m15 18-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-command-panel2 text-sm font-semibold text-command-gold ring-1 ring-command-line" aria-hidden="true">
+                  {chatInitials(chat)}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h2 className="truncate text-lg font-semibold text-command-text">{chat.displayName}</h2>
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${chatStatusDotTone(chat)}`} aria-hidden="true" />
+                  </div>
+                  <p className="truncate text-xs text-command-muted">{chatHeaderStatus}</p>
+                  <span className="sr-only">Active WhatsApp Chat</span>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1 text-xs font-semibold">
                 <Link
                   href={`/leads/${activeConversation.lead.id}`}
-                  className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-command-muted transition hover:border-command-gold/60 hover:text-command-text"
+                  className="hidden rounded-lg px-3 py-2 text-command-muted transition hover:bg-command-bg hover:text-command-text sm:inline-flex"
                 >
-                  View full lead
+                  Full lead
                 </Link>
                 {canManageSpam ? (
                   <button
                     type="button"
-                    onClick={() => void markConversationSpam(chat)}
-                    disabled={Boolean(spamPendingLeadId)}
-                    className="rounded-full border border-command-red/45 bg-command-red/10 px-3 py-1.5 text-command-red transition hover:border-command-red/70 hover:bg-command-red/15 disabled:cursor-wait disabled:opacity-60"
+                    onClick={() => markConversationSpam(chat)}
+                    disabled={Boolean(spamPendingLeadIds.length)}
+                    className="hidden rounded-lg px-3 py-2 text-command-subtle transition hover:bg-command-red/10 hover:text-command-red disabled:cursor-wait disabled:opacity-50 sm:inline-flex"
                   >
-                    {spamPendingLeadId === chat.id ? "Removing spam..." : "Remove spam"}
+                    Remove spam
                   </button>
                 ) : null}
-                {!contextOpen ? (
-                  <button
-                    type="button"
-                    onClick={() => setContextOpen(true)}
-                    className="rounded-full border border-command-gold/60 bg-command-gold/10 px-3 py-1.5 text-command-gold"
-                  >
-                    Open context
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setContextOpen(true)}
+                  className="rounded-lg border border-command-line bg-command-bg/60 px-3 py-2 text-command-muted transition hover:border-command-gold/50 hover:text-command-text"
+                  aria-haspopup="dialog"
+                >
+                  Details
+                </button>
               </div>
-            </div>
-          </header>
+            </header>
 
-          {manualReplyStatus === "sent" ? (
-            <div className="border-b border-command-line bg-command-green/10 px-5 py-3 text-sm text-command-green">
-              WhatsApp reply sent. Chat is now waiting for client and bot takeover is active.
-            </div>
-          ) : null}
-          {manualReplyStatus === "failed" && !/NEXT_REDIRECT/i.test(manualReplyError || "") ? (
-            <div className="border-b border-command-line bg-command-red/10 px-5 py-3 text-sm text-command-red">
-              WhatsApp send failed: {manualReplyError || "Unknown send error."}
-            </div>
-          ) : null}
-          {conversationLoading ? (
-            <div className="border-b border-command-line bg-command-cyan/10 px-5 py-3 text-sm text-command-cyan">
-              Loading selected conversation...
-            </div>
-          ) : null}
+            {manualReplyStatus === "sent" ? (
+              <div className="shrink-0 border-b border-command-green/25 bg-command-green/10 px-4 py-2 text-sm text-command-green">
+                WhatsApp reply sent. Chat is now waiting for client and bot takeover is active.
+              </div>
+            ) : null}
+            {manualReplyStatus === "failed" && !/NEXT_REDIRECT/i.test(manualReplyError || "") ? (
+              <div className="shrink-0 border-b border-command-red/25 bg-command-red/10 px-4 py-2 text-sm text-command-red">
+                WhatsApp send failed: {manualReplyError || "Unknown send error."}
+              </div>
+            ) : null}
+            {conversationLoading ? (
+              <div className="shrink-0 border-b border-command-cyan/25 bg-command-cyan/10 px-4 py-2 text-sm text-command-cyan">
+                Loading selected conversation…
+              </div>
+            ) : null}
 
-          <ReplyComposer
-            conversation={activeConversation}
-            draftSeed={draftSeeds[activeConversation.lead.id]}
-            sendingState={sendingByLeadId[activeConversation.lead.id]}
-            sendError={errorByLeadId[activeConversation.lead.id]}
-            onDraftSeedConsumed={consumeDraftSeed}
-            onSendStarted={handleSendStarted}
-            onSendFinished={handleSendFinished}
-            onOptimisticReply={handleOptimisticReply}
-            onSendSettled={handleSendSettled}
-          />
-
-          <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-            {activeMessagesNewestFirst.length ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Latest messages</p>
-                    <p className="mt-1 text-sm text-command-muted">Newest first. Older messages continue below.</p>
+            <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5">
+              {activeMessagesNewestFirst.length ? (
+                <div className="mx-auto max-w-4xl space-y-3.5">
+                  <div className="flex items-center justify-between gap-3 pb-1">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-command-gold">Latest messages</p>
+                      <p className="text-xs text-command-subtle">Newest first. Older messages continue below.</p>
+                    </div>
+                    <span className="text-xs text-command-subtle">{activeMessagesNewestFirst.length} shown</span>
                   </div>
-                  <span className="rounded-full border border-command-line bg-command-panel2 px-3 py-1 text-xs font-semibold text-command-muted">
-                    {activeMessagesNewestFirst.length} shown
-                  </span>
+                  {activeMessagesNewestFirst.map((message) => (
+                    <MessageBubble
+                      key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`}
+                      message={message}
+                      onRetry={handleRetryDraft}
+                    />
+                  ))}
+                  {activeOlderState.hasOlder ? (
+                    <div className="flex justify-center pt-2">
+                      <button
+                        type="button"
+                        onClick={loadEarlierMessages}
+                        disabled={loadingOlder}
+                        title={loadingOlder ? "Loading older messages now." : "Load older WhatsApp messages for this lead."}
+                        className="rounded-full border border-command-line bg-command-panel2 px-4 py-2 text-sm font-semibold text-command-muted transition hover:border-command-gold/60 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {loadingOlder ? "Loading older messages..." : "Load older messages"}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-                {activeMessagesNewestFirst.map((message) => (
-                  <MessageBubble
-                    key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`}
-                    message={message}
-                    onRetry={handleRetryDraft}
-                  />
-                ))}
-                {activeOlderState.hasOlder ? (
-                  <div className="flex justify-center pt-2">
-                    <button
-                      type="button"
-                      onClick={loadEarlierMessages}
-                      disabled={loadingOlder}
-                      title={loadingOlder ? "Loading older messages now." : "Load older WhatsApp messages for this lead."}
-                      className="rounded-full border border-command-line bg-command-panel2 px-4 py-2 text-sm font-semibold text-command-muted transition hover:border-command-gold/60 disabled:cursor-wait disabled:opacity-60"
-                    >
-                      {loadingOlder ? "Loading older messages..." : "Load older messages"}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-command-line bg-command-panel2/80 p-5 text-sm text-command-muted">
-                No WhatsApp messages saved for this lead yet.
-              </div>
-            )}
-          </div>
-        </main>
+              ) : (
+                <div className="mx-auto max-w-4xl rounded-2xl bg-command-panel2/80 p-5 text-sm text-command-muted">
+                  No WhatsApp messages saved for this lead yet.
+                </div>
+              )}
+            </div>
 
-        {contextOpen ? (
-          <LeadContextPanel
-            conversation={activeConversation}
-            activeMessages={activeMessages}
-            onClose={() => setContextOpen(false)}
-          />
-        ) : null}
-      </div>
-    </section>
+            <ReplyComposer
+              conversation={activeConversation}
+              draftSeed={draftSeeds[activeConversation.lead.id]}
+              sendingState={sendingByLeadId[activeConversation.lead.id]}
+              sendError={errorByLeadId[activeConversation.lead.id]}
+              onDraftSeedConsumed={consumeDraftSeed}
+              onSendStarted={handleSendStarted}
+              onSendFinished={handleSendFinished}
+              onOptimisticReply={handleOptimisticReply}
+              onSendSettled={handleSendSettled}
+            />
+          </main>
+        </div>
+      </section>
+
+      {contextOpen ? (
+        <div className="fixed inset-0 z-[60]" data-testid="inbox-details-drawer">
+          <button type="button" onClick={() => setContextOpen(false)} className="absolute inset-0 h-full w-full bg-black/65 backdrop-blur-sm" aria-label="Close conversation details" />
+          <div className="absolute inset-y-0 right-0 w-full border-l border-command-line bg-command-panel2 shadow-premium sm:w-[26rem] lg:w-[28rem]" role="dialog" aria-modal="true" aria-label="Conversation details">
+            <LeadContextPanel
+              conversation={activeConversation}
+              activeMessages={activeMessages}
+              onClose={() => setContextOpen(false)}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <InboxSpamDialog
+        count={spamConfirmation.length}
+        label={spamDialogLabel}
+        open={spamConfirmation.length > 0}
+        pending={spamPendingLeadIds.length > 0}
+        onCancel={cancelSpamConfirmation}
+        onConfirm={() => void confirmSpamRemoval()}
+      />
+    </>
   );
 }
