@@ -228,7 +228,7 @@ export async function saveAppointmentSettingsAction(formData: FormData) {
 export async function setShowTestDemoRecordsAction(formData: FormData) {
   const permission = await requirePermission("edit_settings");
   if (!permission.ok) return;
-  setShowTestDemoRecordsPreference(formData.get("show_test_demo_records") === "on");
+  await setShowTestDemoRecordsPreference(formData.get("show_test_demo_records") === "on");
   revalidatePath("/");
   revalidatePath("/settings");
   revalidatePath("/sales-pipeline");

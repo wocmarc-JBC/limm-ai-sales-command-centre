@@ -22,6 +22,8 @@ const required = [
   "liveInboundEnabled",
   "testAutoReplyEnabled",
   "hasWhatsappVerifyToken",
+  "hasWhatsappAppSecret",
+  "webhookSignatureEnforced",
   "hasWhatsappPhoneNumberId",
   "hasWhatsappAccessToken",
   "hasWhatsappBusinessNumber"

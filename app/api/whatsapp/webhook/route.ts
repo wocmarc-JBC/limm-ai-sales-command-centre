@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleWhatsAppInboundMessage } from "@/lib/whatsapp-auto-reply";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 import { parseWhatsAppInbound } from "@/lib/whatsapp-parser";
+import { verifyWhatsAppWebhookSignature } from "@/lib/whatsapp-webhook-signature";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ function getMissingWebhookConfig() {
   if (envMissing("NEXT_PUBLIC_SUPABASE_ANON_KEY")) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   if (envMissing("SUPABASE_SERVICE_ROLE_KEY")) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (envMissing("WHATSAPP_VERIFY_TOKEN")) missing.push("WHATSAPP_VERIFY_TOKEN");
+  if (envMissing("WHATSAPP_APP_SECRET")) missing.push("WHATSAPP_APP_SECRET");
   if (!runtime.liveInboundEnabled) missing.push("WHATSAPP_LIVE_INBOUND_ENABLED=true");
   if (!runtime.autoReplyModeAllowed) missing.push("WHATSAPP_AUTO_REPLY_MODE_VALID");
 
@@ -85,8 +87,50 @@ export async function POST(request: NextRequest) {
   console.info("whatsapp_webhook_received_start");
   try {
     console.info("whatsapp_body_read_started");
-    const rawBody = await request.text();
-    console.info("whatsapp_body_read_ok", { byteLength: rawBody.length });
+    const rawBodyBuffer = Buffer.from(await request.arrayBuffer());
+    const rawBody = rawBodyBuffer.toString("utf8");
+    console.info("whatsapp_body_read_ok", { byteLength: rawBodyBuffer.byteLength });
+
+    console.info("whatsapp_signature_check_started");
+    const signatureResult = verifyWhatsAppWebhookSignature({
+      rawBody: rawBodyBuffer,
+      signature: request.headers.get("x-hub-signature-256"),
+      appSecret: process.env.WHATSAPP_APP_SECRET
+    });
+
+    if (!signatureResult.ok) {
+      if (signatureResult.reason === "missing_app_secret") {
+        console.error("whatsapp_webhook_error", {
+          stage: "signature_config",
+          code: "webhook_signature_config_error",
+          missing: ["WHATSAPP_APP_SECRET"]
+        });
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "config_error",
+            code: "webhook_signature_config_error",
+            missing: ["WHATSAPP_APP_SECRET"]
+          },
+          { status: 500 }
+        );
+      }
+
+      console.warn("whatsapp_webhook_rejected", {
+        stage: "signature_check",
+        code: "invalid_webhook_signature",
+        reason: signatureResult.reason
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "unauthorized",
+          code: "invalid_webhook_signature"
+        },
+        { status: 401 }
+      );
+    }
+    console.info("whatsapp_signature_verified");
 
     let payload: unknown;
     try {
@@ -118,6 +162,7 @@ export async function POST(request: NextRequest) {
       hasSupabaseAnonKey: !envMissing("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
       hasServiceRoleKey: !envMissing("SUPABASE_SERVICE_ROLE_KEY"),
       hasWhatsappVerifyToken: !envMissing("WHATSAPP_VERIFY_TOKEN"),
+      hasWhatsappAppSecret: !envMissing("WHATSAPP_APP_SECRET"),
       hasWhatsappPhoneNumberId: !envMissing("WHATSAPP_PHONE_NUMBER_ID"),
       hasWhatsappAccessToken: !envMissing("WHATSAPP_ACCESS_TOKEN"),
       hasWhatsappBusinessNumber: !envMissing("WHATSAPP_BUSINESS_NUMBER")

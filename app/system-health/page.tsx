@@ -8,6 +8,7 @@ import { getHandoffEmailRuntime } from "@/lib/handoff-email";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 import { buildIntentGateObservabilitySnapshot } from "@/lib/whatsapp-intent-observability";
+import Link from "next/link";
 
 function boolLabel(value: boolean) {
   return value ? "Yes" : "No";
@@ -60,12 +61,13 @@ export default async function SystemHealthPage() {
   const schemaRows = schemaSummaryRows();
   const schemaWarning = schemaRows.some(([, value]) => !["None reported", "Not run in this runtime"].includes(value) && value.length > 0);
   const rows = [
-    ["App version", process.env.npm_package_version ?? "10.2.1"],
+    ["App version", process.env.npm_package_version ?? "10.2.2"],
     ["Commit", process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "Not available locally"],
     ["Data mode", dataMode],
     ["Supabase mode", auth.mode],
     ["Current role", auth.profile.role],
     ["WhatsApp health", whatsapp.statusLabel],
+    ["Webhook signature authentication", whatsapp.appSecretConfigured ? "Enforced" : "App secret missing"],
     ["WhatsApp concurrency safety", conversationConcurrency.migration027Ready && conversationConcurrency.migration028Ready ? "Ready" : "Migration required"],
     ["Intent migration 027", boolLabel(conversationConcurrency.migration027Ready)],
     ["Concurrency migration 028", boolLabel(conversationConcurrency.migration028Ready)],
@@ -80,24 +82,24 @@ export default async function SystemHealthPage() {
   return (
     <>
       <PageHeader title="System Health" eyebrow="Read-only diagnostics">
-        <a
+        <Link
           href="/leads/new?template=qa"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover"
         >
           Create QA Test Lead
-        </a>
+        </Link>
         <a
           href="/api/whatsapp/health"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-cyan/60 bg-command-cyan/10 px-4 py-2 text-base font-semibold text-command-cyan transition hover:bg-command-cyan/15"
         >
           WhatsApp Health JSON
         </a>
-        <a
+        <Link
           href="/settings"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-muted transition hover:border-command-gold/60"
         >
           Settings
-        </a>
+        </Link>
       </PageHeader>
 
       {schemaWarning ? (

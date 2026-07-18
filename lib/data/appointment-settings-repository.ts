@@ -8,7 +8,7 @@ import { getSupabaseServerClient } from "./supabase-server";
 
 export async function getAppointmentSettings() {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("appointment_rules")
       .select("*")
@@ -32,7 +32,7 @@ export async function saveAppointmentSettings(settings: AppointmentSettings, aud
   };
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { error } = await supabase!.from("appointment_rules").upsert(
       {
         name: "default",

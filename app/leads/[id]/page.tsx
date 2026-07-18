@@ -53,6 +53,7 @@ import { formatLeadDisplayName } from "@/lib/lead-display";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
+import Link from "next/link";
 import { money } from "@/lib/sales-collection";
 import { inferLeadLocation } from "@/lib/singapore-location";
 import { conversationIntentLabel, WHATSAPP_CONVERSATION_INTENTS } from "@/lib/whatsapp-intent-gate";
@@ -128,19 +129,20 @@ function getValidationDisplay(recommendation: AiDryRunRecommendation) {
 }
 
 export default async function LeadDetailPage({
-  params,
-  searchParams
+  params: paramsPromise,
+  searchParams: searchParamsPromise
 }: {
-  params: { id: string };
-  searchParams?: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{
     uploadLink?: string;
     metaMessageId?: string;
     deleteStatus?: DeleteStatus;
     quotationStatus?: QuotationStatus;
     message?: string;
     created?: string;
-  };
+  }>;
 }) {
+  const [params, searchParams] = await Promise.all([paramsPromise, searchParamsPromise]);
   const auth = await getCurrentProfile();
   if (!auth.authenticated) return null;
   if (!auth.profile) return null;
@@ -465,9 +467,9 @@ export default async function LeadDetailPage({
           </label>
           <div className="flex flex-wrap gap-2 md:col-span-2">
             <ActionButton type="submit" data-testid="create-quotation-package">Create Quotation Package</ActionButton>
-            <a href="/quotations" className="inline-flex min-h-11 items-center rounded-md border border-command-line bg-command-elevated px-4 py-2 text-base font-semibold text-command-text">
+            <Link href="/quotations" className="inline-flex min-h-11 items-center rounded-md border border-command-line bg-command-elevated px-4 py-2 text-base font-semibold text-command-text">
               View Quotation History
-            </a>
+            </Link>
           </div>
         </form>
       </section>

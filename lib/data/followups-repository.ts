@@ -98,7 +98,7 @@ export function filterAndPageFollowUps(items: FollowUp[], options: ListFollowUps
 
 async function getFollowUpById(id: string) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("followups")
       .select("*, leads(*)")
@@ -118,7 +118,7 @@ export async function listFollowUpsPage(options: ListFollowUpsOptions = {}) {
   const fetchLimit = options.includeTest || options.status === "all" ? 500 : Math.min(120, pageSize * 6);
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     let query = supabase!
       .from("followups")
       .select("*, leads(*)")
@@ -181,7 +181,7 @@ export async function updateFollowUpStatus(id: string, status: FollowUpStatus, n
   }
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("followups")
       .update(patch)

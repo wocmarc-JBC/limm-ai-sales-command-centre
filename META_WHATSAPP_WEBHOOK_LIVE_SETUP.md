@@ -22,7 +22,17 @@ WHATSAPP_VERIFY_TOKEN=
 
 In Meta, paste the exact same value into the webhook Verify Token field.
 
-## 3. Marcus-Approved Live Mode
+## 3. POST Signature Secret
+
+In Vercel, set the Meta app's server-only App Secret:
+
+```text
+WHATSAPP_APP_SECRET=
+```
+
+Do not use the Verify Token or access token here. The webhook rejects every POST whose `X-Hub-Signature-256` does not match the exact raw request body before any CRM write or WhatsApp reply.
+
+## 4. Marcus-Approved Live Mode
 
 Use:
 
@@ -35,7 +45,7 @@ WHATSAPP_TEST_MODE=false
 
 This enables Marcus-approved live auto-reply for the current WhatsApp number. It remains reply-only, safety-gated, audited, and controlled by the emergency kill switch.
 
-## 4. Subscribe Field
+## 5. Subscribe Field
 
 In Meta WhatsApp webhook settings, subscribe to:
 
@@ -43,7 +53,7 @@ In Meta WhatsApp webhook settings, subscribe to:
 messages
 ```
 
-## 5. Confirm Inbound Logging And Auto-Reply
+## 6. Confirm Inbound Logging And Auto-Reply
 
 After the WhatsApp number is registered and Meta webhook verifies:
 
@@ -53,7 +63,7 @@ After the WhatsApp number is registered and Meta webhook verifies:
 4. Confirm audit log includes `whatsapp_inbound_received`.
 5. Confirm audit log includes `whatsapp_auto_reply_sent` or an exact blocked/failed reason.
 
-## 6. Closed Test Alternative
+## 7. Closed Test Alternative
 
 Closed test remains supported with:
 
@@ -62,7 +72,7 @@ WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false
 WHATSAPP_TEST_MODE=true
 ```
 
-## 7. Emergency Off
+## 8. Emergency Off
 
 Immediate off:
 

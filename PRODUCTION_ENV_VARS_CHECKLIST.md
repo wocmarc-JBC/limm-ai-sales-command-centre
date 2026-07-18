@@ -33,6 +33,7 @@ WHATSAPP_TEST_AUTO_REPLY_ENABLED=true
 WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=true
 WHATSAPP_TEST_MODE=false
 WHATSAPP_VERIFY_TOKEN=
+WHATSAPP_APP_SECRET=
 WHATSAPP_PHONE_NUMBER_ID=
 WHATSAPP_ACCESS_TOKEN=
 WHATSAPP_BUSINESS_NUMBER=
@@ -42,6 +43,7 @@ WHATSAPP_GRAPH_VERSION=v21.0
 Important:
 
 - Emergency off remains `WHATSAPP_TEST_AUTO_REPLY_ENABLED=false`.
+- `WHATSAPP_APP_SECRET` is server-only and is required to authenticate Meta's `X-Hub-Signature-256` before processing a POST.
 - Closed test remains available with `WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false` and `WHATSAPP_TEST_MODE=true`.
 - Any other public/test mode pairing is blocked.
 

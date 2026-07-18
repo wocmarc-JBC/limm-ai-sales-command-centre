@@ -9,10 +9,11 @@ import { currentMonthKey, money, nonGstNote } from "@/lib/sales-collection";
 const inputClass = "rounded border border-command-line bg-command-bg px-3 py-2 text-command-text";
 
 export default async function TargetsPage({
-  searchParams
+  searchParams: searchParamsPromise
 }: {
-  searchParams?: { month?: string };
+  searchParams?: Promise<{ month?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const selectedMonth = searchParams?.month || currentMonthKey();
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
   const { summary, target } = await getSalesCollectionData(selectedMonth, { includeTestDemo: showTestDemoRecords });

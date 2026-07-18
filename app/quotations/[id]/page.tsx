@@ -42,12 +42,13 @@ const bossActions = [
 const inputClass = "rounded-md border border-command-line bg-command-bg px-3 py-2 text-command-text";
 
 export default async function QuotationDetailPage({
-  params,
-  searchParams
+  params: paramsPromise,
+  searchParams: searchParamsPromise
 }: {
-  params: { id: string };
-  searchParams?: { created?: string; qaStatus?: string; message?: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ created?: string; qaStatus?: string; message?: string }>;
 }) {
+  const [params, searchParams] = await Promise.all([paramsPromise, searchParamsPromise]);
   const auth = await getCurrentProfile();
   const canApprove = Boolean(auth.profile && can(auth.profile.role, "approve_requests"));
   const canEdit = Boolean(auth.profile && can(auth.profile.role, "update_leads"));

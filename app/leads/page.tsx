@@ -2,6 +2,7 @@ import { LeadCard } from "@/components/LeadCard";
 import { PageHeader } from "@/components/PageHeader";
 import { listLatestMeaningfulWhatsAppMessagesForLeads } from "@/lib/data/lead-messages-repository";
 import { listLeads } from "@/lib/data/leads-repository";
+import Link from "next/link";
 
 const views = [
   { key: "active", label: "Active Leads", href: "/leads" },
@@ -10,9 +11,14 @@ const views = [
   { key: "spam", label: "Show Spam", href: "/leads?view=spam" },
   { key: "non-sales", label: "Non-Sales Conversations", href: "/leads?view=non-sales" },
   { key: "all", label: "Show All", href: "/leads?view=all" }
-];
+] as const;
 
-export default async function LeadInboxPage({ searchParams }: { searchParams?: { view?: string; show_test?: string } }) {
+export default async function LeadInboxPage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams?: Promise<{ view?: string; show_test?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const view = searchParams?.show_test === "true" ? "test" : searchParams?.view ?? "active";
   const rawLeads = await listLeads({
     includeTest: view === "test" || view === "all" || view === "spam",
@@ -30,14 +36,14 @@ export default async function LeadInboxPage({ searchParams }: { searchParams?: {
   return (
     <>
       <PageHeader title="AI Lead Inbox" eyebrow="Reply queue">
-        <a
+        <Link
           href="/leads/new"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover"
         >
           Create Manual Lead
-        </a>
+        </Link>
         {views.map((item) => (
-          <a
+          <Link
             key={item.key}
             href={item.href}
             className={`inline-flex min-h-11 items-center rounded-xl border px-4 py-2 text-base font-semibold transition hover:border-command-gold/60 ${
@@ -45,7 +51,7 @@ export default async function LeadInboxPage({ searchParams }: { searchParams?: {
             }`}
           >
             {item.label}
-          </a>
+          </Link>
         ))}
       </PageHeader>
       <div className="mission-panel mb-5 rounded-2xl p-4 text-base text-command-muted shadow-premium">

@@ -70,7 +70,12 @@ function shouldShowLead(input: {
   return true;
 }
 
-export default async function ClientFilesPage({ searchParams }: { searchParams?: { filter?: string } }) {
+export default async function ClientFilesPage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams?: Promise<{ filter?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const filter = searchParams?.filter || "all";
   const leads = await listLeads();
   const visibleLeadIds = new Set(leads.map((lead) => lead.id));

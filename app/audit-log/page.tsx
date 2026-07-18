@@ -3,7 +3,12 @@ import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { listAuditLogs } from "@/lib/data/audit-repository";
 
-export default async function AuditLogPage({ searchParams }: { searchParams?: { entity_type?: string; action?: string } }) {
+export default async function AuditLogPage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams?: Promise<{ entity_type?: string; action?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   const canViewAudit = Boolean(auth.profile && can(auth.profile.role, "view_audit"));
   if (!canViewAudit) {

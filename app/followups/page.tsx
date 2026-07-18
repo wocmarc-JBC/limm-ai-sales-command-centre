@@ -29,10 +29,11 @@ function tone(status: FollowUpProtectionStatus) {
 }
 
 export default async function FollowUpQueuePage({
-  searchParams
+  searchParams: searchParamsPromise
 }: {
-  searchParams?: { status?: string; q?: string };
+  searchParams?: Promise<{ status?: string; q?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const selected = statusFilters.find((item) => item.key === searchParams?.status) ?? statusFilters[0];
   const search = searchParams?.q?.trim().toLowerCase() ?? "";
   const summaries = (await listFollowUpProtectionSummaries(80))

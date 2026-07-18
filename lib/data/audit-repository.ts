@@ -22,7 +22,7 @@ type AuditInput = {
 
 export async function listAuditLogs(filter?: { entityType?: string; action?: string; entityId?: string }) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     let query = supabase!
       .from("audit_logs")
       .select("*")
@@ -50,7 +50,7 @@ export async function createAuditLog(input: AuditInput) {
   let actorId = input.actorId ?? null;
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data: userData } = await supabase!.auth.getUser();
     if (userData.user) {
       actorId = input.actorId ?? userData.user.id;
@@ -108,7 +108,7 @@ export async function createAuditLog(input: AuditInput) {
       throw new Error(`Audit log insert failed for ${audit.action}: ${adminError.message}`);
     }
 
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const insertPayload = {
       id: audit.id,
       actor: audit.actor,

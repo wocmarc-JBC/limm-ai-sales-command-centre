@@ -4,7 +4,7 @@ import { getSupabaseServerClient } from "./supabase-server";
 
 export async function getSettingsSummary() {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!.from("settings").select("*");
     if (!error && data) {
       return {

@@ -70,6 +70,8 @@ export const dynamic = "force-dynamic";
 // salesBrainVersion: "v10.2.0"
 // version: "v10_2_1_conversation_concurrency_safety"
 // salesBrainVersion: "v10.2.1"
+// version: "v10_2_2_webhook_auth_dependency_hardening"
+// securityVersion: "v10.2.2"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -92,12 +94,19 @@ export async function GET() {
     const clientFilesStorage = getClientFilesStorageRuntime();
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     const concurrencySafety = await getWhatsAppConversationConcurrencyHealth();
+    const webhookSignatureEnforced = envPresent("WHATSAPP_APP_SECRET");
+    const concurrencySafetyReady =
+      concurrencySafety.databaseConnected && concurrencySafety.migration027Ready && concurrencySafety.migration028Ready;
+    const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v10_2_1_conversation_concurrency_safety",
+      version: "v10_2_2_webhook_auth_dependency_hardening",
       salesBrainVersion: "v10.2.1",
+      securityVersion: "v10.2.2",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
+      webhookSignatureVerificationAvailable: true,
+      webhookSignatureEnforced,
       crossInstanceConversationLeaseAvailable: concurrencySafety.migration028Ready,
       atomicReplyReservationAvailable: concurrencySafety.migration028Ready,
       finalPreSendContextRefreshAvailable: true,
@@ -109,9 +118,12 @@ export async function GET() {
       databaseConnected: concurrencySafety.databaseConnected,
       migration027Ready: concurrencySafety.migration027Ready,
       migration028Ready: concurrencySafety.migration028Ready,
-      whatsappProductionSafetyReady:
-        concurrencySafety.databaseConnected && concurrencySafety.migration027Ready && concurrencySafety.migration028Ready,
-      whatsappProductionSafetyReason: concurrencySafety.reason,
+      whatsappProductionSafetyReady,
+      whatsappProductionSafetyReason: !concurrencySafetyReady
+        ? concurrencySafety.reason
+        : webhookSignatureEnforced
+          ? "ready"
+          : "webhook_app_secret_missing",
       intentGateAvailable: true,
       leadEligibilityGateAvailable: true,
       nonSalesRoutingAvailable: true,
@@ -535,6 +547,7 @@ export async function GET() {
       publicAutoReplyEnabled: envFlag("WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED"),
       testMode: envFlag("WHATSAPP_TEST_MODE", true),
       hasWhatsappVerifyToken: envPresent("WHATSAPP_VERIFY_TOKEN"),
+      hasWhatsappAppSecret: webhookSignatureEnforced,
       hasWhatsappPhoneNumberId: envPresent("WHATSAPP_PHONE_NUMBER_ID"),
       hasWhatsappAccessToken: envPresent("WHATSAPP_ACCESS_TOKEN"),
       hasWhatsappBusinessNumber: envPresent("WHATSAPP_BUSINESS_NUMBER"),
@@ -551,10 +564,13 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v10_2_1_conversation_concurrency_safety",
+      version: "v10_2_2_webhook_auth_dependency_hardening",
       salesBrainVersion: "v10.2.1",
+      securityVersion: "v10.2.2",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
+      webhookSignatureVerificationAvailable: true,
+      webhookSignatureEnforced: false,
       crossInstanceConversationLeaseAvailable: false,
       atomicReplyReservationAvailable: false,
       finalPreSendContextRefreshAvailable: false,
@@ -991,6 +1007,7 @@ export async function GET() {
       publicAutoReplyEnabled: false,
       testMode: false,
       hasWhatsappVerifyToken: false,
+      hasWhatsappAppSecret: false,
       hasWhatsappPhoneNumberId: false,
       hasWhatsappAccessToken: false,
       hasWhatsappBusinessNumber: false,

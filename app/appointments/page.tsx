@@ -9,7 +9,12 @@ function slotMessage(slot: { day: string; date: string; start: string; end: stri
   return `We can check availability for ${humanizeDay(slot.day)}, ${slot.date}, ${slot.start} to ${slot.end}. Would this timing work for you?`;
 }
 
-export default async function AppointmentCommandCentrePage({ searchParams }: { searchParams?: { lead?: string } }) {
+export default async function AppointmentCommandCentrePage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams?: Promise<{ lead?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const settings = await getAppointmentSettings();
   const startDate = singaporeDateKey();
   const slots = findAppointmentSlots(settings, "site_discussion", startDate, 7).slice(0, 8);

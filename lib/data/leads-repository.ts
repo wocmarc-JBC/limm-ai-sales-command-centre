@@ -166,7 +166,7 @@ function leadPatchToRow(patch: Partial<Lead>, now: string) {
 
 export async function listLeads(options?: ListLeadsOptions) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("leads")
       .select("*")
@@ -184,7 +184,7 @@ export async function listLeads(options?: ListLeadsOptions) {
 
 export async function getLeadById(id: string) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!.from("leads").select("*").eq("id", id).maybeSingle();
     if (!error && data) return mapLeadRow(data);
   }
@@ -241,7 +241,7 @@ export async function createManualLead(input: ManualLeadCreateInput, actor = "Ma
   const row = manualLeadToRow(input, now);
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseAdminClient() ?? getSupabaseServerClient();
+    const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
     const { data, error } = await supabase!
       .from("leads")
       .insert(row)
@@ -337,7 +337,7 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
   const now = new Date().toISOString();
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseAdminClient() ?? getSupabaseServerClient();
+    const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
     const fullRow = leadPatchToRow(patch, now);
     let { data, error } = await supabase!
       .from("leads")
@@ -1018,7 +1018,7 @@ export async function hardDeleteLead(id: string, reason: string) {
   });
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     await supabase!.from("leads").delete().eq("id", id);
     return before;
   }

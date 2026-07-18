@@ -8,7 +8,12 @@ import { formatLeadDisplayName, formatFullPhoneForProtectedApp } from "@/lib/lea
 import { getProductionLeadVisibilityReasons, productionVisibilityNoiseTerms } from "@/lib/production-visibility";
 import { isProtectedLead } from "@/lib/test-lead-cleanup";
 
-export default async function ProductionDataCleanupPage({ searchParams }: { searchParams?: { archived?: string } }) {
+export default async function ProductionDataCleanupPage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams?: Promise<{ archived?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   const canCleanup = Boolean(auth.profile && can(auth.profile.role, "soft_delete_leads"));
 

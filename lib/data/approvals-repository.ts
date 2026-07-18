@@ -12,7 +12,7 @@ export type ListApprovalRequestsOptions = ProductionVisibilityOptions & {
 
 export async function listApprovalRequests(options: ListApprovalRequestsOptions = {}) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("approval_requests")
       .select("*")
@@ -28,7 +28,7 @@ export async function decideApprovalRequest(id: string, status: ApprovalStatus, 
   const now = new Date().toISOString();
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data: userData } = await supabase!.auth.getUser();
     const { data, error } = await supabase!
       .from("approval_requests")

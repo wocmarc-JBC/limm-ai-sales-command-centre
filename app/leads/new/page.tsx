@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { createManualLeadAction } from "@/lib/actions";
 import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
+import Link from "next/link";
 
 const inputClass = "rounded-md border border-command-line bg-command-bg px-3 py-2 text-base text-command-text";
 
@@ -81,10 +82,11 @@ function Field({
 }
 
 export default async function NewLeadPage({
-  searchParams
+  searchParams: searchParamsPromise
 }: {
-  searchParams?: { template?: string; createStatus?: string; message?: string };
+  searchParams?: Promise<{ template?: string; createStatus?: string; message?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   if (!auth.authenticated || !auth.profile) {
     return (
@@ -105,18 +107,18 @@ export default async function NewLeadPage({
   return (
     <>
       <PageHeader title="Create Manual Lead" eyebrow="Internal lead intake">
-        <a
+        <Link
           href="/leads/new?template=qa"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-cyan/60 bg-command-cyan/10 px-4 py-2 text-base font-semibold text-command-cyan transition hover:bg-command-cyan/15"
         >
           Use QA production test template
-        </a>
-        <a
+        </Link>
+        <Link
           href="/leads"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-muted transition hover:border-command-gold/60"
         >
           Back to Leads
-        </a>
+        </Link>
       </PageHeader>
 
       <section className="mission-panel mb-6 rounded-2xl p-5">

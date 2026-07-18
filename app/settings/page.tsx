@@ -15,7 +15,12 @@ import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
 import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan } from "@/lib/test-lead-cleanup";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
 
-export default async function SettingsPage({ searchParams }: { searchParams?: { cleanup?: string } }) {
+export default async function SettingsPage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams?: Promise<{ cleanup?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   if (!auth.authenticated || !auth.profile) {
     return (

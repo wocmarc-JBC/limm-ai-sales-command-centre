@@ -164,7 +164,7 @@ async function updateReadinessFromFile(leadId: string, category: LeadFileCategor
 
 export async function listLeadFiles(leadId: string) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_files")
       .select("*")
@@ -180,7 +180,7 @@ export async function listLeadFiles(leadId: string) {
 
 export async function listAllLeadFiles() {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_files")
       .select("*")
@@ -246,7 +246,7 @@ export async function createLeadUploadLink(input: { leadId: string; createdBy?: 
 
 export async function listLeadUploadLinks(leadId: string) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_upload_links")
       .select("*")

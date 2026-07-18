@@ -33,7 +33,12 @@ function statusTone(status: QuotationPackageStatus) {
   return "border-command-line bg-command-card text-command-muted";
 }
 
-export default async function QuotationsPage({ searchParams }: { searchParams?: { status?: string } }) {
+export default async function QuotationsPage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams?: Promise<{ status?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
   const leads = await listLeads({ includeTest: showTestDemoRecords });

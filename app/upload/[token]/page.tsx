@@ -14,12 +14,13 @@ const errorMessages: Record<string, string> = {
 };
 
 export default async function ClientUploadPage({
-  params,
-  searchParams
+  params: paramsPromise,
+  searchParams: searchParamsPromise
 }: {
-  params: { token: string };
-  searchParams?: { uploaded?: string; error?: string };
+  params: Promise<{ token: string }>;
+  searchParams?: Promise<{ uploaded?: string; error?: string }>;
 }) {
+  const [params, searchParams] = await Promise.all([paramsPromise, searchParamsPromise]);
   const uploadLink = await getUploadLinkByToken(params.token).catch(() => null);
   const runtime = getClientFilesStorageRuntime();
   if (!uploadLink) notFound();

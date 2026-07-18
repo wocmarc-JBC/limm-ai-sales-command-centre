@@ -10,6 +10,7 @@ import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
+import Link from "next/link";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
   return latestMeaningfulWhatsAppMessage(messages);
@@ -52,14 +53,15 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): M
 }
 
 export default async function WhatsAppInboxPage({
-  searchParams
+  searchParams: searchParamsPromise
 }: {
-  searchParams?: {
+  searchParams?: Promise<{
     lead?: string;
     manualReplyStatus?: string;
     manualReplyError?: string;
-  };
+  }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   if (!auth.authenticated) return null;
 
@@ -147,18 +149,18 @@ export default async function WhatsAppInboxPage({
   return (
     <>
       <PageHeader title="LIMM WhatsApp Inbox" eyebrow="Operator console">
-        <a
+        <Link
           href="/leads"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-muted transition hover:border-command-gold/60"
         >
           Lead list
-        </a>
-        <a
+        </Link>
+        <Link
           href="/settings"
           className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-base font-semibold text-command-muted transition hover:border-command-gold/60"
         >
           Settings
-        </a>
+        </Link>
       </PageHeader>
       <MultiChatInbox
         conversations={conversations}

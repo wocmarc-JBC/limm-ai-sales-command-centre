@@ -65,7 +65,7 @@ function mapAiDecisionRow(row: any): AiDryRunRecommendation {
 
 export async function listAiRecommendationsForLead(leadId: string) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_ai_decisions")
       .select("*")
@@ -97,7 +97,7 @@ export async function saveAiDryRunRecommendation(recommendation: AiDryRunRecomme
   }
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_ai_decisions")
       .insert({
@@ -170,7 +170,7 @@ export async function recordAiDraftReviewAction(input: {
   };
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_ai_decisions")
       .select("*")

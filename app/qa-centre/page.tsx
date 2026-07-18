@@ -201,10 +201,11 @@ function getString(value: string | string[] | undefined) {
 }
 
 export default async function QaCentrePage({
-  searchParams
+  searchParams: searchParamsPromise
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   if (!auth.authenticated) {
     return (

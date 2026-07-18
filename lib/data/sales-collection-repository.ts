@@ -66,7 +66,7 @@ function targetToRow(target: MonthlySalesTarget) {
 
 export async function listProjectAccounts(options: ProductionVisibilityOptions = {}) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!.from("project_accounts").select("*").order("updated_at", { ascending: false });
     if (!error && data) return filterProjectsForProductionVisibility(data.map(mapProjectRow), options);
   }
@@ -75,7 +75,7 @@ export async function listProjectAccounts(options: ProductionVisibilityOptions =
 
 export async function listPaymentRecords(options: ProductionVisibilityOptions = {}) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!.from("payment_records").select("*").order("created_at", { ascending: false });
     if (!error && data) return filterPaymentsForProductionVisibility(data.map(mapPaymentRow), options);
   }
@@ -84,7 +84,7 @@ export async function listPaymentRecords(options: ProductionVisibilityOptions = 
 
 export async function getMonthlySalesTarget(month = currentMonthKey()) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!.from("monthly_targets").select("*").eq("target_month", month).maybeSingle();
     if (!error && data) return mapMonthlyTargetRow(data);
   }
@@ -99,7 +99,7 @@ export async function saveMonthlySalesTarget(target: MonthlySalesTarget, actorNa
   const after = { ...target, updatedAt: new Date().toISOString() };
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("monthly_targets")
       .upsert(targetToRow(after), { onConflict: "target_month" })
@@ -171,7 +171,7 @@ export async function createProjectFromWonLead(lead: Lead, actorName = "Marcus")
   };
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("project_accounts")
       .upsert({
@@ -239,7 +239,7 @@ export async function createProjectFromWonLead(lead: Lead, actorName = "Marcus")
 
 export async function addPaymentRecord(payment: PaymentRecord, actorName = "Marcus") {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("payment_records")
       .insert({
@@ -303,7 +303,7 @@ export async function markPaymentRecordReceived(paymentId: string, actorName = "
         : "Fully Paid";
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("payment_records")
       .update({ received_date: now, status, updated_at: now })
@@ -349,7 +349,7 @@ export async function markPaymentRecordReceived(paymentId: string, actorName = "
 export async function voidPaymentRecord(payment: PaymentRecord, reason: string, actorName = "Marcus") {
   const after = { ...payment, voidedAt: new Date().toISOString(), voidedBy: actorName, voidReason: reason };
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("payment_records")
       .update({ voided_at: after.voidedAt, voided_by: actorName, void_reason: reason })
@@ -395,7 +395,7 @@ export async function restoreVoidedPaymentRecord(paymentId: string, actorName = 
   const now = new Date().toISOString();
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("payment_records")
       .update({ voided_at: null, voided_by: "", void_reason: "", updated_at: now })
@@ -504,7 +504,7 @@ export async function createQaTestProjectForQuotation(lead: Lead, quotation: Quo
   };
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("project_accounts")
       .upsert({

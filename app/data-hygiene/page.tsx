@@ -14,7 +14,12 @@ const groups: Array<{ type: DataHygieneRecordType; label: string }> = [
   { type: "client_file", label: "Client files" }
 ];
 
-export default async function DataHygienePage({ searchParams }: { searchParams?: { changed?: string } }) {
+export default async function DataHygienePage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams?: Promise<{ changed?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const auth = await getCurrentProfile();
   const canCleanup = Boolean(auth.profile && can(auth.profile.role, "soft_delete_leads"));
 

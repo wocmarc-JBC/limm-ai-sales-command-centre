@@ -42,6 +42,7 @@ for (const key of [
   "publicAutoReplyEnabled",
   "testMode",
   "hasWhatsappVerifyToken",
+  "hasWhatsappAppSecret",
   "hasWhatsappPhoneNumberId",
   "hasWhatsappAccessToken",
   "hasWhatsappBusinessNumber"
@@ -71,6 +72,8 @@ const requiredMarkers = [
   "whatsapp_webhook_received_start",
   "whatsapp_body_read_started",
   "whatsapp_body_read_ok",
+  "whatsapp_signature_check_started",
+  "whatsapp_signature_verified",
   "whatsapp_payload_parse_started",
   "whatsapp_payload_parsed",
   "whatsapp_unsupported_payload",
@@ -86,9 +89,10 @@ for (const marker of requiredMarkers) {
   assert(webhook.includes(marker), `Webhook route missing diagnostic marker or safe response: ${marker}`);
 }
 assert(/console\.info\("whatsapp_webhook_received_start"\)/.test(webhook), "Webhook POST must log the first start marker.");
-assert(webhook.includes("await request.text()"), "Webhook must read raw body before parsing.");
+assert(webhook.includes("await request.arrayBuffer()"), "Webhook must read exact raw bytes before signature verification and parsing.");
 assert(webhook.includes("JSON.parse(rawBody)"), "Webhook must parse JSON inside the guarded handler.");
 assert(webhook.includes("missing") && webhook.includes("SUPABASE_SERVICE_ROLE_KEY"), "Webhook must return missing config names safely.");
+assert(webhook.includes("WHATSAPP_APP_SECRET") && webhook.includes("x-hub-signature-256"), "Webhook POST must verify Meta's HMAC signature.");
 assert(webhook.includes("WHATSAPP_AUTO_REPLY_MODE_VALID"), "Webhook must validate the public/test mode pairing safely.");
 assert(!webhook.includes("WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED=false"), "Webhook must not force closed-test public=false after Marcus live approval.");
 assert(!webhook.includes("WHATSAPP_TEST_MODE=true"), "Webhook must not force closed-test mode after Marcus live approval.");

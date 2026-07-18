@@ -6,6 +6,7 @@ export type WhatsAppRuntime = {
   publicAutoReplyEnabled: boolean;
   testMode: boolean;
   verifyTokenConfigured: boolean;
+  appSecretConfigured: boolean;
   accessTokenConfigured: boolean;
   phoneNumberIdConfigured: boolean;
   businessNumber: string;
@@ -37,9 +38,10 @@ export function getWhatsAppRuntime(): WhatsAppRuntime {
   const publicAutoReplyEnabled = flag("WHATSAPP_PUBLIC_AUTO_REPLY_ENABLED", false);
   const testMode = flag("WHATSAPP_TEST_MODE", true);
   const verifyTokenConfigured = Boolean(process.env.WHATSAPP_VERIFY_TOKEN);
+  const appSecretConfigured = Boolean(process.env.WHATSAPP_APP_SECRET);
   const accessTokenConfigured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN);
   const phoneNumberIdConfigured = Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID);
-  const credentialsReady = accessTokenConfigured && phoneNumberIdConfigured;
+  const credentialsReady = appSecretConfigured && accessTokenConfigured && phoneNumberIdConfigured;
   const closedTestAutoReplyAllowed =
     liveInboundEnabled &&
     testAutoReplyEnabled &&
@@ -62,6 +64,7 @@ export function getWhatsAppRuntime(): WhatsAppRuntime {
     publicAutoReplyEnabled,
     testMode,
     verifyTokenConfigured,
+    appSecretConfigured,
     accessTokenConfigured,
     phoneNumberIdConfigured,
     businessNumber: normalizeWhatsAppPhone(process.env.WHATSAPP_BUSINESS_NUMBER ?? ""),

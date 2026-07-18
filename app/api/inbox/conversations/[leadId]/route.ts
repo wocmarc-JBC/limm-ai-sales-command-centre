@@ -46,8 +46,9 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { leadId: string } }
+  { params: paramsPromise }: { params: Promise<{ leadId: string }> }
 ) {
+  const params = await paramsPromise;
   const auth = await getCurrentProfile();
   if (!auth.authenticated) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });

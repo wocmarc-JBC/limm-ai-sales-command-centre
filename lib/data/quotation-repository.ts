@@ -167,7 +167,7 @@ export async function listQuotationReadinessRows(): Promise<QuotationReadinessRo
   const store = getMockStore();
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("quotation_readiness")
       .select("*")
@@ -206,7 +206,7 @@ export async function updateQuotationReadinessStatus(
   if (!before) {
     let targetLeadId = "";
     if (getDataMode() === "Supabase Mode") {
-      const supabase = getSupabaseServerClient();
+      const supabase = await getSupabaseServerClient();
       const { data } = await supabase!
         .from("quotation_readiness")
         .select("lead_id")
@@ -239,7 +239,7 @@ export async function updateQuotationReadinessStatus(
   }
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("quotation_readiness")
       .update({ status, quote_preparation_checklist: checklist, updated_at: now })
@@ -291,7 +291,7 @@ export type ListQuotationPackagesOptions = ProductionVisibilityOptions & {
 
 export async function listQuotationPackages(options: ListQuotationPackagesOptions = {}) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("quotation_packages")
       .select("*")
@@ -308,7 +308,7 @@ export async function listQuotationPackages(options: ListQuotationPackagesOption
 
 export async function getQuotationPackageById(id: string) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!.from("quotation_packages").select("*").eq("id", id).maybeSingle();
     if (!error && data) return mapQuotationPackageRow(data);
     return null;
@@ -351,7 +351,7 @@ async function saveQuotationPackage(quotation: QuotationPackage, before: Quotati
   const after = { ...quotation, updatedAt: nowIso() };
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("quotation_packages")
       .upsert(quotePackageToRow(after), { onConflict: "id" })

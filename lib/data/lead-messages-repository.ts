@@ -261,7 +261,7 @@ export async function saveLeadMessage(input: {
 
 export async function listLeadMessages(leadId: string) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_messages")
       .select("*")
@@ -281,7 +281,7 @@ export async function listLatestLeadMessagesForInbox(leadIds: string[], perLead 
   if (!uniqueLeadIds.length) return new Map<string, LeadMessage[]>();
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_messages")
       .select("*")
@@ -337,7 +337,7 @@ export async function listLatestMeaningfulWhatsAppMessagesForLeads(leadIds: stri
 
 export async function listLeadMessagesPage(leadId: string, limit = 30, before?: string) {
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     let query = supabase!
       .from("lead_messages")
       .select("*")
@@ -371,7 +371,7 @@ export async function listLeadMessagesAfter(leadId: string, after: string, limit
   if (!leadId || !after) return [];
 
   if (getDataMode() === "Supabase Mode") {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase!
       .from("lead_messages")
       .select("*")
