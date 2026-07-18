@@ -370,6 +370,33 @@ where schemaname = 'public'
 and indexname = 'project_accounts_location_idx';
 ```
 
+## 027_v10_2_intent_gate_conversation_safety.sql
+
+Purpose: Add v10.2.0 WhatsApp intent, sales eligibility, conversation routing, one-time acknowledgement, latest-unanswered-question, and semantic reply-safety state to leads.
+Dependencies: migrations 002, 015, 018, 019, 020, and 022.
+Safe to re-run: Yes. Uses `add column if not exists`, guarded constraint creation, and `create index if not exists`.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'leads'
+  and column_name in (
+    'conversation_intent',
+    'lead_eligible',
+    'conversation_route',
+    'intent_confidence',
+    'intent_reason_codes',
+    'intent_classifier_version',
+    'intent_manual_override',
+    'intent_classified_at',
+    'non_sales_acknowledged_at',
+    'latest_unanswered_question',
+    'conversation_safety_state'
+  );
+```
+
 ## After All Migrations
 
 Run:

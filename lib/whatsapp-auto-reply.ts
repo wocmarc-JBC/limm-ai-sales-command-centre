@@ -14,12 +14,24 @@ import {
   saveLeadMessage,
   upsertWhatsAppLead
 } from "@/lib/data/lead-messages-repository";
-import { updateLeadFactsFromEvidence } from "@/lib/data/leads-repository";
+import {
+  getLeadById,
+  recordConversationSafetyOutcome,
+  updateConversationRouting,
+  updateLeadFactsFromEvidence
+} from "@/lib/data/leads-repository";
 import { getWhatsAppRuntime, normalizeWhatsAppPhone } from "@/lib/whatsapp-config";
 import { processWhatsAppHandoffEmail } from "@/lib/handoff-email";
 import { storeWhatsAppMediaForLead } from "@/lib/whatsapp-media-storage";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
-import { buildWhatsAppReplyDecision, type WhatsAppReplyDecision } from "@/lib/whatsapp-reply-decision";
+import {
+  orchestrateWhatsAppConversationReply,
+  type WhatsAppReplyDecision
+} from "@/lib/whatsapp-reply-decision";
+// Compatibility audit marker: buildWhatsAppReplyDecision delegates to the
+// orchestrator; the live webhook intentionally calls the orchestrator directly.
+import { classifyConversationIntent, WHATSAPP_INTENT_CONTEXT_MESSAGE_LIMIT } from "@/lib/whatsapp-intent-gate";
+import { applySemanticDuplicateGuard, identifyLatestUnansweredQuestion } from "@/lib/whatsapp-conversation-safety";
 import { validateWhatsAppAutoReply, WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY } from "@/lib/whatsapp-safety";
 import { buildSilentCaptureNoteFromDecision } from "@/lib/whatsapp-silent-capture";
 
@@ -74,14 +86,6 @@ function logWhatsAppError(stage: string, metadata: Record<string, unknown> = {})
   console.error("whatsapp_webhook_error", { stage, ...metadata });
 }
 
-function canBuildReplyDecision(message: ParsedWhatsAppMessage) {
-  const type = message.type.toLowerCase();
-  if (type === "text") return Boolean(message.text.trim());
-  if (type === "audio" || type === "voice") return true;
-  if (["image", "document", "video"].includes(type)) return Boolean(message.text.trim());
-  return false;
-}
-
 async function auditWhatsApp(input: {
   action: string;
   leadId: string;
@@ -119,6 +123,20 @@ async function auditWhatsApp(input: {
   logWhatsApp("whatsapp_audit_written", { action: input.action, leadId: input.leadId });
 }
 
+async function recordConversationSafetyOutcomeSafely(
+  input: Parameters<typeof recordConversationSafetyOutcome>[0]
+) {
+  try {
+    await recordConversationSafetyOutcome(input);
+  } catch (error) {
+    logWhatsAppError("conversation_safety_outcome", {
+      providerMessageId: input.providerMessageId,
+      leadId: input.lead.id,
+      reason: safeError(error)
+    });
+  }
+}
+
 async function auditReplyDecisionTrace(input: {
   leadId: string;
   providerMessageId: string;
@@ -128,11 +146,9 @@ async function auditReplyDecisionTrace(input: {
     providerMessageId: input.providerMessageId,
     ...input.decision.blackBoxTrace
   };
-  const events = [
+  const sharedEvents = [
     ["whatsapp_reply_decision_started", "WhatsApp reply decision started."],
-    ["whatsapp_sales_brain_classified", "WhatsApp sales brain classified the inbound message."],
     ["whatsapp_conversation_stage_detected", "WhatsApp conversation stage detected."],
-    ["whatsapp_sales_move_selected", "WhatsApp sales move selected."],
     ["whatsapp_reply_candidate_created", "WhatsApp reply candidate created."],
     ["whatsapp_reply_safety_checked", "WhatsApp reply safety checked."],
     ["whatsapp_reply_repetition_checked", "WhatsApp reply repetition checked."],
@@ -140,8 +156,16 @@ async function auditReplyDecisionTrace(input: {
     ["whatsapp_no_silence_guard_checked", "WhatsApp no-silence guard checked."],
     ["whatsapp_reply_finalized", "WhatsApp reply decision finalized."]
   ] as const;
+  const routeEvents = input.decision.leadEligible
+    ? [
+        ["whatsapp_sales_brain_classified", "WhatsApp sales brain classified the eligible renovation enquiry."],
+        ["whatsapp_sales_move_selected", "WhatsApp sales move selected."]
+      ] as const
+    : [
+        ["whatsapp_non_sales_route_selected", "WhatsApp non-sales routing policy selected without invoking the sales brain."]
+      ] as const;
 
-  for (const [action, summary] of events) {
+  for (const [action, summary] of [...sharedEvents, ...routeEvents]) {
     await auditWhatsApp({
       action,
       leadId: input.leadId,
@@ -245,9 +269,10 @@ export async function handleWhatsAppInboundMessage(
     throw error;
   }
 
+  let savedInboundMessage: Awaited<ReturnType<typeof saveLeadMessage>>;
   try {
     logWhatsApp("whatsapp_inbound_message_save_started", { providerMessageId, leadId: lead.id });
-    const savedInboundMessage = await saveLeadMessage({
+    savedInboundMessage = await saveLeadMessage({
       leadId: lead.id,
       direction: "inbound",
       body: inboundBody,
@@ -263,21 +288,11 @@ export async function handleWhatsAppInboundMessage(
         mediaId: message.mediaId,
         isVoiceMessage: message.isVoiceMessage,
         businessPhoneNumberId: message.businessPhoneNumberId,
-        providerMessageId
+        providerMessageId,
+        rawInboundSavedBeforeIntentClassification: true
       }
     });
     logWhatsApp("whatsapp_inbound_message_saved", { providerMessageId, leadId: lead.id });
-    try {
-      const updatedLead = await updateLeadFactsFromEvidence(lead, [savedInboundMessage], [], {
-        providerMessageId,
-        source: "whatsapp_inbound",
-        liveExtraction: true
-      });
-      if (updatedLead) lead = updatedLead;
-      logWhatsApp("lead_facts_extracted", { providerMessageId, leadId: lead.id });
-    } catch (factsError) {
-      logWhatsAppError("lead_facts_extract", { providerMessageId, leadId: lead.id, reason: safeError(factsError) });
-    }
   } catch (error) {
     logWhatsAppError("inbound_message_save", { providerMessageId, leadId: lead.id, reason: safeError(error) });
     throw error;
@@ -288,8 +303,122 @@ export async function handleWhatsAppInboundMessage(
     action: "whatsapp_inbound_received",
     leadId: lead.id,
     summary: "WhatsApp inbound message received and saved for review.",
-    metadata: { providerMessageId, messageType: message.type }
+    metadata: {
+      providerMessageId,
+      messageType: message.type,
+      rawInboundSavedBeforeIntentClassification: true,
+      intentGateVersion: "v10.2.0"
+    }
   });
+
+  let recentMessages: Awaited<ReturnType<typeof listRecentLeadMessagesForWebhook>> = [savedInboundMessage];
+  try {
+    recentMessages = await listRecentLeadMessagesForWebhook(lead.id, WHATSAPP_INTENT_CONTEXT_MESSAGE_LIMIT);
+  } catch (error) {
+    logWhatsAppError("intent_context_load", { providerMessageId, leadId: lead.id, reason: safeError(error) });
+    await auditWhatsApp({
+      action: "whatsapp_context_load_failed",
+      leadId: lead.id,
+      summary: "WhatsApp intent context lookup failed; classification continued with the saved inbound message only.",
+      metadata: { providerMessageId, reason: safeError(error), contextFallback: "saved_inbound_only" }
+    });
+  }
+
+  const intentGate = classifyConversationIntent({
+    currentMessageText: inboundBody,
+    currentMessageType: message.type,
+    recentMessages,
+    lead,
+    botPaused: lead.botPaused
+  });
+  const latestUnansweredQuestion = identifyLatestUnansweredQuestion({
+    messages: recentMessages,
+    currentMessageText: message.text || message.caption,
+    currentProviderMessageId: providerMessageId,
+    currentCreatedAt: savedInboundMessage.createdAt
+  });
+
+  try {
+    const routedLead = await updateConversationRouting(lead, intentGate, latestUnansweredQuestion, {
+      providerMessageId,
+      rawInboundMessageId: savedInboundMessage.id,
+      rawInboundSavedBeforeIntentClassification: true,
+      classificationLatencyMs: intentGate.classificationLatencyMs,
+      ruleVersion: intentGate.ruleVersion
+    });
+    if (routedLead) lead = routedLead;
+  } catch (error) {
+    logWhatsAppError("intent_routing_persist", { providerMessageId, leadId: lead.id, reason: safeError(error) });
+    await auditWhatsApp({
+      action: "whatsapp_intent_routing_failed_safe_suppression",
+      leadId: lead.id,
+      summary: "WhatsApp intent routing could not be persisted, so auto-reply was safely suppressed.",
+      metadata: {
+        providerMessageId,
+        primaryIntent: intentGate.primaryIntent,
+        confidence: intentGate.confidence,
+        reasonCodes: intentGate.reasonCodes,
+        classifierVersion: intentGate.classifierVersion,
+        ruleVersion: intentGate.ruleVersion,
+        reason: safeError(error)
+      }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Intent routing could not be persisted; no auto-reply was sent."
+    };
+  }
+
+  await auditWhatsApp({
+    action: "whatsapp_conversation_intent_classified",
+    leadId: lead.id,
+    summary: "WhatsApp conversation intent and sales eligibility classified before the sales brain.",
+    metadata: {
+      providerMessageId,
+      rawInboundMessageId: savedInboundMessage.id,
+      primaryIntent: intentGate.primaryIntent,
+      conversationIntent: intentGate.conversationIntent,
+      leadEligible: intentGate.leadEligible,
+      salesEligible: intentGate.salesEligible,
+      conversationRoute: intentGate.conversationRoute,
+      confidence: intentGate.confidence,
+      reasonCodes: intentGate.reasonCodes,
+      classifierVersion: intentGate.classifierVersion,
+      ruleVersion: intentGate.ruleVersion,
+      manualOverride: lead.intentManualOverride ?? null,
+      manualOverrideApplied: intentGate.manualOverrideApplied,
+      classificationFailed: intentGate.classificationFailed,
+      classificationLatencyMs: intentGate.classificationLatencyMs,
+      latestUnansweredQuestion: latestUnansweredQuestion?.text ?? "",
+      classifiedAt: lead.intentClassifiedAt ?? new Date().toISOString(),
+      timestamp: lead.intentClassifiedAt ?? new Date().toISOString()
+    }
+  });
+
+  if (intentGate.shouldExtractLeadFacts) {
+    try {
+      const updatedLead = await updateLeadFactsFromEvidence(lead, [savedInboundMessage], [], {
+        providerMessageId,
+        source: "whatsapp_inbound_after_intent_gate",
+        liveExtraction: true,
+        conversationIntent: intentGate.conversationIntent,
+        leadEligible: intentGate.leadEligible
+      });
+      if (updatedLead) lead = updatedLead;
+      logWhatsApp("lead_facts_extracted", { providerMessageId, leadId: lead.id, intentGatePassed: true });
+    } catch (factsError) {
+      logWhatsAppError("lead_facts_extract", { providerMessageId, leadId: lead.id, reason: safeError(factsError) });
+    }
+  } else {
+    logWhatsApp("lead_facts_extraction_skipped", {
+      providerMessageId,
+      leadId: lead.id,
+      conversationIntent: intentGate.conversationIntent,
+      leadEligible: false
+    });
+  }
 
   if (["image", "document"].includes(message.type.toLowerCase())) {
     try {
@@ -332,28 +461,19 @@ export async function handleWhatsAppInboundMessage(
         botPauseReason: lead.botPauseReason ?? ""
       }
     });
-    return {
+    await recordConversationSafetyOutcomeSafely({
+      lead,
       providerMessageId,
-      leadId: lead.id,
-      status: "auto_reply_disabled",
-      reason: "Bot paused for this lead."
-    };
-  }
-
-  const typeForDecision = message.type.toLowerCase();
-  if (!canBuildReplyDecision(message) && !["image", "document"].includes(typeForDecision)) {
-    logWhatsApp("whatsapp_auto_reply_disabled", { providerMessageId, leadId: lead.id, reason: "unsupported_or_empty_message" });
-    await auditWhatsApp({
-      action: "whatsapp_auto_reply_disabled",
-      leadId: lead.id,
-      summary: "WhatsApp auto-reply disabled for unsupported or empty inbound message.",
-      metadata: { providerMessageId, reason: "unsupported_or_empty_message" }
+      conversationIntent: intentGate.conversationIntent,
+      noReplySafetySuppression: true,
+      unrelatedReplyBlocked: true,
+      suppressionReason: "human_takeover_or_bot_paused"
     });
     return {
       providerMessageId,
       leadId: lead.id,
       status: "auto_reply_disabled",
-      reason: "Unsupported or empty inbound message was saved, but no auto-reply was sent."
+      reason: "Bot paused for this lead."
     };
   }
 
@@ -423,23 +543,10 @@ export async function handleWhatsAppInboundMessage(
     });
   }
 
-  let recentMessages: Awaited<ReturnType<typeof listRecentLeadMessagesForWebhook>> = [];
-  try {
-    recentMessages = await listRecentLeadMessagesForWebhook(lead.id, 8);
-  } catch (error) {
-    logWhatsAppError("context_load", { providerMessageId, leadId: lead.id, reason: safeError(error) });
-    await auditWhatsApp({
-      action: "whatsapp_context_load_failed",
-      leadId: lead.id,
-      summary: "WhatsApp sales brain context lookup failed; safe fallback path will continue.",
-      metadata: { providerMessageId, reason: safeError(error) }
-    });
-  }
-
   logWhatsApp("whatsapp_reply_decision_started", { providerMessageId, leadId: lead.id });
   logWhatsApp("whatsapp_auto_reply_generate_started", { providerMessageId, leadId: lead.id });
-  const decision = buildWhatsAppReplyDecision({
-    inboundMessageText: message.text,
+  const decision = orchestrateWhatsAppConversationReply({
+    inboundMessageText: message.text || message.caption,
     inboundMessageType: message.type,
     lead,
     previousMessages: recentMessages,
@@ -447,7 +554,9 @@ export async function handleWhatsAppInboundMessage(
     openAiEnabled: false,
     calendarEventId: "",
     rateLimitExceeded: rateLimitWarning,
-    providerMessageId
+    providerMessageId,
+    intentGateDecision: intentGate,
+    latestUnansweredQuestion
   });
   await auditReplyDecisionTrace({ leadId: lead.id, providerMessageId, decision });
   let reply = decision.replyText;
@@ -498,7 +607,7 @@ export async function handleWhatsAppInboundMessage(
   await auditWhatsApp({
     action: "whatsapp_auto_reply_requested",
     leadId: lead.id,
-    summary: "WhatsApp auto-reply requested and passed through the v5.3 reply coach gates.",
+    summary: "WhatsApp reply/no-reply plan passed through the v10.2 intent and conversation safety gates.",
     metadata: brainMetadata
   });
 
@@ -524,6 +633,15 @@ export async function handleWhatsAppInboundMessage(
           ...silentCaptureNote.metadata
         }
       });
+      await recordConversationSafetyOutcomeSafely({
+        lead,
+        providerMessageId,
+        conversationIntent: decision.conversationIntent,
+        semanticDuplicateBlocked: decision.semanticDuplicateBlocked,
+        unrelatedReplyBlocked: decision.unrelatedReplyBlocked,
+        noReplySafetySuppression: decision.noReplySafetySuppression,
+        suppressionReason: decision.intentionalNoReplyReason ?? "silent_capture"
+      });
       return {
         providerMessageId,
         leadId: lead.id,
@@ -545,17 +663,28 @@ export async function handleWhatsAppInboundMessage(
       summary: "WhatsApp reply decision ended with an intentional no-reply reason.",
       metadata: brainMetadata
     });
-    await saveLeadMessage({
-      leadId: lead.id,
-      direction: "outbound",
-      body: reply,
-      safeToSend: false,
-      whatsappStatus: "disabled",
-      metadata: {
-        inboundProviderMessageId: providerMessageId,
-        reason: decision.intentionalNoReplyReason || "intentional_no_reply",
-        ...decision.blackBoxTrace
-      }
+    if (reply.trim()) {
+      await saveLeadMessage({
+        leadId: lead.id,
+        direction: "outbound",
+        body: reply,
+        safeToSend: false,
+        whatsappStatus: "disabled",
+        metadata: {
+          inboundProviderMessageId: providerMessageId,
+          reason: decision.intentionalNoReplyReason || "intentional_no_reply",
+          ...decision.blackBoxTrace
+        }
+      });
+    }
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      semanticDuplicateBlocked: decision.semanticDuplicateBlocked,
+      unrelatedReplyBlocked: decision.unrelatedReplyBlocked,
+      noReplySafetySuppression: decision.noReplySafetySuppression,
+      suppressionReason: decision.intentionalNoReplyReason ?? "intentional_no_reply"
     });
     return {
       providerMessageId,
@@ -593,12 +722,56 @@ export async function handleWhatsAppInboundMessage(
     });
     reply = WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY;
     safety = validateWhatsAppAutoReply(reply, { calendarEventId });
+    const fallbackSemanticGuard = applySemanticDuplicateGuard(reply, recentMessages);
     Object.assign(decision.blackBoxTrace, {
       finalSafetyFallbackRewriteUsed: safety.ok,
       finalSafetyFallbackRewriteErrorCodes: safety.errorCodes,
       finalSafetyFallbackRewriteErrorLabels: safety.errorLabels,
-      finalSafetyFallbackRewriteCharacterCount: reply.length
+      finalSafetyFallbackRewriteCharacterCount: reply.length,
+      finalFallbackSemanticDuplicateGuard: fallbackSemanticGuard,
+      final_reply_text: safety.ok && !fallbackSemanticGuard.blocked ? reply : "",
+      finalReplyHash: safety.ok && !fallbackSemanticGuard.blocked ? fallbackSemanticGuard.candidateSignature : ""
     });
+    if (safety.ok && fallbackSemanticGuard.blocked) {
+      decision.shouldReply = false;
+      decision.replyText = "";
+      decision.intentionalNoReplyReason = "semantic_duplicate_reply";
+      decision.semanticDuplicateBlocked = true;
+      decision.noReplySafetySuppression = true;
+      decision.repetitionResult = "blocked";
+      Object.assign(decision.blackBoxTrace, {
+        semanticDuplicateBlocked: true,
+        noReplySafetySuppression: true,
+        intentional_no_reply_reason: "semantic_duplicate_reply",
+        final_send_result: "semantic_duplicate_blocked_after_safety_rewrite"
+      });
+      brainMetadata = { providerMessageId, ...decision.blackBoxTrace };
+      await auditWhatsApp({
+        action: "whatsapp_semantic_duplicate_blocked",
+        leadId: lead.id,
+        summary: "WhatsApp safety fallback was suppressed because it duplicated a recent AI reply.",
+        metadata: brainMetadata
+      });
+      await recordConversationSafetyOutcomeSafely({
+        lead,
+        providerMessageId,
+        conversationIntent: decision.conversationIntent,
+        semanticDuplicateBlocked: true,
+        noReplySafetySuppression: true,
+        suppressionReason: "semantic_duplicate_reply"
+      });
+      return {
+        providerMessageId,
+        leadId: lead.id,
+        status: "auto_reply_disabled",
+        reason: "Semantic duplicate reply was safely suppressed.",
+        reply: ""
+      };
+    }
+    if (safety.ok) {
+      decision.replyText = reply;
+      decision.replySignature = fallbackSemanticGuard.candidateSignature;
+    }
     brainMetadata = {
       providerMessageId,
       ...decision.blackBoxTrace
@@ -640,6 +813,14 @@ export async function handleWhatsAppInboundMessage(
         safety
       }
     });
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      noReplySafetySuppression: true,
+      unrelatedReplyBlocked: decision.unrelatedReplyBlocked,
+      suppressionReason: "final_safety_validator_blocked"
+    });
     return {
       providerMessageId,
       leadId: lead.id,
@@ -656,6 +837,55 @@ export async function handleWhatsAppInboundMessage(
     intent: decision.intent,
     characterCount: reply.length
   });
+
+  try {
+    const finalLeadState = await getLeadById(lead.id);
+    if (!finalLeadState) throw new Error("Lead state unavailable before WhatsApp send.");
+    if (finalLeadState.botPaused) {
+      logWhatsApp("whatsapp_final_human_takeover_guard_blocked", { providerMessageId, leadId: lead.id });
+      await auditWhatsApp({
+        action: "whatsapp_final_human_takeover_guard_blocked",
+        leadId: lead.id,
+        summary: "WhatsApp auto-reply was suppressed because human takeover became active before send.",
+        metadata: { ...brainMetadata, final_send_result: "human_takeover_blocked" }
+      });
+      await recordConversationSafetyOutcomeSafely({
+        lead: finalLeadState,
+        providerMessageId,
+        conversationIntent: decision.conversationIntent,
+        unrelatedReplyBlocked: true,
+        noReplySafetySuppression: true,
+        suppressionReason: "human_takeover_or_bot_paused"
+      });
+      return {
+        providerMessageId,
+        leadId: lead.id,
+        status: "auto_reply_disabled",
+        reason: "Human takeover became active before send.",
+        reply: ""
+      };
+    }
+  } catch (error) {
+    logWhatsAppError("final_human_takeover_guard_refresh", {
+      providerMessageId,
+      leadId: lead.id,
+      reason: safeError(error)
+    });
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      noReplySafetySuppression: true,
+      suppressionReason: "final_human_takeover_state_unavailable"
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_disabled",
+      reason: "Final human-takeover state could not be verified; no auto-reply was sent.",
+      reply: ""
+    };
+  }
 
   try {
     logWhatsApp("whatsapp_auto_reply_send_payload_summary", getWhatsAppSendPayloadSummary(senderPhone, reply));
@@ -682,6 +912,14 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       summary: "WhatsApp auto-reply sent after safety validation.",
       metadata: { ...brainMetadata, outboundProviderMessageId: sent.providerMessageId, final_send_result: "sent" }
+    });
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      acknowledgementIntent: decision.acknowledgementIntent,
+      replySent: true,
+      replySignature: decision.replySignature || String(decision.blackBoxTrace.finalReplyHash ?? "")
     });
     return {
       providerMessageId,

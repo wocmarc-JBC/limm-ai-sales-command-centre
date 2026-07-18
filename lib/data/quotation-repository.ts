@@ -14,6 +14,7 @@ import {
 } from "@/lib/production-visibility";
 import { isQaE2EMode, qaE2eSafetyMetadata, QA_E2E_RUN_ID } from "@/lib/qa-e2e-mode";
 import { getQaWorkflowTestEligibility, qaWorkflowSafetyMetadata } from "@/lib/qa-workflow-test-mode";
+import { isSalesEligibleLead } from "@/lib/whatsapp-intent-gate";
 import type {
   Lead,
   QuotationPackage,
@@ -184,7 +185,7 @@ export async function listQuotationReadinessRows(): Promise<QuotationReadinessRo
   return mockClone(
     store.quotationReadiness
       .map((readiness) => ({ readiness, lead: store.leads.find((lead) => lead.id === readiness.leadId) }))
-      .filter((row): row is QuotationReadinessRow => Boolean(row.lead))
+      .filter((row): row is QuotationReadinessRow => Boolean(row.lead && isSalesEligibleLead(row.lead)))
   );
 }
 
@@ -201,6 +202,41 @@ export async function updateQuotationReadinessStatus(
   const rows = await listQuotationReadinessRows();
   const before = rows.find((row) => row.readiness.id === id)?.readiness ?? null;
   const now = nowIso();
+
+  if (!before) {
+    let targetLeadId = "";
+    if (getDataMode() === "Supabase Mode") {
+      const supabase = getSupabaseServerClient();
+      const { data } = await supabase!
+        .from("quotation_readiness")
+        .select("lead_id")
+        .eq("id", id)
+        .maybeSingle();
+      targetLeadId = String(data?.lead_id ?? "");
+    } else {
+      targetLeadId = getMockStore().quotationReadiness.find((item) => item.id === id)?.leadId ?? "";
+    }
+    if (targetLeadId) {
+      const { getLeadById } = await import("./leads-repository");
+      const targetLead = await getLeadById(targetLeadId);
+      if (targetLead && !isSalesEligibleLead(targetLead)) {
+        await createAuditLog({
+          actorType: "system",
+          actorName: "Intent Gate",
+          action: "non_sales_quotation_readiness_update_blocked",
+          entityType: "quotation_readiness",
+          entityId: id,
+          summary: "Quotation readiness update blocked because the linked conversation is not sales eligible.",
+          beforeData: {
+            conversationIntent: targetLead.conversationIntent,
+            conversationRoute: targetLead.conversationRoute
+          },
+          afterData: null
+        });
+        return null;
+      }
+    }
+  }
 
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseServerClient();
@@ -293,6 +329,7 @@ export async function getLatestActiveQuotationForLead(leadId: string, options: P
 export function buildQuotationSendGate(quotation: QuotationPackage | null, lead: Lead | null | undefined) {
   const missing: string[] = [];
   if (!lead) missing.push("lead is missing");
+  if (lead && !isSalesEligibleLead(lead)) missing.push("conversation is not sales eligible");
   if (lead && !isQaE2EMode() && isProductionHiddenLead(lead)) missing.push("lead is test/demo/spam/archived/deleted");
   if (!quotation) missing.push("latest active quotation package is missing");
   if (quotation && quotation.status !== "Boss Approved") missing.push("latest active quotation version is not Boss Approved");
@@ -346,6 +383,22 @@ export async function createQuotationPackage(input: {
   marginEstimate?: number | null;
   actorName?: string;
 }) {
+  if (!isSalesEligibleLead(input.lead)) {
+    await createAuditLog({
+      actorType: "system",
+      actorName: "Intent Gate",
+      action: "non_sales_quotation_package_blocked",
+      entityType: "lead",
+      entityId: input.lead.id,
+      summary: "Quotation package creation blocked because the conversation is not sales eligible.",
+      beforeData: {
+        conversationIntent: input.lead.conversationIntent,
+        conversationRoute: input.lead.conversationRoute
+      },
+      afterData: null
+    });
+    throw new Error("This conversation is not eligible for quotation package creation.");
+  }
   const existing = await listQuotationPackagesForLead(input.lead.id, { includeTestDemo: true });
   const versionNumber = Math.max(0, ...existing.map((quotation) => quotation.versionNumber)) + 1;
   const now = nowIso();

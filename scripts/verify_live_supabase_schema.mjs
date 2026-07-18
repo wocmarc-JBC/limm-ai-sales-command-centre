@@ -25,7 +25,7 @@ const requiredTables = [
 
 const requiredColumns = {
   profiles: ["id", "email", "full_name", "role", "active", "created_at", "updated_at"],
-  leads: ["id", "client_name", "phone", "email", "source", "division", "property_type", "service_type", "scope_summary", "lead_score", "lead_category", "status", "missing_info", "risk_flags", "boss_approval_needed", "appointment_suitable", "appointment_type", "quotation_readiness_score", "next_action", "created_at", "updated_at"],
+  leads: ["id", "client_name", "phone", "email", "source", "division", "property_type", "service_type", "scope_summary", "lead_score", "lead_category", "status", "missing_info", "risk_flags", "boss_approval_needed", "appointment_suitable", "appointment_type", "quotation_readiness_score", "next_action", "conversation_intent", "lead_eligible", "conversation_route", "intent_confidence", "intent_reason_codes", "intent_classifier_version", "intent_manual_override", "intent_classified_at", "non_sales_acknowledged_at", "latest_unanswered_question", "conversation_safety_state", "created_at", "updated_at"],
   lead_messages: ["id", "lead_id", "direction", "channel", "body", "safe_to_send", "provider_message_id", "provider_timestamp", "whatsapp_status", "metadata", "created_at"],
   approval_requests: ["id", "lead_id", "approval_type", "reason", "ai_recommendation", "status", "requested_at", "decided_at", "decided_by", "notes"],
   followups: ["id", "lead_id", "followup_type", "due_at", "status", "suggested_message", "completed_at", "notes"],
@@ -77,6 +77,10 @@ function localStaticChecks() {
   const whatsappMigration = read("supabase/migrations/018_v4_8_whatsapp_closed_test.sql");
   for (const phrase of ["provider_message_id", "provider_timestamp", "whatsapp_status", "metadata", "lead_messages_provider_message_id_unique"]) {
     if (!whatsappMigration.includes(phrase)) failures.push(`WhatsApp closed-test migration missing: ${phrase}`);
+  }
+  const intentGateMigration = read("supabase/migrations/027_v10_2_intent_gate_conversation_safety.sql");
+  for (const phrase of ["conversation_intent", "lead_eligible", "conversation_route", "conversation_safety_state", "leads_sales_eligible_active_idx"]) {
+    if (!intentGateMigration.includes(phrase)) failures.push(`Intent gate migration missing: ${phrase}`);
   }
   return failures;
 }

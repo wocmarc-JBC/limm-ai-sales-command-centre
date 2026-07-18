@@ -25,6 +25,7 @@ import {
   resumeBotForLeadAction,
   reviewAiDraftAction,
   saveLeadIntakeProfileAction,
+  setLeadConversationIntentOverrideAction,
   softDeleteLeadAction,
   takeOverLeadAction,
   updateLeadStatusAction,
@@ -54,6 +55,7 @@ import { getOpenAiBrainRuntime } from "@/lib/openai-brain-config";
 import { buildConversationSummary, buildFollowUpReminder, calculateLeadLevel, missionForLead, readinessStatus } from "@/lib/sales-control";
 import { money } from "@/lib/sales-collection";
 import { inferLeadLocation } from "@/lib/singapore-location";
+import { conversationIntentLabel, WHATSAPP_CONVERSATION_INTENTS } from "@/lib/whatsapp-intent-gate";
 import type { AiDraftReviewStatus, AiDryRunRecommendation, LeadFileCategory, LeadMessage, LeadStatus } from "@/lib/types";
 
 const statuses: LeadStatus[] = [
@@ -252,6 +254,79 @@ export default async function LeadDetailPage({
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, 6);
 
+  const intentRoutingPanel = (
+    <section className="mt-6 rounded-2xl border border-command-cyan/35 bg-command-card p-5 shadow-premium">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">v10.2 Conversation Routing</p>
+          <h2 className="mt-1 text-xl font-semibold text-command-text">
+            {conversationIntentLabel(lead.conversationIntent ?? "genuine_new_renovation_lead")}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-command-muted">
+            Route: {humanizeLabel(lead.conversationRoute ?? "sales_lead")} · Sales eligible: {lead.leadEligible === false ? "No" : "Yes"} · Confidence: {Math.round((lead.intentConfidence ?? 0) * 100)}%
+          </p>
+          <p className="mt-1 text-xs text-command-subtle">
+            Classifier {lead.intentClassifierVersion || "legacy/default"} · {lead.intentClassifiedAt ? new Date(lead.intentClassifiedAt).toLocaleString("en-SG") : "Not classified from live inbound yet"}
+          </p>
+        </div>
+        <form action={setLeadConversationIntentOverrideAction} className="grid min-w-72 gap-2 rounded-xl border border-command-line bg-command-bg/55 p-3">
+          <input type="hidden" name="lead_id" value={lead.id} />
+          <label htmlFor="conversation_intent" className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Manual correction</label>
+          <select
+            id="conversation_intent"
+            name="conversation_intent"
+            defaultValue={lead.intentManualOverride ?? lead.conversationIntent ?? "genuine_new_renovation_lead"}
+            className="rounded-md border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text"
+          >
+            <option value="">Clear override / use classifier</option>
+            {WHATSAPP_CONVERSATION_INTENTS.map((intent) => (
+              <option key={intent} value={intent}>{conversationIntentLabel(intent)}</option>
+            ))}
+          </select>
+          <ActionButton type="submit" tone="muted">Save Intent Override</ActionButton>
+          {lead.intentManualOverride ? <p className="text-xs text-command-amber">Manual override active</p> : null}
+        </form>
+      </div>
+    </section>
+  );
+
+  if (lead.leadEligible === false) {
+    return (
+      <>
+        <PageHeader title={displayName} eyebrow="Non-Sales Conversation">
+          <a
+            href={`/inbox?lead=${encodeURIComponent(lead.id)}`}
+            className="inline-flex min-h-11 items-center rounded-xl border border-command-gold bg-command-gold px-4 py-2 text-base font-semibold text-black transition hover:bg-command-goldHover"
+          >
+            Open in WhatsApp Inbox
+          </a>
+        </PageHeader>
+        {intentRoutingPanel}
+        <section className="mt-6 rounded-2xl border border-command-line bg-command-card p-5 shadow-premium">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Sales Safety Exclusion</p>
+          <h2 className="mt-1 text-xl font-semibold text-command-text">Kept out of sales workflows</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">
+            This conversation remains available for operator review, but it is excluded from Command Core Sales, Mission Map, Follow-Ups, lead scoring, sales metrics, and quotation readiness unless Marcus corrects the intent above.
+          </p>
+        </section>
+        <section className="mt-6 rounded-2xl border border-command-cyan/25 bg-command-card p-5 shadow-premium">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-cyan">Conversation Timeline</p>
+          <div className="mt-4 space-y-3">
+            {conversationMessages.length ? conversationMessages.slice(-20).map((message) => (
+              <div key={message.id} className="rounded-xl border border-command-line bg-command-bg/55 p-4">
+                <div className="flex items-center justify-between gap-3 text-xs text-command-muted">
+                  <span>{message.direction === "inbound" ? "Contact" : message.metadata?.manualReply ? "Marcus" : "AI / system"}</span>
+                  <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("en-SG")}</time>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-command-text">{message.body || "Message body not available."}</p>
+              </div>
+            )) : <p className="text-sm text-command-muted">No WhatsApp messages saved yet.</p>}
+          </div>
+        </section>
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader title={displayName} eyebrow="Lead Detail">
@@ -275,6 +350,7 @@ export default async function LeadDetailPage({
           <p className="mt-1 text-sm">No WhatsApp/email/calendar action was sent.</p>
         </section>
       ) : null}
+      {intentRoutingPanel}
       <section className="mt-6 rounded-lg border border-command-cyan/25 bg-command-card p-6 shadow-premium">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

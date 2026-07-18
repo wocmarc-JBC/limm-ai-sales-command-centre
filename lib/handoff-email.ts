@@ -53,6 +53,7 @@ function handoffReasons(decision: WhatsAppReplyDecision) {
   const trace = decision.blackBoxTrace;
   const intents = Array.isArray(trace.detectedIntents) ? trace.detectedIntents.map(String) : [];
   const reasons = [
+    decision.conversationIntent === "existing_client_project_message" ? "Existing client project message" : "",
     intents.includes("appointment_request") || intents.includes("meeting_availability") ? "Appointment requested" : "",
     intents.includes("price_question") ? "Price/Budget question" : "",
     intents.includes("portfolio_request") ? "Past works / portfolio requested" : "",

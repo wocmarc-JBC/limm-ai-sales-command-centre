@@ -830,7 +830,7 @@ for (const phrase of ["whatsapp_inbound_received", "whatsapp_auto_reply_sent", "
   assert(whatsappService.includes(phrase), `WhatsApp closed-test service missing ${phrase}`);
 }
 for (const phrase of [
-  "buildWhatsAppReplyDecision",
+  "orchestrateWhatsAppConversationReply",
   "listRecentLeadMessagesForWebhook",
   "auditReplyDecisionTrace",
   "whatsapp_reply_decision_started",
@@ -843,7 +843,7 @@ for (const phrase of [
   "distinctTextWillStillReply",
   "decision.blackBoxTrace"
 ]) {
-  assert(whatsappService.includes(phrase), `WhatsApp v5.3 reply decision integration missing ${phrase}`);
+  assert(whatsappService.includes(phrase), `WhatsApp production reply decision integration missing ${phrase}`);
 }
 assert(!whatsappService.includes("Too many auto-replies sent to this WhatsApp phone."), "Old hard rate-limit silence reason must be removed.");
 assert(!/recentReplyCount\s*>=\s*3[\s\S]{0,900}return\s+\{[\s\S]{0,300}auto_reply_disabled/.test(whatsappService), "Rate-limit threshold must not return before reply decision.");
@@ -883,7 +883,10 @@ for (const phrase of [
   "instagramUrlAvailable",
   "humanFollowUpTaskCreated",
   "combinedReplyUsed",
-  "ULTRA_SAFE_MINIMAL_FALLBACK_REPLY",
+  "orchestrateWhatsAppConversationReply",
+  "applySemanticDuplicateGuard",
+  "applyHumanTakeoverGuard",
+  "conversationIntent",
   "safety_result",
   "repetition_result",
   "quality_result",

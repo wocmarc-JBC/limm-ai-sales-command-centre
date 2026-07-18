@@ -8,17 +8,24 @@ const views = [
   { key: "test", label: "Show Test Leads", href: "/leads?view=test" },
   { key: "inactive", label: "Archived / Deleted", href: "/leads?view=inactive" },
   { key: "spam", label: "Show Spam", href: "/leads?view=spam" },
+  { key: "non-sales", label: "Non-Sales Conversations", href: "/leads?view=non-sales" },
   { key: "all", label: "Show All", href: "/leads?view=all" }
 ];
 
 export default async function LeadInboxPage({ searchParams }: { searchParams?: { view?: string; show_test?: string } }) {
   const view = searchParams?.show_test === "true" ? "test" : searchParams?.view ?? "active";
-  const rawLeads = await listLeads({ includeTest: view === "test" || view === "all" || view === "spam", includeInactive: view === "inactive" || view === "all" || view === "spam" });
+  const rawLeads = await listLeads({
+    includeTest: view === "test" || view === "all" || view === "spam",
+    includeInactive: view === "inactive" || view === "all" || view === "spam",
+    includeNonSales: view === "non-sales" || view === "all"
+  });
   const leads = view === "inactive"
     ? rawLeads.filter((lead) => lead.deletedAt || lead.archivedAt)
     : view === "spam"
       ? rawLeads.filter((lead) => lead.isSpam)
-      : rawLeads;
+      : view === "non-sales"
+        ? rawLeads.filter((lead) => lead.leadEligible === false)
+        : rawLeads;
   const latestWhatsAppMessages = await listLatestMeaningfulWhatsAppMessagesForLeads(leads.map((lead) => lead.id));
   return (
     <>

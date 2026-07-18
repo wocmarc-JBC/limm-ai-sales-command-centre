@@ -14,6 +14,66 @@ function getSupabaseWriteClient() {
   return supabase;
 }
 
+const INTENT_GATE_INSERT_COLUMNS = new Set([
+  "conversation_intent",
+  "lead_eligible",
+  "conversation_route",
+  "intent_confidence",
+  "intent_reason_codes",
+  "intent_classifier_version",
+  "intent_classified_at",
+  "conversation_safety_state"
+]);
+
+function provisionalWhatsAppLeadRow(input: { phone: string; contactName?: string; latestMessage: string }, now: string) {
+  const intentGate = {
+    conversationIntent: "unclear_intent",
+    primaryIntent: "unclear_intent",
+    leadEligible: false,
+    salesEligible: false,
+    conversationRoute: "intent_review",
+    confidence: 0,
+    reasonCodes: ["awaiting_pre_sales_intent_classification"],
+    classifierVersion: "v10.2.0",
+    classifiedAt: null,
+    conversationSafetyState: {}
+  };
+  return {
+    client_name: input.contactName || "WhatsApp Contact",
+    phone: input.phone,
+    source: "WhatsApp",
+    division: "LIMM Works",
+    property_type: "",
+    service_type: "conversation_pending_classification",
+    scope_summary: "",
+    lead_score: 0,
+    lead_category: "Low Fit",
+    status: "Not Suitable",
+    missing_info: [],
+    risk_flags: [],
+    boss_approval_needed: false,
+    appointment_suitable: false,
+    appointment_type: "initial_project_review",
+    appointment_readiness: 0,
+    quotation_readiness_score: 0,
+    next_action: "Classify conversation intent before entering any sales workflow.",
+    last_client_message: input.latestMessage,
+    lead_level: "Low Fit",
+    mission_category: "Conversation: intent review",
+    intake_profile: { trace: { intentGate } },
+    conversation_intent: "unclear_intent",
+    lead_eligible: false,
+    conversation_route: "intent_review",
+    intent_confidence: 0,
+    intent_reason_codes: ["awaiting_pre_sales_intent_classification"],
+    intent_classifier_version: "v10.2.0",
+    intent_classified_at: null,
+    conversation_safety_state: {},
+    created_at: now,
+    updated_at: now
+  };
+}
+
 export async function findLeadMessageByProviderId(providerMessageId: string) {
   if (!providerMessageId) return null;
   if (getDataMode() === "Supabase Mode") {
@@ -58,33 +118,24 @@ export async function upsertWhatsAppLead(input: { phone: string; contactName?: s
       return mapLeadRow(data);
     }
 
-    const { data, error } = await supabase
+    const fullRow = provisionalWhatsAppLeadRow(input, now);
+    let { data, error } = await supabase
       .from("leads")
-      .insert({
-        client_name: input.contactName || "WhatsApp Lead",
-        phone: input.phone,
-        source: "WhatsApp",
-        division: "LIMM Works",
-        property_type: "",
-        service_type: "initial_project_review",
-        scope_summary: "WhatsApp renovation enquiry pending review",
-        lead_score: 25,
-        lead_category: "Cold",
-        status: "New Enquiry",
-        missing_info: ["property_type", "scope", "floor_plan", "site_photos"],
-        risk_flags: [],
-        boss_approval_needed: false,
-        appointment_suitable: false,
-        appointment_type: "initial_project_review",
-        appointment_readiness: 10,
-        quotation_readiness_score: 0,
-        next_action: "Ask for scope, floor plan, and site photos before project review.",
-        last_client_message: input.latestMessage,
-        created_at: now,
-        updated_at: now
-      })
+      .insert(fullRow)
       .select("*")
       .maybeSingle();
+    if (error && /column|schema cache|PGRST204|42703/i.test(`${error.code ?? ""} ${error.message ?? ""}`)) {
+      const compatibilityRow = Object.fromEntries(
+        Object.entries(fullRow).filter(([column]) => !INTENT_GATE_INSERT_COLUMNS.has(column))
+      );
+      const retry = await supabase
+        .from("leads")
+        .insert(compatibilityRow)
+        .select("*")
+        .maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
     if (error) throw new Error(`WhatsApp lead insert failed: ${error.message}`);
     return mapLeadRow(data);
   }
@@ -104,29 +155,55 @@ export async function upsertWhatsAppLead(input: { phone: string; contactName?: s
 
   const lead: Lead = {
     id: `whatsapp-${input.phone}-${Date.now()}`,
-    clientName: input.contactName || "WhatsApp Lead",
+    clientName: input.contactName || "WhatsApp Contact",
     phone: input.phone,
     source: "WhatsApp",
     division: "LIMM Works",
     propertyType: "",
-    serviceType: "initial_project_review",
-    scopeSummary: "WhatsApp renovation enquiry pending review",
-    leadScore: 25,
-    leadCategory: "Cold",
-    status: "New Enquiry",
-    missingInfo: ["property_type", "scope", "floor_plan", "site_photos"],
-    aiRecommendedNextAction: "Ask for scope, floor plan, and site photos before project review.",
+    serviceType: "conversation_pending_classification",
+    scopeSummary: "",
+    leadScore: 0,
+    leadCategory: "Low Fit",
+    status: "Not Suitable",
+    missingInfo: [],
+    aiRecommendedNextAction: "Classify conversation intent before entering any sales workflow.",
     bossApprovalNeeded: false,
     appointmentSuitable: false,
     appointmentType: "initial_project_review",
-    appointmentReadiness: 10,
+    appointmentReadiness: 0,
     quotationReadiness: 0,
     lastClientMessage: input.latestMessage,
     lastReplyAt: null,
     createdAt: now,
     updatedAt: now,
     preferredContactTime: "",
-    riskFlags: []
+    riskFlags: [],
+    leadLevel: "Low Fit",
+    missionCategory: "Conversation: intent review",
+    conversationIntent: "unclear_intent",
+    leadEligible: false,
+    conversationRoute: "intent_review",
+    intentConfidence: 0,
+    intentReasonCodes: ["awaiting_pre_sales_intent_classification"],
+    intentClassifierVersion: "v10.2.0",
+    intentClassifiedAt: null,
+    conversationSafetyState: {},
+    intakeProfile: {
+      trace: {
+        intentGate: {
+          conversationIntent: "unclear_intent",
+          primaryIntent: "unclear_intent",
+          leadEligible: false,
+          salesEligible: false,
+          conversationRoute: "intent_review",
+          confidence: 0,
+          reasonCodes: ["awaiting_pre_sales_intent_classification"],
+          classifierVersion: "v10.2.0",
+          classifiedAt: null,
+          conversationSafetyState: {}
+        }
+      }
+    }
   };
   store.leads.unshift(lead);
   return mockClone(lead);

@@ -122,7 +122,7 @@ function record(type: DataHygieneRecordType, id: string, title: string, subtitle
 
 export async function buildDataHygienePreview(): Promise<DataHygienePreview> {
   const [leads, approvals, projects, payments, files] = await Promise.all([
-    listLeads({ includeInactive: true, includeTest: true }),
+    listLeads({ includeInactive: true, includeTest: true, includeNonSales: true }),
     listApprovalRequests({ includeTestDemo: true }),
     listProjectAccounts({ includeTestDemo: true }),
     listPaymentRecords({ includeTestDemo: true }),

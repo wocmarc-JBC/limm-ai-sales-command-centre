@@ -218,7 +218,7 @@ export default async function QaCentrePage({
     );
   }
 
-  const leads = await listLeads({ includeTest: true });
+  const leads = await listLeads({ includeTest: true, includeNonSales: true });
   const selectedLeadId = getString(searchParams?.lead) || leads[0]?.id || "qa-sample-lead";
   const selectedLead = leads.find((lead) => lead.id === selectedLeadId) ?? fallbackLead();
   const [messages, files] = await Promise.all([

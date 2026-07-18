@@ -4,6 +4,7 @@ import { mapFollowUpRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseServerClient } from "./supabase-server";
 import { isTestFollowUp } from "@/lib/test-lead-cleanup";
+import { isSalesEligibleLead } from "@/lib/whatsapp-intent-gate";
 import type { FollowUp, FollowUpStatus } from "@/lib/types";
 
 export type ListFollowUpsOptions = {
@@ -44,6 +45,7 @@ function urgencyRank(item: FollowUp) {
 
 function shouldShowFollowUp(item: FollowUp, options: ListFollowUpsOptions = {}) {
   const status = options.status ?? "active";
+  if (item.lead && !isSalesEligibleLead(item.lead)) return false;
   if (!options.includeTest && isTestFollowUp(item)) return false;
   if (!options.includeCompleted && status !== "completed" && status !== "all" && (item.status === "Completed" || item.completedAt)) return false;
 
@@ -145,6 +147,23 @@ export async function countFollowUps(options: ListFollowUpsOptions = {}) {
 
 export async function updateFollowUpStatus(id: string, status: FollowUpStatus, notes = "") {
   const before = await getFollowUpById(id);
+  if (before?.lead && !isSalesEligibleLead(before.lead)) {
+    await createAuditLog({
+      actorType: "system",
+      actorName: "Intent Gate",
+      action: "non_sales_followup_update_blocked",
+      entityType: "followup",
+      entityId: id,
+      summary: "Follow-up update blocked because the linked conversation is not sales eligible.",
+      beforeData: {
+        status: before.status,
+        conversationIntent: before.lead.conversationIntent,
+        conversationRoute: before.lead.conversationRoute
+      },
+      afterData: null
+    });
+    return null;
+  }
   const now = new Date().toISOString();
   const completedAt = status === "Completed" || status === "No Reply" ? now : null;
   const patch: Record<string, unknown> = { status, notes, completed_at: completedAt };

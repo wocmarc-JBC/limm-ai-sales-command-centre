@@ -16,6 +16,20 @@ export const projectAccountLocationColumns = [
   "location_notes"
 ];
 
+export const intentGateLeadColumns = [
+  "conversation_intent",
+  "lead_eligible",
+  "conversation_route",
+  "intent_confidence",
+  "intent_reason_codes",
+  "intent_classifier_version",
+  "intent_manual_override",
+  "intent_classified_at",
+  "non_sales_acknowledged_at",
+  "latest_unanswered_question",
+  "conversation_safety_state"
+];
+
 export const requiredTables = [
   "profiles",
   "leads",
@@ -118,7 +132,8 @@ export const requiredColumnsByTable = {
     "location_confidence",
     "location_source",
     "location_notes",
-    "intake_profile"
+    "intake_profile",
+    ...intentGateLeadColumns
   ],
   quotation_packages: [
     "id",
@@ -202,6 +217,9 @@ export const requiredIndexes = [
   "leads_cleanup_queue_idx",
   "leads_bot_paused_idx",
   "leads_needs_marcus_idx",
+  "leads_sales_eligible_active_idx",
+  "leads_conversation_route_idx",
+  "leads_conversation_intent_idx",
   "quotation_packages_lead_id_idx",
   "quotation_packages_status_idx",
   "quotation_packages_qa_run_id_idx",
@@ -235,6 +253,12 @@ const migrationHints = [
     table: "project_accounts",
     name,
     file: "026_project_accounts_location_fields.sql"
+  })),
+  ...intentGateLeadColumns.map((name) => ({
+    matchType: "column",
+    table: "leads",
+    name,
+    file: "027_v10_2_intent_gate_conversation_safety.sql"
   })),
   { matchType: "column", table: "project_accounts", name: "is_test", file: "025_qa_downstream_test_flags.sql" },
   { matchType: "column", table: "payment_records", name: "is_test", file: "025_qa_downstream_test_flags.sql" },
@@ -290,6 +314,9 @@ const migrationHints = [
   { matchType: "column", table: "leads", name: "project_id", file: "020_v6_3_sales_collection_command_centre.sql" },
   { matchType: "column", table: "leads", name: "intake_profile", file: "018_v6_5_smart_lead_intake.sql" },
   { matchType: "index", name: "leads_active_command_queue_idx", file: "019_v6_ultimate_command_centre.sql" },
+  { matchType: "index", name: "leads_sales_eligible_active_idx", file: "027_v10_2_intent_gate_conversation_safety.sql" },
+  { matchType: "index", name: "leads_conversation_route_idx", file: "027_v10_2_intent_gate_conversation_safety.sql" },
+  { matchType: "index", name: "leads_conversation_intent_idx", file: "027_v10_2_intent_gate_conversation_safety.sql" },
   { matchType: "index", name: "quotation_packages_lead_number_version_idx", file: "024_quotation_packages.sql" },
   { matchType: "index", name: "project_accounts_location_idx", file: "026_project_accounts_location_fields.sql" },
   { matchType: "index", name: "project_accounts_is_test_idx", file: "025_qa_downstream_test_flags.sql" },

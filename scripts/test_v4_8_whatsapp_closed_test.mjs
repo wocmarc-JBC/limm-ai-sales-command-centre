@@ -214,11 +214,11 @@ assert(read("supabase/MIGRATION_ORDER.md").includes("018_v4_8_whatsapp_closed_te
 
 const leadDetail = read("app/leads/[id]/page.tsx");
 for (const phrase of [
-  "WhatsApp Auto-Reply",
-  "Marcus-approved live mode",
-  "Public auto-reply enabled by Marcus",
-  "No pricing / no Calendar booking",
-  "Auto-reply audit trail",
+  "v10.2 Conversation Routing",
+  "Manual correction",
+  "Sales Safety Exclusion",
+  "WhatsApp Conversation",
+  "Read-only lead view",
   "listLeadMessages"
 ]) {
   assert(leadDetail.includes(phrase), `Lead detail missing WhatsApp closed-test UI phrase: ${phrase}`);

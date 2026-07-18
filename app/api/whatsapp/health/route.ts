@@ -65,6 +65,8 @@ export const dynamic = "force-dynamic";
 // version: "v9_0_clean_whatsapp_sales_brain"
 // salesBrainVersion: "v9_clean_core"
 // version: "v10_boss_operations_command_centre_pwa"
+// version: "v10_2_0_intent_gate_conversation_safety"
+// salesBrainVersion: "v10.2.0"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -88,9 +90,26 @@ export async function GET() {
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
     return NextResponse.json({
       ok: true,
-      version: "v9_0_clean_whatsapp_sales_brain",
-      salesBrainVersion: "v9_clean_core",
+      version: "v10_2_0_intent_gate_conversation_safety",
+      salesBrainVersion: "v10.2.0",
+      underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
+      intentGateAvailable: true,
+      leadEligibilityGateAvailable: true,
+      nonSalesRoutingAvailable: true,
+      oneTimeVendorAcknowledgementAvailable: true,
+      latestUnansweredQuestionAvailable: true,
+      semanticDuplicateGuardAvailable: true,
+      semanticDuplicateThreshold: 0.85,
+      semanticDuplicateReplyWindow: 5,
+      humanTakeoverFinalGuardAvailable: true,
+      nonSalesSalesSurfaceExclusionAvailable: true,
+      rawInboundBeforeIntentClassificationAvailable: true,
+      intentGateAuditAvailable: true,
+      manualIntentOverrideAvailable: true,
+      classifierFailureSafeSuppressionAvailable: true,
+      deterministicIntentBudgetMs: 100,
+      intentContextMessageLimit: 10,
       v9ProductionRouteEnabled: true,
       legacyReplyLogicQuarantined: true,
       singleReplyCoreOnly: true,
@@ -514,9 +533,26 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v9_0_clean_whatsapp_sales_brain",
-      salesBrainVersion: "v9_clean_core",
+      version: "v10_2_0_intent_gate_conversation_safety",
+      salesBrainVersion: "v10.2.0",
+      underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
+      intentGateAvailable: false,
+      leadEligibilityGateAvailable: false,
+      nonSalesRoutingAvailable: false,
+      oneTimeVendorAcknowledgementAvailable: false,
+      latestUnansweredQuestionAvailable: false,
+      semanticDuplicateGuardAvailable: false,
+      semanticDuplicateThreshold: 0.85,
+      semanticDuplicateReplyWindow: 5,
+      humanTakeoverFinalGuardAvailable: false,
+      nonSalesSalesSurfaceExclusionAvailable: false,
+      rawInboundBeforeIntentClassificationAvailable: false,
+      intentGateAuditAvailable: false,
+      manualIntentOverrideAvailable: false,
+      classifierFailureSafeSuppressionAvailable: false,
+      deterministicIntentBudgetMs: 100,
+      intentContextMessageLimit: 10,
       v9ProductionRouteEnabled: false,
       legacyReplyLogicQuarantined: false,
       singleReplyCoreOnly: false,

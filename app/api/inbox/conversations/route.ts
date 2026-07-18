@@ -27,6 +27,10 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]) {
     displayName: formatLeadDisplayName(lead),
     phone: lead.phone,
     status: lead.status,
+    conversationIntent: lead.conversationIntent ?? "genuine_new_renovation_lead",
+    conversationRoute: lead.conversationRoute ?? "sales_lead",
+    leadEligible: lead.leadEligible !== false,
+    intentConfidence: lead.intentConfidence ?? 0,
     botPaused: Boolean(lead.botPaused),
     needsMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded),
     propertyType: facts.propertyType.value || lead.propertyType,
@@ -52,7 +56,7 @@ export async function GET() {
 
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
   const [leads, allFiles] = await Promise.all([
-    listLeads({ includeTest: showTestDemoRecords }),
+    listLeads({ includeTest: showTestDemoRecords, includeNonSales: true }),
     listAllLeadFiles()
   ]);
   const leadIds = leads.map((lead) => lead.id);
@@ -61,7 +65,7 @@ export async function GET() {
     .filter((lead) => hasWhatsAppContactOrMessages(
       lead,
       summaryMessagesByLead.get(lead.id) ?? []
-    ) && isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? []))
+    ) && (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? [])))
     .slice(0, 30);
   const conversations = activeLeads
     .map((lead) => buildSummary(

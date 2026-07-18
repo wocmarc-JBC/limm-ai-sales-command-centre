@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   analyzeSchemaSnapshot,
+  intentGateLeadColumns,
   projectAccountLocationColumns,
   requiredColumnsByTable,
   requiredIndexes,
@@ -92,6 +93,26 @@ for (const column of ["lead_owner", "follow_up_date", "probability_percent", "po
   assert(missingSalesResult.missingColumns.leads.includes(column), `Missing sales column detection must report leads.${column}.`);
 }
 assert(missingSalesResult.likelyMigrationFiles.includes("020_v6_3_sales_collection_command_centre.sql"), "Missing v6.3 sales lead columns should hint migration 020.");
+
+const missingIntentGateSnapshot = completeSnapshot();
+missingIntentGateSnapshot.columnsByTable.leads = missingIntentGateSnapshot.columnsByTable.leads.filter(
+  (column) => !intentGateLeadColumns.includes(column)
+);
+missingIntentGateSnapshot.indexes = missingIntentGateSnapshot.indexes.filter(
+  (index) => !["leads_sales_eligible_active_idx", "leads_conversation_route_idx", "leads_conversation_intent_idx"].includes(index)
+);
+const missingIntentGateResult = analyzeSchemaSnapshot(missingIntentGateSnapshot);
+assert(!missingIntentGateResult.ok, "Missing v10.2 intent-gate schema should fail schema analysis.");
+for (const column of intentGateLeadColumns) {
+  assert(missingIntentGateResult.missingColumns.leads.includes(column), `Missing v10.2 column detection must report leads.${column}.`);
+}
+for (const index of ["leads_sales_eligible_active_idx", "leads_conversation_route_idx", "leads_conversation_intent_idx"]) {
+  assert(missingIntentGateResult.missingIndexes.includes(index), `Missing v10.2 index detection must report ${index}.`);
+}
+assert(
+  missingIntentGateResult.likelyMigrationFiles.includes("027_v10_2_intent_gate_conversation_safety.sql"),
+  "Missing v10.2 intent-gate schema should hint migration 027."
+);
 
 for (const table of ["project_accounts", "payment_records"]) {
   assert(requiredColumnsByTable[table].includes("is_test"), `Required ${table} columns must include is_test.`);

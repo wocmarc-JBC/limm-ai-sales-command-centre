@@ -40,7 +40,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
   const whatsapp = getWhatsAppRuntime();
   const calendar = getCalendarRuntime();
   const cleanupScanRequested = searchParams?.cleanup === "scan";
-  const cleanupLeads = cleanupScanRequested ? await listLeads({ includeInactive: true, includeTest: true }) : [];
+  const cleanupLeads = cleanupScanRequested ? await listLeads({ includeInactive: true, includeTest: true, includeNonSales: true }) : [];
   const cleanupMessages = cleanupScanRequested ? await Promise.all(cleanupLeads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const)) : [];
   const cleanupPlan = cleanupScanRequested ? buildTestLeadCleanupPlan(cleanupLeads, new Map(cleanupMessages)) : [];
   const cleanupFollowUps = cleanupScanRequested ? await listFollowUps({ includeTest: true, includeCompleted: true, status: "all", pageSize: 500, scanAll: true }) : [];

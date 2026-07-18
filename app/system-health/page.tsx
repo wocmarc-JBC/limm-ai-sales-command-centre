@@ -2,9 +2,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getCalendarRuntime } from "@/lib/calendar-config";
 import { getDataMode } from "@/lib/data/data-source";
+import { listAuditLogs } from "@/lib/data/audit-repository";
 import { getHandoffEmailRuntime } from "@/lib/handoff-email";
 import { getOpenAiWhatsAppReplyRuntime } from "@/lib/openai-whatsapp-config";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
+import { buildIntentGateObservabilitySnapshot } from "@/lib/whatsapp-intent-observability";
 
 function boolLabel(value: boolean) {
   return value ? "Yes" : "No";
@@ -47,10 +49,11 @@ export default async function SystemHealthPage() {
   const handoffEmail = getHandoffEmailRuntime();
   const openAiWhatsApp = getOpenAiWhatsAppReplyRuntime();
   const dataMode = getDataMode();
+  const intentMetrics = buildIntentGateObservabilitySnapshot(await listAuditLogs());
   const schemaRows = schemaSummaryRows();
   const schemaWarning = schemaRows.some(([, value]) => !["None reported", "Not run in this runtime"].includes(value) && value.length > 0);
   const rows = [
-    ["App version", process.env.npm_package_version ?? "5.0.0"],
+    ["App version", process.env.npm_package_version ?? "10.2.0"],
     ["Commit", process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "Not available locally"],
     ["Data mode", dataMode],
     ["Supabase mode", auth.mode],
@@ -119,6 +122,30 @@ export default async function SystemHealthPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+      <section className="mt-5 rounded-lg border border-command-cyan/35 bg-command-card p-6 shadow-premium">
+        <p className="text-xs uppercase tracking-[0.24em] text-command-cyan">v10.2 Conversation Safety</p>
+        <h2 className="mt-1 text-2xl font-semibold">Intent gate observability</h2>
+        <p className="mt-2 text-command-muted">Read-only metrics from the latest {intentMetrics.sampleSize} classified inbound audit events available to this session.</p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Sales eligible rate", `${intentMetrics.eligibleRatePercent}%`],
+            ["Vendor messages", intentMetrics.vendorCount],
+            ["Spam messages", intentMetrics.spamCount],
+            ["Unclear messages", intentMetrics.unclearCount],
+            ["Manual corrections", intentMetrics.manualCorrections],
+            ["Inferred false positives", intentMetrics.inferredFalsePositives],
+            ["Duplicate replies blocked", intentMetrics.duplicateRepliesBlocked],
+            ["Unrelated replies blocked", intentMetrics.unrelatedRepliesBlocked],
+            ["No-reply suppressions", intentMetrics.noReplySuppressions],
+            ["One-time vendor acknowledgements", intentMetrics.oneTimeVendorAcknowledgements]
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-xl border border-command-line bg-command-bg/55 p-4">
+              <p className="text-sm text-command-muted">{label}</p>
+              <p className="mt-1 text-2xl font-semibold text-command-text">{value}</p>
+            </div>
+          ))}
         </div>
       </section>
     </>

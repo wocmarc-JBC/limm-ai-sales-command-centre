@@ -1,3 +1,6 @@
+import type { ConversationIntent, ConversationRoute } from "@/lib/whatsapp-intent-gate";
+import type { LatestUnansweredQuestion } from "@/lib/whatsapp-conversation-safety";
+
 export type Division = "LIMM Works" | "Demo Works" | "Carpentry Works";
 
 export type LeadCategory = "Hot" | "Warm" | "Cold" | "Low Fit" | "Manager Review";
@@ -262,7 +265,7 @@ export interface Lead {
   needsMarcus?: boolean;
   followedUpAt?: string | null;
   followedUpBy?: string;
-  leadLevel?: "Gold Lead" | "Warm Lead" | "Cold Lead" | "Risk Lead" | "Spam/Test" | "Needs Marcus";
+  leadLevel?: "Gold Lead" | "Warm Lead" | "Cold Lead" | "Low Fit" | "Risk Lead" | "Spam/Test" | "Needs Marcus";
   conversationSummary?: string;
   missionCategory?: string;
   salesStage?: SalesStage;
@@ -297,6 +300,17 @@ export interface Lead {
   locationSource?: LocationSource;
   locationNotes?: string;
   intakeProfile?: LeadIntakeProfile;
+  conversationIntent?: ConversationIntent;
+  leadEligible?: boolean;
+  conversationRoute?: ConversationRoute;
+  intentConfidence?: number;
+  intentReasonCodes?: string[];
+  intentClassifierVersion?: string;
+  intentManualOverride?: ConversationIntent | null;
+  intentClassifiedAt?: string | null;
+  nonSalesAcknowledgedAt?: string | null;
+  latestUnansweredQuestion?: LatestUnansweredQuestion | null;
+  conversationSafetyState?: Record<string, unknown>;
 }
 
 export interface ProjectAccount {

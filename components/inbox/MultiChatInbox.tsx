@@ -29,6 +29,10 @@ export type MultiChatSummary = {
   displayName: string;
   phone: string;
   status: string;
+  conversationIntent: NonNullable<Lead["conversationIntent"]>;
+  conversationRoute: NonNullable<Lead["conversationRoute"]>;
+  leadEligible: boolean;
+  intentConfidence: number;
   botPaused: boolean;
   needsMarcus: boolean;
   propertyType: string;
@@ -46,6 +50,10 @@ export type MultiChatSummary = {
 };
 
 export type MultiChatContext = {
+  conversationIntent: NonNullable<Lead["conversationIntent"]>;
+  conversationRoute: NonNullable<Lead["conversationRoute"]>;
+  leadEligible: boolean;
+  intentConfidence: number;
   propertyType: string;
   scopeSummary: string;
   budgetExpectation: string;
@@ -401,9 +409,16 @@ const ChatRow = memo(function ChatRow({
       </div>
       <p className="mt-2 line-clamp-2 text-sm leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview)}</p>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>
-          {chatStatusLabel(chat)}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chatStatusTone(chat)}`}>
+            {chatStatusLabel(chat)}
+          </span>
+          {!chat.leadEligible ? (
+            <span className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-2 py-0.5 text-[10px] font-semibold text-command-cyan">
+              {humanize(chat.conversationIntent)}
+            </span>
+          ) : null}
+        </div>
         {chat.floorPlanReceived || chat.sitePhotosReceived ? (
           <span className="rounded-full border border-command-green/35 bg-command-green/10 px-2 py-0.5 text-[10px] text-command-green">
             Files
@@ -500,7 +515,7 @@ function ReplyComposer({
 
   useEffect(() => {
     setAiDraft("");
-  }, [leadId]);
+  }, [leadId, conversation.context.leadEligible]);
 
   useEffect(() => {
     if (!draftSeed?.text) return;
@@ -630,40 +645,48 @@ function ReplyComposer({
 
   return (
     <div className="border-b border-command-line bg-command-panel/95 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] backdrop-blur">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {quickReplies.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            onClick={() => insertQuickReply(item.text)}
-            className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-xs font-semibold text-command-muted transition hover:border-command-gold/60 hover:bg-command-gold/10 hover:text-command-text"
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-command-cyan/20 bg-command-bg/55 px-3 py-2">
-        <p className="text-xs leading-5 text-command-muted">Draft only. Marcus must review, edit, and send manually.</p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setAiDraft(buildAiDraft(conversation))}
-            className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-3 py-1.5 text-xs font-semibold text-command-cyan transition hover:bg-command-cyan/15"
-          >
-            Generate AI Draft
-          </button>
-          {aiDraft ? (
-            <button
-              type="button"
-              onClick={() => setReply(aiDraft)}
-              className="rounded-full border border-command-gold/60 bg-command-gold/12 px-3 py-1.5 text-xs font-semibold text-command-gold transition hover:bg-command-gold/18"
-            >
-              Use draft
-            </button>
-          ) : null}
+      {conversation.context.leadEligible ? (
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {quickReplies.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => insertQuickReply(item.text)}
+                className="rounded-full border border-command-line bg-command-bg/70 px-3 py-1.5 text-xs font-semibold text-command-muted transition hover:border-command-gold/60 hover:bg-command-gold/10 hover:text-command-text"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-command-cyan/20 bg-command-bg/55 px-3 py-2">
+            <p className="text-xs leading-5 text-command-muted">Draft only. Marcus must review, edit, and send manually.</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setAiDraft(buildAiDraft(conversation))}
+                className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-3 py-1.5 text-xs font-semibold text-command-cyan transition hover:bg-command-cyan/15"
+              >
+                Generate AI Draft
+              </button>
+              {aiDraft ? (
+                <button
+                  type="button"
+                  onClick={() => setReply(aiDraft)}
+                  className="rounded-full border border-command-gold/60 bg-command-gold/12 px-3 py-1.5 text-xs font-semibold text-command-gold transition hover:bg-command-gold/18"
+                >
+                  Use draft
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {aiDraft ? <p className="mb-3 max-h-24 overflow-y-auto rounded-xl border border-command-line bg-command-bg/55 p-3 text-sm leading-6 text-command-muted">{aiDraft}</p> : null}
+        </>
+      ) : (
+        <div className="mb-3 rounded-xl border border-command-cyan/25 bg-command-cyan/5 px-3 py-2 text-xs leading-5 text-command-muted">
+          Non-sales route. Sales quick replies and AI drafting are disabled; operators can still write a manual reply when needed.
         </div>
-      </div>
-      {aiDraft ? <p className="mb-3 max-h-24 overflow-y-auto rounded-xl border border-command-line bg-command-bg/55 p-3 text-sm leading-6 text-command-muted">{aiDraft}</p> : null}
+      )}
       <form ref={formRef} onSubmit={handleSubmit}>
         <label htmlFor="manual_reply_body" className="sr-only">Type WhatsApp reply</label>
         <div className="flex gap-3">
@@ -725,8 +748,8 @@ const LeadContextPanel = memo(function LeadContextPanel({
     <aside className="border-t border-command-line bg-command-panel2/95 xl:border-l xl:border-t-0">
       <div className="flex items-center justify-between border-b border-command-line px-4 py-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Lead Context</p>
-          <p className="mt-1 text-base font-semibold text-command-text">Sales details</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-command-gold">Conversation Context</p>
+          <p className="mt-1 text-base font-semibold text-command-text">{context.leadEligible ? "Sales details" : "Non-sales routing"}</p>
         </div>
         <button
           type="button"
@@ -746,6 +769,12 @@ const LeadContextPanel = memo(function LeadContextPanel({
           </div>
           <p className="mt-3 text-lg font-semibold text-command-text">{chat.displayName}</p>
           <p className="mt-1 text-sm text-command-muted">{chat.phone || "Phone pending"}</p>
+          <dl className="mt-4 space-y-2 border-t border-command-line pt-3 text-sm">
+            <div className="flex justify-between gap-3"><dt className="text-command-muted">Intent</dt><dd className="text-right text-command-text">{humanize(context.conversationIntent)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-command-muted">Route</dt><dd className="text-right text-command-text">{humanize(context.conversationRoute)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-command-muted">Sales eligible</dt><dd className="text-right text-command-text">{context.leadEligible ? "Yes" : "No"}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-command-muted">Confidence</dt><dd className="text-right text-command-text">{Math.round(context.intentConfidence * 100)}%</dd></div>
+          </dl>
         </div>
 
         <div className="mt-4 rounded-2xl border border-command-gold/35 bg-command-gold/10 p-4">
@@ -764,7 +793,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
         ) : null}
 
         <div className="mt-4 grid gap-3">
-          <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+          {context.leadEligible ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Project basics</p>
             <dl className="mt-3 space-y-3 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Status</dt><dd className="text-right text-command-text">{conversation.lead.status}</dd></div>
@@ -775,18 +804,18 @@ const LeadContextPanel = memo(function LeadContextPanel({
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Completeness</dt><dd className="text-right text-command-text">{context.infoCompletenessScore}%</dd></div>
             </dl>
             <p className="mt-3 text-sm leading-6 text-command-text">{context.scopeSummary || "Scope pending"}</p>
-          </section>
+          </section> : null}
 
-          <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+          {context.leadEligible ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Files / photos</p>
             <dl className="mt-3 space-y-3 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Floor plan</dt><dd className="text-right text-command-text">{context.floorPlanStatus}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-command-muted">Photos</dt><dd className="text-right text-command-text">{context.sitePhotosStatus}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-command-muted">References</dt><dd className="text-right text-command-text">{context.referenceImagesStatus}</dd></div>
             </dl>
-          </section>
+          </section> : null}
 
-          {context.missingFields.length || context.conflictFields.length ? (
+          {context.leadEligible && (context.missingFields.length || context.conflictFields.length) ? (
             <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Lead Facts</p>
               {context.missingFields.length ? (
@@ -798,10 +827,10 @@ const LeadContextPanel = memo(function LeadContextPanel({
             </section>
           ) : null}
 
-          <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
+          {context.leadEligible ? <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Appointment</p>
             <p className="mt-2 text-sm leading-6 text-command-text">{context.appointmentPreference}</p>
-          </section>
+          </section> : null}
 
           <section className="rounded-2xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-command-muted">Notes</p>
@@ -812,7 +841,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
         <details className="mt-4 rounded-xl border border-command-line bg-command-bg/55 p-4">
           <summary className="cursor-pointer text-sm font-semibold text-command-text">Lead Actions</summary>
           <div className="mt-4 grid gap-2 text-sm">
-            <form action={markBossApprovalNeededAction}>
+            {context.leadEligible ? <><form action={markBossApprovalNeededAction}>
               <input type="hidden" name="lead_id" value={conversation.lead.id} />
               <button className="w-full rounded-md border border-command-gold/60 bg-command-gold/12 px-3 py-2 font-semibold text-command-gold transition hover:bg-command-gold/18" type="submit">
                 Approve Reply
@@ -837,7 +866,7 @@ const LeadContextPanel = memo(function LeadContextPanel({
               <button className="w-full rounded-md border border-command-amber/50 bg-command-amber/10 px-3 py-2 font-semibold text-command-amber transition hover:bg-command-amber/15" type="submit">
                 Mark waiting for client
               </button>
-            </form>
+            </form></> : null}
             {conversation.lead.botPaused ? (
               <form action={resumeBotForLeadAction}>
                 <input type="hidden" name="lead_id" value={conversation.lead.id} />

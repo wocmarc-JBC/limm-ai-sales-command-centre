@@ -54,6 +54,7 @@ import {
   requestAppointmentReview,
   restoreLead,
   resumeBotForLead,
+  setLeadConversationIntentOverride,
   softDeleteLead,
   takeOverLead,
   updateLeadSalesTracking,
@@ -95,6 +96,11 @@ import { getQaWorkflowTestEligibility, qaWorkflowSafetyMetadata } from "@/lib/qa
 import { currentMonthKey, defaultMonthlyTarget } from "@/lib/sales-collection";
 import { setShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { getProductionLeadVisibilityReasons } from "@/lib/production-visibility";
+import {
+  WHATSAPP_CONVERSATION_INTENTS,
+  isSalesEligibleLead,
+  type ConversationIntent
+} from "@/lib/whatsapp-intent-gate";
 import { buildTestFollowUpCleanupPlan, buildTestLeadCleanupPlan, isProtectedLead } from "@/lib/test-lead-cleanup";
 import type { Permission } from "@/lib/auth/roles";
 import type { AiDraftReviewStatus, ApprovalStatus, Division, FollowUpStatus, LeadCategory, LeadFileCategory, LeadStatus, QuotationReadinessRecord } from "@/lib/types";
@@ -1012,6 +1018,9 @@ export async function createQuotationPackageAction(formData: FormData) {
   const leadId = text(formData, "lead_id");
   const lead = await getLeadById(leadId);
   if (!lead) return;
+  if (!isSalesEligibleLead(lead)) {
+    redirectToQuotationFailure(leadId, "This conversation is routed outside the sales pipeline and cannot create a quotation package.");
+  }
 
   const actor = permission.auth.profile?.fullName ?? "Marcus";
   const role = permission.auth.profile?.role ?? "sales";
@@ -1443,6 +1452,24 @@ function revalidateLeadPaths(leadId: string) {
   revalidatePath("/audit-log");
 }
 
+export async function setLeadConversationIntentOverrideAction(formData: FormData) {
+  const permission = await requirePermission("update_leads");
+  if (!permission.ok) return;
+  const leadId = text(formData, "lead_id");
+  const requested = text(formData, "conversation_intent").trim();
+  if (requested && !WHATSAPP_CONVERSATION_INTENTS.includes(requested as ConversationIntent)) return;
+  const intent = requested ? requested as ConversationIntent : null;
+  await setLeadConversationIntentOverride(
+    leadId,
+    intent,
+    permission.auth.profile?.fullName ?? "Marcus"
+  );
+  revalidateLeadPaths(leadId);
+  revalidatePath("/followups");
+  revalidatePath("/quotation-readiness");
+  revalidatePath("/reports");
+}
+
 export async function archiveLeadAction(formData: FormData) {
   const leadId = text(formData, "lead_id");
   const permission = await requirePermission("soft_delete_leads");
@@ -1562,7 +1589,7 @@ export async function cleanupOldTestLeadsAction(formData: FormData) {
   const permission = await requirePermission(permissionName);
   if (!permission.ok) return;
 
-  const leads = await listLeads({ includeInactive: true, includeTest: true });
+  const leads = await listLeads({ includeInactive: true, includeTest: true, includeNonSales: true });
   const messages = await Promise.all(leads.map(async (lead) => [lead.id, await listLeadMessages(lead.id)] as const));
   const plan = buildTestLeadCleanupPlan(leads, new Map(messages), { hardDeleteTestData: mode === "hard_delete_soft_deleted" });
   const followUps = await listFollowUps({ includeTest: true, includeCompleted: true, status: "all", pageSize: 500, scanAll: true });
@@ -1615,7 +1642,7 @@ export async function softArchiveProductionNoiseRecordsAction(formData: FormData
   }
 
   const actor = permission.auth.profile?.fullName ?? "Marcus";
-  const leads = await listLeads({ includeInactive: true, includeTest: true });
+  const leads = await listLeads({ includeInactive: true, includeTest: true, includeNonSales: true });
   let archived = 0;
 
   for (const lead of leads) {
@@ -1653,7 +1680,7 @@ export async function dataHygieneCleanupAction(formData: FormData) {
   const actor = permission.auth.profile?.fullName ?? "Marcus";
   if (!selectedRefs.length) redirect("/data-hygiene?changed=0");
 
-  const leads = await listLeads({ includeInactive: true, includeTest: true });
+  const leads = await listLeads({ includeInactive: true, includeTest: true, includeNonSales: true });
   const payments = await listPaymentRecords({ includeTestDemo: true });
   const files = await listAllLeadFiles();
   const leadById = new Map(leads.map((lead) => [lead.id, lead]));

@@ -29,6 +29,10 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[]): M
     displayName: formatLeadDisplayName(lead),
     phone: lead.phone,
     status: lead.status,
+    conversationIntent: lead.conversationIntent ?? "genuine_new_renovation_lead",
+    conversationRoute: lead.conversationRoute ?? "sales_lead",
+    leadEligible: lead.leadEligible !== false,
+    intentConfidence: lead.intentConfidence ?? 0,
     botPaused: Boolean(lead.botPaused),
     needsMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded),
     propertyType: lead.propertyType,
@@ -60,7 +64,7 @@ export default async function WhatsAppInboxPage({
 
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
   const [leads, allFiles] = await Promise.all([
-    listLeads({ includeTest: showTestDemoRecords }),
+    listLeads({ includeTest: showTestDemoRecords, includeNonSales: true }),
     listAllLeadFiles()
   ]);
   const leadIds = leads.map((lead) => lead.id);
@@ -68,7 +72,7 @@ export default async function WhatsAppInboxPage({
   const activeLeadPool = leads.filter((lead) => hasWhatsAppContactOrMessages(
     lead,
     summaryMessagesByLead.get(lead.id) ?? []
-  ) && isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? []));
+  ) && (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? [])));
   const selectedLeadFromQuery = searchParams?.lead
     ? activeLeadPool.find((lead) => lead.id === searchParams.lead)
     : undefined;
@@ -105,6 +109,10 @@ export default async function WhatsAppInboxPage({
       summary,
       messages: orderedMessages,
       context: {
+        conversationIntent: lead.conversationIntent ?? "genuine_new_renovation_lead",
+        conversationRoute: lead.conversationRoute ?? "sales_lead",
+        leadEligible: lead.leadEligible !== false,
+        intentConfidence: lead.intentConfidence ?? 0,
         propertyType: facts.propertyType.value || "Not provided yet",
         scopeSummary: facts.scopeSummary.value || "Scope pending",
         budgetExpectation: facts.budgetExpectation.value || "Not collected yet",

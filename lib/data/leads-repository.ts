@@ -9,9 +9,37 @@ import { buildLeadFacts, leadFactsToLeadPatch } from "@/lib/lead-facts";
 import { buildQuoteApprovalGate, isQuoteSentPatch } from "@/lib/boss-ops";
 import { isProductionHiddenLead } from "@/lib/production-visibility";
 import { scoreTestLead } from "@/lib/test-lead-cleanup";
+import {
+  classifyConversationIntent,
+  isSalesEligibleLead,
+  type ConversationIntent,
+  type IntentGateDecision
+} from "@/lib/whatsapp-intent-gate";
+import type { LatestUnansweredQuestion } from "@/lib/whatsapp-conversation-safety";
 import type { Division, Lead, LeadCategory, LeadFile, LeadIntakeProfile, LeadMessage, LeadStatus } from "@/lib/types";
 
-type ListLeadsOptions = { includeInactive?: boolean; includeTest?: boolean };
+type ListLeadsOptions = { includeInactive?: boolean; includeTest?: boolean; includeNonSales?: boolean };
+
+const INTENT_GATE_ROW_COLUMNS = new Set([
+  "conversation_intent",
+  "lead_eligible",
+  "conversation_route",
+  "intent_confidence",
+  "intent_reason_codes",
+  "intent_classifier_version",
+  "intent_manual_override",
+  "intent_classified_at",
+  "non_sales_acknowledged_at",
+  "latest_unanswered_question",
+  "conversation_safety_state"
+]);
+
+function isMissingIntentGateColumnError(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  const detail = `${error.code ?? ""} ${error.message ?? ""}`;
+  return /PGRST204|42703|schema cache|column/i.test(detail) &&
+    [...INTENT_GATE_ROW_COLUMNS].some((column) => detail.includes(column));
+}
 
 export class ManualLeadCreateError extends Error {
   constructor(message = "Manual lead creation failed. No external message or booking was sent.") {
@@ -39,6 +67,7 @@ export type ManualLeadCreateInput = {
 
 function shouldShowLead(lead: Lead, options?: ListLeadsOptions) {
   if (!options?.includeInactive && (lead.deletedAt || lead.archivedAt || lead.isSpam)) return false;
+  if (!options?.includeNonSales && !isSalesEligibleLead(lead)) return false;
   if (!options?.includeTest && lead.isTest) return false;
   if (!options?.includeTest && scoreTestLead(lead).clearlyTest) return false;
   if (!options?.includeTest && isProductionHiddenLead(lead)) return false;
@@ -56,6 +85,13 @@ function leadPatchToRow(patch: Partial<Lead>, now: string) {
     updated_at: now
   };
   const optional: Array<[keyof Lead, string]> = [
+    ["propertyType", "property_type"],
+    ["serviceType", "service_type"],
+    ["scopeSummary", "scope_summary"],
+    ["leadScore", "lead_score"],
+    ["leadCategory", "lead_category"],
+    ["lastClientMessage", "last_client_message"],
+    ["preferredContactTime", "preferred_contact_time"],
     ["deletedAt", "deleted_at"],
     ["deletedBy", "deleted_by"],
     ["deleteReason", "delete_reason"],
@@ -109,7 +145,18 @@ function leadPatchToRow(patch: Partial<Lead>, now: string) {
     ["locationConfidence", "location_confidence"],
     ["locationSource", "location_source"],
     ["locationNotes", "location_notes"],
-    ["intakeProfile", "intake_profile"]
+    ["intakeProfile", "intake_profile"],
+    ["conversationIntent", "conversation_intent"],
+    ["leadEligible", "lead_eligible"],
+    ["conversationRoute", "conversation_route"],
+    ["intentConfidence", "intent_confidence"],
+    ["intentReasonCodes", "intent_reason_codes"],
+    ["intentClassifierVersion", "intent_classifier_version"],
+    ["intentManualOverride", "intent_manual_override"],
+    ["intentClassifiedAt", "intent_classified_at"],
+    ["nonSalesAcknowledgedAt", "non_sales_acknowledged_at"],
+    ["latestUnansweredQuestion", "latest_unanswered_question"],
+    ["conversationSafetyState", "conversation_safety_state"]
   ];
   for (const [key, column] of optional) {
     if (key in patch) row[column] = patch[key];
@@ -291,18 +338,36 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
 
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseAdminClient() ?? getSupabaseServerClient();
-    const { data, error } = await supabase!
+    const fullRow = leadPatchToRow(patch, now);
+    let { data, error } = await supabase!
       .from("leads")
-      .update(leadPatchToRow(patch, now))
+      .update(fullRow)
       .eq("id", id)
       .select("*")
       .maybeSingle();
 
+    if (
+      isMissingIntentGateColumnError(error) &&
+      Object.keys(fullRow).some((column) => INTENT_GATE_ROW_COLUMNS.has(column))
+    ) {
+      const compatibilityRow = Object.fromEntries(
+        Object.entries(fullRow).filter(([column]) => !INTENT_GATE_ROW_COLUMNS.has(column))
+      );
+      const retry = await supabase!
+        .from("leads")
+        .update(compatibilityRow)
+        .eq("id", id)
+        .select("*")
+        .maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (!error && data) {
       const after = mapLeadRow(data);
       await createAuditLog({
-        actorType: "boss",
-        actorName: "Marcus",
+        actorType: String(metadata.auditActorType ?? "boss"),
+        actorName: String(metadata.auditActorName ?? "Marcus"),
         action,
         entityType: "lead",
         entityId: id,
@@ -313,6 +378,7 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
       });
       return after;
     }
+    if (error) throw new Error(`Lead update failed: ${error.message}`);
   }
 
   const store = getMockStore();
@@ -321,8 +387,8 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
   store.leads[index] = { ...store.leads[index], ...patch, updatedAt: now };
   const after = store.leads[index];
   await createAuditLog({
-    actorType: "boss",
-    actorName: "Marcus",
+    actorType: String(metadata.auditActorType ?? "boss"),
+    actorName: String(metadata.auditActorName ?? "Marcus"),
     action,
     entityType: "lead",
     entityId: id,
@@ -334,12 +400,226 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
   return mockClone(after);
 }
 
+function intentGateIntakeProfile(
+  lead: Lead,
+  gate: IntentGateDecision,
+  latestUnansweredQuestion: LatestUnansweredQuestion | null,
+  classifiedAt: string,
+  safetyState: Record<string, unknown> = lead.conversationSafetyState ?? {}
+): LeadIntakeProfile {
+  return {
+    ...(lead.intakeProfile ?? {}),
+    trace: {
+      ...(lead.intakeProfile?.trace ?? {}),
+      intentGate: {
+        conversationIntent: gate.conversationIntent,
+        primaryIntent: gate.primaryIntent,
+        leadEligible: gate.leadEligible,
+        salesEligible: gate.salesEligible,
+        conversationRoute: gate.conversationRoute,
+        confidence: gate.confidence,
+        reasonCodes: gate.reasonCodes,
+        autoReplyPolicy: gate.autoReplyPolicy,
+        classifierVersion: gate.classifierVersion,
+        ruleVersion: gate.ruleVersion,
+        manualOverride: lead.intentManualOverride ?? null,
+        manualOverrideApplied: gate.manualOverrideApplied,
+        classifiedAt,
+        classificationLatencyMs: gate.classificationLatencyMs,
+        latestUnansweredQuestion,
+        nonSalesAcknowledgedAt: lead.nonSalesAcknowledgedAt ?? null,
+        conversationSafetyState: safetyState
+      }
+    }
+  };
+}
+
+export async function updateConversationRouting(
+  lead: Lead,
+  gate: IntentGateDecision,
+  latestUnansweredQuestion: LatestUnansweredQuestion | null,
+  metadata: Record<string, unknown> = {}
+) {
+  const classifiedAt = new Date().toISOString();
+  const provisional = lead.serviceType === "conversation_pending_classification" || lead.conversationRoute === "intent_review";
+  const salesPatch: Partial<Lead> = gate.leadEligible && provisional
+    ? {
+        serviceType: "initial_project_review",
+        leadScore: 25,
+        leadCategory: "Cold",
+        status: "New Enquiry",
+        missingInfo: ["property_type", "scope", "floor_plan", "site_photos"],
+        aiRecommendedNextAction: "Ask only for the next useful renovation detail before project review.",
+        leadLevel: "Cold Lead",
+        missionCategory: "Sales Follow-Up"
+      }
+    : !gate.leadEligible && provisional
+      ? {
+          leadScore: 0,
+          leadCategory: "Low Fit",
+          status: "Not Suitable",
+          missingInfo: [],
+          quotationReadiness: 0,
+          appointmentReadiness: 0,
+          aiRecommendedNextAction: `Route conversation to ${gate.conversationRoute.replace(/_/g, " ")}; keep it out of sales queues.`,
+          leadLevel: "Low Fit",
+          missionCategory: `Conversation: ${gate.conversationRoute.replace(/_/g, " ")}`
+        }
+      : {};
+  const intakeProfile = intentGateIntakeProfile(lead, gate, latestUnansweredQuestion, classifiedAt);
+
+  return updateLead(
+    lead.id,
+    {
+      ...salesPatch,
+      conversationIntent: gate.conversationIntent,
+      leadEligible: gate.leadEligible,
+      conversationRoute: gate.conversationRoute,
+      intentConfidence: gate.confidence,
+      intentReasonCodes: gate.reasonCodes,
+      intentClassifierVersion: gate.classifierVersion,
+      intentManualOverride: lead.intentManualOverride ?? null,
+      intentClassifiedAt: classifiedAt,
+      latestUnansweredQuestion,
+      conversationSafetyState: lead.conversationSafetyState ?? {},
+      intakeProfile
+    },
+    "whatsapp_conversation_routed",
+    "WhatsApp conversation classified and routed before the renovation sales brain.",
+    {
+      auditActorType: "system",
+      auditActorName: "WhatsApp Intent Gate",
+      conversationIntent: gate.conversationIntent,
+      leadEligible: gate.leadEligible,
+      conversationRoute: gate.conversationRoute,
+      confidence: gate.confidence,
+      reasonCodes: gate.reasonCodes,
+      classifierVersion: gate.classifierVersion,
+      ruleVersion: gate.ruleVersion,
+      manualOverride: lead.intentManualOverride ?? null,
+      manualOverrideApplied: gate.manualOverrideApplied,
+      latestUnansweredQuestion: latestUnansweredQuestion?.text ?? "",
+      ...metadata
+    }
+  );
+}
+
+export async function setLeadConversationIntentOverride(
+  id: string,
+  intent: ConversationIntent | null,
+  actorName = "Marcus"
+) {
+  const lead = await getLeadById(id);
+  if (!lead) return null;
+  const overriddenLead: Lead = { ...lead, intentManualOverride: intent };
+  const gate = classifyConversationIntent({
+    currentMessageText: lead.lastClientMessage,
+    currentMessageType: "text",
+    recentMessages: [],
+    lead: overriddenLead,
+    botPaused: lead.botPaused
+  });
+  return updateConversationRouting(overriddenLead, gate, lead.latestUnansweredQuestion ?? null, {
+    auditActorType: "boss",
+    auditActorName: actorName,
+    manualIntentCorrection: true,
+    previousIntent: lead.conversationIntent ?? "",
+    requestedOverride: intent ?? "cleared"
+  });
+}
+
+export async function recordConversationSafetyOutcome(input: {
+  lead: Lead;
+  providerMessageId: string;
+  conversationIntent: IntentGateDecision["conversationIntent"];
+  acknowledgementIntent?: IntentGateDecision["conversationIntent"] | null;
+  replySent?: boolean;
+  semanticDuplicateBlocked?: boolean;
+  unrelatedReplyBlocked?: boolean;
+  noReplySafetySuppression?: boolean;
+  replySignature?: string;
+  suppressionReason?: string;
+}) {
+  const latestLead = await getLeadById(input.lead.id) ?? input.lead;
+  const previousState = latestLead.conversationSafetyState ?? {};
+  const acknowledgedIntents = Array.isArray(previousState.acknowledgedIntents)
+    ? previousState.acknowledgedIntents.map(String)
+    : [];
+  const acknowledgementSent = Boolean(input.replySent && input.acknowledgementIntent);
+  if (acknowledgementSent && input.acknowledgementIntent && !acknowledgedIntents.includes(input.acknowledgementIntent)) {
+    acknowledgedIntents.push(input.acknowledgementIntent);
+  }
+  const now = new Date().toISOString();
+  const count = (key: string, increment: boolean | undefined) => Number(previousState[key] ?? 0) + (increment ? 1 : 0);
+  const safetyState: Record<string, unknown> = {
+    ...previousState,
+    acknowledgedIntents,
+    duplicateRepliesBlocked: count("duplicateRepliesBlocked", input.semanticDuplicateBlocked),
+    unrelatedRepliesBlocked: count("unrelatedRepliesBlocked", input.unrelatedReplyBlocked),
+    noReplySafetySuppressions: count("noReplySafetySuppressions", input.noReplySafetySuppression),
+    lastReplySignature: input.replySignature || previousState.lastReplySignature || "",
+    lastSuppressionReason: input.suppressionReason ?? "",
+    lastProviderMessageId: input.providerMessageId,
+    updatedAt: now
+  };
+  const gate = {
+    ...(latestLead.intakeProfile?.trace?.intentGate as Record<string, unknown> | undefined),
+    conversationSafetyState: safetyState,
+    nonSalesAcknowledgedAt: acknowledgementSent ? now : latestLead.nonSalesAcknowledgedAt ?? null,
+    latestUnansweredQuestion: input.replySent ? null : latestLead.latestUnansweredQuestion ?? null
+  };
+  const intakeProfile: LeadIntakeProfile = {
+    ...(latestLead.intakeProfile ?? {}),
+    trace: {
+      ...(latestLead.intakeProfile?.trace ?? {}),
+      intentGate: gate
+    }
+  };
+
+  return updateLead(
+    latestLead.id,
+    {
+      nonSalesAcknowledgedAt: acknowledgementSent ? now : latestLead.nonSalesAcknowledgedAt ?? null,
+      latestUnansweredQuestion: input.replySent ? null : latestLead.latestUnansweredQuestion ?? null,
+      conversationSafetyState: safetyState,
+      intakeProfile
+    },
+    "whatsapp_conversation_safety_outcome",
+    "WhatsApp conversation safety outcome recorded.",
+    {
+      auditActorType: "system",
+      auditActorName: "WhatsApp Conversation Safety",
+      providerMessageId: input.providerMessageId,
+      conversationIntent: input.conversationIntent,
+      acknowledgementSent,
+      semanticDuplicateBlocked: Boolean(input.semanticDuplicateBlocked),
+      unrelatedReplyBlocked: Boolean(input.unrelatedReplyBlocked),
+      noReplySafetySuppression: Boolean(input.noReplySafetySuppression),
+      suppressionReason: input.suppressionReason ?? ""
+    }
+  );
+}
+
 export async function updateLeadStatus(id: string, status: LeadStatus) {
   return updateLead(id, { status }, "lead_status_updated", `Lead status updated to ${status}.`);
 }
 
 export async function updateLeadSalesTracking(id: string, patch: Partial<Lead>, reason = "Sales tracking updated.") {
   const lead = await getLeadById(id);
+  if (lead && !isSalesEligibleLead(lead)) {
+    await createAuditLog({
+      actorType: "system",
+      actorName: "Intent Gate",
+      action: "non_sales_sales_tracking_blocked",
+      entityType: "lead",
+      entityId: id,
+      summary: "Sales tracking update blocked because the conversation is not sales eligible.",
+      beforeData: { conversationIntent: lead.conversationIntent, conversationRoute: lead.conversationRoute },
+      afterData: null,
+      metadata: { requestedFields: Object.keys(patch), reason }
+    });
+    return null;
+  }
   if (lead && isQuoteSentPatch(patch)) {
     const auditLogs = await listAuditLogs({ entityType: "lead", entityId: id });
     const gate = buildQuoteApprovalGate(lead, auditLogs);
@@ -491,6 +771,20 @@ export async function markLeadNotSuitable(id: string) {
 }
 
 export async function moveLeadToQuotationReadiness(id: string) {
+  const lead = await getLeadById(id);
+  if (lead && !isSalesEligibleLead(lead)) {
+    await createAuditLog({
+      actorType: "system",
+      actorName: "Intent Gate",
+      action: "non_sales_quotation_readiness_blocked",
+      entityType: "lead",
+      entityId: id,
+      summary: "Quotation readiness move blocked because the conversation is not sales eligible.",
+      beforeData: { conversationIntent: lead.conversationIntent, conversationRoute: lead.conversationRoute },
+      afterData: null
+    });
+    return null;
+  }
   return updateLead(
     id,
     { status: "Quotation Readiness", aiRecommendedNextAction: "Prepare quotation readiness pack for Marcus review." },

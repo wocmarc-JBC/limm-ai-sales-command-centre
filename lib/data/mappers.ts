@@ -14,7 +14,21 @@ import type {
   QuotationReadinessRecord
 } from "@/lib/types";
 
+function asRecord(value: unknown): Record<string, any> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, any> : {};
+}
+
+function intentGateStateFromRow(row: any) {
+  const intakeProfile = asRecord(row.intake_profile ?? row.intakeProfile);
+  const trace = asRecord(intakeProfile.trace);
+  return asRecord(trace.intentGate);
+}
+
 export function mapLeadRow(row: any): Lead {
+  const intentGate = intentGateStateFromRow(row);
+  const persistedEligibility = row.lead_eligible;
+  const traceEligibility = intentGate.leadEligible ?? intentGate.salesEligible;
+  const traceIsAuthoritative = Boolean(intentGate.classifierVersion) && !row.intent_classifier_version;
   return {
     id: row.id,
     clientName: row.client_name ?? "",
@@ -94,7 +108,30 @@ export function mapLeadRow(row: any): Lead {
     locationConfidence: row.location_confidence ?? "unknown",
     locationSource: row.location_source ?? "unknown",
     locationNotes: row.location_notes ?? "",
-    intakeProfile: row.intake_profile ?? row.intakeProfile ?? undefined
+    intakeProfile: row.intake_profile ?? row.intakeProfile ?? undefined,
+    conversationIntent: traceIsAuthoritative
+      ? intentGate.conversationIntent ?? intentGate.primaryIntent ?? "genuine_new_renovation_lead"
+      : row.conversation_intent ?? intentGate.conversationIntent ?? intentGate.primaryIntent ?? "genuine_new_renovation_lead",
+    leadEligible: traceIsAuthoritative && typeof traceEligibility === "boolean"
+      ? traceEligibility
+      : typeof persistedEligibility === "boolean"
+      ? persistedEligibility
+      : typeof traceEligibility === "boolean"
+        ? traceEligibility
+        : true,
+    conversationRoute: traceIsAuthoritative
+      ? intentGate.conversationRoute ?? "sales_lead"
+      : row.conversation_route ?? intentGate.conversationRoute ?? "sales_lead",
+    intentConfidence: Number(traceIsAuthoritative ? intentGate.confidence ?? 0 : row.intent_confidence ?? intentGate.confidence ?? 0),
+    intentReasonCodes: traceIsAuthoritative ? intentGate.reasonCodes ?? [] : row.intent_reason_codes ?? intentGate.reasonCodes ?? [],
+    intentClassifierVersion: row.intent_classifier_version ?? intentGate.classifierVersion ?? "",
+    intentManualOverride: row.intent_manual_override ?? intentGate.manualOverride ?? null,
+    intentClassifiedAt: row.intent_classified_at ?? intentGate.classifiedAt ?? null,
+    nonSalesAcknowledgedAt: row.non_sales_acknowledged_at ?? intentGate.nonSalesAcknowledgedAt ?? null,
+    latestUnansweredQuestion: row.latest_unanswered_question ?? intentGate.latestUnansweredQuestion ?? null,
+    conversationSafetyState: traceIsAuthoritative
+      ? intentGate.conversationSafetyState ?? {}
+      : row.conversation_safety_state ?? intentGate.conversationSafetyState ?? {}
   };
 }
 

@@ -217,18 +217,24 @@ for (const message of [
 ]) {
   const livePathDecision = decide(message, { previousMessages: priorCustomCarpentryReply });
   check(
-    `live path repeated short carpentry price stays carpentry: ${message}`,
+    `live path repeated short carpentry price keeps carpentry intent: ${message}`,
     livePathDecision.intent === "carpentry_demo_qa" &&
-      includesAll(livePathDecision.replyText, ["custom carpentry", "cabinet size", "photo of the area", "rough dimensions"]) &&
-      excludesAll(livePathDecision.replyText, shortCarpentryPriceForbidden),
-    `${livePathDecision.intent}: ${livePathDecision.replyText}`
+      livePathDecision.semanticDuplicateBlocked &&
+      !livePathDecision.shouldReply &&
+      livePathDecision.replyText === "",
+    JSON.stringify({
+      intent: livePathDecision.intent,
+      semanticDuplicateBlocked: livePathDecision.semanticDuplicateBlocked,
+      shouldReply: livePathDecision.shouldReply,
+      replyText: livePathDecision.replyText
+    })
   );
   check(
-    `live path repeated short carpentry price is not generic greeting: ${message}`,
-    !/dream home|what renovation works are you planning/i.test(livePathDecision.replyText),
-    livePathDecision.replyText
+    `live path repeated short carpentry price records v10.2 semantic suppression: ${message}`,
+    livePathDecision.intentionalNoReplyReason === "semantic_duplicate_reply" &&
+      livePathDecision.blackBoxTrace.final_send_result === "semantic_duplicate_blocked",
+    JSON.stringify(livePathDecision.blackBoxTrace.semanticDuplicateGuard)
   );
-  assertSafeReply(`live path ${message}`, livePathDecision.replyText);
 }
 
 const priorDemoContext = [

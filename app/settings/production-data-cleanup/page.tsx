@@ -34,7 +34,7 @@ export default async function ProductionDataCleanupPage({ searchParams }: { sear
     );
   }
 
-  const leads = await listLeads({ includeInactive: true, includeTest: true });
+  const leads = await listLeads({ includeInactive: true, includeTest: true, includeNonSales: true });
   const previewRows = leads
     .map((lead) => {
       const reasons = getProductionLeadVisibilityReasons(lead);
