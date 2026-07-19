@@ -15,3 +15,5 @@ The `client-files` bucket is private and production access uses short-lived sign
 ## Release gate
 
 Schema, application and browser checks must pass before deployment. A release does not claim disaster-recovery readiness until an independent storage target is configured and its first restore drill passes. Credentials belong in the deployment secret store, never source control.
+
+The current Vercel Hobby plan permits only daily cron frequency. The durable WhatsApp queue processes immediately with `after()` and uses a daily backlog sweep; move the worker to Vercel Queues or a Pro minute-level cron before claiming sub-minute retry recovery.
