@@ -500,11 +500,23 @@ const ChatRow = memo(function ChatRow({
             : "bg-transparent hover:bg-white/[0.04]"
       }`}
     >
-      <button
-        type="button"
-        onClick={() => selectionMode ? onToggleSelected(chat.id) : onSelect(chat.id)}
+      <a
+        href={selectionMode ? undefined : `/inbox?lead=${encodeURIComponent(chat.id)}`}
+        role={selectionMode ? "button" : undefined}
+        tabIndex={selectionMode ? 0 : undefined}
+        onClick={(event) => {
+          event.preventDefault();
+          if (selectionMode) onToggleSelected(chat.id);
+          else onSelect(chat.id);
+        }}
+        onKeyDown={(event) => {
+          if (!selectionMode || (event.key !== "Enter" && event.key !== " ")) return;
+          event.preventDefault();
+          onToggleSelected(chat.id);
+        }}
         aria-label={selectionMode ? `Select ${chat.displayName || chat.phone}` : `Open conversation with ${chat.displayName || chat.phone}`}
         aria-pressed={selectionMode ? selected : undefined}
+        aria-current={!selectionMode && active ? "page" : undefined}
         className={`flex min-h-[5.25rem] w-full items-start gap-3 px-3 py-3 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-command-gold ${canManageSpam && !selectionMode ? "pr-[3.75rem]" : ""}`}
       >
         {selectionMode ? (
@@ -536,7 +548,7 @@ const ChatRow = memo(function ChatRow({
         {chat.unreadCount > 0 ? (
           <span className="mt-6 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-command-gold px-1.5 text-[10px] font-bold text-black">{chat.unreadCount}</span>
         ) : null}
-      </button>
+      </a>
       {canManageSpam && !selectionMode ? (
         <button
           type="button"
@@ -2351,6 +2363,18 @@ export function MultiChatInbox({
                     Remove spam
                   </button>
                 ) : null}
+                <form action={activeConversation.lead.botPaused ? resumeBotForLeadAction : pauseBotForLeadAction}>
+                  <input type="hidden" name="lead_id" value={activeConversation.lead.id} />
+                  {!activeConversation.lead.botPaused ? <input type="hidden" name="reason" value="Paused from WhatsApp Sales Inbox header." /> : null}
+                  <button
+                    type="submit"
+                    data-testid="inbox-header-automation-control"
+                    title={activeConversation.lead.botPaused ? "Resume automatic replies for this conversation." : "Pause automatic replies for this conversation."}
+                    className={`hidden min-h-10 items-center rounded-xl border px-3 py-2 transition sm:inline-flex ${activeConversation.lead.botPaused ? "border-command-green/45 bg-command-green/10 text-command-green hover:bg-command-green/15" : "border-command-cyan/45 bg-command-cyan/10 text-command-cyan hover:bg-command-cyan/15"}`}
+                  >
+                    {activeConversation.lead.botPaused ? "Resume bot" : "Pause bot"}
+                  </button>
+                </form>
                 <button
                   ref={detailsButtonRef}
                   type="button"

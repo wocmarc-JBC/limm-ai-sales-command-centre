@@ -18,7 +18,7 @@ const health = read("app/api/whatsapp/health/route.ts");
 const webhook = read("app/api/whatsapp/webhook/route.ts");
 const migration = read("supabase/migrations/031_v11_1_1_whatsapp_persistence_recovery.sql");
 
-assert.equal(packageJson.version, "11.1.2");
+assert.equal(packageJson.version, "11.1.3");
 assert.ok(packageJson.scripts.build.indexOf("verify_production_schema_gate.mjs") < packageJson.scripts.build.indexOf("next build"), "Production schema gate must execute before Next.js build.");
 assert.ok(packageJson.scripts["verify:authenticated-release"]);
 assert.ok(packageJson.scripts["verify:deployed-production"]);
@@ -41,7 +41,7 @@ assert.match(blocked.stderr, /requires the Supabase URL and a server-only servic
 for (const marker of ["SUPABASE_TEST_EMAIL", "SUPABASE_TEST_PASSWORD", "verify_live_authenticated_actions.mjs", "authenticated-boss.spec.ts", 'QA_E2E_MODE: "0"']) {
   assert.ok(authGate.includes(marker), `Authenticated release gate missing ${marker}`);
 }
-assert.ok(deployedProof.includes("freshV1112RealInboundProofObserved"));
+assert.ok(deployedProof.includes("freshV1113RealOutboundProofObserved"));
 assert.ok(deployedProof.includes("whatsappProductionSafetyReady"));
 
 for (const marker of [
@@ -65,10 +65,10 @@ for (const marker of ["Boss-only recovery", "Recover to CRM — no send", "No cl
 assert.ok(operationsPage.includes("WhatsAppRecoveryPanel"));
 assert.ok(operationsPage.includes('auth.profile.role === "boss"'));
 for (const marker of [
-  'version: "v11_1_2_production_proof"', "productionSchemaDeploymentGateAvailable", "bossOnlyFailureRecoveryWorkspaceAvailable",
-  "freshV1112RealInboundProofObserved", "whatsappRecoveryProofSchemaReady"
+  'version: "v11_1_3_outbound_hotfix"', "productionSchemaDeploymentGateAvailable", "bossOnlyFailureRecoveryWorkspaceAvailable",
+  "freshV1112RealInboundProofObserved", "freshV1113RealOutboundProofObserved", "whatsappRecoveryProofSchemaReady"
 ]) assert.ok(health.includes(marker), `Production health missing ${marker}`);
-assert.ok(webhook.includes('releaseVersion: "11.1.2"'));
+assert.ok(webhook.includes('releaseVersion: "11.1.3"'));
 
 for (const marker of [
   "revoke all on table public.whatsapp_webhook_failures from public, anon, authenticated",
@@ -76,4 +76,4 @@ for (const marker of [
   "alter table public.whatsapp_webhook_failures enable row level security"
 ]) assert.ok(migration.includes(marker), `Service-only recovery table missing ${marker}`);
 
-console.log("PASS: v11.1.2 production schema gate, boss-only no-send recovery, proof telemetry, and authenticated QA gate checks passed.");
+console.log("PASS: v11.1.2 production schema gate, boss-only no-send recovery, proof telemetry, and authenticated QA foundations remain preserved.");

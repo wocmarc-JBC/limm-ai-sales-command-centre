@@ -88,8 +88,8 @@ export const dynamic = "force-dynamic";
 // uiVersion: "v10.6.0"
 // version: "v11_1_0_world_class_operations"
 // uiVersion: "v11.1.0"
-// version: "v11_1_2_production_proof"
-// uiVersion: "v11.1.2"
+// version: "v11_1_3_outbound_hotfix"
+// uiVersion: "v11.1.3"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -125,10 +125,10 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v11_1_2_production_proof",
+      version: "v11_1_3_outbound_hotfix",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v11.1.2",
+      uiVersion: "v11.1.3",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -152,13 +152,20 @@ export async function GET() {
       bossOnlyFailureRecoveryWorkspaceAvailable: true,
       noSendFailureRecoveryAvailable: true,
       authenticatedQaReleaseGateAvailable: true,
+      trustedWebhookLeadControlReadAvailable: true,
+      unexpectedNoSendTelemetryAvailable: true,
+      outboundTerminalProofRequired: true,
       whatsappRecoveryProofSchemaReady: whatsappProof.schemaReady,
       unresolvedPreservedInboundCount: whatsappProof.pendingFailureCount,
       recoveredInboundLast24hCount: whatsappProof.recoveredLast24hCount,
       lastPreservedInboundFailureAt: whatsappProof.lastFailureAt,
       lastPreservedInboundRecoveryAt: whatsappProof.lastRecoveryAt,
-      freshV1112RealInboundProofObserved: Boolean(whatsappProof.lastReleaseInboundAt),
-      freshV1112RealInboundProofAt: whatsappProof.lastReleaseInboundAt,
+      freshV1112RealInboundProofObserved: Boolean(whatsappProof.lastV1112InboundAt),
+      freshV1112RealInboundProofAt: whatsappProof.lastV1112InboundAt,
+      freshV1113RealInboundProofObserved: Boolean(whatsappProof.lastReleaseInboundAt),
+      freshV1113RealInboundProofAt: whatsappProof.lastReleaseInboundAt,
+      freshV1113RealOutboundProofObserved: Boolean(whatsappProof.lastReleaseOutboundAt),
+      freshV1113RealOutboundProofAt: whatsappProof.lastReleaseOutboundAt,
       whatsappProductionSafetyReady,
       whatsappProductionSafetyReason: !concurrencySafetyReady
         ? concurrencySafety.reason
@@ -666,10 +673,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v11_1_2_production_proof",
+      version: "v11_1_3_outbound_hotfix",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v11.1.2",
+      uiVersion: "v11.1.3",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -693,6 +700,9 @@ export async function GET() {
       bossOnlyFailureRecoveryWorkspaceAvailable: true,
       noSendFailureRecoveryAvailable: true,
       authenticatedQaReleaseGateAvailable: true,
+      trustedWebhookLeadControlReadAvailable: true,
+      unexpectedNoSendTelemetryAvailable: true,
+      outboundTerminalProofRequired: true,
       whatsappRecoveryProofSchemaReady: false,
       unresolvedPreservedInboundCount: 0,
       recoveredInboundLast24hCount: 0,
@@ -700,6 +710,10 @@ export async function GET() {
       lastPreservedInboundRecoveryAt: null,
       freshV1112RealInboundProofObserved: false,
       freshV1112RealInboundProofAt: null,
+      freshV1113RealInboundProofObserved: false,
+      freshV1113RealInboundProofAt: null,
+      freshV1113RealOutboundProofObserved: false,
+      freshV1113RealOutboundProofAt: null,
       whatsappProductionSafetyReady: false,
       whatsappProductionSafetyReason: "health_check_failed",
       intentGateAvailable: false,

@@ -21,7 +21,8 @@ const contract = {
     "conversation_intent", "lead_eligible", "conversation_route", "intent_confidence",
     "intent_reason_codes", "intent_classifier_version", "intent_manual_override",
     "intent_classified_at", "non_sales_acknowledged_at", "latest_unanswered_question",
-    "conversation_safety_state", "first_operator_response_at"
+    "conversation_safety_state", "first_operator_response_at", "bot_paused", "bot_paused_at",
+    "bot_paused_by", "bot_pause_reason", "needs_marcus"
   ],
   lead_messages: [
     "id", "lead_id", "direction", "channel", "body", "safe_to_send", "provider_message_id",

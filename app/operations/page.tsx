@@ -71,12 +71,13 @@ export default async function OperationsPage() {
           </div>
         </article>
       </section>
-      <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="WhatsApp production proof">
+      <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="WhatsApp production proof">
         {[
           ["Persistence contract", whatsappProof.schemaReady ? "Ready" : "Unavailable", whatsappProof.schemaReady],
           ["Unresolved preserved", whatsappProof.pendingFailureCount, whatsappProof.pendingFailureCount === 0],
           ["Recovered in 24h", whatsappProof.recoveredLast24hCount, true],
-          ["Fresh v11.1.2 inbound", whatsappProof.lastReleaseInboundAt ? "Observed" : "Awaiting inbound", Boolean(whatsappProof.lastReleaseInboundAt)]
+          ["Fresh v11.1.3 inbound", whatsappProof.lastReleaseInboundAt ? "Observed" : "Awaiting inbound", Boolean(whatsappProof.lastReleaseInboundAt)],
+          ["Fresh v11.1.3 outbound", whatsappProof.lastReleaseOutboundAt ? "Sent" : "Awaiting reply", Boolean(whatsappProof.lastReleaseOutboundAt)]
         ].map(([label, value, ok]) => (
           <article key={String(label)} className={`rounded-2xl border p-5 ${statusTone(Boolean(ok))}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.15em] opacity-80">{label}</p>

@@ -7,6 +7,7 @@ import { hashProviderMessageId } from "@/lib/operations/observability";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
 
 export const WHATSAPP_RECOVERY_RELEASE = "11.1.2";
+export const WHATSAPP_OUTBOUND_PROOF_RELEASE = "11.1.3";
 
 export type WhatsAppWebhookFailureSummary = {
   id: string;
@@ -30,7 +31,9 @@ export type WhatsAppProductionProofSnapshot = {
   recoveredLast24hCount: number;
   lastFailureAt: string | null;
   lastRecoveryAt: string | null;
+  lastV1112InboundAt: string | null;
   lastReleaseInboundAt: string | null;
+  lastReleaseOutboundAt: string | null;
 };
 
 function maskPhone(phone: string) {
@@ -209,12 +212,14 @@ export async function getWhatsAppProductionProofSnapshot(): Promise<WhatsAppProd
     recoveredLast24hCount: 0,
     lastFailureAt: null,
     lastRecoveryAt: null,
-    lastReleaseInboundAt: null
+    lastV1112InboundAt: null,
+    lastReleaseInboundAt: null,
+    lastReleaseOutboundAt: null
   };
   const admin = getSupabaseAdminClient();
   if (!admin) return empty;
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const [pending, recovered, latestFailure, latestRecovery, latestInbound] = await Promise.all([
+  const [pending, recovered, latestFailure, latestRecovery, latestV1112Inbound, latestReleaseInbound, latestReleaseOutbound] = await Promise.all([
     admin.from("whatsapp_webhook_failures").select("id", { count: "exact", head: true }).is("recovered_at", null),
     admin.from("whatsapp_webhook_failures").select("id", { count: "exact", head: true }).gte("recovered_at", since),
     admin.from("whatsapp_webhook_failures").select("last_failed_at").order("last_failed_at", { ascending: false }).limit(1).maybeSingle(),
@@ -227,16 +232,39 @@ export async function getWhatsAppProductionProofSnapshot(): Promise<WhatsAppProd
       .contains("metadata", { releaseVersion: WHATSAPP_RECOVERY_RELEASE })
       .order("created_at", { ascending: false })
       .limit(1)
+      .maybeSingle(),
+    admin.from("operational_trace_events")
+      .select("created_at")
+      .eq("event_name", "whatsapp_webhook")
+      .eq("stage", "completed")
+      .in("status", ["ok", "degraded"])
+      .contains("metadata", { releaseVersion: WHATSAPP_OUTBOUND_PROOF_RELEASE })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin.from("operational_trace_events")
+      .select("created_at")
+      .eq("event_name", "whatsapp_webhook")
+      .eq("stage", "completed")
+      .eq("status", "ok")
+      .contains("metadata", { releaseVersion: WHATSAPP_OUTBOUND_PROOF_RELEASE, outboundTerminalProof: true })
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle()
   ]);
-  if (pending.error || recovered.error || latestFailure.error || latestRecovery.error || latestInbound.error) return empty;
+  if (
+    pending.error || recovered.error || latestFailure.error || latestRecovery.error ||
+    latestV1112Inbound.error || latestReleaseInbound.error || latestReleaseOutbound.error
+  ) return empty;
   return {
     schemaReady: true,
     pendingFailureCount: pending.count ?? 0,
     recoveredLast24hCount: recovered.count ?? 0,
     lastFailureAt: latestFailure.data?.last_failed_at ? String(latestFailure.data.last_failed_at) : null,
     lastRecoveryAt: latestRecovery.data?.recovered_at ? String(latestRecovery.data.recovered_at) : null,
-    lastReleaseInboundAt: latestInbound.data?.created_at ? String(latestInbound.data.created_at) : null
+    lastV1112InboundAt: latestV1112Inbound.data?.created_at ? String(latestV1112Inbound.data.created_at) : null,
+    lastReleaseInboundAt: latestReleaseInbound.data?.created_at ? String(latestReleaseInbound.data.created_at) : null,
+    lastReleaseOutboundAt: latestReleaseOutbound.data?.created_at ? String(latestReleaseOutbound.data.created_at) : null
   };
 }
 

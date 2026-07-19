@@ -240,15 +240,30 @@ export async function POST(request: NextRequest) {
     }
 
     const first = results[0];
+    const terminalOutcomes = results.map((result) => result.terminalOutcome);
+    const unexpectedNoSendCount = terminalOutcomes.filter((outcome) => outcome === "unexpected_no_send").length;
+    const outboundSendFailedCount = terminalOutcomes.filter((outcome) => outcome === "outbound_send_failed").length;
+    const outboundTerminalProof = terminalOutcomes.includes("outbound_sent");
+    const completionDegraded = unexpectedNoSendCount > 0 || outboundSendFailedCount > 0;
     await recordOperationalEvent({
       traceId,
       leadId: first?.leadId,
       eventName: "whatsapp_webhook",
       stage: "completed",
-      status: results.some((result) => result.status === "auto_reply_failed") ? "degraded" : "ok",
+      status: completionDegraded ? "degraded" : "ok",
       durationMs: performance.now() - startedAt,
       providerMessageId: first?.providerMessageId,
-      metadata: { messageCount: results.length, firstStatus: first?.status || "none", releaseVersion: "11.1.2" }
+      metadata: {
+        messageCount: results.length,
+        firstStatus: first?.status || "none",
+        firstTerminalOutcome: first?.terminalOutcome || "none",
+        terminalOutcomes,
+        unexpectedNoSendCount,
+        outboundSendFailedCount,
+        externalSendAttempted: results.some((result) => result.externalSendAttempted),
+        outboundTerminalProof,
+        releaseVersion: "11.1.3"
+      }
     }).catch(() => false);
     if (results.length === 1 && first) {
       return NextResponse.json(autoReplyResponseFromResult(first), { headers: { "X-LIMM-Trace-Id": traceId } });
@@ -256,12 +271,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      results: results.map((result) => ({
-        providerMessageId: result.providerMessageId,
-        leadId: result.leadId,
-        status: result.status,
-        reason: result.reason
-      }))
+        results: results.map((result) => ({
+          providerMessageId: result.providerMessageId,
+          leadId: result.leadId,
+          status: result.status,
+          reason: result.reason,
+          terminalOutcome: result.terminalOutcome
+        }))
     }, { headers: { "X-LIMM-Trace-Id": traceId } });
   } catch (error) {
     const reason = safeReason(error);

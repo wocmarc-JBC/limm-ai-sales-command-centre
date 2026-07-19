@@ -101,7 +101,7 @@ export function InboxTeamWorkspace({
         return;
       }
       await refresh();
-      setNotice(action === "claim" ? "Conversation claimed." : "Conversation released to the team queue.");
+      setNotice(action === "claim" ? "Conversation assigned to you. Bot state unchanged." : "Conversation released to the team queue. Bot state unchanged.");
     } finally {
       setPending("");
     }
@@ -169,14 +169,16 @@ export function InboxTeamWorkspace({
               Enable alerts
             </button>
           ) : null}
+          <span className="hidden text-[10px] font-medium text-command-subtle 2xl:inline">Assignment only · does not pause bot</span>
           {!activeAssignment || mine ? (
             <button
               type="button"
               disabled={Boolean(pending)}
               onClick={() => void mutate(mine ? "release" : "claim")}
+              title={mine ? "Release this conversation to the team queue. Bot state is unchanged." : "Assign this conversation to yourself for 30 minutes. This does not pause the bot."}
               className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition disabled:opacity-50 ${mine ? "border-command-line text-command-muted hover:text-command-text" : "border-command-gold/45 bg-command-gold/10 text-command-gold hover:bg-command-gold/15"}`}
             >
-              {pending === "claim" ? "Claiming…" : pending === "release" ? "Releasing…" : mine ? "Release" : "Claim chat"}
+              {pending === "claim" ? "Assigning…" : pending === "release" ? "Releasing…" : mine ? "Release" : "Assign to me"}
             </button>
           ) : null}
           <button type="button" onClick={() => setNotesOpen((open) => !open)} aria-expanded={notesOpen} className="rounded-lg border border-command-line px-2.5 py-1.5 text-[11px] font-semibold text-command-muted transition hover:border-command-gold/40 hover:text-command-text">

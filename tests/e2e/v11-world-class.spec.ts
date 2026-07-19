@@ -44,8 +44,11 @@ test.describe("v11.1 world-class operator flow", () => {
       await existingRelease.click();
       await expect(team).toContainText("Unassigned team queue");
     }
-    await team.getByRole("button", { name: "Claim chat" }).click();
+    await expect(team).toContainText("Assignment only · does not pause bot");
+    await team.getByRole("button", { name: "Assign to me" }).click();
     await expect(team).toContainText("Owned by you");
+    await expect(team).toContainText("Bot state unchanged");
+    await expect(page.getByTestId("inbox-header-automation-control")).toBeVisible();
 
     await team.getByRole("button", { name: /^Notes/ }).click();
     const note = "QA collaboration note @QA Admin";
@@ -67,7 +70,7 @@ test.describe("v11.1 world-class operator flow", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/inbox", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("inbox-layout")).toHaveAttribute("data-mobile-pane", "queue");
-    await page.getByTestId("inbox-chat-row").first().getByRole("button", { name: /Open conversation with/ }).click();
+    await page.getByTestId("inbox-chat-row").first().getByRole("link", { name: /Open conversation with/ }).click();
     await expect(page.getByTestId("inbox-layout")).toHaveAttribute("data-mobile-pane", "chat");
     await expect(page.getByRole("button", { name: "Back to conversations" })).toBeVisible();
     await expectNoHorizontalScroll(page);

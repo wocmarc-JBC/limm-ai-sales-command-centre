@@ -15,11 +15,14 @@ import {
   upsertWhatsAppLead
 } from "@/lib/data/lead-messages-repository";
 import {
-  getLeadById,
   recordConversationSafetyOutcome,
   updateConversationRouting,
   updateLeadFactsFromEvidence
 } from "@/lib/data/leads-repository";
+import {
+  getWhatsAppLeadControlState,
+  type WhatsAppLeadControlState
+} from "@/lib/data/whatsapp-lead-control-repository";
 import {
   acquireWhatsAppConversationReplyLease,
   completeWhatsAppConversationReplyReservation,
@@ -55,6 +58,14 @@ import { validateWhatsAppAutoReply, WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY } from "@
 import { buildSilentCaptureNoteFromDecision } from "@/lib/whatsapp-silent-capture";
 import { evaluateWhatsAppReplyQuality } from "@/lib/ai-quality";
 import { recordAiQualityObservation } from "@/lib/data/team-inbox-repository";
+import type { Lead } from "@/lib/types";
+
+export type WhatsAppInboundTerminalOutcome =
+  | "outbound_sent"
+  | "outbound_send_failed"
+  | "intentional_no_send"
+  | "unexpected_no_send"
+  | "inbound_ignored";
 
 export type WhatsAppInboundHandleResult = {
   providerMessageId: string;
@@ -72,7 +83,20 @@ export type WhatsAppInboundHandleResult = {
     | "auto_reply_failed";
   reason: string;
   reply?: string;
+  terminalOutcome: WhatsAppInboundTerminalOutcome;
+  externalSendAttempted: boolean;
 };
+
+function applyLeadControlState(lead: Lead, control: WhatsAppLeadControlState): Lead {
+  return {
+    ...lead,
+    botPaused: control.botPaused,
+    botPausedAt: control.botPausedAt,
+    botPausedBy: control.botPausedBy,
+    botPauseReason: control.botPauseReason,
+    needsMarcus: control.needsMarcus
+  };
+}
 
 function tenMinutesAgoIso() {
   return new Date(Date.now() - 10 * 60 * 1000).toISOString();
@@ -246,7 +270,9 @@ export async function handleWhatsAppInboundMessage(
     return {
       providerMessageId,
       status: "ignored_disabled",
-      reason: "WHATSAPP_LIVE_INBOUND_ENABLED is false."
+      reason: "WHATSAPP_LIVE_INBOUND_ENABLED is false.",
+      terminalOutcome: "inbound_ignored",
+      externalSendAttempted: false
     };
   }
 
@@ -263,7 +289,9 @@ export async function handleWhatsAppInboundMessage(
       providerMessageId,
       leadId: duplicate.leadId,
       status: "ignored_duplicate",
-      reason: "Provider message id was already processed."
+      reason: "Provider message id was already processed.",
+      terminalOutcome: "inbound_ignored",
+      externalSendAttempted: false
     };
   }
 
@@ -272,7 +300,9 @@ export async function handleWhatsAppInboundMessage(
     return {
       providerMessageId,
       status: "ignored_own_number",
-      reason: "Inbound sender matches configured WhatsApp business number."
+      reason: "Inbound sender matches configured WhatsApp business number.",
+      terminalOutcome: "inbound_ignored",
+      externalSendAttempted: false
     };
   }
 
@@ -389,7 +419,9 @@ export async function handleWhatsAppInboundMessage(
       providerMessageId,
       leadId: lead.id,
       status: "auto_reply_disabled",
-      reason: "Intent routing could not be persisted; no auto-reply was sent."
+      reason: "Intent routing could not be persisted; no auto-reply was sent.",
+      terminalOutcome: "unexpected_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -495,7 +527,9 @@ export async function handleWhatsAppInboundMessage(
       providerMessageId,
       leadId: lead.id,
       status: "auto_reply_disabled",
-      reason: "Bot paused for this lead."
+      reason: "Bot paused for this lead.",
+      terminalOutcome: "intentional_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -511,7 +545,9 @@ export async function handleWhatsAppInboundMessage(
       providerMessageId,
       leadId: lead.id,
       status: "auto_reply_disabled",
-      reason: "WHATSAPP_TEST_AUTO_REPLY_ENABLED is false."
+      reason: "WHATSAPP_TEST_AUTO_REPLY_ENABLED is false.",
+      terminalOutcome: "intentional_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -533,7 +569,9 @@ export async function handleWhatsAppInboundMessage(
       providerMessageId,
       leadId: lead.id,
       status: "auto_reply_disabled",
-      reason: "Auto-reply requires either closed test mode or Marcus-approved live mode."
+      reason: "Auto-reply requires either closed test mode or Marcus-approved live mode.",
+      terminalOutcome: "unexpected_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -549,7 +587,9 @@ export async function handleWhatsAppInboundMessage(
       providerMessageId,
       leadId: lead.id,
       status: "auto_reply_disabled",
-      reason: "WhatsApp credentials missing."
+      reason: "WhatsApp credentials missing.",
+      terminalOutcome: "unexpected_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -583,7 +623,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_disabled",
       reason: "Conversation safety lease unavailable; no auto-reply was sent.",
-      reply: ""
+      reply: "",
+      terminalOutcome: "unexpected_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -610,7 +652,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_coalesced",
       reason: `Inbound message coalesced: ${replyLease.reason}.`,
-      reply: ""
+      reply: "",
+      terminalOutcome: "intentional_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -626,9 +670,9 @@ export async function handleWhatsAppInboundMessage(
     const latestPlanningInboundIdentity = latestPlanningInbound?.providerMessageId || latestPlanningInbound?.id || "";
     const currentInboundIdentity = providerMessageId || savedInboundMessage.id;
     if (latestPlanningInbound && latestPlanningInboundIdentity !== currentInboundIdentity) {
-      const latestLeadState = await getLeadById(lead.id);
-      if (!latestLeadState) throw new Error("Lead state unavailable while consolidating the inbound WhatsApp burst.");
-      lead = latestLeadState;
+      const latestLeadControl = await getWhatsAppLeadControlState(lead.id);
+      if (!latestLeadControl) throw new Error("Lead control state unavailable while consolidating the inbound WhatsApp burst.");
+      lead = applyLeadControlState(lead, latestLeadControl);
       replyInboundBody = latestPlanningInbound.body;
       replyInboundMessageType = typeof latestPlanningInbound.metadata?.messageType === "string"
         ? latestPlanningInbound.metadata.messageType
@@ -798,7 +842,9 @@ export async function handleWhatsAppInboundMessage(
         leadId: lead.id,
         status: "auto_reply_silent_capture",
         reason: "AI captured facts silently to avoid repeated replies.",
-        reply: ""
+        reply: "",
+        terminalOutcome: "intentional_no_send",
+        externalSendAttempted: false
       };
     }
 
@@ -842,7 +888,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_disabled",
       reason: decision.intentionalNoReplyReason || "Intentional no-reply.",
-      reply
+      reply,
+      terminalOutcome: "intentional_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -916,7 +964,9 @@ export async function handleWhatsAppInboundMessage(
         leadId: lead.id,
         status: "auto_reply_disabled",
         reason: "Semantic duplicate reply was safely suppressed.",
-        reply: ""
+        reply: "",
+        terminalOutcome: "intentional_no_send",
+        externalSendAttempted: false
       };
     }
     if (safety.ok) {
@@ -978,7 +1028,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_blocked",
       reason: safety.errors.join("; "),
-      reply
+      reply,
+      terminalOutcome: "intentional_no_send",
+      externalSendAttempted: false
     };
   }
   logWhatsApp("whatsapp_auto_reply_validation_passed", {
@@ -991,8 +1043,9 @@ export async function handleWhatsAppInboundMessage(
   });
 
   try {
-    const finalLeadState = await getLeadById(lead.id);
-    if (!finalLeadState) throw new Error("Lead state unavailable before WhatsApp send.");
+    const finalLeadControl = await getWhatsAppLeadControlState(lead.id);
+    if (!finalLeadControl) throw new Error("Lead control state unavailable before WhatsApp send.");
+    const finalLeadState = applyLeadControlState(lead, finalLeadControl);
     if (finalLeadState.botPaused) {
       logWhatsApp("whatsapp_final_human_takeover_guard_blocked", { providerMessageId, leadId: lead.id });
       await auditWhatsApp({
@@ -1014,7 +1067,9 @@ export async function handleWhatsAppInboundMessage(
         leadId: lead.id,
         status: "auto_reply_disabled",
         reason: "Human takeover became active before send.",
-        reply: ""
+        reply: "",
+        terminalOutcome: "intentional_no_send",
+        externalSendAttempted: false
       };
     }
   } catch (error) {
@@ -1035,7 +1090,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_disabled",
       reason: "Final human-takeover state could not be verified; no auto-reply was sent.",
-      reply: ""
+      reply: "",
+      terminalOutcome: "unexpected_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -1066,7 +1123,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_disabled",
       reason: "Final conversation state could not be verified; no auto-reply was sent.",
-      reply: ""
+      reply: "",
+      terminalOutcome: "unexpected_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -1102,7 +1161,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_coalesced",
       reason: "Newer inbound messages arrived during planning; stale reply suppressed.",
-      reply: ""
+      reply: "",
+      terminalOutcome: "intentional_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -1132,7 +1193,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_disabled",
       reason: "Final pre-send semantic duplicate reply was safely suppressed.",
-      reply: ""
+      reply: "",
+      terminalOutcome: "intentional_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -1213,7 +1276,9 @@ export async function handleWhatsAppInboundMessage(
         leadId: lead.id,
         status: "auto_reply_coalesced",
         reason: `Atomic reply reservation not granted: ${reservation.reason}.`,
-        reply: ""
+        reply: "",
+        terminalOutcome: "intentional_no_send",
+        externalSendAttempted: false
       };
     }
     replyReservationId = reservation.reservationId;
@@ -1248,7 +1313,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_disabled",
       reason: "Atomic reply reservation unavailable; no auto-reply was sent.",
-      reply: ""
+      reply: "",
+      terminalOutcome: "unexpected_no_send",
+      externalSendAttempted: false
     };
   }
 
@@ -1310,7 +1377,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_sent",
       reason: "WhatsApp auto-reply sent after safety validation.",
-      reply
+      reply,
+      terminalOutcome: "outbound_sent",
+      externalSendAttempted: true
     };
   } catch (error) {
     const sendError = safeSendErrorMetadata(error);
@@ -1358,7 +1427,9 @@ export async function handleWhatsAppInboundMessage(
         leadId: lead.id,
         status: "auto_reply_sent",
         reason: "WhatsApp auto-reply was sent, but post-send persistence needs operator review.",
-        reply
+        reply,
+        terminalOutcome: "outbound_sent",
+        externalSendAttempted: true
       };
     }
     try {
@@ -1446,7 +1517,9 @@ export async function handleWhatsAppInboundMessage(
       leadId: lead.id,
       status: "auto_reply_failed",
       reason: error instanceof Error ? error.message : "Unknown WhatsApp send failure",
-      reply
+      reply,
+      terminalOutcome: "outbound_send_failed",
+      externalSendAttempted: true
     };
   }
   } finally {
