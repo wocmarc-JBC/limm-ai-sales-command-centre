@@ -1,0 +1,72 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const migration = read("supabase/migrations/20260719160109_v11_3_0_reliability_disaster_recovery.sql");
+const webhook = read("app/api/whatsapp/webhook/route.ts");
+const worker = read("lib/whatsapp-inbound-worker.ts");
+const workerRoute = read("app/api/operations/whatsapp-jobs/route.ts");
+const schedulerAuth = read("lib/reliability-scheduler-auth.ts");
+const jobs = read("lib/data/whatsapp-inbound-jobs-repository.ts");
+const retryPolicy = read("lib/whatsapp-job-reliability.ts");
+const recovery = read("lib/data/client-file-recovery-repository.ts");
+const fileRepository = read("lib/data/lead-files-repository.ts");
+const health = read("app/api/whatsapp/health/route.ts");
+const operations = read("components/operations/ReliabilityRecoveryPanel.tsx");
+const packageJson = JSON.parse(read("package.json"));
+
+assert.equal(packageJson.version, "11.3.0");
+assert.match(migration, /create extension if not exists pg_cron with schema pg_catalog/);
+assert.match(migration, /create extension if not exists pg_net/);
+assert.match(migration, /job\.status = 'processing'[\s\S]*job\.locked_at < now\(\) - interval '5 minutes'/);
+assert.match(migration, /whatsapp_inbound_job_attempts/);
+assert.match(migration, /lease_recovered boolean not null default false/);
+assert.match(migration, /complete_whatsapp_inbound_job/);
+assert.match(migration, /retry_whatsapp_inbound_job/);
+assert.match(migration, /requeue_whatsapp_inbound_job/);
+assert.match(migration, /verify_limm_scheduler_token/);
+assert.match(migration, /vault\.decrypted_secrets/);
+assert.match(migration, /revoke all on function public\.verify_limm_scheduler_token\(text\) from public, anon, authenticated/);
+assert.match(migration, /dispatch_whatsapp_worker/);
+assert.match(migration, /dispatch_client_file_integrity/);
+assert.match(migration, /limm-reliability-retention/);
+assert.match(migration, /client_file_recovery_runs/);
+assert.match(migration, /client_file_recovery_items/);
+assert.match(migration, /alter table public\.client_file_recovery_runs enable row level security/);
+assert.match(migration, /grant select, insert, update, delete on table public\.client_file_recovery_runs to service_role/);
+
+assert.match(webhook, /enqueueWhatsAppInboundMessages/);
+assert.doesNotMatch(webhook, /handleWhatsAppInboundMessage/);
+assert.match(worker, /handleWhatsAppInboundMessage\(job\.message\)/);
+assert.match(worker, /dead_lettered/);
+assert.match(worker, /manualRequeueCount/);
+assert.match(workerRoute, /authorizeReliabilityScheduler/);
+assert.match(workerRoute, /recordWhatsAppWorkerHeartbeat/);
+assert.match(workerRoute, /releaseVersion: "11\.3\.0"/);
+assert.match(schedulerAuth, /CRON_SECRET/);
+assert.match(schedulerAuth, /verifyWhatsAppSchedulerToken/);
+assert.match(jobs, /get_whatsapp_queue_health/);
+assert.match(jobs, /listWhatsAppDeadLetters/);
+assert.match(jobs, /requeueWhatsAppDeadLetter/);
+assert.match(retryPolicy, /WHATSAPP_JOB_ATTEMPTS_PER_CYCLE = 8/);
+assert.match(retryPolicy, /WHATSAPP_JOB_MAX_RETRY_DELAY_SECONDS = 5 \* 60/);
+
+assert.match(fileRepository, /createHash\("sha256"\)\.update\(input\.bytes\)\.digest\("hex"\)/);
+assert.match(fileRepository, /integrity_status: "verified"/);
+assert.match(recovery, /@aws-sdk\/client-s3/);
+assert.match(recovery, /objects\/\$\{inspection\.observedSha\.slice\(0, 2\)\}\/\$\{inspection\.observedSha\}/);
+assert.match(recovery, /DAILY_MANIFEST_RETENTION = 35/);
+assert.match(recovery, /MONTHLY_MANIFEST_RETENTION = 12/);
+assert.match(recovery, /DR_S3_RESTORE_BUCKET/);
+assert.match(recovery, /restore-drills\/\$\{runId\}/);
+assert.match(recovery, /DeleteObjectCommand/);
+assert.doesNotMatch(recovery, /NEXT_PUBLIC_DR_|NEXT_PUBLIC_S3_/);
+
+assert.match(health, /v11_3_0_reliability_disaster_recovery/);
+assert.match(health, /clientFileDisasterRecoveryReady/);
+assert.match(health, /expiredProcessingLeaseRecoveryAvailable: true/);
+assert.match(operations, /Dead-letter queue/);
+assert.match(operations, /same-project Storage is not counted as a backup/);
+assert.match(read(".github/workflows/release-gate.yml"), /npm run test:v11\.3\.0/);
+
+console.log("PASS v11.3 minute recovery, expired-lease reclaim, dead letters, checksums, offsite manifests, and restore-drill gate");

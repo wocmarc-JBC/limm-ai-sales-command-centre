@@ -11,6 +11,8 @@ import { getWhatsAppConversationConcurrencyHealth } from "@/lib/data/whatsapp-co
 import { getSupabasePublicKey } from "@/lib/data/data-source";
 import { hasSupabaseAdminEnv } from "@/lib/data/supabase-admin";
 import { getWhatsAppProductionProofSnapshot } from "@/lib/data/whatsapp-webhook-failures-repository";
+import { getWhatsAppQueueHealth } from "@/lib/data/whatsapp-inbound-jobs-repository";
+import { getClientFileRecoverySnapshot } from "@/lib/data/client-file-recovery-repository";
 import { getOperationsSloSnapshot } from "@/lib/operations/observability";
 
 export const runtime = "nodejs";
@@ -90,6 +92,8 @@ export const dynamic = "force-dynamic";
 // uiVersion: "v11.1.0"
 // version: "v11_1_3_outbound_hotfix"
 // uiVersion: "v11.1.3"
+// version: "v11_3_0_reliability_disaster_recovery"
+// reliabilityVersion: "v11.3.0"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -111,10 +115,12 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     const clientFilesStorage = getClientFilesStorageRuntime();
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
-    const [concurrencySafety, operations, whatsappProof] = await Promise.all([
+    const [concurrencySafety, operations, whatsappProof, queueReliability, fileRecovery] = await Promise.all([
       getWhatsAppConversationConcurrencyHealth(),
       getOperationsSloSnapshot(),
-      getWhatsAppProductionProofSnapshot()
+      getWhatsAppProductionProofSnapshot(),
+      getWhatsAppQueueHealth(),
+      getClientFileRecoverySnapshot()
     ]);
     const webhookSignatureEnforced = envPresent("WHATSAPP_APP_SECRET");
     const concurrencySafetyReady =
@@ -125,10 +131,11 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v11_1_3_outbound_hotfix",
+      version: "v11_3_0_reliability_disaster_recovery",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v11.1.3",
+      uiVersion: "v11.3.0",
+      reliabilityVersion: "v11.3.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -155,6 +162,36 @@ export async function GET() {
       trustedWebhookLeadControlReadAvailable: true,
       unexpectedNoSendTelemetryAvailable: true,
       outboundTerminalProofRequired: true,
+      durableInboundQueueAvailable: queueReliability.available,
+      durableInboundQueuedCount: queueReliability.queuedCount,
+      durableInboundProcessingCount: queueReliability.processingCount,
+      durableInboundDeadLetterCount: queueReliability.deadLetterCount,
+      durableInboundStaleLeaseCount: queueReliability.staleProcessingCount,
+      durableInboundCompletedLast24hCount: queueReliability.completedLast24hCount,
+      durableInboundRetryScheduledLast24hCount: queueReliability.retryScheduledLast24hCount,
+      durableWorkerLastSucceededAt: queueReliability.workerLastSucceededAt,
+      durableWorkerStatus: queueReliability.workerStatus,
+      expiredProcessingLeaseRecoveryAvailable: true,
+      minuteLevelSupabaseCronRecoveryAvailable: Boolean(queueReliability.workerLastSucceededAt),
+      durableAttemptHistoryAvailable: queueReliability.available,
+      bossDeadLetterReplayAvailable: true,
+      clientFileIntegrityControlAvailable: fileRecovery.available,
+      clientFileLatestIntegrityAt: fileRecovery.latestIntegrityAt,
+      clientFileLatestIntegrityStatus: fileRecovery.latestIntegrityStatus,
+      clientFileOffsiteBackupConfigured: fileRecovery.offsiteConfigured,
+      clientFileLatestBackupAt: fileRecovery.latestBackupAt,
+      clientFileLatestBackupStatus: fileRecovery.latestBackupStatus,
+      clientFileProtectedObjectCount: fileRecovery.protectedObjectCount,
+      clientFileRestoreBucketIsolated: fileRecovery.restoreBucketIsolated,
+      clientFileLatestRestoreDrillAt: fileRecovery.latestRestoreDrillAt,
+      clientFileLatestRestoreDrillStatus: fileRecovery.latestRestoreDrillStatus,
+      clientFileBackupDailyManifestRetention: 35,
+      clientFileBackupMonthlyManifestRetention: 12,
+      clientFileDisasterRecoveryReady:
+        fileRecovery.offsiteConfigured &&
+        fileRecovery.latestBackupStatus === "succeeded" &&
+        fileRecovery.restoreBucketIsolated &&
+        fileRecovery.latestRestoreDrillStatus === "succeeded",
       whatsappRecoveryProofSchemaReady: whatsappProof.schemaReady,
       unresolvedPreservedInboundCount: whatsappProof.pendingFailureCount,
       recoveredInboundLast24hCount: whatsappProof.recoveredLast24hCount,

@@ -482,6 +482,9 @@ export interface LeadFile {
   storagePath: string;
   mimeType: string;
   fileSizeBytes: number;
+  contentSha256?: string;
+  integrityStatus?: "unverified" | "verified" | "missing" | "size_mismatch" | "checksum_mismatch" | "error";
+  integrityVerifiedAt?: string | null;
   source: LeadFileSource;
   whatsappMessageId?: string | null;
   whatsappMediaId?: string | null;

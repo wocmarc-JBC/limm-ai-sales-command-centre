@@ -27,8 +27,8 @@ check("publishes the v10.3.0 operator-experience release", () => {
   assert.ok(major > 10 || (major === 10 && minor >= 3));
   assert.ok(packageJson.scripts["test:v10.3.0"]?.includes("test_inbox_operator_experience.mjs"));
   const currentReleaseTest = packageJson.scripts["test:v10.4.0"] ?? "";
-  assert.ok(packageJson.scripts.verify.includes("test:v10.4.0") || packageJson.scripts.verify.includes("test:v10.5.0") || packageJson.scripts.verify.includes("test:v10.6.0") || packageJson.scripts.verify.includes("test:v11.1.0") || packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0"));
-  if (packageJson.scripts.verify.includes("test:v11.1.0") || packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0")) {
+  assert.ok(packageJson.scripts.verify.includes("test:v10.4.0") || packageJson.scripts.verify.includes("test:v10.5.0") || packageJson.scripts.verify.includes("test:v10.6.0") || packageJson.scripts.verify.includes("test:v11.1.0") || packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.3.0"));
+  if (packageJson.scripts.verify.includes("test:v11.1.0") || packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.3.0")) {
     assert.ok(packageJson.scripts["test:v11.1.0"]?.includes("test:v10.6.0"));
   }
   if (packageJson.scripts.verify.includes("test:v10.5.0") || packageJson.scripts.verify.includes("test:v10.6.0")) {

@@ -343,6 +343,7 @@ export async function uploadLeadFile(input: {
 
   const now = new Date().toISOString();
   const storagePath = buildStoragePath({ leadId: input.leadId, category: input.fileCategory, fileName: input.fileName });
+  const contentSha256 = createHash("sha256").update(input.bytes).digest("hex");
 
   if (getDataMode() === "Supabase Mode") {
     const supabase = adminClient();
@@ -365,6 +366,9 @@ export async function uploadLeadFile(input: {
         storage_path: storagePath,
         mime_type: input.mimeType,
         file_size_bytes: input.sizeBytes,
+        content_sha256: contentSha256,
+        integrity_status: "verified",
+        integrity_verified_at: now,
         source: input.source,
         whatsapp_message_id: input.whatsappMessageId || null,
         whatsapp_media_id: input.whatsappMediaId || null,
@@ -400,6 +404,9 @@ export async function uploadLeadFile(input: {
     storagePath,
     mimeType: input.mimeType,
     fileSizeBytes: input.sizeBytes,
+    contentSha256,
+    integrityStatus: "verified",
+    integrityVerifiedAt: now,
     source: input.source,
     whatsappMessageId: input.whatsappMessageId ?? null,
     whatsappMediaId: input.whatsappMediaId ?? null,

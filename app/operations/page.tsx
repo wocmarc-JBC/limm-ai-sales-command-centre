@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { WhatsAppRecoveryPanel } from "@/components/operations/WhatsAppRecoveryPanel";
+import { ReliabilityRecoveryPanel } from "@/components/operations/ReliabilityRecoveryPanel";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { getClientFileRecoverySnapshot } from "@/lib/data/client-file-recovery-repository";
+import {
+  getWhatsAppQueueHealth,
+  listWhatsAppDeadLetters
+} from "@/lib/data/whatsapp-inbound-jobs-repository";
 import {
   getWhatsAppProductionProofSnapshot,
   listPendingWhatsAppWebhookFailures
@@ -18,12 +24,15 @@ export default async function OperationsPage() {
   if (!auth.authenticated || !auth.profile || !["boss", "admin"].includes(auth.profile.role)) {
     return <section className="rounded-2xl border border-command-line bg-command-card p-6 text-command-muted">Boss or admin access is required for operations telemetry.</section>;
   }
-  const [snapshot, whatsappProof, recoveryQueue] = await Promise.all([
+  const [snapshot, whatsappProof, recoveryQueue, queueHealth, fileRecovery, deadLetters] = await Promise.all([
     getOperationsSloSnapshot(),
     getWhatsAppProductionProofSnapshot(),
     auth.profile.role === "boss"
       ? listPendingWhatsAppWebhookFailures()
-      : Promise.resolve({ available: true, items: [] })
+      : Promise.resolve({ available: true, items: [] }),
+    getWhatsAppQueueHealth(),
+    getClientFileRecoverySnapshot(),
+    auth.profile.role === "boss" ? listWhatsAppDeadLetters() : Promise.resolve([])
   ]);
   const availabilityPassing = snapshot.successRatePercent >= OPERATIONS_SLOS.inboxAvailabilityPercent;
   const latencyPassing = snapshot.p95DurationMs <= OPERATIONS_SLOS.manualSendP95Ms || snapshot.sampleSize === 0;
@@ -56,7 +65,10 @@ export default async function OperationsPage() {
               ["Inbox refresh p95", `< ${OPERATIONS_SLOS.inboxRefreshP95Ms} ms`],
               ["Manual send p95", `< ${OPERATIONS_SLOS.manualSendP95Ms} ms`],
               ["Realtime recovery", `< ${OPERATIONS_SLOS.realtimeRecoverySeconds} seconds`],
-              ["Trace failure rate", `< ${OPERATIONS_SLOS.traceFailureRatePercent}%`]
+              ["Trace failure rate", `< ${OPERATIONS_SLOS.traceFailureRatePercent}%`],
+              ["Durable inbound RPO", `${OPERATIONS_SLOS.durableInboundRpoSeconds} seconds after acceptance`],
+              ["Durable worker recovery", `< ${OPERATIONS_SLOS.durableWorkerRecoverySeconds} seconds`],
+              ["Client-file recovery target", `RPO ${OPERATIONS_SLOS.clientFilesRpoHours}h · RTO ${OPERATIONS_SLOS.clientFilesRtoHours}h`]
             ].map(([label, value]) => <div key={label} className="flex justify-between gap-4 py-3"><dt className="text-command-muted">{label}</dt><dd className="font-semibold text-command-text">{value}</dd></div>)}
           </dl>
         </article>
@@ -85,6 +97,12 @@ export default async function OperationsPage() {
           </article>
         ))}
       </section>
+      <ReliabilityRecoveryPanel
+        initialQueue={queueHealth}
+        initialFiles={fileRecovery}
+        initialDeadLetters={deadLetters}
+        boss={auth.profile.role === "boss"}
+      />
       {auth.profile.role === "boss" ? (
         <WhatsAppRecoveryPanel initialItems={recoveryQueue.items} initialAvailable={recoveryQueue.available} />
       ) : null}

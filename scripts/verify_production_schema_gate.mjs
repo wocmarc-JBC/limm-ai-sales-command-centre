@@ -41,6 +41,38 @@ const contract = {
     "id", "provider_message_id_hash", "sender_phone", "message_body", "message_type",
     "provider_timestamp", "failure_stage", "error_code", "safe_reason", "message_metadata",
     "attempt_count", "first_failed_at", "last_failed_at", "recovered_at", "recovered_lead_id", "expires_at"
+  ],
+  whatsapp_inbound_jobs: [
+    "id", "provider_message_id", "message", "status", "attempt_count", "max_attempts",
+    "available_at", "locked_at", "completed_at", "last_error_code", "result",
+    "manual_requeue_count", "last_started_at", "last_finished_at",
+    "last_error_at", "dead_lettered_at", "created_at", "updated_at"
+  ],
+  whatsapp_inbound_job_attempts: [
+    "id", "job_id", "attempt_number", "started_at", "finished_at", "outcome", "error_code",
+    "duration_ms", "lease_recovered", "created_at"
+  ],
+  reliability_heartbeats: [
+    "service_name", "status", "last_started_at", "last_succeeded_at", "last_failed_at",
+    "duration_ms", "metadata", "updated_at"
+  ],
+  reliability_dispatches: [
+    "id", "service_name", "request_id", "status", "error_code", "requested_at"
+  ],
+  client_file_recovery_runs: [
+    "id", "run_type", "status", "destination", "source_object_count", "processed_object_count",
+    "verified_object_count", "copied_object_count", "failed_object_count", "source_bytes",
+    "copied_bytes", "manifest_key", "manifest_sha256", "error_code", "metadata",
+    "started_at", "completed_at", "created_at"
+  ],
+  client_file_recovery_items: [
+    "id", "run_id", "lead_file_id", "storage_bucket", "storage_path", "mime_type",
+    "expected_size_bytes", "observed_size_bytes", "expected_sha256", "observed_sha256",
+    "backup_object_key", "status", "error_code", "checked_at"
+  ],
+  lead_files: [
+    "id", "storage_bucket", "storage_path", "content_sha256", "integrity_status",
+    "integrity_verified_at"
   ]
 };
 
@@ -85,12 +117,22 @@ async function checkRpc(name) {
   if (value !== true) throw new Error(`rpc_contract_not_ready:${name}`);
 }
 
+async function checkRpcAvailable(name) {
+  const response = await request(`/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}"
+  });
+  if (!response.ok) throw new Error(`rpc_contract_failed:${name}:${response.status}`);
+}
+
 try {
   for (const [table, columns] of Object.entries(contract)) await checkTable(table, columns);
   for (const table of requiredTables) await checkTable(table, [table === "settings" ? "key" : "id"]);
   await checkRpc("whatsapp_conversation_concurrency_schema_ready");
   await checkRpc("world_class_operations_schema_ready");
-  console.log(`PASS: production schema deployment gate verified ${Object.keys(contract).length + requiredTables.length} tables and 2 readiness contracts.`);
+  await checkRpcAvailable("get_whatsapp_queue_health");
+  console.log(`PASS: production schema deployment gate verified ${Object.keys(contract).length + requiredTables.length} tables and 3 readiness contracts.`);
 } catch (error) {
   const reason = error instanceof Error
     ? (error.name === "AbortError" ? "schema_gate_timeout" : error.message)

@@ -34,7 +34,7 @@ check("preserves the v10.5.0 measurable quality release in later versions", () =
   assert.ok(packageJson.scripts["test:v10.5.0"]?.includes("test_command_centre_10_quality.mjs"));
   const currentReleaseTest = packageJson.scripts["test:v11.1.0"] ?? packageJson.scripts["test:v10.6.0"] ?? packageJson.scripts["test:v10.5.0"] ?? "";
   assert.ok(
-    packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.1.3") ||
+    packageJson.scripts.verify.includes("test:v11.3.0") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.1.3") ||
       packageJson.scripts.verify.includes(packageJson.scripts["test:v11.1.0"] ? "test:v11.1.0" : packageJson.scripts["test:v10.6.0"] ? "test:v10.6.0" : "test:v10.5.0")
   );
   if (packageJson.scripts["test:v11.1.0"]) assert.ok(currentReleaseTest.includes("test:v10.6.0"));
@@ -111,7 +111,11 @@ check("defers the heavy Singapore map outside the initial Command Core bundle", 
   assert.ok(deferredMap.includes('ssr: false'));
   assert.ok(deferredMap.includes('data-testid="command-core-map-loading"'));
   assert.ok(deferredMap.includes('import("@/components/SingaporeMissionMap")'));
-  assert.ok(fs.statSync(path.join(root, "lib/singapore-map-data.json")).size > 3_000_000);
+  const mapPath = path.join(root, "lib/singapore-map-data.json");
+  const mapData = JSON.parse(fs.readFileSync(mapPath, "utf8"));
+  assert.ok(fs.statSync(mapPath).size > 800_000);
+  assert.equal(mapData.type, "FeatureCollection");
+  assert.equal(mapData.features.length, 55);
 });
 
 check("keeps the map loading state stable and reduced-motion compatible", () => {

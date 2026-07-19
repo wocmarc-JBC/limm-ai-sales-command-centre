@@ -32,7 +32,7 @@ check("publishes the v10.4.0 product-polish release", () => {
   assert.ok(packageJson.scripts["test:v10.4.0"]?.includes("test:v10.3.0"));
   const currentReleaseTest = packageJson.scripts["test:v11.1.0"] ?? packageJson.scripts["test:v10.6.0"] ?? packageJson.scripts["test:v10.5.0"] ?? "";
   assert.ok(
-    packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.1.3") ||
+    packageJson.scripts.verify.includes("test:v11.3.0") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.1.3") ||
       packageJson.scripts.verify.includes(packageJson.scripts["test:v11.1.0"] ? "test:v11.1.0" : packageJson.scripts["test:v10.6.0"] ? "test:v10.6.0" : "test:v10.5.0")
   );
   if (packageJson.scripts["test:v11.1.0"]) assert.ok(currentReleaseTest.includes("test:v10.6.0"));

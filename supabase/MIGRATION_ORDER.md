@@ -520,6 +520,46 @@ where schemaname = 'public'
   and policyname = 'lead_files_select_roles';
 ```
 
+## 20260719141822_v11_2_0_durable_whatsapp_release.sql
+
+Purpose: Durably accept WhatsApp inbound messages before HTTP acknowledgement, persist delivery receipts, index inbox activity, and enforce assignment-aware attachment authorization.
+Dependencies: migrations 003, 023, 028, 029, 030, and 031.
+Safe to re-run: Yes. Tables, columns, indexes, policies, triggers, grants, and functions are additive or replaced idempotently.
+Verification query:
+
+```sql
+select table_name from information_schema.tables
+where table_schema = 'public'
+  and table_name in ('whatsapp_inbound_jobs', 'whatsapp_delivery_events');
+
+select has_table_privilege('anon', 'public.whatsapp_inbound_jobs', 'select') as anon_can_claim,
+       has_function_privilege('service_role', 'public.claim_whatsapp_inbound_job(uuid)', 'execute') as service_can_claim;
+```
+
+## 20260719160109_v11_3_0_reliability_disaster_recovery.sql
+
+Purpose: Recover expired inbound-processing leases, record atomic attempt history, add encrypted Supabase Cron dispatch, dead-letter replay, retention, client-file checksums, backup manifests, and restore-drill evidence.
+Dependencies: migrations 023, 029, 030, 031, and the v11.2 durable release. Hosted Supabase must support `pg_cron`, `pg_net`, Vault, and `pgcrypto`.
+Safe to re-run: Schema objects and functions are idempotent. Operational Vault secret creation and scheduler activation are performed separately so secret material never enters source control.
+Verification query:
+
+```sql
+select extname from pg_extension where extname in ('pg_cron', 'pg_net', 'supabase_vault');
+
+select table_name from information_schema.tables
+where table_schema = 'public'
+  and table_name in (
+    'whatsapp_inbound_job_attempts',
+    'reliability_heartbeats',
+    'reliability_dispatches',
+    'client_file_recovery_runs',
+    'client_file_recovery_items'
+  );
+
+select has_function_privilege('anon', 'public.verify_limm_scheduler_token(text)', 'execute') as anon_can_verify,
+       has_function_privilege('service_role', 'public.verify_limm_scheduler_token(text)', 'execute') as service_can_verify;
+```
+
 ## After All Migrations
 
 Run:
