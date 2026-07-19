@@ -560,6 +560,19 @@ select has_function_privilege('anon', 'public.verify_limm_scheduler_token(text)'
        has_function_privilege('service_role', 'public.verify_limm_scheduler_token(text)', 'execute') as service_can_verify;
 ```
 
+## 20260719165000_v11_3_1_scheduler_cold_start_tolerance.sql
+
+Purpose: Extend the Vault-authenticated `pg_net` scheduler observation window from 25 to 55 seconds so a cold client-file integrity function can finish inside its 60-second runtime ceiling without a false transport timeout.
+Dependencies: the v11.3.0 reliability and disaster-recovery migration.
+Safe to re-run: Yes. The private dispatch function is replaced idempotently and its grants remain closed to public roles.
+Verification query:
+
+```sql
+select pg_get_functiondef(
+  'limm_private.dispatch_reliability_endpoint(text,text)'::regprocedure
+) like '%timeout_milliseconds := 55000%' as cold_start_tolerance_ready;
+```
+
 ## After All Migrations
 
 Run:

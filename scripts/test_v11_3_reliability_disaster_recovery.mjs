@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const migration = read("supabase/migrations/20260719160109_v11_3_0_reliability_disaster_recovery.sql");
+const schedulerToleranceMigration = read("supabase/migrations/20260719165000_v11_3_1_scheduler_cold_start_tolerance.sql");
 const webhook = read("app/api/whatsapp/webhook/route.ts");
 const worker = read("lib/whatsapp-inbound-worker.ts");
 const workerRoute = read("app/api/operations/whatsapp-jobs/route.ts");
@@ -34,6 +35,8 @@ assert.match(migration, /client_file_recovery_runs/);
 assert.match(migration, /client_file_recovery_items/);
 assert.match(migration, /alter table public\.client_file_recovery_runs enable row level security/);
 assert.match(migration, /grant select, insert, update, delete on table public\.client_file_recovery_runs to service_role/);
+assert.match(schedulerToleranceMigration, /timeout_milliseconds := 55000/);
+assert.match(schedulerToleranceMigration, /LIMM-Supabase-Reliability-Scheduler\/11\.3\.1/);
 
 assert.match(webhook, /enqueueWhatsAppInboundMessages/);
 assert.doesNotMatch(webhook, /handleWhatsAppInboundMessage/);
