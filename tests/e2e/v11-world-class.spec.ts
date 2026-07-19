@@ -97,4 +97,109 @@ test.describe("v11.1 world-class operator flow", () => {
 
     expect(errors).toEqual([]);
   });
+
+  test("renders private WhatsApp images, documents, and honest unavailable states in chat", async ({ page }) => {
+    const errors = captureErrors(page);
+    const preview = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='420'%3E%3Crect width='100%25' height='100%25' fill='%23172028'/%3E%3Cpath d='M80 320l150-160 100 95 75-80 180 145' fill='none' stroke='%2329d17d' stroke-width='18'/%3E%3C/svg%3E";
+
+    await page.route("**/api/inbox/conversations/*", async (route) => {
+      const response = await route.fetch();
+      const payload = await response.json();
+      if (!payload?.conversation?.lead?.id) {
+        await route.fulfill({ response, json: payload });
+        return;
+      }
+      const existingMessages = Array.isArray(payload.conversation.messages) ? payload.conversation.messages : [];
+      const base = existingMessages.find((message: { direction?: string }) => message.direction === "inbound") ?? {
+        id: "qa-media-base",
+        leadId: payload.conversation.lead.id,
+        direction: "inbound",
+        channel: "whatsapp",
+        body: "",
+        safeToSend: false,
+        whatsappStatus: "received",
+        metadata: {},
+        createdAt: "2099-01-01T00:00:00.000Z"
+      };
+      payload.conversation.messages = [
+        ...existingMessages,
+        {
+          ...base,
+          id: "qa-media-image",
+          providerMessageId: "qa-media-image-provider",
+          body: "[WhatsApp image received]",
+          createdAt: "2099-01-01T00:03:00.000Z",
+          metadata: { messageType: "image", mimeType: "image/jpeg" },
+          attachments: [{
+            id: "qa-image-file",
+            kind: "image",
+            fileName: "WhatsApp image.jpg",
+            mimeType: "image/jpeg",
+            fileSizeBytes: 248000,
+            fileCategory: "site_photos",
+            availability: "ready",
+            viewUrl: preview,
+            downloadUrl: preview,
+            retryable: false
+          }]
+        },
+        {
+          ...base,
+          id: "qa-media-document",
+          providerMessageId: "qa-media-document-provider",
+          body: "[WhatsApp document received]",
+          createdAt: "2099-01-01T00:02:00.000Z",
+          metadata: { messageType: "document", mimeType: "application/pdf", filename: "Floor Plan.pdf" },
+          attachments: [{
+            id: "qa-document-file",
+            kind: "document",
+            fileName: "Floor Plan.pdf",
+            mimeType: "application/pdf",
+            fileSizeBytes: 860000,
+            fileCategory: "floor_plan",
+            availability: "ready",
+            viewUrl: "/health",
+            downloadUrl: "/health?download=1",
+            retryable: false
+          }]
+        },
+        {
+          ...base,
+          id: "qa-media-unavailable",
+          providerMessageId: "qa-media-unavailable-provider",
+          body: "[WhatsApp image received]",
+          createdAt: "2099-01-01T00:01:00.000Z",
+          metadata: { messageType: "image", mimeType: "image/jpeg" },
+          attachments: [{
+            id: "qa-unavailable-file",
+            kind: "image",
+            fileName: "WhatsApp image.jpg",
+            mimeType: "image/jpeg",
+            fileSizeBytes: 0,
+            fileCategory: "site_photos",
+            availability: "unavailable",
+            viewUrl: "",
+            downloadUrl: "",
+            retryable: false
+          }]
+        }
+      ];
+      await route.fulfill({ response, json: payload });
+    });
+
+    await page.goto("/inbox", { waitUntil: "domcontentloaded" });
+    const rows = page.getByTestId("inbox-chat-row");
+    await expect(rows.nth(1)).toBeVisible();
+    await rows.nth(1).getByRole("link", { name: /Open conversation with/ }).click();
+    await expect(page.getByTestId("inbox-image-attachment")).toBeVisible();
+    await expect(page.getByTestId("inbox-document-attachment")).toContainText("Floor Plan.pdf");
+    await expect(page.getByTestId("inbox-media-unavailable")).toContainText("file could not be retrieved");
+    await expect(page.getByText("[WhatsApp image received]", { exact: true })).toHaveCount(0);
+    await expectNoHorizontalScroll(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByTestId("inbox-image-attachment")).toBeVisible();
+    await expect(page.getByTestId("inbox-document-attachment")).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    expect(errors).toEqual([]);
+  });
 });

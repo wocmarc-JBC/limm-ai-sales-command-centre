@@ -192,6 +192,21 @@ export async function listAllLeadFiles() {
   return mockClone(getMockStore().leadFiles).sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
 }
 
+export async function getLeadFileById(fileId: string) {
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = adminClient();
+    const { data, error } = await supabase
+      .from("lead_files")
+      .select("*")
+      .eq("id", fileId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return mapLeadFileRow(data);
+  }
+  const file = getMockStore().leadFiles.find((item) => item.id === fileId);
+  return file ? mockClone(file) : null;
+}
+
 export async function createLeadUploadLink(input: { leadId: string; createdBy?: string; expiresInDays?: number; maxUploads?: number }) {
   const rawToken = randomBytes(32).toString("base64url");
   const hash = tokenHash(rawToken);
@@ -453,7 +468,11 @@ export async function createLeadFileMetadataOnly(input: {
   return mockClone(file);
 }
 
-export async function getSignedLeadFileUrl(fileId: string, expiresInSeconds = 300) {
+export async function getSignedLeadFileUrl(
+  fileId: string,
+  expiresInSeconds = 300,
+  options: { download?: boolean } = { download: true }
+) {
   let file: LeadFile | undefined;
   if (getDataMode() === "Supabase Mode") {
     const supabase = adminClient();
@@ -467,14 +486,16 @@ export async function getSignedLeadFileUrl(fileId: string, expiresInSeconds = 30
   } else {
     file = (await listAllLeadFiles()).find((item) => item.id === fileId && item.fileStatus !== "voided");
   }
-  if (!file) return "";
+  if (!file || file.fileStatus === "needs_clarification" || file.fileSizeBytes <= 0 || !file.storagePath) return "";
   if (getDataMode() !== "Supabase Mode") return "#";
   const supabase = adminClient();
-  const { data, error } = await supabase.storage
-    .from(file.storageBucket || CLIENT_FILES_BUCKET)
-    .createSignedUrl(file.storagePath, expiresInSeconds, {
-      download: safeFileName(file.originalFileName)
-    });
+  const bucket = supabase.storage.from(file.storageBucket || CLIENT_FILES_BUCKET);
+  const signed = options.download === false
+    ? await bucket.createSignedUrl(file.storagePath, expiresInSeconds)
+    : await bucket.createSignedUrl(file.storagePath, expiresInSeconds, {
+        download: safeFileName(file.originalFileName)
+      });
+  const { data, error } = signed;
   if (error) return "";
   await auditFileAction({
     action: "client_file_signed_url_created",

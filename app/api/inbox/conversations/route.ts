@@ -7,6 +7,7 @@ import { listLeads } from "@/lib/data/leads-repository";
 import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
+import { inboxMessagePreview } from "@/lib/inbox-message-display";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { buildLeadFacts } from "@/lib/lead-facts";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
@@ -43,7 +44,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[], as
     needsMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded),
     propertyType: facts.propertyType.value || lead.propertyType,
     scopeSummary: facts.scopeSummary.value || lead.scopeSummary,
-    lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
+    lastMessagePreview: latestMessage ? inboxMessagePreview(latestMessage) : lead.lastClientMessage || lead.scopeSummary,
     lastActivityAt: latestMessage?.createdAt ?? inboxLeadFallbackActivityAt(lead),
     primaryStatus: queue.primaryStatus,
     unreadCount: queue.unreadCount,

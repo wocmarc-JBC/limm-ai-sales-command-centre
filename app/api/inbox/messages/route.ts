@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { listLeadFiles } from "@/lib/data/lead-files-repository";
 import { listLeadMessagesAfter, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
+import { attachLeadFilesToMessages } from "@/lib/inbox-message-attachments";
 
 export async function GET(request: Request) {
   const auth = await getCurrentProfile();
@@ -17,17 +19,23 @@ export async function GET(request: Request) {
   }
 
   if (after) {
-    const messages = await listLeadMessagesAfter(leadId, after, 30);
+    const [messages, files] = await Promise.all([
+      listLeadMessagesAfter(leadId, after, 30),
+      listLeadFiles(leadId)
+    ]);
     return NextResponse.json({
       ok: true,
-      messages
+      messages: attachLeadFilesToMessages(messages, files)
     });
   }
 
-  const page = await listLeadMessagesPage(leadId, 30, before);
+  const [page, files] = await Promise.all([
+    listLeadMessagesPage(leadId, 30, before),
+    listLeadFiles(leadId)
+  ]);
   return NextResponse.json({
     ok: true,
-    messages: page.messages,
+    messages: attachLeadFilesToMessages(page.messages, files),
     hasOlder: page.hasOlder,
     oldestCursor: page.oldestCursor
   });

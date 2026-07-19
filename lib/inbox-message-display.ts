@@ -11,6 +11,32 @@ function normalizedBody(message: LeadMessage) {
   return message.body.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+function metadataText(message: LeadMessage, key: string) {
+  const value = message.metadata?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export function inboxMessageBodyText(message: LeadMessage) {
+  const body = message.body.trim();
+  const messageType = metadataText(message, "messageType").toLowerCase();
+  const isMediaPlaceholder = (messageType === "image" || messageType === "document")
+    && /^\[(?:unsupported\s+)?whatsapp\s+(?:image|document)\s+received\]$/i.test(body);
+  if (!isMediaPlaceholder) return body;
+  return metadataText(message, "caption");
+}
+
+export function inboxMessagePreview(message: LeadMessage) {
+  const body = inboxMessageBodyText(message);
+  if (body) return body;
+  const messageType = metadataText(message, "messageType").toLowerCase();
+  if (messageType === "image") return "Image received";
+  if (messageType === "document") {
+    const filename = metadataText(message, "filename");
+    return filename ? `Document received · ${filename}` : "Document received";
+  }
+  return message.body;
+}
+
 function isDeliveredAiReply(message: LeadMessage) {
   if (message.direction !== "outbound" || message.metadata?.manualReply === true || !normalizedBody(message)) return false;
   const status = String(message.whatsappStatus ?? "").toLowerCase();

@@ -6,6 +6,8 @@ import { getLeadById } from "@/lib/data/leads-repository";
 import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
+import { attachLeadFilesToMessages } from "@/lib/inbox-message-attachments";
+import { inboxMessagePreview } from "@/lib/inbox-message-display";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
@@ -34,7 +36,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[], as
     needsMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded),
     propertyType: lead.propertyType,
     scopeSummary: lead.scopeSummary,
-    lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
+    lastMessagePreview: latestMessage ? inboxMessagePreview(latestMessage) : lead.lastClientMessage || lead.scopeSummary,
     lastActivityAt: latestMessage?.createdAt ?? inboxLeadFallbackActivityAt(lead),
     primaryStatus: queue.primaryStatus,
     unreadCount: queue.unreadCount,
@@ -69,6 +71,7 @@ export async function GET(
     listInboxAssignments([lead.id])
   ]);
   const facts = buildLeadFacts(lead, messagePage.messages, leadFiles);
+  const messages = attachLeadFilesToMessages(messagePage.messages, leadFiles);
   const summary = {
     ...buildSummary(lead, messagePage.messages, leadFiles, assignmentsByLead.get(lead.id)),
     propertyType: facts.propertyType.value || lead.propertyType,
@@ -82,7 +85,7 @@ export async function GET(
     conversation: {
       lead,
       summary,
-      messages: messagePage.messages,
+      messages,
       context: {
         conversationIntent: lead.conversationIntent ?? "genuine_new_renovation_lead",
         conversationRoute: lead.conversationRoute ?? "sales_lead",

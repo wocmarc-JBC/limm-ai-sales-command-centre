@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import {
   memo,
@@ -29,8 +30,8 @@ import { InboxSpamDialog } from "@/components/inbox/InboxSpamDialog";
 import { InboxOperatorBrief } from "@/components/inbox/InboxOperatorBrief";
 import { sortInboxLatestFirst } from "@/lib/inbox-conversation-order";
 import { getInboxQueueState, type InboxPrimaryStatus } from "@/lib/inbox-queue";
-import { collapseHistoricalDuplicateAiMessages } from "@/lib/inbox-message-display";
-import type { Lead, LeadMessage } from "@/lib/types";
+import { collapseHistoricalDuplicateAiMessages, inboxMessageBodyText, inboxMessagePreview } from "@/lib/inbox-message-display";
+import type { Lead, LeadMessage, LeadMessageAttachment } from "@/lib/types";
 import { isSilentCaptureMessage, latestSilentCapture, silentCaptureSummary } from "@/lib/whatsapp-silent-capture";
 import {
   buildConversationBrief,
@@ -239,6 +240,13 @@ function humanize(value?: string | null) {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatFileSize(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "Size unavailable";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
 }
 
 function metadataString(message: LeadMessage, key: string) {
@@ -573,12 +581,130 @@ const ChatRow = memo(function ChatRow({
   );
 });
 
+function MessageAttachmentCard({
+  attachment,
+  onRetry
+}: {
+  attachment: LeadMessageAttachment;
+  onRetry?: (fileId: string) => Promise<{ ok: boolean; errorMessage?: string }>;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const [retryState, setRetryState] = useState<"idle" | "retrying" | "failed">("idle");
+  const [retryError, setRetryError] = useState("");
+  const ready = attachment.availability === "ready";
+
+  const retry = useCallback(async () => {
+    if (!onRetry || retryState === "retrying") return;
+    setRetryState("retrying");
+    setRetryError("");
+    const result = await onRetry(attachment.id);
+    if (!result.ok) {
+      setRetryState("failed");
+      setRetryError(result.errorMessage || "Retry failed. Ask the client to resend the file.");
+    }
+  }, [attachment.id, onRetry, retryState]);
+
+  useEffect(() => {
+    if (ready || !attachment.retryable || !onRetry || retryState !== "idle") return;
+    const key = `limm-media-auto-retry:${attachment.id}`;
+    if (window.sessionStorage.getItem(key)) return;
+    window.sessionStorage.setItem(key, "1");
+    const timer = window.setTimeout(() => void retry(), 400);
+    return () => window.clearTimeout(timer);
+  }, [attachment.id, attachment.retryable, onRetry, ready, retry, retryState]);
+
+  if (!ready) {
+    return (
+      <section className="rounded-xl border border-command-amber/45 bg-command-amber/10 p-3" data-testid="inbox-media-unavailable">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-command-amber/35 bg-command-bg/50 text-command-amber" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.7">
+              <path d="M4 5.5h16v13H4zM7 15l3.2-3.5 2.4 2.4 1.8-2 2.6 3.1" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="m18.5 4.5-13 15" strokeLinecap="round" />
+            </svg>
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-command-text">WhatsApp {attachment.kind} unavailable</p>
+            <p className="mt-0.5 text-xs leading-5 text-command-muted">
+              The message was received, but the file could not be retrieved. Retry now or ask the client to resend it.
+            </p>
+            {attachment.retryable && onRetry ? (
+              <button
+                type="button"
+                onClick={() => void retry()}
+                disabled={retryState === "retrying"}
+                className="mt-2 inline-flex min-h-8 items-center rounded-lg border border-command-amber/45 bg-command-bg/55 px-3 py-1 text-xs font-semibold text-command-amber transition hover:bg-command-amber/10 disabled:cursor-wait disabled:opacity-60"
+              >
+                {retryState === "retrying" ? "Retrying retrieval…" : "Retry retrieval"}
+              </button>
+            ) : null}
+            {retryState === "failed" ? <p className="mt-2 text-xs leading-5 text-command-red">{retryError}</p> : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (attachment.kind === "image" && !imageFailed) {
+    return (
+      <section className="overflow-hidden rounded-xl border border-command-line bg-command-bg/70" data-testid="inbox-image-attachment">
+        <a href={attachment.viewUrl} target="_blank" rel="noreferrer" className="block bg-black/20" title={`Open ${attachment.fileName}`}>
+          <Image
+            src={attachment.viewUrl}
+            alt={`Client attachment: ${attachment.fileName}`}
+            width={720}
+            height={540}
+            sizes="(max-width: 768px) 82vw, 560px"
+            unoptimized
+            loading="lazy"
+            onError={() => setImageFailed(true)}
+            className="max-h-[28rem] h-auto w-full object-contain"
+          />
+        </a>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-command-line px-3 py-2 text-xs">
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-command-text">{attachment.fileName}</p>
+            <p className="text-command-muted">{humanize(attachment.fileCategory)} · {formatFileSize(attachment.fileSizeBytes)}</p>
+          </div>
+          <div className="flex items-center gap-2 font-semibold">
+            <a href={attachment.viewUrl} target="_blank" rel="noreferrer" className="text-command-cyan hover:underline">Open</a>
+            <a href={attachment.downloadUrl} className="text-command-gold hover:underline">Download</a>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-xl border border-command-line bg-command-bg/70 p-3" data-testid="inbox-document-attachment">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-command-cyan/30 bg-command-cyan/10 text-command-cyan" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.7">
+            <path d="M7 3.5h7l4 4v13H7z" strokeLinejoin="round" /><path d="M14 3.5v4h4M9.5 12h5M9.5 15.5h5" strokeLinecap="round" />
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold text-command-text">{attachment.fileName}</p>
+          <p className="text-xs text-command-muted">{humanize(attachment.fileCategory)} · {formatFileSize(attachment.fileSizeBytes)}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2 text-xs font-semibold">
+          <a href={attachment.viewUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-command-cyan/35 px-2.5 py-1.5 text-command-cyan transition hover:bg-command-cyan/10">Open</a>
+          <a href={attachment.downloadUrl} className="rounded-lg border border-command-gold/35 px-2.5 py-1.5 text-command-gold transition hover:bg-command-gold/10">Download</a>
+        </div>
+      </div>
+      {imageFailed ? <p className="mt-2 text-xs text-command-amber">Preview could not load. Open or download the original file.</p> : null}
+    </section>
+  );
+}
+
 const MessageBubble = memo(function MessageBubble({
   message,
-  onRetry
+  onRetry,
+  onRetryAttachment
 }: {
   message: LeadMessage;
   onRetry?: (leadId: string, body: string) => void;
+  onRetryAttachment?: (fileId: string) => Promise<{ ok: boolean; errorMessage?: string }>;
 }) {
   const outbound = message.direction === "outbound";
   const internal = message.direction === "internal";
@@ -588,6 +714,7 @@ const MessageBubble = memo(function MessageBubble({
   const collapsedDuplicateCount = typeof message.metadata?.uiCollapsedDuplicateCount === "number"
     ? message.metadata.uiCollapsedDuplicateCount
     : 1;
+  const displayBody = inboxMessageBodyText(message);
   return (
     <article data-message-direction={message.direction} className={`flex ${internal ? "justify-center" : outbound ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[90%] rounded-2xl border px-3.5 py-2.5 text-sm leading-6 shadow-[0_8px_24px_rgba(0,0,0,0.14)] sm:max-w-[82%] md:max-w-[72%] ${internal ? "text-center text-sm" : ""} ${bubbleTone(message)}`}>
@@ -604,9 +731,24 @@ const MessageBubble = memo(function MessageBubble({
             <p className="mt-1 text-xs leading-5 text-command-muted">Next action: {silentCapture.nextAction}</p>
             <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-command-subtle">Internal only - not sent to client</p>
           </div>
-        ) : (
-          <p className="mt-1.5 whitespace-pre-wrap break-words">{message.body || "Message body not available."}</p>
-        )}
+        ) : null}
+        {!silentCapture && message.attachments?.length ? (
+          <div className="mt-2.5 space-y-2.5">
+            {message.attachments.map((attachment) => (
+              <MessageAttachmentCard
+                key={attachment.id}
+                attachment={attachment}
+                onRetry={onRetryAttachment}
+              />
+            ))}
+          </div>
+        ) : null}
+        {!silentCapture && displayBody ? (
+          <p className={`${message.attachments?.length ? "mt-2.5" : "mt-1.5"} whitespace-pre-wrap break-words`}>{displayBody}</p>
+        ) : null}
+        {!silentCapture && !displayBody && !message.attachments?.length ? (
+          <p className="mt-1.5 text-command-muted">Message content is not available.</p>
+        ) : null}
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-[11px] text-command-muted">
           <time dateTime={message.createdAt}>{formatTimestamp(message.createdAt)}</time>
           {message.metadata?.manualReply ? <span>Manual reply</span> : outbound ? <span>AI/system reply</span> : null}
@@ -1334,6 +1476,29 @@ export function MultiChatInbox({
     }
   }, []);
 
+  const handleRetryAttachment = useCallback(async (fileId: string) => {
+    try {
+      const response = await fetch(`/api/inbox/attachments/${encodeURIComponent(fileId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}"
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.ok) {
+        return {
+          ok: false,
+          errorMessage: typeof data?.errorMessage === "string"
+            ? data.errorMessage
+            : "Retry failed. Ask the client to resend the file."
+        };
+      }
+      if (activeLeadId) await loadConversation(activeLeadId, { background: true });
+      return { ok: true };
+    } catch {
+      return { ok: false, errorMessage: "The retry could not connect. Try again shortly." };
+    }
+  }, [activeLeadId, loadConversation]);
+
   const refreshQueue = useCallback(async (signal?: AbortSignal) => {
     try {
       const requestedLimit = Math.max(30, chatSummaries.length);
@@ -1422,7 +1587,14 @@ export function MultiChatInbox({
       try {
         const response = await fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeLeadId)}&after=${encodeURIComponent(latestPersistedCursor)}`, { cache: "no-store" });
         const data = await response.json().catch(() => ({}));
-        if (!data?.ok || !Array.isArray(data.messages) || data.messages.length === 0) return;
+        if (!data?.ok || !Array.isArray(data.messages)) return;
+        if (data.messages.length === 0) {
+          const waitingForAttachment = conversationMap[activeLeadId]?.messages.some((message) =>
+            message.attachments?.some((attachment) => attachment.id.startsWith("missing-"))
+          );
+          if (waitingForAttachment) await loadConversation(activeLeadId, { background: true });
+          return;
+        }
         const incoming = data.messages as LeadMessage[];
         setConversationMap((current) => {
           const conversation = current[activeLeadId];
@@ -1437,7 +1609,7 @@ export function MultiChatInbox({
               messages,
               summary: latest ? {
                 ...conversation.summary,
-                lastMessagePreview: latest.body,
+                lastMessagePreview: inboxMessagePreview(latest),
                 lastActivityAt: latest.createdAt,
                 primaryStatus: queue.primaryStatus,
                 unreadCount: queue.unreadCount,
@@ -1464,7 +1636,7 @@ export function MultiChatInbox({
               closedOrDone: false
             };
           patchSummary(activeLeadId, {
-            lastMessagePreview: latest.body,
+            lastMessagePreview: inboxMessagePreview(latest),
             lastActivityAt: latest.createdAt,
             primaryStatus: queue.primaryStatus,
             unreadCount: queue.unreadCount,
@@ -1859,7 +2031,7 @@ export function MultiChatInbox({
       [leadId]: mergeTimelineMessages([...(current[leadId] ?? []), message])
     }));
     patchSummary(leadId, {
-      lastMessagePreview: message.body,
+      lastMessagePreview: inboxMessagePreview(message),
       lastActivityAt: message.createdAt,
       primaryStatus: "Waiting for client",
       unreadCount: 0,
@@ -2435,6 +2607,7 @@ export function MultiChatInbox({
                       key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`}
                       message={message}
                       onRetry={handleRetryDraft}
+                      onRetryAttachment={operator.role === "viewer" ? undefined : handleRetryAttachment}
                     />
                   ))}
                   {activeOlderState.hasOlder ? (

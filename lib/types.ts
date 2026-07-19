@@ -423,6 +423,21 @@ export interface MonthlySalesTarget {
 
 export type LeadMessageDirection = "inbound" | "outbound" | "internal";
 
+export type LeadMessageAttachmentKind = "image" | "document";
+
+export interface LeadMessageAttachment {
+  id: string;
+  kind: LeadMessageAttachmentKind;
+  fileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  fileCategory: LeadFileCategory;
+  availability: "ready" | "unavailable";
+  viewUrl: string;
+  downloadUrl: string;
+  retryable: boolean;
+}
+
 export interface LeadMessage {
   id: string;
   leadId: string;
@@ -434,6 +449,7 @@ export interface LeadMessage {
   providerTimestamp?: string | null;
   whatsappStatus?: "received" | "sent" | "blocked" | "failed" | "disabled" | "";
   metadata: Record<string, unknown>;
+  attachments?: LeadMessageAttachment[];
   createdAt: string;
 }
 

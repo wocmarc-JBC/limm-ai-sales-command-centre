@@ -7,6 +7,8 @@ import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data
 import { listLeads } from "@/lib/data/leads-repository";
 import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
+import { attachLeadFilesToMessages } from "@/lib/inbox-message-attachments";
+import { inboxMessagePreview } from "@/lib/inbox-message-display";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
@@ -47,7 +49,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[], as
     needsMarcus: Boolean(lead.needsMarcus || lead.bossApprovalNeeded),
     propertyType: lead.propertyType,
     scopeSummary: lead.scopeSummary,
-    lastMessagePreview: latestMessage?.body || lead.lastClientMessage || lead.scopeSummary,
+    lastMessagePreview: latestMessage ? inboxMessagePreview(latestMessage) : lead.lastClientMessage || lead.scopeSummary,
     lastActivityAt: latestMessage?.createdAt ?? inboxLeadFallbackActivityAt(lead),
     primaryStatus: queue.primaryStatus,
     unreadCount: queue.unreadCount,
@@ -111,12 +113,18 @@ export default async function WhatsAppInboxPage({
   const selectedPage = selectedLead
     ? await listLeadMessagesPage(selectedLead.id, 30)
     : { messages: [], hasOlder: false, oldestCursor: null };
+  const selectedMessages = selectedLead
+    ? attachLeadFilesToMessages(
+        selectedPage.messages,
+        allFiles.filter((file) => file.leadId === selectedLead.id)
+      )
+    : [];
 
   const conversations: MultiChatConversation[] = activeLeads.map((lead) => {
     const summaryMessages = summaryMessagesByLead.get(lead.id) ?? [];
     const selected = lead.id === selectedLead?.id;
     const orderedMessages = selected
-      ? selectedPage.messages
+      ? selectedMessages
       : [...summaryMessages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const leadFiles = allFiles.filter((file) => file.leadId === lead.id);
     const facts = buildLeadFacts(lead, orderedMessages, leadFiles);

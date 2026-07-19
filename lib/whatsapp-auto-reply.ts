@@ -306,7 +306,7 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
-  const inboundBody = message.text || message.caption || `[Unsupported WhatsApp ${message.type || "message"} received]`;
+  const inboundBody = message.text || message.caption || `[WhatsApp ${message.type || "message"} received]`;
   let lead: Awaited<ReturnType<typeof upsertWhatsAppLead>>;
   try {
     logWhatsApp("whatsapp_lead_upsert_started", { providerMessageId });

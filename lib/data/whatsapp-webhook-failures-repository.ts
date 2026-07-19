@@ -47,7 +47,7 @@ function recoveryProviderMessageId(providerMessageIdHash: string) {
 }
 
 function inboundBody(message: ParsedWhatsAppMessage) {
-  return message.text || message.caption || `[Unsupported WhatsApp ${message.type || "message"} received]`;
+  return message.text || message.caption || `[WhatsApp ${message.type || "message"} received]`;
 }
 
 export function classifyWhatsAppProcessingFailure(error: unknown) {
