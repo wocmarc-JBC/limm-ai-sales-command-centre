@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getDataMode } from "./data-source";
 import { mapLeadMessageRow, mapLeadRow } from "./mappers";
+import { nextWhatsAppLeadCompatibilityRow } from "./lead-schema-compatibility";
 import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { getSupabaseServerClient } from "./supabase-server";
@@ -13,17 +14,6 @@ function getSupabaseWriteClient() {
   }
   return supabase;
 }
-
-const INTENT_GATE_INSERT_COLUMNS = new Set([
-  "conversation_intent",
-  "lead_eligible",
-  "conversation_route",
-  "intent_confidence",
-  "intent_reason_codes",
-  "intent_classifier_version",
-  "intent_classified_at",
-  "conversation_safety_state"
-]);
 
 function provisionalWhatsAppLeadRow(input: { phone: string; contactName?: string; latestMessage: string }, now: string) {
   const intentGate = {
@@ -137,23 +127,22 @@ export async function upsertWhatsAppLead(input: { phone: string; contactName?: s
       return mapLeadRow(data);
     }
 
-    const fullRow = provisionalWhatsAppLeadRow(input, now);
-    let { data, error } = await supabase
-      .from("leads")
-      .insert(fullRow)
-      .select("*")
-      .maybeSingle();
-    if (error && /column|schema cache|PGRST204|42703/i.test(`${error.code ?? ""} ${error.message ?? ""}`)) {
-      const compatibilityRow = Object.fromEntries(
-        Object.entries(fullRow).filter(([column]) => !INTENT_GATE_INSERT_COLUMNS.has(column))
-      );
-      const retry = await supabase
+    let insertRow: Record<string, unknown> = provisionalWhatsAppLeadRow(input, now);
+    let data = null;
+    let error = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const result = await supabase
         .from("leads")
-        .insert(compatibilityRow)
+        .insert(insertRow)
         .select("*")
         .maybeSingle();
-      data = retry.data;
-      error = retry.error;
+      data = result.data;
+      error = result.error;
+      if (!error) break;
+
+      const compatibleRow = nextWhatsAppLeadCompatibilityRow(insertRow, error);
+      if (!compatibleRow) break;
+      insertRow = compatibleRow;
     }
     if (error) throw new Error(`WhatsApp lead insert failed: ${error.message}`);
     return mapLeadRow(data);

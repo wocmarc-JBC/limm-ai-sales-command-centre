@@ -57,7 +57,8 @@ export const requiredTables = [
   "operational_trace_events",
   "ai_reply_quality_events",
   "operator_product_events",
-  "api_rate_limit_windows"
+  "api_rate_limit_windows",
+  "whatsapp_webhook_failures"
 ];
 
 export const requiredColumnsByTable = {
@@ -259,6 +260,11 @@ export const requiredColumnsByTable = {
   ],
   api_rate_limit_windows: [
     "key_hash", "window_started_at", "request_count", "updated_at"
+  ],
+  whatsapp_webhook_failures: [
+    "id", "provider_message_id_hash", "sender_phone", "message_body", "message_type", "provider_timestamp",
+    "failure_stage", "error_code", "safe_reason", "message_metadata", "attempt_count", "first_failed_at",
+    "last_failed_at", "recovered_at", "recovered_lead_id", "expires_at"
   ]
 };
 
@@ -287,7 +293,10 @@ export const requiredIndexes = [
   "ai_reply_quality_events_version_created_idx",
   "ai_reply_quality_events_decision_created_idx",
   "operator_product_events_name_created_idx",
-  "api_rate_limit_windows_updated_idx"
+  "api_rate_limit_windows_updated_idx",
+  "leads_intake_profile_gin",
+  "whatsapp_webhook_failures_unrecovered_idx",
+  "whatsapp_webhook_failures_recovered_lead_idx"
 ];
 
 export const rlsRequiredTables = [
@@ -304,7 +313,8 @@ export const rlsRequiredTables = [
   "operational_trace_events",
   "ai_reply_quality_events",
   "operator_product_events",
-  "api_rate_limit_windows"
+  "api_rate_limit_windows",
+  "whatsapp_webhook_failures"
 ];
 
 export const serviceRoleOnlyRlsTables = [
@@ -313,7 +323,8 @@ export const serviceRoleOnlyRlsTables = [
   "operational_trace_events",
   "ai_reply_quality_events",
   "operator_product_events",
-  "api_rate_limit_windows"
+  "api_rate_limit_windows",
+  "whatsapp_webhook_failures"
 ];
 
 export const requiredStorageBuckets = ["client-files"];
@@ -333,6 +344,11 @@ const migrationHints = [
     name,
     file: "029_v11_1_world_class_operations.sql"
   })),
+  {
+    matchType: "table",
+    name: "whatsapp_webhook_failures",
+    file: "031_v11_1_1_whatsapp_persistence_recovery.sql"
+  },
   { matchType: "column", table: "leads", name: "first_operator_response_at", file: "029_v11_1_world_class_operations.sql" },
   ...["inbox_assignments_profile_lease_idx", "inbox_internal_notes_lead_created_idx", "operational_trace_events_trace_created_idx", "operational_trace_events_status_created_idx", "ai_reply_quality_events_version_created_idx", "ai_reply_quality_events_decision_created_idx", "operator_product_events_name_created_idx", "api_rate_limit_windows_updated_idx"].map((name) => ({
     matchType: "index",
@@ -415,7 +431,7 @@ const migrationHints = [
   { matchType: "column", table: "leads", name: "won_date", file: "020_v6_3_sales_collection_command_centre.sql" },
   { matchType: "column", table: "leads", name: "lost_date", file: "020_v6_3_sales_collection_command_centre.sql" },
   { matchType: "column", table: "leads", name: "project_id", file: "020_v6_3_sales_collection_command_centre.sql" },
-  { matchType: "column", table: "leads", name: "intake_profile", file: "018_v6_5_smart_lead_intake.sql" },
+  { matchType: "column", table: "leads", name: "intake_profile", file: "031_v11_1_1_whatsapp_persistence_recovery.sql" },
   { matchType: "index", name: "leads_active_command_queue_idx", file: "019_v6_ultimate_command_centre.sql" },
   { matchType: "index", name: "leads_sales_eligible_active_idx", file: "027_v10_2_intent_gate_conversation_safety.sql" },
   { matchType: "index", name: "leads_conversation_route_idx", file: "027_v10_2_intent_gate_conversation_safety.sql" },
@@ -427,6 +443,9 @@ const migrationHints = [
   { matchType: "index", name: "whatsapp_reply_reservations_signature_bucket_uidx", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
   { matchType: "index", name: "whatsapp_reply_reservations_lead_reserved_idx", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
   { matchType: "index", name: "whatsapp_reply_reservations_status_idx", file: "028_v10_2_1_whatsapp_conversation_concurrency.sql" },
+  { matchType: "index", name: "leads_intake_profile_gin", file: "031_v11_1_1_whatsapp_persistence_recovery.sql" },
+  { matchType: "index", name: "whatsapp_webhook_failures_unrecovered_idx", file: "031_v11_1_1_whatsapp_persistence_recovery.sql" },
+  { matchType: "index", name: "whatsapp_webhook_failures_recovered_lead_idx", file: "031_v11_1_1_whatsapp_persistence_recovery.sql" },
   { matchType: "bucket", name: "client-files", file: "020_v6_7_client_file_uploads.sql" }
 ];
 

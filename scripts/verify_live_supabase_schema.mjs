@@ -22,12 +22,13 @@ const requiredTables = [
   "message_templates",
   "lead_outcomes",
   "whatsapp_conversation_reply_leases",
-  "whatsapp_reply_reservations"
+  "whatsapp_reply_reservations",
+  "whatsapp_webhook_failures"
 ];
 
 const requiredColumns = {
   profiles: ["id", "email", "full_name", "role", "active", "created_at", "updated_at"],
-  leads: ["id", "client_name", "phone", "email", "source", "division", "property_type", "service_type", "scope_summary", "lead_score", "lead_category", "status", "missing_info", "risk_flags", "boss_approval_needed", "appointment_suitable", "appointment_type", "quotation_readiness_score", "next_action", "conversation_intent", "lead_eligible", "conversation_route", "intent_confidence", "intent_reason_codes", "intent_classifier_version", "intent_manual_override", "intent_classified_at", "non_sales_acknowledged_at", "latest_unanswered_question", "conversation_safety_state", "created_at", "updated_at"],
+  leads: ["id", "client_name", "phone", "email", "source", "division", "property_type", "service_type", "scope_summary", "lead_score", "lead_category", "status", "missing_info", "risk_flags", "boss_approval_needed", "appointment_suitable", "appointment_type", "quotation_readiness_score", "next_action", "intake_profile", "conversation_intent", "lead_eligible", "conversation_route", "intent_confidence", "intent_reason_codes", "intent_classifier_version", "intent_manual_override", "intent_classified_at", "non_sales_acknowledged_at", "latest_unanswered_question", "conversation_safety_state", "created_at", "updated_at"],
   lead_messages: ["id", "lead_id", "direction", "channel", "body", "safe_to_send", "provider_message_id", "provider_timestamp", "whatsapp_status", "metadata", "created_at"],
   approval_requests: ["id", "lead_id", "approval_type", "reason", "ai_recommendation", "status", "requested_at", "decided_at", "decided_by", "notes"],
   followups: ["id", "lead_id", "followup_type", "due_at", "status", "suggested_message", "completed_at", "notes"],
@@ -36,7 +37,8 @@ const requiredColumns = {
   audit_logs: ["id", "actor", "actor_type", "actor_name", "actor_email", "actor_id", "action", "entity_type", "entity_id", "before_data", "after_data", "metadata", "created_at"],
   settings: ["key", "value", "updated_at"],
   whatsapp_conversation_reply_leases: ["lead_id", "owner_token", "lease_expires_at", "cooldown_until", "pending_inbound_count", "last_inbound_at", "last_acquired_at", "updated_at"],
-  whatsapp_reply_reservations: ["id", "lead_id", "owner_token", "inbound_provider_message_id", "reply_signature", "reservation_bucket", "status", "outbound_provider_message_id", "failure_reason", "reserved_at", "completed_at"]
+  whatsapp_reply_reservations: ["id", "lead_id", "owner_token", "inbound_provider_message_id", "reply_signature", "reservation_bucket", "status", "outbound_provider_message_id", "failure_reason", "reserved_at", "completed_at"],
+  whatsapp_webhook_failures: ["id", "provider_message_id_hash", "sender_phone", "message_body", "message_type", "provider_timestamp", "failure_stage", "error_code", "safe_reason", "message_metadata", "attempt_count", "first_failed_at", "last_failed_at", "recovered_at", "recovered_lead_id", "expires_at"]
 };
 
 function read(relativePath) {
@@ -89,6 +91,10 @@ function localStaticChecks() {
   const concurrencyMigration = read("supabase/migrations/028_v10_2_1_whatsapp_conversation_concurrency.sql");
   for (const phrase of ["whatsapp_conversation_reply_leases", "whatsapp_reply_reservations", "acquire_whatsapp_conversation_reply_lease", "release_whatsapp_conversation_reply_lease", "reserve_whatsapp_conversation_reply", "whatsapp_conversation_concurrency_schema_ready"]) {
     if (!concurrencyMigration.includes(phrase)) failures.push(`Conversation concurrency migration missing: ${phrase}`);
+  }
+  const persistenceRecoveryMigration = read("supabase/migrations/031_v11_1_1_whatsapp_persistence_recovery.sql");
+  for (const phrase of ["intake_profile", "whatsapp_webhook_failures", "capture_whatsapp_webhook_failure", "enable row level security", "service_role"]) {
+    if (!persistenceRecoveryMigration.includes(phrase)) failures.push(`WhatsApp persistence recovery migration missing: ${phrase}`);
   }
   return failures;
 }

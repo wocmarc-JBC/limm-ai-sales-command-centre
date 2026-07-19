@@ -474,6 +474,30 @@ where schemaname = 'public'
   and policyname like '%_service_role';
 ```
 
+## 031_v11_1_1_whatsapp_persistence_recovery.sql
+
+Purpose: Repair production schema drift for `leads.intake_profile` and add a service-only recovery inbox for inbound WhatsApp content that fails before normal `lead_messages` persistence.
+Dependencies: migrations 002, 003, 016, 022, 027, 028, and 029.
+Safe to re-run: Yes. The lead column, indexes, table, policy, grants, and capture function are additive or replaced idempotently.
+Verification query:
+
+```sql
+select column_name
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'leads'
+  and column_name = 'intake_profile';
+
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+  and table_name = 'whatsapp_webhook_failures';
+
+select has_table_privilege('anon', 'public.whatsapp_webhook_failures', 'select') as anon_can_read,
+       has_table_privilege('authenticated', 'public.whatsapp_webhook_failures', 'select') as authenticated_can_read,
+       has_table_privilege('service_role', 'public.whatsapp_webhook_failures', 'insert') as service_can_capture;
+```
+
 ## After All Migrations
 
 Run:

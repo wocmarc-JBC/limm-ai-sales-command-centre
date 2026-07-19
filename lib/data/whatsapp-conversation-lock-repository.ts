@@ -106,24 +106,43 @@ export async function releaseWhatsAppConversationReplyLease(input: {
 
 export async function getWhatsAppConversationConcurrencyHealth() {
   if (getDataMode() !== "Supabase Mode") {
-    return { databaseConnected: false, migration027Ready: false, migration028Ready: false, reason: "mock_mode" };
+    return {
+      databaseConnected: false,
+      migration027Ready: false,
+      migration028Ready: false,
+      migration031Ready: false,
+      intakeProfileReady: false,
+      failureRecoveryReady: false,
+      reason: "mock_mode"
+    };
   }
   const client = getWriteClient();
-  const intentSchema = await client
-    .from("leads")
-    .select("conversation_intent,lead_eligible,conversation_route,intent_confidence,intent_reason_codes,intent_classifier_version,intent_manual_override,intent_classified_at,non_sales_acknowledged_at,latest_unanswered_question,conversation_safety_state")
-    .limit(1);
-  const lockSchema = await client
-    .from("whatsapp_conversation_reply_leases")
-    .select("lead_id,lease_expires_at,cooldown_until")
-    .limit(1);
-  const schemaFunction = await client.rpc("whatsapp_conversation_concurrency_schema_ready");
+  const [intentSchema, lockSchema, schemaFunction, intakeProfileSchema, failureRecoverySchema] = await Promise.all([
+    client
+      .from("leads")
+      .select("conversation_intent,lead_eligible,conversation_route,intent_confidence,intent_reason_codes,intent_classifier_version,intent_manual_override,intent_classified_at,non_sales_acknowledged_at,latest_unanswered_question,conversation_safety_state")
+      .limit(1),
+    client
+      .from("whatsapp_conversation_reply_leases")
+      .select("lead_id,lease_expires_at,cooldown_until")
+      .limit(1),
+    client.rpc("whatsapp_conversation_concurrency_schema_ready"),
+    client.from("leads").select("intake_profile").limit(1),
+    client.from("whatsapp_webhook_failures").select("provider_message_id_hash,recovered_at").limit(1)
+  ]);
   const migration027Ready = !intentSchema.error;
   const migration028Ready = !lockSchema.error && !schemaFunction.error && schemaFunction.data === true;
+  const intakeProfileReady = !intakeProfileSchema.error;
+  const failureRecoveryReady = !failureRecoverySchema.error;
+  const migration031Ready = intakeProfileReady && failureRecoveryReady;
   return {
-    databaseConnected: !intentSchema.error || !lockSchema.error || !schemaFunction.error,
+    databaseConnected:
+      !intentSchema.error || !lockSchema.error || !schemaFunction.error || !intakeProfileSchema.error || !failureRecoverySchema.error,
     migration027Ready,
     migration028Ready,
-    reason: migration027Ready && migration028Ready ? "ready" : "migration_required"
+    migration031Ready,
+    intakeProfileReady,
+    failureRecoveryReady,
+    reason: migration027Ready && migration028Ready && migration031Ready ? "ready" : "migration_required"
   };
 }

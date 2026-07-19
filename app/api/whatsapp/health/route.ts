@@ -112,7 +112,10 @@ export async function GET() {
     const operations = await getOperationsSloSnapshot();
     const webhookSignatureEnforced = envPresent("WHATSAPP_APP_SECRET");
     const concurrencySafetyReady =
-      concurrencySafety.databaseConnected && concurrencySafety.migration027Ready && concurrencySafety.migration028Ready;
+      concurrencySafety.databaseConnected &&
+      concurrencySafety.migration027Ready &&
+      concurrencySafety.migration028Ready &&
+      concurrencySafety.migration031Ready;
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
@@ -135,6 +138,10 @@ export async function GET() {
       databaseConnected: concurrencySafety.databaseConnected,
       migration027Ready: concurrencySafety.migration027Ready,
       migration028Ready: concurrencySafety.migration028Ready,
+      migration031Ready: concurrencySafety.migration031Ready,
+      intakeProfileSchemaReady: concurrencySafety.intakeProfileReady,
+      inboundFailureRecoveryAvailable: concurrencySafety.failureRecoveryReady,
+      schemaCompatibilityRetryAvailable: true,
       whatsappProductionSafetyReady,
       whatsappProductionSafetyReason: !concurrencySafetyReady
         ? concurrencySafety.reason
@@ -661,6 +668,10 @@ export async function GET() {
       databaseConnected: false,
       migration027Ready: false,
       migration028Ready: false,
+      migration031Ready: false,
+      intakeProfileSchemaReady: false,
+      inboundFailureRecoveryAvailable: false,
+      schemaCompatibilityRetryAvailable: true,
       whatsappProductionSafetyReady: false,
       whatsappProductionSafetyReason: "health_check_failed",
       intentGateAvailable: false,

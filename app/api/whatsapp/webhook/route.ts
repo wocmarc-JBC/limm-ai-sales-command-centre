@@ -5,7 +5,12 @@ import { parseWhatsAppInbound } from "@/lib/whatsapp-parser";
 import { verifyWhatsAppWebhookSignature } from "@/lib/whatsapp-webhook-signature";
 import { getSupabasePublicKey } from "@/lib/data/data-source";
 import { hasSupabaseAdminEnv } from "@/lib/data/supabase-admin";
-import { createTraceId, recordOperationalEvent } from "@/lib/operations/observability";
+import {
+  captureWhatsAppWebhookFailure,
+  classifyWhatsAppProcessingFailure,
+  markWhatsAppWebhookFailureRecovered
+} from "@/lib/data/whatsapp-webhook-failures-repository";
+import { createTraceId, hashProviderMessageId, recordOperationalEvent } from "@/lib/operations/observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -190,22 +195,43 @@ export async function POST(request: NextRequest) {
     for (const message of messages) {
       try {
         const result = await handleWhatsAppInboundMessage(message);
+        await markWhatsAppWebhookFailureRecovered({
+          providerMessageId: message.providerMessageId,
+          leadId: result.leadId
+        }).catch(() => false);
         results.push(result);
       } catch (error) {
         const reason = safeReason(error);
+        const processingErrorCode = classifyWhatsAppProcessingFailure(error);
+        const failureCaptured = await captureWhatsAppWebhookFailure({
+          message,
+          failureStage: "message_processing",
+          errorCode: processingErrorCode,
+          safeReason: reason
+        }).catch(() => false);
         console.error("whatsapp_webhook_error", {
           stage: "message_processing",
-          code: "message_processing_failed",
-          providerMessageId: message.providerMessageId,
-          reason
+          code: processingErrorCode,
+          providerMessageIdHash: hashProviderMessageId(message.providerMessageId),
+          failureCaptured,
+          reasonAvailableInProtectedRecovery: failureCaptured
         });
-        await recordOperationalEvent({ traceId, eventName: "whatsapp_webhook", stage: "message_processing", status: "failed", durationMs: performance.now() - startedAt, providerMessageId: message.providerMessageId, errorCode: "message_processing_failed" }).catch(() => false);
+        await recordOperationalEvent({
+          traceId,
+          eventName: "whatsapp_webhook",
+          stage: "message_processing",
+          status: "failed",
+          durationMs: performance.now() - startedAt,
+          providerMessageId: message.providerMessageId,
+          errorCode: processingErrorCode,
+          metadata: { failureCaptured }
+        }).catch(() => false);
         return NextResponse.json(
           {
             ok: false,
             error: "webhook_error",
             code: "message_processing_failed",
-            providerMessageId: message.providerMessageId,
+            providerMessageIdHash: hashProviderMessageId(message.providerMessageId),
             reason
           },
           { status: 500 }

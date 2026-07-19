@@ -5,6 +5,7 @@ import { orchestrateWhatsAppConversationReply } from "@/lib/whatsapp-reply-decis
 import { validateWhatsAppAutoReply } from "@/lib/whatsapp-safety";
 import { evaluateWhatsAppReplyQuality } from "@/lib/ai-quality";
 import { createTraceId, getOperationsSloSnapshot, recordOperationalEvent } from "@/lib/operations/observability";
+import { purgeExpiredWhatsAppWebhookFailures } from "@/lib/data/whatsapp-webhook-failures-repository";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,26 +49,38 @@ export async function GET(request: Request) {
     const safety = validateWhatsAppAutoReply(decision.replyText);
     const quality = evaluateWhatsAppReplyQuality(decision.replyText);
     const passed = decision.leadEligible && decision.shouldReply && safety.ok && quality.releaseEligible;
-    const schema = await getOperationsSloSnapshot();
+    const [schema, failureRetention] = await Promise.all([
+      getOperationsSloSnapshot(),
+      purgeExpiredWhatsAppWebhookFailures()
+    ]);
+    const canaryPassed = passed && schema.schemaReady && failureRetention.ok;
     await recordOperationalEvent({
       traceId,
       leadId: null,
       eventName: "synthetic_pipeline_canary",
       stage: "planner_to_safety_no_send",
-      status: passed && schema.schemaReady ? "ok" : "degraded",
+      status: canaryPassed ? "ok" : "degraded",
       durationMs: performance.now() - startedAt,
-      errorCode: passed ? (schema.schemaReady ? "" : "schema_not_ready") : "reply_pipeline_gate_failed",
+      errorCode: !passed
+        ? "reply_pipeline_gate_failed"
+        : !schema.schemaReady
+          ? "schema_not_ready"
+          : failureRetention.ok
+            ? ""
+            : "failure_retention_degraded",
       metadata: {
         replyPlanned: Boolean(decision.replyText),
         intentEligible: decision.leadEligible,
         safetyPassed: safety.ok,
         qualityScore: quality.overall,
         schemaReady: schema.schemaReady,
+        failureRetentionReady: failureRetention.ok,
+        expiredFailureRowsDeleted: failureRetention.deletedCount,
         externalSendAttempted: false
       }
     });
     return NextResponse.json({
-      ok: passed && schema.schemaReady,
+      ok: canaryPassed,
       traceId,
       canary: {
         planner: decision.blackBoxTrace.plannerVersion || "single_reply_planner",
@@ -76,9 +89,11 @@ export async function GET(request: Request) {
         safetyPassed: safety.ok,
         qualityScore: quality.overall,
         schemaReady: schema.schemaReady,
+        failureRetentionReady: failureRetention.ok,
+        expiredFailureRowsDeleted: failureRetention.deletedCount,
         externalSendAttempted: false
       }
-    }, { status: passed && schema.schemaReady ? 200 : 503, headers: { "X-LIMM-Trace-Id": traceId } });
+    }, { status: canaryPassed ? 200 : 503, headers: { "X-LIMM-Trace-Id": traceId } });
   } catch (error) {
     await recordOperationalEvent({ traceId, eventName: "synthetic_pipeline_canary", stage: "planner_to_safety_no_send", status: "failed", durationMs: performance.now() - startedAt, errorCode: error instanceof Error ? error.name : "canary_failed" }).catch(() => false);
     return NextResponse.json({ ok: false, traceId, error: "canary_failed", externalSendAttempted: false }, { status: 500, headers: { "X-LIMM-Trace-Id": traceId } });
