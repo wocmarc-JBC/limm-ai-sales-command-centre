@@ -70,6 +70,17 @@ const contract = {
     "expected_size_bytes", "observed_size_bytes", "expected_sha256", "observed_sha256",
     "backup_object_key", "status", "error_code", "checked_at"
   ],
+  reliability_incidents: [
+    "id", "fingerprint", "incident_type", "component", "severity", "status", "title",
+    "safe_summary", "first_detected_at", "last_detected_at", "acknowledged_at",
+    "acknowledged_by", "resolved_at", "occurrence_count", "notification_count",
+    "last_notified_at", "metadata", "created_at", "updated_at"
+  ],
+  database_recovery_runs: [
+    "id", "external_run_id", "run_type", "status", "provider", "artifact_sha256",
+    "artifact_size_bytes", "source_backup_id", "isolated_restore", "schema_checks_passed",
+    "row_checks_passed", "error_code", "metadata", "started_at", "completed_at", "created_at"
+  ],
   lead_files: [
     "id", "storage_bucket", "storage_path", "content_sha256", "integrity_status",
     "integrity_verified_at"

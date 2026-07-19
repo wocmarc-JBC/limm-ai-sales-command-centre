@@ -1,0 +1,295 @@
+name: Database Disaster Recovery
+
+on:
+  schedule:
+    - cron: "30 18 * * *"
+    - cron: "45 18 1 * *"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Recovery operation to run
+        required: true
+        type: choice
+        default: backup
+        options:
+          - backup
+          - restore_drill
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-disaster-recovery
+  cancel-in-progress: false
+
+jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ready: ${{ steps.guard.outputs.ready }}
+    env:
+      DR_DATABASE_URL: ${{ secrets.DR_DATABASE_URL }}
+      DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
+      DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
+      DR_S3_REGION: ${{ secrets.DR_S3_REGION }}
+      DR_S3_BUCKET: ${{ secrets.DR_S3_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DR_S3_SECRET_ACCESS_KEY }}
+      RELIABILITY_EVIDENCE_TOKEN: ${{ secrets.RELIABILITY_EVIDENCE_TOKEN }}
+      RELIABILITY_EVIDENCE_URL: ${{ vars.RELIABILITY_EVIDENCE_URL }}
+    steps:
+      - id: guard
+        name: Fail-closed configuration guard
+        shell: bash
+        run: |
+          required=(DR_DATABASE_URL DR_BACKUP_PASSPHRASE DR_S3_ENDPOINT DR_S3_REGION DR_S3_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RELIABILITY_EVIDENCE_TOKEN RELIABILITY_EVIDENCE_URL)
+          missing=0
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              missing=$((missing + 1))
+            fi
+          done
+          if [[ "$missing" -gt 0 ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Database DR remains fail-closed because $missing required secret or variable values are absent."
+            echo "Database DR not configured; no readiness evidence was created." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Database DR configuration guard passed without exposing secret values." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  backup:
+    needs: configuration
+    if: >-
+      needs.configuration.outputs.ready == 'true' &&
+      ((github.event_name == 'schedule' && github.event.schedule == '30 18 * * *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'backup'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DR_DATABASE_URL: ${{ secrets.DR_DATABASE_URL }}
+      DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
+      DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
+      DR_S3_REGION: ${{ secrets.DR_S3_REGION }}
+      DR_S3_BUCKET: ${{ secrets.DR_S3_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DR_S3_SECRET_ACCESS_KEY }}
+      RELIABILITY_EVIDENCE_TOKEN: ${{ secrets.RELIABILITY_EVIDENCE_TOKEN }}
+      RELIABILITY_EVIDENCE_URL: ${{ vars.RELIABILITY_EVIDENCE_URL }}
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - name: Prepare run identity
+        shell: bash
+        run: |
+          echo "DR_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          echo "DR_EXTERNAL_RUN_ID=github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-backup" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/limm-db-dr"
+
+      - name: Create PostgreSQL 17 custom-format dump
+        shell: bash
+        run: |
+          docker run --rm --network host \
+            -v "$RUNNER_TEMP/limm-db-dr:/work" \
+            -e DATABASE_URL \
+            postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --format=custom --compress=9 --no-owner --no-privileges --file=/work/database.dump'
+          test -s "$RUNNER_TEMP/limm-db-dr/database.dump"
+
+      - name: Encrypt and checksum artifact
+        shell: bash
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -in "$RUNNER_TEMP/limm-db-dr/database.dump" \
+            -out "$RUNNER_TEMP/limm-db-dr/database.dump.enc" \
+            -pass env:DR_BACKUP_PASSPHRASE
+          rm "$RUNNER_TEMP/limm-db-dr/database.dump"
+          sha=$(sha256sum "$RUNNER_TEMP/limm-db-dr/database.dump.enc" | cut -d ' ' -f 1)
+          bytes=$(stat -c %s "$RUNNER_TEMP/limm-db-dr/database.dump.enc")
+          object_key="database-backups/$(date -u +%Y/%m/%d)/limm-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.dump.enc"
+          echo "DR_ARTIFACT_SHA256=$sha" >> "$GITHUB_ENV"
+          echo "DR_ARTIFACT_BYTES=$bytes" >> "$GITHUB_ENV"
+          echo "DR_OBJECT_KEY=$object_key" >> "$GITHUB_ENV"
+
+      - name: Upload encrypted artifact and latest manifest
+        shell: bash
+        run: |
+          aws s3 cp "$RUNNER_TEMP/limm-db-dr/database.dump.enc" "s3://${DR_S3_BUCKET}/${DR_OBJECT_KEY}" \
+            --endpoint-url "$DR_S3_ENDPOINT" --region "$DR_S3_REGION" --no-progress
+          completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          jq -n \
+            --arg externalRunId "$DR_EXTERNAL_RUN_ID" \
+            --arg objectKey "$DR_OBJECT_KEY" \
+            --arg sha256 "$DR_ARTIFACT_SHA256" \
+            --arg completedAt "$completed_at" \
+            --argjson bytes "$DR_ARTIFACT_BYTES" \
+            '{schemaVersion:"limm-database-backup-v1",externalRunId:$externalRunId,objectKey:$objectKey,sha256:$sha256,bytes:$bytes,completedAt:$completedAt,encrypted:true}' \
+            > "$RUNNER_TEMP/limm-db-dr/latest.json"
+          aws s3 cp "$RUNNER_TEMP/limm-db-dr/latest.json" "s3://${DR_S3_BUCKET}/database-backups/latest.json" \
+            --endpoint-url "$DR_S3_ENDPOINT" --region "$DR_S3_REGION" --no-progress
+
+      - name: Record successful backup evidence
+        shell: bash
+        run: |
+          completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          jq -n \
+            --arg externalRunId "$DR_EXTERNAL_RUN_ID" \
+            --arg artifactSha256 "$DR_ARTIFACT_SHA256" \
+            --arg startedAt "$DR_STARTED_AT" \
+            --arg completedAt "$completed_at" \
+            --arg workflowRunId "$GITHUB_RUN_ID" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commitSha "$GITHUB_SHA" \
+            --argjson artifactSizeBytes "$DR_ARTIFACT_BYTES" \
+            --argjson workflowRunAttempt "$GITHUB_RUN_ATTEMPT" \
+            '{externalRunId:$externalRunId,runType:"backup",status:"succeeded",provider:"independent_pg_dump_s3",artifactSha256:$artifactSha256,artifactSizeBytes:$artifactSizeBytes,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"pg_custom_gzip"}' \
+            > "$RUNNER_TEMP/limm-db-dr/evidence.json"
+          curl --silent --show-error --fail-with-body \
+            -H "Authorization: Bearer ${RELIABILITY_EVIDENCE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/limm-db-dr/evidence.json" \
+            "$RELIABILITY_EVIDENCE_URL"
+
+      - name: Record failed backup evidence
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          jq -n \
+            --arg externalRunId "${DR_EXTERNAL_RUN_ID:-github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-backup}" \
+            --arg startedAt "${DR_STARTED_AT:-$completed_at}" \
+            --arg completedAt "$completed_at" \
+            --arg workflowRunId "$GITHUB_RUN_ID" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commitSha "$GITHUB_SHA" \
+            --argjson workflowRunAttempt "$GITHUB_RUN_ATTEMPT" \
+            '{externalRunId:$externalRunId,runType:"backup",status:"failed",provider:"independent_pg_dump_s3",artifactSha256:"",artifactSizeBytes:0,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"workflow_backup_failed",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"pg_custom_gzip"}' \
+            > "$RUNNER_TEMP/limm-db-dr/failed-evidence.json"
+          curl --silent --show-error --fail-with-body \
+            -H "Authorization: Bearer ${RELIABILITY_EVIDENCE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/limm-db-dr/failed-evidence.json" \
+            "$RELIABILITY_EVIDENCE_URL"
+
+  restore-drill:
+    needs: configuration
+    if: >-
+      needs.configuration.outputs.ready == 'true' &&
+      ((github.event_name == 'schedule' && github.event.schedule == '45 18 1 * *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'restore_drill'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
+      DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
+      DR_S3_REGION: ${{ secrets.DR_S3_REGION }}
+      DR_S3_BUCKET: ${{ secrets.DR_S3_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DR_S3_SECRET_ACCESS_KEY }}
+      RELIABILITY_EVIDENCE_TOKEN: ${{ secrets.RELIABILITY_EVIDENCE_TOKEN }}
+      RELIABILITY_EVIDENCE_URL: ${{ vars.RELIABILITY_EVIDENCE_URL }}
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - name: Prepare isolated restore drill
+        shell: bash
+        run: |
+          echo "DR_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          echo "DR_EXTERNAL_RUN_ID=github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-restore" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/limm-db-dr"
+          aws s3 cp "s3://${DR_S3_BUCKET}/database-backups/latest.json" "$RUNNER_TEMP/limm-db-dr/latest.json" \
+            --endpoint-url "$DR_S3_ENDPOINT" --region "$DR_S3_REGION" --no-progress
+          jq -e '.schemaVersion == "limm-database-backup-v1" and .encrypted == true' "$RUNNER_TEMP/limm-db-dr/latest.json" > /dev/null
+          object_key=$(jq -r '.objectKey' "$RUNNER_TEMP/limm-db-dr/latest.json")
+          sha=$(jq -r '.sha256' "$RUNNER_TEMP/limm-db-dr/latest.json")
+          bytes=$(jq -r '.bytes' "$RUNNER_TEMP/limm-db-dr/latest.json")
+          source_run=$(jq -r '.externalRunId' "$RUNNER_TEMP/limm-db-dr/latest.json")
+          [[ "$object_key" == database-backups/* ]] && [[ "$sha" =~ ^[a-f0-9]{64}$ ]] && [[ "$bytes" =~ ^[0-9]+$ ]]
+          echo "DR_OBJECT_KEY=$object_key" >> "$GITHUB_ENV"
+          echo "DR_ARTIFACT_SHA256=$sha" >> "$GITHUB_ENV"
+          echo "DR_ARTIFACT_BYTES=$bytes" >> "$GITHUB_ENV"
+          echo "DR_SOURCE_BACKUP_RUN_ID=$source_run" >> "$GITHUB_ENV"
+
+      - name: Download, verify, and decrypt backup
+        shell: bash
+        run: |
+          aws s3 cp "s3://${DR_S3_BUCKET}/${DR_OBJECT_KEY}" "$RUNNER_TEMP/limm-db-dr/database.dump.enc" \
+            --endpoint-url "$DR_S3_ENDPOINT" --region "$DR_S3_REGION" --no-progress
+          echo "${DR_ARTIFACT_SHA256}  $RUNNER_TEMP/limm-db-dr/database.dump.enc" | sha256sum --check --strict
+          test "$(stat -c %s "$RUNNER_TEMP/limm-db-dr/database.dump.enc")" = "$DR_ARTIFACT_BYTES"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+            -in "$RUNNER_TEMP/limm-db-dr/database.dump.enc" \
+            -out "$RUNNER_TEMP/limm-db-dr/database.dump" \
+            -pass env:DR_BACKUP_PASSPHRASE
+          test -s "$RUNNER_TEMP/limm-db-dr/database.dump"
+
+      - name: Restore into isolated PostgreSQL and verify contracts
+        shell: bash
+        run: |
+          container="limm-restore-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          password=$(openssl rand -hex 24)
+          cleanup() { docker rm -f "$container" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          docker run -d --name "$container" -p 127.0.0.1:55432:5432 \
+            -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=limm_restore postgres:17-alpine > /dev/null
+          for attempt in $(seq 1 30); do
+            if docker exec "$container" pg_isready -U postgres -d limm_restore > /dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker exec "$container" pg_isready -U postgres -d limm_restore
+          docker run --rm --network host -v "$RUNNER_TEMP/limm-db-dr:/work" -e PGPASSWORD="$password" postgres:17-alpine \
+            pg_restore --host 127.0.0.1 --port 55432 --username postgres --dbname limm_restore --no-owner --no-privileges /work/database.dump
+          required=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
+            "select count(*) from information_schema.tables where table_schema='public' and table_name in ('profiles','leads','lead_messages','audit_logs','whatsapp_inbound_jobs','client_file_recovery_runs');")
+          test "$required" = "6"
+          docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -v ON_ERROR_STOP=1 -Atc \
+            "select count(*) from public.profiles; select count(*) from public.leads; select count(*) from public.lead_messages; select count(*) from public.audit_logs;" > /dev/null
+          echo "DR_SCHEMA_CHECKS=6" >> "$GITHUB_ENV"
+          echo "DR_ROW_CHECKS=4" >> "$GITHUB_ENV"
+
+      - name: Record successful restore evidence
+        shell: bash
+        run: |
+          completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          jq -n \
+            --arg externalRunId "$DR_EXTERNAL_RUN_ID" \
+            --arg sourceBackupExternalRunId "$DR_SOURCE_BACKUP_RUN_ID" \
+            --arg artifactSha256 "$DR_ARTIFACT_SHA256" \
+            --arg startedAt "$DR_STARTED_AT" \
+            --arg completedAt "$completed_at" \
+            --arg workflowRunId "$GITHUB_RUN_ID" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commitSha "$GITHUB_SHA" \
+            --argjson artifactSizeBytes "$DR_ARTIFACT_BYTES" \
+            --argjson schemaChecksPassed "$DR_SCHEMA_CHECKS" \
+            --argjson rowChecksPassed "$DR_ROW_CHECKS" \
+            --argjson workflowRunAttempt "$GITHUB_RUN_ATTEMPT" \
+            '{externalRunId:$externalRunId,runType:"restore_drill",status:"succeeded",provider:"independent_pg_dump_s3",artifactSha256:$artifactSha256,artifactSizeBytes:$artifactSizeBytes,sourceBackupExternalRunId:$sourceBackupExternalRunId,isolatedRestore:true,schemaChecksPassed:$schemaChecksPassed,rowChecksPassed:$rowChecksPassed,errorCode:"",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"pg_custom_gzip"}' \
+            > "$RUNNER_TEMP/limm-db-dr/evidence.json"
+          curl --silent --show-error --fail-with-body \
+            -H "Authorization: Bearer ${RELIABILITY_EVIDENCE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/limm-db-dr/evidence.json" \
+            "$RELIABILITY_EVIDENCE_URL"
+
+      - name: Record failed restore evidence
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          jq -n \
+            --arg externalRunId "${DR_EXTERNAL_RUN_ID:-github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-restore}" \
+            --arg startedAt "${DR_STARTED_AT:-$completed_at}" \
+            --arg completedAt "$completed_at" \
+            --arg workflowRunId "$GITHUB_RUN_ID" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commitSha "$GITHUB_SHA" \
+            --argjson workflowRunAttempt "$GITHUB_RUN_ATTEMPT" \
+            '{externalRunId:$externalRunId,runType:"restore_drill",status:"failed",provider:"independent_pg_dump_s3",artifactSha256:"",artifactSizeBytes:0,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"workflow_restore_failed",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"pg_custom_gzip"}' \
+            > "$RUNNER_TEMP/limm-db-dr/failed-evidence.json"
+          curl --silent --show-error --fail-with-body \
+            -H "Authorization: Bearer ${RELIABILITY_EVIDENCE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/limm-db-dr/failed-evidence.json" \
+            "$RELIABILITY_EVIDENCE_URL"

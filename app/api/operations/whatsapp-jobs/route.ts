@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         processedCount: results.length,
         retryScheduledCount: retried,
         deadLetteredCount: deadLettered,
-        releaseVersion: "11.3.0"
+        releaseVersion: "11.4.0"
       }
     });
     const queue = await getWhatsAppQueueHealth();
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
       status: "failed",
       startedAt,
       durationMs: performance.now() - started,
-      metadata: { scheduler, errorCode: error instanceof Error ? error.name : "worker_failed", releaseVersion: "11.3.0" }
+      metadata: { scheduler, errorCode: error instanceof Error ? error.name : "worker_failed", releaseVersion: "11.4.0" }
     }).catch(() => false);
     return NextResponse.json({ ok: false, error: "worker_failed" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }

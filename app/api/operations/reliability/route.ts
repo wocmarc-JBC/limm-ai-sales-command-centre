@@ -7,6 +7,11 @@ import {
   runClientFileOffsiteBackup,
   runClientFileRestoreDrill
 } from "@/lib/data/client-file-recovery-repository";
+import { getDatabaseRecoverySnapshot } from "@/lib/data/database-recovery-repository";
+import {
+  acknowledgeReliabilityIncident,
+  getReliabilityIncidentSnapshot
+} from "@/lib/data/reliability-incidents-repository";
 import {
   getWhatsAppQueueHealth,
   listWhatsAppDeadLetters,
@@ -47,13 +52,16 @@ export async function GET() {
   if (!rate.allowed) return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429, headers: rateLimitHeaders(rate) });
 
   try {
-    const [queue, files, deadLetters] = await Promise.all([
+    const [queue, files, database, incidents, deadLetters] = await Promise.all([
       getWhatsAppQueueHealth(),
       getClientFileRecoverySnapshot(),
+      getDatabaseRecoverySnapshot(),
+      getReliabilityIncidentSnapshot(),
       access.actor.role === "boss" ? listWhatsAppDeadLetters() : Promise.resolve([])
     ]);
-    return NextResponse.json({ ok: queue.available && files.available, queue, files, deadLetters }, {
-      status: queue.available && files.available ? 200 : 503,
+    const available = queue.available && files.available && database.available && incidents.available;
+    return NextResponse.json({ ok: available, queue, files, database, incidents, deadLetters }, {
+      status: available ? 200 : 503,
       headers: { ...rateLimitHeaders(rate), "Cache-Control": "no-store" }
     });
   } catch {
@@ -80,6 +88,25 @@ export async function POST(request: Request) {
   const action = typeof payload.action === "string" ? payload.action : "";
 
   try {
+  if (action === "acknowledge_incident") {
+    const incidentId = typeof payload.incidentId === "string" ? payload.incidentId : "";
+    if (!UUID_PATTERN.test(incidentId)) return NextResponse.json({ ok: false, error: "invalid_incident_id" }, { status: 400, headers: rateLimitHeaders(rate) });
+    const acknowledged = await acknowledgeReliabilityIncident(incidentId, access.actor.id);
+    if (!acknowledged) return NextResponse.json({ ok: false, error: "active_incident_not_found" }, { status: 404, headers: rateLimitHeaders(rate) });
+    await createAuditLog({
+      actorType: access.actor.role,
+      actorName: access.actor.fullName,
+      actorEmail: access.actor.email,
+      actorId: access.actor.id,
+      action: "reliability_incident_acknowledged",
+      entityType: "reliability_incident",
+      entityId: incidentId,
+      summary: "Operator acknowledged an active reliability incident; automatic resolution still requires the condition to clear.",
+      metadata: { clientMessageSent: false, manualResolutionAllowed: false }
+    });
+    return NextResponse.json({ ok: true, incidentId, status: "acknowledged" }, { headers: { ...rateLimitHeaders(rate), "Cache-Control": "no-store" } });
+  }
+
   if (action === "requeue_job") {
     if (access.actor.role !== "boss") return NextResponse.json({ ok: false, error: "boss_access_required" }, { status: 403, headers: rateLimitHeaders(rate) });
     const jobId = typeof payload.jobId === "string" ? payload.jobId : "";

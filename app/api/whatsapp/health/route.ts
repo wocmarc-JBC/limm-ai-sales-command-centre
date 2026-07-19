@@ -13,6 +13,8 @@ import { hasSupabaseAdminEnv } from "@/lib/data/supabase-admin";
 import { getWhatsAppProductionProofSnapshot } from "@/lib/data/whatsapp-webhook-failures-repository";
 import { getWhatsAppQueueHealth } from "@/lib/data/whatsapp-inbound-jobs-repository";
 import { getClientFileRecoverySnapshot } from "@/lib/data/client-file-recovery-repository";
+import { getDatabaseRecoverySnapshot } from "@/lib/data/database-recovery-repository";
+import { getReliabilityIncidentSnapshot } from "@/lib/data/reliability-incidents-repository";
 import { getOperationsSloSnapshot } from "@/lib/operations/observability";
 
 export const runtime = "nodejs";
@@ -94,6 +96,8 @@ export const dynamic = "force-dynamic";
 // uiVersion: "v11.1.3"
 // version: "v11_3_0_reliability_disaster_recovery"
 // reliabilityVersion: "v11.3.0"
+// version: "v11_4_0_recovery_readiness"
+// reliabilityVersion: "v11.4.0"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -115,12 +119,14 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     const clientFilesStorage = getClientFilesStorageRuntime();
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
-    const [concurrencySafety, operations, whatsappProof, queueReliability, fileRecovery] = await Promise.all([
+    const [concurrencySafety, operations, whatsappProof, queueReliability, fileRecovery, databaseRecovery, reliabilityIncidents] = await Promise.all([
       getWhatsAppConversationConcurrencyHealth(),
       getOperationsSloSnapshot(),
       getWhatsAppProductionProofSnapshot(),
       getWhatsAppQueueHealth(),
-      getClientFileRecoverySnapshot()
+      getClientFileRecoverySnapshot(),
+      getDatabaseRecoverySnapshot(),
+      getReliabilityIncidentSnapshot()
     ]);
     const webhookSignatureEnforced = envPresent("WHATSAPP_APP_SECRET");
     const concurrencySafetyReady =
@@ -131,11 +137,11 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v11_3_0_reliability_disaster_recovery",
+      version: "v11_4_0_recovery_readiness",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v11.3.0",
-      reliabilityVersion: "v11.3.0",
+      uiVersion: "v11.4.0",
+      reliabilityVersion: "v11.4.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -192,6 +198,38 @@ export async function GET() {
         fileRecovery.latestBackupStatus === "succeeded" &&
         fileRecovery.restoreBucketIsolated &&
         fileRecovery.latestRestoreDrillStatus === "succeeded",
+      reliabilityIncidentLedgerAvailable: reliabilityIncidents.available,
+      reliabilityWatchdogLastSucceededAt: reliabilityIncidents.watchdogLastSucceededAt,
+      reliabilityWatchdogStatus: reliabilityIncidents.watchdogStatus,
+      reliabilityOpenCriticalIncidentCount: reliabilityIncidents.openCriticalCount,
+      reliabilityOpenWarningIncidentCount: reliabilityIncidents.openWarningCount,
+      reliabilityAcknowledgedIncidentCount: reliabilityIncidents.acknowledgedCount,
+      reliabilityAlertsEnabled: reliabilityIncidents.alertEnabled,
+      reliabilityAlertProviderConfigured: reliabilityIncidents.alertProviderConfigured,
+      reliabilityAlertRecipientsConfigured: reliabilityIncidents.alertRecipientsConfigured,
+      databaseRecoveryEvidenceAvailable: databaseRecovery.available,
+      databaseRecoveryEvidenceReporterConfigured: databaseRecovery.evidenceReporterConfigured,
+      databaseBackupConfigured: databaseRecovery.backupConfigured,
+      databaseLatestBackupAt: databaseRecovery.latestBackupAt,
+      databaseLatestBackupStatus: databaseRecovery.latestBackupStatus,
+      databaseLatestBackupArtifactVerified: databaseRecovery.latestBackupArtifactVerified,
+      databaseLatestRestoreDrillAt: databaseRecovery.latestRestoreDrillAt,
+      databaseLatestRestoreDrillStatus: databaseRecovery.latestRestoreDrillStatus,
+      databaseLatestRestoreIsolated: databaseRecovery.latestRestoreIsolated,
+      databaseBackupRpoHours: databaseRecovery.rpoHours,
+      databaseRestoreRtoHours: databaseRecovery.rtoHours,
+      databaseDisasterRecoveryReady: databaseRecovery.ready,
+      recoveryReadinessReady:
+        queueReliability.available &&
+        queueReliability.deadLetterCount === 0 &&
+        queueReliability.staleProcessingCount === 0 &&
+        fileRecovery.offsiteConfigured &&
+        fileRecovery.latestBackupStatus === "succeeded" &&
+        fileRecovery.restoreBucketIsolated &&
+        fileRecovery.latestRestoreDrillStatus === "succeeded" &&
+        databaseRecovery.ready &&
+        reliabilityIncidents.available &&
+        reliabilityIncidents.openCriticalCount === 0,
       whatsappRecoveryProofSchemaReady: whatsappProof.schemaReady,
       unresolvedPreservedInboundCount: whatsappProof.pendingFailureCount,
       recoveredInboundLast24hCount: whatsappProof.recoveredLast24hCount,

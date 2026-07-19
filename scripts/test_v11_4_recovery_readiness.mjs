@@ -1,0 +1,111 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const migration = read("supabase/migrations/20260719185937_v11_4_0_recovery_readiness.sql");
+const indexMigration = read("supabase/migrations/20260719195918_v11_4_0_recovery_fk_indexes.sql");
+const incidents = read("lib/data/reliability-incidents-repository.ts");
+const database = read("lib/data/database-recovery-repository.ts");
+const alertEmail = read("lib/reliability-alert-email.ts");
+const evidenceAuth = read("lib/reliability-evidence-auth.ts");
+const watchdogRoute = read("app/api/operations/reliability-watchdog/route.ts");
+const evidenceRoute = read("app/api/operations/database-recovery-evidence/route.ts");
+const reliabilityRoute = read("app/api/operations/reliability/route.ts");
+const operations = read("components/operations/ReliabilityRecoveryPanel.tsx");
+const health = read("app/api/whatsapp/health/route.ts");
+const workflow = read(".github/workflows/database-disaster-recovery.yml");
+const schemaGate = read("scripts/verify_production_schema_gate.mjs");
+const envExample = read(".env.example");
+const teamRepository = read("lib/data/team-inbox-repository.ts");
+const observability = read("lib/operations/observability.ts");
+const rateLimit = read("lib/operations/rate-limit.ts");
+const packageJson = JSON.parse(read("package.json"));
+
+assert.equal(packageJson.version, "11.4.0");
+assert.match(packageJson.scripts["test:v11.4.0"], /test_v11_4_recovery_readiness\.mjs/);
+assert.match(packageJson.scripts.verify, /test:v11\.4\.0/);
+
+assert.match(migration, /create table if not exists public\.reliability_incidents/);
+assert.match(migration, /fingerprint text not null unique/);
+assert.match(migration, /status text not null default 'open' check \(status in \('open','acknowledged','resolved'\)\)/);
+assert.match(migration, /create table if not exists public\.database_recovery_runs/);
+assert.match(migration, /external_run_id text not null unique/);
+assert.match(migration, /alter table public\.reliability_incidents enable row level security/);
+assert.match(migration, /revoke all on table public\.reliability_incidents from public, anon, authenticated/);
+assert.match(migration, /grant select, insert, update, delete on table public\.reliability_incidents to service_role/);
+assert.match(migration, /revoke all on table public\.database_recovery_runs from public, anon, authenticated/);
+assert.match(migration, /reliability_incidents_acknowledged_by_idx/);
+assert.match(migration, /database_recovery_runs_source_backup_idx/);
+assert.match(indexMigration, /reliability_incidents_acknowledged_by_idx/);
+assert.match(indexMigration, /database_recovery_runs_source_backup_idx/);
+assert.match(migration, /create or replace function public\.upsert_reliability_incident/);
+assert.match(migration, /on conflict \(fingerprint\) do update/);
+assert.match(migration, /grant execute on function public\.upsert_reliability_incident[\s\S]*to service_role/);
+assert.match(migration, /dispatch_reliability_watchdog/);
+assert.match(migration, /limm_reliability_watchdog_url/);
+assert.match(migration, /limm-reliability-watchdog-five-minutes/);
+assert.match(migration, /'\*\/5 \* \* \* \*'/);
+
+assert.match(incidents, /workerAgeSeconds > 180/);
+assert.match(incidents, /oldestQueuedAgeSeconds > 120/);
+assert.match(incidents, /queue\.staleProcessingCount > 0/);
+assert.match(incidents, /queue\.deadLetterCount > 0/);
+assert.match(incidents, /integrityAgeHours > 26/);
+assert.match(incidents, /restoreAgeDays > 35/);
+assert.match(incidents, /database_recovery_not_ready/);
+assert.match(incidents, /client\.rpc\("upsert_reliability_incident"/);
+assert.match(incidents, /status: "resolved"/);
+assert.match(incidents, /\.lt\("last_detected_at", evaluatedAt\)/);
+assert.match(incidents, /row\.status !== "open"/);
+assert.match(incidents, /releaseVersion: "11\.4\.0"/);
+assert.doesNotMatch(incidents, /handleWhatsAppInboundMessage|sendWhatsAppTextMessage|WHATSAPP_ACCESS_TOKEN/);
+
+assert.match(database, /DATABASE_BACKUP_RPO_HOURS = 24/);
+assert.match(database, /DATABASE_RESTORE_RTO_HOURS = 4/);
+assert.match(database, /DATABASE_RESTORE_DRILL_FRESHNESS_DAYS = 35/);
+assert.match(database, /latestBackupArtifactVerified/);
+assert.match(database, /restore_not_isolated/);
+assert.match(database, /onConflict: "external_run_id"/);
+assert.doesNotMatch(database, /NEXT_PUBLIC_RELIABILITY_EVIDENCE_TOKEN/);
+
+assert.match(evidenceAuth, /timingSafeEqual/);
+assert.match(evidenceAuth, /configured\.length < 32/);
+assert.match(evidenceRoute, /authorizeReliabilityEvidence/);
+assert.match(evidenceRoute, /contentLength > 16_384/);
+assert.match(evidenceRoute, /Database recovery workflow/);
+assert.match(watchdogRoute, /authorizeReliabilityScheduler/);
+assert.match(watchdogRoute, /clientMessagesSent: 0/);
+assert.match(reliabilityRoute, /acknowledgeReliabilityIncident/);
+assert.match(reliabilityRoute, /manualResolutionAllowed: false/);
+
+assert.match(alertEmail, /RELIABILITY_ALERT_EMAIL_ENABLED/);
+assert.match(alertEmail, /AbortSignal\.timeout\(8_000\)/);
+assert.match(alertEmail, /No client message was sent/);
+assert.doesNotMatch(alertEmail, /senderPhone|messageBody|leadId/);
+
+assert.match(workflow, /Fail-closed configuration guard/);
+assert.match(workflow, /pg_dump.*--format=custom/);
+assert.match(workflow, /aes-256-cbc -pbkdf2 -iter 200000/);
+assert.match(workflow, /sha256sum.*--check --strict/);
+assert.match(workflow, /postgres:17-alpine/);
+assert.match(workflow, /POSTGRES_DB=limm_restore/);
+assert.match(workflow, /required[\s\S]*profiles[\s\S]*leads[\s\S]*lead_messages[\s\S]*audit_logs[\s\S]*whatsapp_inbound_jobs[\s\S]*client_file_recovery_runs/);
+assert.match(workflow, /isolatedRestore:true/);
+assert.match(workflow, /workflow_restore_failed/);
+assert.doesNotMatch(workflow, /echo.*DR_DATABASE_URL|echo.*DR_BACKUP_PASSPHRASE/);
+
+assert.match(operations, /Incident ledger/);
+assert.match(operations, /Database recovery/);
+assert.match(operations, /It will resolve only after the watchdog proves/);
+assert.match(health, /v11_4_0_recovery_readiness/);
+assert.match(health, /databaseDisasterRecoveryReady/);
+assert.match(health, /recoveryReadinessReady/);
+assert.match(schemaGate, /reliability_incidents/);
+assert.match(schemaGate, /database_recovery_runs/);
+assert.match(envExample, /^RELIABILITY_EVIDENCE_TOKEN=$/m);
+assert.match(envExample, /^RELIABILITY_ALERT_EMAIL_ENABLED=false$/m);
+assert.match(teamRepository, /recordOperatorProductEvent[\s\S]*getDataMode\(\) === "Mock Mode"/);
+assert.match(observability, /getDataMode\(\) === "Mock Mode"/);
+assert.match(rateLimit, /getDataMode\(\) === "Mock Mode"/);
+
+console.log("PASS v11.4 durable incident detection, fail-closed alerts, encrypted database backup evidence, and isolated restore readiness");

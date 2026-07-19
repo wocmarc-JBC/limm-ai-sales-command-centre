@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 import { getSupabaseAdminClient } from "@/lib/data/supabase-admin";
+import { getDataMode } from "@/lib/data/data-source";
 import type { OperationsSloSnapshot } from "./contracts";
 
 type OperationalStatus = "started" | "ok" | "degraded" | "failed";
@@ -60,6 +61,7 @@ export async function recordOperationalEvent(event: OperationalEvent) {
   else if (event.status === "degraded") console.warn(JSON.stringify(log));
   else console.info(JSON.stringify(log));
 
+  if (getDataMode() === "Mock Mode") return false;
   const admin = getSupabaseAdminClient();
   if (!admin) return false;
   const { error } = await admin.from("operational_trace_events").insert(row);
@@ -107,6 +109,7 @@ export async function getOperationsSloSnapshot(): Promise<OperationsSloSnapshot>
     lastCanaryAt: null,
     lastCanaryStatus: "not_run"
   };
+  if (getDataMode() === "Mock Mode") return empty;
   const admin = getSupabaseAdminClient();
   if (!admin) return empty;
 

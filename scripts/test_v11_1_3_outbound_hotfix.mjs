@@ -17,7 +17,7 @@ const inbox = read("components/inbox/MultiChatInbox.tsx");
 
 assert.ok(packageJson.version >= "11.1.3");
 assert.ok(packageJson.scripts["test:v11.1.3"]?.includes("test_v11_1_3_outbound_hotfix.mjs"));
-assert.ok(packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.3.0"));
+assert.ok(packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.3.0") || packageJson.scripts.verify.includes("test:v11.4.0"));
 
 assert.ok(controlRepo.startsWith('import "server-only";'));
 assert.ok(controlRepo.includes("getSupabaseAdminClient"));

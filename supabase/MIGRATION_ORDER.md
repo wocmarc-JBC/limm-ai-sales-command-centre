@@ -573,6 +573,42 @@ select pg_get_functiondef(
 ) like '%timeout_milliseconds := 55000%' as cold_start_tolerance_ready;
 ```
 
+## 20260719185937_v11_4_0_recovery_readiness.sql
+
+Purpose: Add service-only incident deduplication, acknowledgement and automatic resolution; independent database backup/restore evidence; and a five-minute Vault-authenticated no-send watchdog.
+Dependencies: the v11.3.0 reliability migration and v11.3.1 scheduler tolerance patch.
+Safe to re-run: Yes. Tables/indexes/policies are additive, private functions are replaced, and the named cron job is unscheduled before rescheduling. The watchdog Vault URL is activated separately after deployment.
+Verification query:
+
+```sql
+select table_name from information_schema.tables
+where table_schema = 'public'
+  and table_name in ('reliability_incidents', 'database_recovery_runs');
+
+select has_table_privilege('anon', 'public.reliability_incidents', 'select') as anon_can_read_incidents,
+       has_table_privilege('authenticated', 'public.database_recovery_runs', 'select') as users_can_read_recovery_evidence,
+       has_table_privilege('service_role', 'public.reliability_incidents', 'select') as service_can_read_incidents;
+
+select jobname, schedule, active from cron.job
+where jobname = 'limm-reliability-watchdog-five-minutes';
+```
+
+## 20260719195918_v11_4_0_recovery_fk_indexes.sql
+
+Purpose: Add covering indexes for the nullable incident acknowledgement and restore-source foreign keys identified by the post-deployment performance advisor.
+Dependencies: the v11.4.0 recovery-readiness migration.
+Safe to re-run: Yes. Both indexes use `create index if not exists` and partial predicates that exclude null references.
+Verification query:
+
+```sql
+select indexname from pg_indexes
+where schemaname = 'public'
+  and indexname in (
+    'reliability_incidents_acknowledged_by_idx',
+    'database_recovery_runs_source_backup_idx'
+  );
+```
+
 ## After All Migrations
 
 Run:

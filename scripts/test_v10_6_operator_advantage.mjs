@@ -162,8 +162,8 @@ check("publishes and chains the v10.6.0 Operator Advantage release", () => {
   assert.ok(major > 10 || (major === 10 && minor >= 6));
   assert.ok(packageJson.scripts["test:v10.6.0"]?.includes("test:v10.5.0"));
   assert.ok(packageJson.scripts["test:v10.6.0"]?.includes("test_v10_6_operator_advantage.mjs"));
-  assert.ok(packageJson.scripts.verify.includes("test:v10.6.0") || packageJson.scripts.verify.includes("test:v11.1.0") || packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.3.0"));
-  if (packageJson.scripts.verify.includes("test:v11.1.0") || packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.3.0")) {
+  assert.ok(packageJson.scripts.verify.includes("test:v10.6.0") || packageJson.scripts.verify.includes("test:v11.1.0") || packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.3.0") || packageJson.scripts.verify.includes("test:v11.4.0"));
+  if (packageJson.scripts.verify.includes("test:v11.1.0") || packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0") || packageJson.scripts.verify.includes("test:v11.3.0") || packageJson.scripts.verify.includes("test:v11.4.0")) {
     assert.ok(packageJson.scripts["test:v11.1.0"]?.includes("test:v10.6.0"));
   }
   assert.ok(packageJson.scripts.build.includes("test_operator_inbox_bundle_budget.mjs"));

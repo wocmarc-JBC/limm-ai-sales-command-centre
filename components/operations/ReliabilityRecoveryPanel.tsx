@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { ClientFileRecoverySnapshot } from "@/lib/data/client-file-recovery-repository";
+import type { DatabaseRecoverySnapshot } from "@/lib/data/database-recovery-repository";
+import type { ReliabilityIncidentSnapshot } from "@/lib/data/reliability-incidents-repository";
 import type { WhatsAppDeadLetterSummary, WhatsAppQueueHealth } from "@/lib/data/whatsapp-inbound-jobs-repository";
 
 function formatTime(value: string | null) {
@@ -21,19 +23,31 @@ function tone(ok: boolean) {
     : "border-command-amber/35 bg-command-amber/10 text-command-amber";
 }
 
+function incidentTone(severity: "warning" | "critical") {
+  return severity === "critical"
+    ? "border-command-red/45 bg-command-red/10 text-command-red"
+    : "border-command-amber/35 bg-command-amber/10 text-command-amber";
+}
+
 export function ReliabilityRecoveryPanel({
   initialQueue,
   initialFiles,
+  initialDatabase,
+  initialIncidents,
   initialDeadLetters,
   boss
 }: {
   initialQueue: WhatsAppQueueHealth;
   initialFiles: ClientFileRecoverySnapshot;
+  initialDatabase: DatabaseRecoverySnapshot;
+  initialIncidents: ReliabilityIncidentSnapshot;
   initialDeadLetters: WhatsAppDeadLetterSummary[];
   boss: boolean;
 }) {
   const [queue, setQueue] = useState(initialQueue);
   const [files, setFiles] = useState(initialFiles);
+  const [database, setDatabase] = useState(initialDatabase);
+  const [incidents, setIncidents] = useState(initialIncidents);
   const [deadLetters, setDeadLetters] = useState(initialDeadLetters);
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
@@ -51,17 +65,23 @@ export function ReliabilityRecoveryPanel({
     if (!response.ok) throw new Error(result.error || "refresh_failed");
     setQueue(result.queue);
     setFiles(result.files);
+    setDatabase(result.database);
+    setIncidents(result.incidents);
     setDeadLetters(Array.isArray(result.deadLetters) ? result.deadLetters : []);
   }
 
-  async function run(action: string, jobId = "") {
-    setBusy(jobId || action);
+  async function run(action: string, targetId = "") {
+    setBusy(targetId || action);
     setNotice(null);
     try {
       const response = await fetch("/api/operations/reliability", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, jobId })
+        body: JSON.stringify({
+          action,
+          ...(action === "requeue_job" ? { jobId: targetId } : {}),
+          ...(action === "acknowledge_incident" ? { incidentId: targetId } : {})
+        })
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
@@ -73,7 +93,9 @@ export function ReliabilityRecoveryPanel({
       await refresh();
       setNotice({
         ok: true,
-        text: action === "requeue_job"
+        text: action === "acknowledge_incident"
+          ? "Incident acknowledged. It will resolve only after the watchdog proves that the underlying condition cleared."
+          : action === "requeue_job"
           ? "Dead letter requeued through the idempotent live handler. The original provider message ID still prevents duplicate processing."
           : action === "run_integrity"
             ? "Client-file checksum audit completed and evidence was recorded."
@@ -93,6 +115,7 @@ export function ReliabilityRecoveryPanel({
   const integrityHealthy = files.latestIntegrityStatus === "succeeded";
   const backupHealthy = files.offsiteConfigured && files.latestBackupStatus === "succeeded";
   const restoreHealthy = files.restoreBucketIsolated && files.latestRestoreDrillStatus === "succeeded";
+  const alertReady = incidents.alertEnabled && incidents.alertProviderConfigured && incidents.alertRecipientsConfigured;
 
   return (
     <section className="mt-5 rounded-2xl border border-command-line bg-command-card p-5 shadow-premium" aria-labelledby="reliability-recovery-title">
@@ -100,7 +123,7 @@ export function ReliabilityRecoveryPanel({
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-command-cyan">Reliability & disaster recovery</p>
           <h2 id="reliability-recovery-title" className="mt-1 text-xl font-semibold text-command-text">Recovery control plane</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">Minute-level durable retries, expired-lease recovery, dead-letter replay, file checksums, offsite manifests and restore-drill evidence.</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-command-muted">Five-minute incident detection, durable retries, dead-letter replay, file checksums, encrypted database backup evidence and isolated restore proof.</p>
         </div>
         <button type="button" onClick={() => { setBusy("refresh"); refresh().catch(() => setNotice({ ok: false, text: "Reliability status could not be refreshed." })).finally(() => setBusy("")); }} disabled={Boolean(busy)} className="min-h-11 rounded-xl border border-command-line bg-command-bg/55 px-4 py-2 text-sm font-semibold text-command-text disabled:opacity-60">
           {busy === "refresh" ? "Refreshing…" : "Refresh"}
@@ -109,12 +132,14 @@ export function ReliabilityRecoveryPanel({
 
       {notice ? <p role="status" className={`mt-4 rounded-xl border p-3 text-sm ${tone(notice.ok)}`}>{notice.text}</p> : null}
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {[
+          ["Critical incidents", incidents.openCriticalCount, incidents.openCriticalCount === 0, `${incidents.acknowledgedCount} acknowledged`],
           ["Queue recovery", queueHealthy ? "Healthy" : "Attention", queueHealthy, `Last worker ${formatTime(queue.workerLastSucceededAt)}`],
           ["Dead letters", queue.deadLetterCount, queue.deadLetterCount === 0, `${queue.retryScheduledLast24hCount} retries in 24h`],
           ["File integrity", integrityHealthy ? "Verified" : files.latestIntegrityStatus.replace(/_/g, " "), integrityHealthy, formatTime(files.latestIntegrityAt)],
-          ["Offsite restore", restoreHealthy ? "Drill passed" : backupHealthy ? "Drill due" : "Not ready", restoreHealthy, files.offsiteConfigured ? formatTime(files.latestRestoreDrillAt) : "Independent target required"]
+          ["Offsite restore", restoreHealthy ? "Drill passed" : backupHealthy ? "Drill due" : "Not ready", restoreHealthy, files.offsiteConfigured ? formatTime(files.latestRestoreDrillAt) : "Independent target required"],
+          ["Database recovery", database.ready ? "Proven" : "Not ready", database.ready, database.latestRestoreDrillAt ? formatTime(database.latestRestoreDrillAt) : "Restore evidence required"]
         ].map(([label, value, ok, helper]) => (
           <article key={String(label)} className={`rounded-xl border p-4 ${tone(Boolean(ok))}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.13em] opacity-80">{String(label)}</p>
@@ -124,7 +149,39 @@ export function ReliabilityRecoveryPanel({
         ))}
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+      <div className="mt-5 rounded-xl border border-command-line bg-command-bg/45 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-command-text">Incident ledger</h3>
+            <p className="mt-1 text-sm text-command-muted">Database-deduplicated conditions auto-resolve only after recovery is observed.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${tone(incidents.watchdogStatus === "healthy" || incidents.watchdogStatus === "degraded")}`}>Watchdog {incidents.watchdogStatus.replace(/_/g, " ")}</span>
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${tone(alertReady)}`}>{alertReady ? "Alerts ready" : "Alerts fail-closed"}</span>
+          </div>
+        </div>
+        {incidents.incidents.length ? (
+          <div className="mt-4 grid gap-2">
+            {incidents.incidents.map((incident) => (
+              <article key={incident.id} className={`rounded-xl border p-4 ${incidentTone(incident.severity)}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold uppercase tracking-[0.13em] opacity-80">{incident.severity} · {incident.component.replace(/_/g, " ")}</p>
+                    <p className="mt-1 font-semibold text-command-text">{incident.title}</p>
+                    <p className="mt-1 text-sm leading-6 text-command-muted">{incident.safeSummary}</p>
+                    <p className="mt-2 text-xs text-command-muted">Detected {formatTime(incident.firstDetectedAt)} · Last seen {formatTime(incident.lastDetectedAt)} · {incident.occurrenceCount} checks</p>
+                  </div>
+                  {incident.status === "open" ? (
+                    <button type="button" onClick={() => run("acknowledge_incident", incident.id)} disabled={Boolean(busy)} className="min-h-11 rounded-xl border border-command-line bg-command-panel px-4 py-2 text-sm font-semibold text-command-text disabled:opacity-60">{busy === incident.id ? "Acknowledging…" : "Acknowledge"}</button>
+                  ) : <span className="rounded-full border border-command-cyan/40 bg-command-cyan/10 px-3 py-1 text-xs font-semibold text-command-cyan">Acknowledged</span>}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : <p className="mt-4 rounded-lg border border-command-green/30 bg-command-green/10 p-3 text-sm text-command-green">No active reliability incidents.</p>}
+      </div>
+
+      <div className="mt-5 grid gap-5 xl:grid-cols-3">
         <article className="rounded-xl border border-command-line bg-command-bg/45 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -154,6 +211,23 @@ export function ReliabilityRecoveryPanel({
             {boss ? <button type="button" onClick={() => run("run_restore_drill")} disabled={Boolean(busy) || !files.offsiteConfigured} className="min-h-11 rounded-xl border border-command-line bg-command-panel px-4 py-2 text-sm font-semibold text-command-text disabled:opacity-50">{busy === "run_restore_drill" ? "Restoring…" : "Run restore drill"}</button> : null}
           </div>
           {!files.offsiteConfigured ? <p className="mt-3 text-xs leading-5 text-command-amber">Source integrity is protected now. True disaster recovery remains fail-closed until a private S3-compatible destination is configured; same-project Storage is not counted as a backup.</p> : null}
+        </article>
+
+        <article className="rounded-xl border border-command-line bg-command-bg/45 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-command-text">Database recovery</h3>
+              <p className="mt-1 text-sm text-command-muted">Target RPO {database.rpoHours}h · RTO {database.rtoHours}h · independent encrypted artifacts</p>
+            </div>
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${tone(database.ready)}`}>{database.ready ? "Recovery proven" : "Fail-closed"}</span>
+          </div>
+          <dl className="mt-4 divide-y divide-command-line text-sm">
+            <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Latest backup</dt><dd className="font-semibold text-command-text">{database.latestBackupStatus.replace(/_/g, " ")} · {formatTime(database.latestBackupAt)}</dd></div>
+            <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Artifact checksum</dt><dd className="font-semibold text-command-text">{database.latestBackupArtifactVerified ? "Verified" : "Not proven"}</dd></div>
+            <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Isolated restore</dt><dd className="font-semibold text-command-text">{database.latestRestoreIsolated ? "Passed" : "Not proven"}</dd></div>
+            <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Schema checks</dt><dd className="font-semibold text-command-text">{database.latestRestoreSchemaChecks}</dd></div>
+          </dl>
+          {!database.ready ? <p className="mt-3 text-xs leading-5 text-command-amber">The app will not report database DR readiness until the independent workflow records both a fresh backup and an isolated restore drill.</p> : null}
         </article>
       </div>
 

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { getSupabaseAdminClient } from "@/lib/data/supabase-admin";
+import { getDataMode } from "@/lib/data/data-source";
 
 type LocalWindow = { count: number; resetAt: number };
 const localWindows = new Map<string, LocalWindow>();
@@ -39,6 +40,7 @@ export async function consumeRateLimit(input: {
 }): Promise<RateLimitResult> {
   const rawKey = `${input.action}:${input.identity}`;
   const keyHash = createHash("sha256").update(rawKey).digest("hex");
+  if (getDataMode() === "Mock Mode") return localRateLimit(keyHash, input.limit, input.windowSeconds);
   const admin = getSupabaseAdminClient();
   if (admin) {
     const { data, error } = await admin.rpc("consume_api_rate_limit", {

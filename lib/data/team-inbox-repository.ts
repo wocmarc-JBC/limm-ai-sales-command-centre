@@ -179,6 +179,7 @@ export async function recordOperatorProductEvent(input: {
   durationMs?: number | null;
   metadata?: Record<string, unknown>;
 }) {
+  if (getDataMode() === "Mock Mode") return false;
   const admin = getSupabaseAdminClient();
   if (!admin) return false;
   const { error } = await admin.from("operator_product_events").insert({
@@ -205,6 +206,7 @@ export async function recordAiQualityObservation(input: {
   reviewedBy?: string | null;
   metadata?: Record<string, unknown>;
 }) {
+  if (getDataMode() === "Mock Mode") return false;
   const admin = getSupabaseAdminClient();
   if (!admin) return false;
   const replySignature = input.reply

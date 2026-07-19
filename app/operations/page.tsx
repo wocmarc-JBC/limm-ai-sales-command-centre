@@ -4,6 +4,8 @@ import { WhatsAppRecoveryPanel } from "@/components/operations/WhatsAppRecoveryP
 import { ReliabilityRecoveryPanel } from "@/components/operations/ReliabilityRecoveryPanel";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getClientFileRecoverySnapshot } from "@/lib/data/client-file-recovery-repository";
+import { getDatabaseRecoverySnapshot } from "@/lib/data/database-recovery-repository";
+import { getReliabilityIncidentSnapshot } from "@/lib/data/reliability-incidents-repository";
 import {
   getWhatsAppQueueHealth,
   listWhatsAppDeadLetters
@@ -24,7 +26,7 @@ export default async function OperationsPage() {
   if (!auth.authenticated || !auth.profile || !["boss", "admin"].includes(auth.profile.role)) {
     return <section className="rounded-2xl border border-command-line bg-command-card p-6 text-command-muted">Boss or admin access is required for operations telemetry.</section>;
   }
-  const [snapshot, whatsappProof, recoveryQueue, queueHealth, fileRecovery, deadLetters] = await Promise.all([
+  const [snapshot, whatsappProof, recoveryQueue, queueHealth, fileRecovery, databaseRecovery, reliabilityIncidents, deadLetters] = await Promise.all([
     getOperationsSloSnapshot(),
     getWhatsAppProductionProofSnapshot(),
     auth.profile.role === "boss"
@@ -32,6 +34,8 @@ export default async function OperationsPage() {
       : Promise.resolve({ available: true, items: [] }),
     getWhatsAppQueueHealth(),
     getClientFileRecoverySnapshot(),
+    getDatabaseRecoverySnapshot(),
+    getReliabilityIncidentSnapshot(),
     auth.profile.role === "boss" ? listWhatsAppDeadLetters() : Promise.resolve([])
   ]);
   const availabilityPassing = snapshot.successRatePercent >= OPERATIONS_SLOS.inboxAvailabilityPercent;
@@ -68,7 +72,9 @@ export default async function OperationsPage() {
               ["Trace failure rate", `< ${OPERATIONS_SLOS.traceFailureRatePercent}%`],
               ["Durable inbound RPO", `${OPERATIONS_SLOS.durableInboundRpoSeconds} seconds after acceptance`],
               ["Durable worker recovery", `< ${OPERATIONS_SLOS.durableWorkerRecoverySeconds} seconds`],
-              ["Client-file recovery target", `RPO ${OPERATIONS_SLOS.clientFilesRpoHours}h · RTO ${OPERATIONS_SLOS.clientFilesRtoHours}h`]
+              ["Client-file recovery target", `RPO ${OPERATIONS_SLOS.clientFilesRpoHours}h · RTO ${OPERATIONS_SLOS.clientFilesRtoHours}h`],
+              ["Database recovery target", `RPO ${OPERATIONS_SLOS.databaseRpoHours}h · RTO ${OPERATIONS_SLOS.databaseRtoHours}h`],
+              ["Incident detection", `< ${OPERATIONS_SLOS.incidentDetectionMinutes} minutes`]
             ].map(([label, value]) => <div key={label} className="flex justify-between gap-4 py-3"><dt className="text-command-muted">{label}</dt><dd className="font-semibold text-command-text">{value}</dd></div>)}
           </dl>
         </article>
@@ -100,6 +106,8 @@ export default async function OperationsPage() {
       <ReliabilityRecoveryPanel
         initialQueue={queueHealth}
         initialFiles={fileRecovery}
+        initialDatabase={databaseRecovery}
+        initialIncidents={reliabilityIncidents}
         initialDeadLetters={deadLetters}
         boss={auth.profile.role === "boss"}
       />

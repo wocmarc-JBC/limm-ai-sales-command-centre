@@ -1,6 +1,6 @@
 import type { UserRole } from "@/lib/auth/roles";
 
-export const WORLD_CLASS_RELEASE = "11.3.0";
+export const WORLD_CLASS_RELEASE = "11.4.0";
 
 export const AI_QUALITY_VERSIONS = {
   model: "configured-provider",
@@ -18,7 +18,10 @@ export const OPERATIONS_SLOS = {
   durableInboundRpoSeconds: 0,
   durableWorkerRecoverySeconds: 120,
   clientFilesRpoHours: 24,
-  clientFilesRtoHours: 4
+  clientFilesRtoHours: 4,
+  databaseRpoHours: 24,
+  databaseRtoHours: 4,
+  incidentDetectionMinutes: 5
 } as const;
 
 export type InboxOperator = {
