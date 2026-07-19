@@ -52,7 +52,7 @@ const InboxCollaborationLayer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex min-h-11 shrink-0 items-center gap-2 border-b border-command-line bg-command-panel2/85 px-4 py-2 text-[11px] font-semibold text-command-muted" role="status">
+      <div className="flex min-h-10 shrink-0 items-center gap-2 border-b border-command-line bg-command-panel2/85 px-3 py-1.5 text-[11px] font-semibold text-command-muted sm:min-h-11 sm:px-4 sm:py-2" role="status">
         <span className="h-2 w-2 animate-pulse rounded-full bg-command-subtle" aria-hidden="true" />
         Connecting team workspace…
       </div>
@@ -316,7 +316,7 @@ function senderLabel(message: LeadMessage) {
 }
 
 function bubbleTone(message: LeadMessage) {
-  if (message.direction === "inbound") return "rounded-bl-md border-command-line bg-command-panel2/95 text-command-text";
+  if (message.direction === "inbound") return "rounded-bl-md border-command-cyan/45 bg-[#121a23] text-[#fffaf0]";
   if (message.direction === "internal") return "border-command-line bg-command-bg/70 text-command-muted";
   if (message.metadata?.manualReply) return "rounded-br-md border-command-green/35 bg-command-green/10 text-command-text";
   return "rounded-br-md border-command-cyan/35 bg-command-cyan/10 text-command-text";
@@ -715,11 +715,14 @@ const MessageBubble = memo(function MessageBubble({
     ? message.metadata.uiCollapsedDuplicateCount
     : 1;
   const displayBody = inboxMessageBodyText(message);
+  const mobileReadability = message.direction === "inbound"
+    ? "text-[16px] font-medium leading-7 sm:text-sm sm:font-normal sm:leading-6"
+    : "text-[15px] leading-6 sm:text-sm";
   return (
-    <article data-message-direction={message.direction} className={`flex ${internal ? "justify-center" : outbound ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[90%] rounded-2xl border px-3.5 py-2.5 text-sm leading-6 shadow-[0_8px_24px_rgba(0,0,0,0.14)] sm:max-w-[82%] md:max-w-[72%] ${internal ? "text-center text-sm" : ""} ${bubbleTone(message)}`}>
+    <article data-testid="inbox-message-bubble" data-message-direction={message.direction} className={`flex ${internal ? "justify-center" : outbound ? "justify-end" : "justify-start"}`}>
+      <div className={`max-w-[96%] rounded-2xl border px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.14)] sm:max-w-[82%] sm:px-3.5 sm:py-2.5 md:max-w-[72%] ${mobileReadability} ${internal ? "text-center text-sm" : ""} ${bubbleTone(message)}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 text-[10px]">
-          <span className="font-semibold uppercase tracking-[0.14em] text-command-muted">{senderLabel(message)}</span>
+          <span className={`font-semibold uppercase tracking-[0.14em] ${message.direction === "inbound" ? "text-command-cyan" : "text-command-muted"}`}>{senderLabel(message)}</span>
           <span className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold ${statusTone(message)}`}>
             {messageStatus(message)}
           </span>
@@ -744,7 +747,7 @@ const MessageBubble = memo(function MessageBubble({
           </div>
         ) : null}
         {!silentCapture && displayBody ? (
-          <p className={`${message.attachments?.length ? "mt-2.5" : "mt-1.5"} whitespace-pre-wrap break-words`}>{displayBody}</p>
+          <p className={`${message.attachments?.length ? "mt-2.5" : "mt-1.5"} whitespace-pre-wrap break-words ${message.direction === "inbound" ? "text-[#fffaf0]" : ""}`}>{displayBody}</p>
         ) : null}
         {!silentCapture && !displayBody && !message.attachments?.length ? (
           <p className="mt-1.5 text-command-muted">Message content is not available.</p>
@@ -940,15 +943,15 @@ function ReplyComposer({
   };
 
   return (
-    <div data-testid="inbox-sticky-composer" className="shrink-0 border-t border-command-line bg-command-panel2/95 px-3 py-2.5 shadow-[0_-12px_30px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4 sm:py-3">
+    <div data-testid="inbox-sticky-composer" className="shrink-0 border-t border-command-line bg-command-panel2/95 px-2.5 py-2 shadow-[0_-12px_30px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4 sm:py-3">
       {salesDraftingEnabled ? (
         <>
-          <div className="thin-scrollbar mb-2 flex items-center gap-1 overflow-x-auto pb-0.5">
+          <div className="thin-scrollbar mb-1.5 flex items-center gap-1 overflow-x-auto sm:mb-2 sm:pb-0.5">
             <button
               type="button"
               onClick={() => setQuickRepliesOpen((open) => !open)}
               aria-expanded={quickRepliesOpen}
-              className={`inline-flex min-h-8 shrink-0 items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${quickRepliesOpen ? "bg-command-gold/15 text-command-gold" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+              className={`inline-flex min-h-7 shrink-0 items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold transition sm:min-h-8 ${quickRepliesOpen ? "bg-command-gold/15 text-command-gold" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
             >
               Quick replies
             </button>
@@ -956,7 +959,7 @@ function ReplyComposer({
               type="button"
               onClick={() => setDraftToolsOpen((open) => !open)}
               aria-expanded={draftToolsOpen}
-              className={`inline-flex min-h-8 shrink-0 items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${draftToolsOpen ? "bg-command-cyan/10 text-command-cyan" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+              className={`inline-flex min-h-7 shrink-0 items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold transition sm:min-h-8 ${draftToolsOpen ? "bg-command-cyan/10 text-command-cyan" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
             >
               AI draft
             </button>
@@ -1007,11 +1010,16 @@ function ReplyComposer({
           ) : null}
         </>
       ) : (
-        <div className="mb-2 flex items-start gap-2 rounded-xl border border-command-cyan/20 bg-command-cyan/5 px-3 py-2 text-[11px] leading-5 text-command-muted">
-          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-command-cyan" aria-hidden="true" />
-          {conversation.context.intentClassified
-            ? "Non-sales route. Sales quick replies and AI drafting are disabled; operators can still write a manual reply when needed."
-            : "Legacy conversation awaiting intent classification. Sales quick replies and AI drafting are disabled; operators can still write a manual reply."}
+        <div className="mb-1.5 flex items-center gap-2 rounded-xl border border-command-cyan/20 bg-command-cyan/5 px-2.5 py-1.5 text-[10px] leading-4 text-command-muted sm:mb-2 sm:items-start sm:px-3 sm:py-2 sm:text-[11px] sm:leading-5">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-command-cyan sm:mt-1" aria-hidden="true" />
+          <span className="truncate sm:hidden">
+            {conversation.context.intentClassified ? "Manual reply only · non-sales route" : "Manual reply only · classify in Details"}
+          </span>
+          <span className="hidden sm:inline">
+            {conversation.context.intentClassified
+              ? "Non-sales route. Sales quick replies and AI drafting are disabled; operators can still write a manual reply when needed."
+              : "Legacy conversation awaiting intent classification. Sales quick replies and AI drafting are disabled; operators can still write a manual reply."}
+          </span>
         </div>
       )}
       <form ref={formRef} onSubmit={handleSubmit}>
@@ -1027,13 +1035,13 @@ function ReplyComposer({
             onKeyDown={handleKeyDown}
             aria-keyshortcuts="Control+Enter Meta+Enter"
             placeholder="Type a WhatsApp reply…"
-            className="max-h-40 min-h-[54px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-4 py-3 text-[15px] leading-6 text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/70 focus:ring-2 focus:ring-command-gold/10"
+            className="h-[52px] max-h-40 min-h-[52px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-3.5 py-2.5 text-[16px] leading-6 text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/70 focus:ring-2 focus:ring-command-gold/10 sm:h-auto sm:min-h-[54px] sm:px-4 sm:py-3 sm:text-[15px]"
           />
           <button
             type="submit"
             disabled={!canSend}
             title={!reply.trim() ? "Type a WhatsApp reply before sending." : isSending ? "Sending WhatsApp reply now." : "Send WhatsApp reply"}
-            className="inline-flex min-h-[54px] min-w-[82px] items-center justify-center gap-1.5 rounded-2xl border border-command-gold bg-command-gold px-4 py-2 text-sm font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:border-command-line disabled:bg-command-panel disabled:text-command-subtle"
+            className="inline-flex min-h-[52px] min-w-[76px] items-center justify-center gap-1.5 rounded-2xl border border-command-gold bg-command-gold px-3 py-2 text-sm font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:border-command-line disabled:bg-command-panel disabled:text-command-subtle sm:min-h-[54px] sm:min-w-[82px] sm:px-4"
           >
             {isSending ? "Sending…" : (
               <>
@@ -1045,10 +1053,9 @@ function ReplyComposer({
             )}
           </button>
         </div>
-        <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[10px] text-command-subtle">
+        <div className={`${sendError ? "flex" : "hidden sm:flex"} mt-1.5 items-center justify-between gap-3 px-1 text-[10px] text-command-subtle`}>
           <span className="hidden sm:inline">⌘/Ctrl + Enter to send · Esc to leave composer</span>
-          <span className="sm:hidden">Review before sending</span>
-          <span className="ml-auto tabular-nums">{reply.length}</span>
+          <span className="ml-auto hidden tabular-nums sm:inline">{reply.length}</span>
           {sendError ? <span className="text-right text-command-red" role="alert">{sendError}</span> : null}
         </div>
       </form>
@@ -2494,24 +2501,24 @@ export function MultiChatInbox({
           </aside>
 
           <main data-testid="inbox-active-chat" className={`${mobilePane === "chat" ? "flex" : "hidden"} min-h-0 flex-col bg-[radial-gradient(circle_at_top_left,rgba(221,179,93,0.045),transparent_34%),linear-gradient(180deg,rgba(9,14,20,0.99),rgba(5,7,10,0.99))] lg:flex`}>
-            <header className="flex min-h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-command-line bg-command-panel/95 px-3 py-2 sm:px-4">
+            <header className="flex min-h-[3.75rem] shrink-0 items-center justify-between gap-2 border-b border-command-line bg-command-panel/95 px-2 py-1.5 sm:min-h-[4.25rem] sm:gap-3 sm:px-4 sm:py-2">
               <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setMobilePane("queue")}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-command-muted transition hover:bg-command-bg hover:text-command-text lg:hidden"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-command-muted transition hover:bg-command-bg hover:text-command-text sm:h-10 sm:w-10 lg:hidden"
                   aria-label="Back to conversations"
                 >
                   <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                     <path d="m15 18-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-command-gold/10 text-sm font-semibold text-command-gold ring-1 ring-command-gold/30" aria-hidden="true">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-command-gold/10 text-xs font-semibold text-command-gold ring-1 ring-command-gold/30 sm:h-10 sm:w-10 sm:text-sm" aria-hidden="true">
                   {chatInitials(chat)}
                 </span>
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <h2 className="truncate text-lg font-semibold text-command-text">{chat.displayName}</h2>
+                    <h2 className="truncate text-base font-semibold text-command-text sm:text-lg">{chat.displayName}</h2>
                     <span className={`h-2 w-2 shrink-0 rounded-full ${chatStatusDotTone(chat)}`} aria-hidden="true" />
                   </div>
                   <p className="truncate text-xs text-command-muted">{chatHeaderStatus}</p>
@@ -2551,7 +2558,7 @@ export function MultiChatInbox({
                   ref={detailsButtonRef}
                   type="button"
                   onClick={() => setContextOpen(true)}
-                  className="inline-flex min-h-10 items-center rounded-xl border border-command-line bg-command-bg/60 px-3 py-2 text-command-muted transition hover:border-command-gold/50 hover:text-command-text"
+                  className="inline-flex min-h-9 items-center rounded-xl border border-command-line bg-command-bg/60 px-2.5 py-1.5 text-command-muted transition hover:border-command-gold/50 hover:text-command-text sm:min-h-10 sm:px-3 sm:py-2"
                   aria-haspopup="dialog"
                   aria-keyshortcuts="D"
                 >
@@ -2592,10 +2599,10 @@ export function MultiChatInbox({
               <InboxOperatorBrief brief={operatorBrief} sla={activeSla} onOpenDetails={() => setContextOpen(true)} />
             ) : null}
 
-            <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5">
+            <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} data-testid="inbox-message-pane" className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2 sm:px-5 sm:py-4">
               {activeMessagesNewestFirst.length ? (
-                <div className="mx-auto max-w-4xl space-y-3.5">
-                  <div className="flex items-center justify-between gap-3 pb-1">
+                <div className="mx-auto max-w-4xl space-y-3 sm:space-y-3.5">
+                  <div className="hidden items-center justify-between gap-3 pb-1 sm:flex">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-command-gold">Latest messages</p>
                       <p className="text-[10px] text-command-subtle">Newest first · older messages continue below</p>

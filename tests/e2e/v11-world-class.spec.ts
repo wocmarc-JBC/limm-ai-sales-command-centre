@@ -125,6 +125,15 @@ test.describe("v11.1 world-class operator flow", () => {
         ...existingMessages,
         {
           ...base,
+          id: "qa-mobile-readable-client-text",
+          providerMessageId: "qa-mobile-readable-client-text-provider",
+          body: "Client mobile readability check: I need help reviewing the kitchen scope and floor plan.",
+          createdAt: "2099-01-01T00:04:00.000Z",
+          metadata: { messageType: "text" },
+          attachments: []
+        },
+        {
+          ...base,
           id: "qa-media-image",
           providerMessageId: "qa-media-image-provider",
           body: "[WhatsApp image received]",
@@ -199,6 +208,36 @@ test.describe("v11.1 world-class operator flow", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByTestId("inbox-image-attachment")).toBeVisible();
     await expect(page.getByTestId("inbox-document-attachment")).toBeVisible();
+    const messagePane = page.getByTestId("inbox-message-pane");
+    await messagePane.evaluate((element) => element.scrollTo({ top: 0, behavior: "auto" }));
+    const readableClientText = page.getByText("Client mobile readability check: I need help reviewing the kitchen scope and floor plan.", { exact: true });
+    await expect(readableClientText).toBeVisible();
+    const mobileReadability = await page.evaluate(() => {
+      const pane = document.querySelector<HTMLElement>("[data-testid='inbox-message-pane']");
+      const chat = document.querySelector<HTMLElement>("[data-testid='inbox-active-chat']");
+      const team = document.querySelector<HTMLElement>("[data-testid='inbox-team-workspace']");
+      const brief = document.querySelector<HTMLElement>("[data-testid='inbox-operator-brief']");
+      const composer = document.querySelector<HTMLElement>("[data-testid='inbox-sticky-composer']");
+      const clientBody = Array.from(document.querySelectorAll<HTMLElement>("[data-message-direction='inbound'] p"))
+        .find((element) => element.textContent?.startsWith("Client mobile readability check:"));
+      const style = clientBody ? window.getComputedStyle(clientBody) : null;
+      return {
+        paneHeight: pane?.getBoundingClientRect().height ?? 0,
+        chatHeight: chat?.getBoundingClientRect().height ?? 0,
+        teamHeight: team?.getBoundingClientRect().height ?? 0,
+        briefHeight: brief?.getBoundingClientRect().height ?? 0,
+        composerHeight: composer?.getBoundingClientRect().height ?? 0,
+        clientFontSize: style ? Number.parseFloat(style.fontSize) : 0,
+        clientLineHeight: style ? Number.parseFloat(style.lineHeight) : 0
+      };
+    });
+    expect(mobileReadability.paneHeight).toBeGreaterThanOrEqual(300);
+    expect(mobileReadability.paneHeight / mobileReadability.chatHeight).toBeGreaterThanOrEqual(0.45);
+    expect(mobileReadability.teamHeight).toBeLessThanOrEqual(52);
+    expect(mobileReadability.briefHeight).toBeLessThanOrEqual(50);
+    expect(mobileReadability.composerHeight).toBeLessThanOrEqual(112);
+    expect(mobileReadability.clientFontSize).toBeGreaterThanOrEqual(16);
+    expect(mobileReadability.clientLineHeight).toBeGreaterThanOrEqual(26);
     await expectNoHorizontalScroll(page);
     expect(errors).toEqual([]);
   });

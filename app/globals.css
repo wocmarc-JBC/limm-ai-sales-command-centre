@@ -179,11 +179,11 @@ textarea {
 }
 
 .inbox-product-frame {
-  height: calc(100dvh - 13.25rem);
+  height: calc(100dvh - 10rem);
 }
 
 [data-qa-e2e="true"] .inbox-product-frame {
-  height: calc(100dvh - 16.25rem);
+  height: calc(100dvh - 13rem);
 }
 
 @media (min-width: 1024px) {

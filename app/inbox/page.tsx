@@ -173,7 +173,7 @@ export default async function WhatsAppInboxPage({
 
   return (
     <>
-      <header className="mb-3 flex min-h-11 items-center justify-between gap-3">
+      <header className="mb-3 hidden min-h-11 items-center justify-between gap-3 sm:flex">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <h1 className="truncate text-xl font-semibold tracking-[-0.02em] text-command-text sm:text-2xl">WhatsApp Inbox</h1>

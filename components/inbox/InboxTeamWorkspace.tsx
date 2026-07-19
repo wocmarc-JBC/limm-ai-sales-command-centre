@@ -149,13 +149,13 @@ export function InboxTeamWorkspace({
 
   return (
     <section className="shrink-0 border-b border-command-line bg-command-panel2/85" data-testid="inbox-team-workspace">
-      <div className="flex min-h-11 flex-wrap items-center gap-2 px-3 py-2 sm:px-4">
+      <div className="flex min-h-10 flex-nowrap items-center gap-1.5 px-3 py-1.5 sm:min-h-11 sm:flex-wrap sm:gap-2 sm:px-4 sm:py-2">
         <span className={`h-2 w-2 rounded-full ${realtimeStatus === "live" ? "bg-command-green" : realtimeStatus === "recovering" ? "bg-command-amber" : "bg-command-subtle"}`} aria-hidden="true" />
-        <span className="text-[11px] font-semibold text-command-muted">
+        <span className="hidden text-[11px] font-semibold text-command-muted sm:inline">
           {realtimeStatus === "live" ? "Realtime team" : realtimeStatus === "recovering" ? "Polling fallback" : realtimeStatus === "connecting" ? "Connecting team" : "Local team mode"}
         </span>
-        <span className="text-command-line" aria-hidden="true">·</span>
-        <span className="min-w-0 truncate text-xs text-command-muted">
+        <span className="hidden text-command-line sm:inline" aria-hidden="true">·</span>
+        <span className="min-w-0 flex-1 truncate text-[11px] text-command-muted sm:flex-none sm:text-xs">
           {activeAssignment ? (mine ? "Owned by you" : `Owned by ${activeAssignment.assignedName}`) : "Unassigned team queue"}
         </span>
         {viewers.length ? (
@@ -163,9 +163,9 @@ export function InboxTeamWorkspace({
             {viewers.map((member) => member.fullName).join(", ")} viewing
           </span>
         ) : null}
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           {notificationsSupported && notificationPermission !== "granted" ? (
-            <button type="button" onClick={() => void onEnableNotifications()} className="rounded-lg px-2 py-1.5 text-[11px] font-semibold text-command-muted transition hover:bg-command-bg hover:text-command-text">
+            <button type="button" onClick={() => void onEnableNotifications()} className="hidden rounded-lg px-2 py-1.5 text-[11px] font-semibold text-command-muted transition hover:bg-command-bg hover:text-command-text sm:inline-flex">
               Enable alerts
             </button>
           ) : null}
@@ -176,12 +176,12 @@ export function InboxTeamWorkspace({
               disabled={Boolean(pending)}
               onClick={() => void mutate(mine ? "release" : "claim")}
               title={mine ? "Release this conversation to the team queue. Bot state is unchanged." : "Assign this conversation to yourself for 30 minutes. This does not pause the bot."}
-              className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition disabled:opacity-50 ${mine ? "border-command-line text-command-muted hover:text-command-text" : "border-command-gold/45 bg-command-gold/10 text-command-gold hover:bg-command-gold/15"}`}
+              className={`min-h-8 rounded-lg border px-2 py-1 text-[10px] font-semibold transition disabled:opacity-50 sm:px-2.5 sm:py-1.5 sm:text-[11px] ${mine ? "border-command-line text-command-muted hover:text-command-text" : "border-command-gold/45 bg-command-gold/10 text-command-gold hover:bg-command-gold/15"}`}
             >
-              {pending === "claim" ? "Assigning…" : pending === "release" ? "Releasing…" : mine ? "Release" : "Assign to me"}
+              {pending === "claim" ? "Assigning…" : pending === "release" ? "Releasing…" : mine ? "Release" : <><span className="sm:hidden">Assign</span><span className="hidden sm:inline">Assign to me</span></>}
             </button>
           ) : null}
-          <button type="button" onClick={() => setNotesOpen((open) => !open)} aria-expanded={notesOpen} className="rounded-lg border border-command-line px-2.5 py-1.5 text-[11px] font-semibold text-command-muted transition hover:border-command-gold/40 hover:text-command-text">
+          <button type="button" onClick={() => setNotesOpen((open) => !open)} aria-expanded={notesOpen} className="min-h-8 rounded-lg border border-command-line px-2 py-1 text-[10px] font-semibold text-command-muted transition hover:border-command-gold/40 hover:text-command-text sm:px-2.5 sm:py-1.5 sm:text-[11px]">
             Notes {state.notes.length ? `(${state.notes.length})` : ""}
           </button>
         </div>
