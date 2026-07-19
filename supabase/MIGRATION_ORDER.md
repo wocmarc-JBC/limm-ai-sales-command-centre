@@ -498,6 +498,28 @@ select has_table_privilege('anon', 'public.whatsapp_webhook_failures', 'select')
        has_table_privilege('service_role', 'public.whatsapp_webhook_failures', 'insert') as service_can_capture;
 ```
 
+## 20260719120623_v11_1_4_whatsapp_attachment_realtime.sql
+
+Purpose: Restore authenticated internal-role reads for the RLS-protected `lead_files` table, then broadcast its inserts, updates, and deletes to the existing private inbox Realtime channel so a WhatsApp image or PDF replaces its short-lived processing card as soon as private storage finishes.
+Dependencies: migrations 023 and 029.
+Safe to re-run: Yes. The trigger is replaced idempotently and reuses the existing private broadcast function.
+Verification query:
+
+```sql
+select trigger_name, event_manipulation
+from information_schema.triggers
+where event_object_schema = 'public'
+  and event_object_table = 'lead_files'
+  and trigger_name = 'lead_files_broadcast_inbox_activity'
+order by event_manipulation;
+
+select policyname, roles, cmd
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'lead_files'
+  and policyname = 'lead_files_select_roles';
+```
+
 ## After All Migrations
 
 Run:

@@ -101,6 +101,7 @@ test.describe("v11.1 world-class operator flow", () => {
   test("renders private WhatsApp images, documents, and honest unavailable states in chat", async ({ page }) => {
     const errors = captureErrors(page);
     const preview = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='420'%3E%3Crect width='100%25' height='100%25' fill='%23172028'/%3E%3Cpath d='M80 320l150-160 100 95 75-80 180 145' fill='none' stroke='%2329d17d' stroke-width='18'/%3E%3C/svg%3E";
+    let hydrationFetchCount = 0;
 
     await page.route("**/api/inbox/conversations/*", async (route) => {
       const response = await route.fetch();
@@ -109,6 +110,8 @@ test.describe("v11.1 world-class operator flow", () => {
         await route.fulfill({ response, json: payload });
         return;
       }
+      hydrationFetchCount += 1;
+      const hydrated = hydrationFetchCount > 2;
       const existingMessages = Array.isArray(payload.conversation.messages) ? payload.conversation.messages : [];
       const base = existingMessages.find((message: { direction?: string }) => message.direction === "inbound") ?? {
         id: "qa-media-base",
@@ -123,6 +126,26 @@ test.describe("v11.1 world-class operator flow", () => {
       };
       payload.conversation.messages = [
         ...existingMessages,
+        {
+          ...base,
+          id: "qa-media-hydration",
+          providerMessageId: "qa-media-hydration-provider",
+          body: "[WhatsApp image received]",
+          createdAt: "2099-01-01T00:05:00.000Z",
+          metadata: { messageType: "image", mimeType: "image/jpeg" },
+          attachments: [{
+            id: hydrated ? "qa-hydrated-image-file" : "missing-qa-media-hydration",
+            kind: "image",
+            fileName: hydrated ? "Hydrated site photo.jpg" : "WhatsApp image.jpg",
+            mimeType: "image/jpeg",
+            fileSizeBytes: hydrated ? 193000 : 0,
+            fileCategory: "site_photos",
+            availability: hydrated ? "ready" : "unavailable",
+            viewUrl: hydrated ? preview : "",
+            downloadUrl: hydrated ? preview : "",
+            retryable: false
+          }]
+        },
         {
           ...base,
           id: "qa-mobile-readable-client-text",
@@ -200,13 +223,15 @@ test.describe("v11.1 world-class operator flow", () => {
     const rows = page.getByTestId("inbox-chat-row");
     await expect(rows.nth(1)).toBeVisible();
     await rows.nth(1).getByRole("link", { name: /Open conversation with/ }).click();
-    await expect(page.getByTestId("inbox-image-attachment")).toBeVisible();
+    await expect.poll(() => hydrationFetchCount, { timeout: 8_000 }).toBeGreaterThanOrEqual(3);
+    await expect(page.getByText("Hydrated site photo.jpg")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("inbox-image-attachment")).toHaveCount(2);
     await expect(page.getByTestId("inbox-document-attachment")).toContainText("Floor Plan.pdf");
-    await expect(page.getByTestId("inbox-media-unavailable")).toContainText("file could not be retrieved");
+    await expect(page.getByTestId("inbox-media-unavailable")).toContainText("no retrievable file is available");
     await expect(page.getByText("[WhatsApp image received]", { exact: true })).toHaveCount(0);
     await expectNoHorizontalScroll(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByTestId("inbox-image-attachment")).toBeVisible();
+    await expect(page.getByTestId("inbox-image-attachment").first()).toBeVisible();
     await expect(page.getByTestId("inbox-document-attachment")).toBeVisible();
     const messagePane = page.getByTestId("inbox-message-pane");
     await messagePane.evaluate((element) => element.scrollTo({ top: 0, behavior: "auto" }));

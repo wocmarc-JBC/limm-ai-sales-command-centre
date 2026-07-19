@@ -100,6 +100,9 @@ for (const phrase of [
   "inbox-media-unavailable",
   "Retry retrieval",
   "limm-media-auto-retry:",
+  "MEDIA_HYDRATION_DELAYS_MS",
+  "pendingAttachmentSignature",
+  "Loading WhatsApp",
   "inboxMessageBodyText(message)",
   "onRetryAttachment"
 ]) assert(inbox.includes(phrase), `Inbox attachment UI missing ${phrase}`);
@@ -110,6 +113,17 @@ for (const file of [
   "app/api/inbox/messages/route.ts"
 ]) assert(read(file).includes("attachLeadFilesToMessages"), `${file} must hydrate attachment metadata.`);
 
+const realtimeMigration = read("supabase/migrations/20260719120623_v11_1_4_whatsapp_attachment_realtime.sql");
+for (const phrase of [
+  "lead_files_broadcast_inbox_activity",
+  "after insert or update or delete on public.lead_files",
+  "limm_private.broadcast_inbox_activity()",
+  "alter table public.lead_files enable row level security",
+  "grant select on table public.lead_files to authenticated",
+  "create policy lead_files_select_roles",
+  "public.current_user_is_any(array['boss','admin','sales','viewer'])"
+]) assert(realtimeMigration.toLowerCase().includes(phrase.toLowerCase()), `Attachment Realtime migration missing ${phrase}`);
+
 const autoReply = read("lib/whatsapp-auto-reply.ts");
 assert(autoReply.includes("[WhatsApp ${message.type || \"message\"} received]"));
 assert(!autoReply.includes("[Unsupported WhatsApp ${message.type"), "Supported media must not be labelled unsupported.");
@@ -119,7 +133,8 @@ for (const marker of [
   "inboxMediaAttachmentVisibilityAvailable",
   "privateInboxAttachmentRedirectAvailable",
   "whatsappMediaFetchRetryAvailable",
-  "whatsappMediaManualRecoveryAvailable"
+  "whatsappMediaManualRecoveryAvailable",
+  "whatsappAttachmentRealtimeRefreshAvailable"
 ]) assert(health.includes(marker), `Health proof missing ${marker}`);
 
 console.log("PASS: authenticated WhatsApp image/document visibility, safe private delivery, and recovery checks passed.");

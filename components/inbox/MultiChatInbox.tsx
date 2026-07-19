@@ -47,6 +47,8 @@ import { trackOperatorEvent } from "@/lib/operator-product-analytics";
 import type { InboxAssignment, InboxOperator } from "@/lib/operations/contracts";
 import type { RealtimeStatus } from "@/components/inbox/useInboxRealtime";
 
+const MEDIA_HYDRATION_DELAYS_MS = [750, 1500, 3000, 6000, 12000] as const;
+
 const InboxCollaborationLayer = dynamic(
   () => import("@/components/inbox/InboxCollaborationLayer").then((module) => module.InboxCollaborationLayer),
   {
@@ -592,6 +594,7 @@ function MessageAttachmentCard({
   const [retryState, setRetryState] = useState<"idle" | "retrying" | "failed">("idle");
   const [retryError, setRetryError] = useState("");
   const ready = attachment.availability === "ready";
+  const pendingStorage = !ready && attachment.id.startsWith("missing-");
 
   const retry = useCallback(async () => {
     if (!onRetry || retryState === "retrying") return;
@@ -624,9 +627,15 @@ function MessageAttachmentCard({
             </svg>
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-command-text">WhatsApp {attachment.kind} unavailable</p>
+            <p className="font-semibold text-command-text">
+              {pendingStorage ? `Loading WhatsApp ${attachment.kind}…` : `WhatsApp ${attachment.kind} unavailable`}
+            </p>
             <p className="mt-0.5 text-xs leading-5 text-command-muted">
-              The message was received, but the file could not be retrieved. Retry now or ask the client to resend it.
+              {pendingStorage
+                ? "The message arrived and its secure file is still being prepared. This chat will refresh automatically."
+                : attachment.retryable
+                  ? "The message arrived, but its file could not be retrieved. Retry retrieval now or ask the client to resend it."
+                  : "The message arrived, but no retrievable file is available. Ask the client to resend it."}
             </p>
             {attachment.retryable && onRetry ? (
               <button
@@ -1579,10 +1588,50 @@ export function MultiChatInbox({
     [activeMessages]
   );
   const latestVisibleMessageId = activeMessagesNewestFirst[0]?.id ?? "";
+  const pendingAttachmentSignature = useMemo(() => activeMessages
+    .flatMap((message) => message.attachments ?? [])
+    .filter((attachment) => attachment.availability !== "ready" && attachment.id.startsWith("missing-"))
+    .map((attachment) => attachment.id)
+    .sort()
+    .join("|"), [activeMessages]);
   const latestPersistedCursor = useMemo(() => {
     const persisted = activeConversation?.messages.filter((message) => !message.id.startsWith("optimistic-")) ?? [];
     return newestMessage(persisted)?.createdAt ?? "";
   }, [activeConversation]);
+
+  useEffect(() => {
+    if (!activeLeadId || !pendingAttachmentSignature) return;
+    let cancelled = false;
+    let timer: number | null = null;
+
+    const refreshAttempt = (attempt: number) => {
+      if (attempt >= MEDIA_HYDRATION_DELAYS_MS.length) return;
+      timer = window.setTimeout(async () => {
+        if (cancelled) return;
+        await loadConversation(activeLeadId, { background: true });
+        if (!cancelled) refreshAttempt(attempt + 1);
+      }, MEDIA_HYDRATION_DELAYS_MS[attempt]);
+    };
+
+    refreshAttempt(0);
+    return () => {
+      cancelled = true;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [activeLeadId, loadConversation, pendingAttachmentSignature]);
+
+  useEffect(() => {
+    if (!activeLeadId || !pendingAttachmentSignature) return;
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadConversation(activeLeadId, { background: true });
+    };
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [activeLeadId, loadConversation, pendingAttachmentSignature]);
 
   useEffect(() => {
     if (!activeLeadId) return;
