@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import { WhatsAppRecoveryPanel } from "@/components/operations/WhatsAppRecoveryPanel";
 import { getCurrentProfile } from "@/lib/auth/session";
+import {
+  getWhatsAppProductionProofSnapshot,
+  listPendingWhatsAppWebhookFailures
+} from "@/lib/data/whatsapp-webhook-failures-repository";
 import { getOperationsSloSnapshot } from "@/lib/operations/observability";
 import { OPERATIONS_SLOS, WORLD_CLASS_RELEASE } from "@/lib/operations/contracts";
 
@@ -13,7 +18,13 @@ export default async function OperationsPage() {
   if (!auth.authenticated || !auth.profile || !["boss", "admin"].includes(auth.profile.role)) {
     return <section className="rounded-2xl border border-command-line bg-command-card p-6 text-command-muted">Boss or admin access is required for operations telemetry.</section>;
   }
-  const snapshot = await getOperationsSloSnapshot();
+  const [snapshot, whatsappProof, recoveryQueue] = await Promise.all([
+    getOperationsSloSnapshot(),
+    getWhatsAppProductionProofSnapshot(),
+    auth.profile.role === "boss"
+      ? listPendingWhatsAppWebhookFailures()
+      : Promise.resolve({ available: true, items: [] })
+  ]);
   const availabilityPassing = snapshot.successRatePercent >= OPERATIONS_SLOS.inboxAvailabilityPercent;
   const latencyPassing = snapshot.p95DurationMs <= OPERATIONS_SLOS.manualSendP95Ms || snapshot.sampleSize === 0;
   return (
@@ -60,6 +71,22 @@ export default async function OperationsPage() {
           </div>
         </article>
       </section>
+      <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="WhatsApp production proof">
+        {[
+          ["Persistence contract", whatsappProof.schemaReady ? "Ready" : "Unavailable", whatsappProof.schemaReady],
+          ["Unresolved preserved", whatsappProof.pendingFailureCount, whatsappProof.pendingFailureCount === 0],
+          ["Recovered in 24h", whatsappProof.recoveredLast24hCount, true],
+          ["Fresh v11.1.2 inbound", whatsappProof.lastReleaseInboundAt ? "Observed" : "Awaiting inbound", Boolean(whatsappProof.lastReleaseInboundAt)]
+        ].map(([label, value, ok]) => (
+          <article key={String(label)} className={`rounded-2xl border p-5 ${statusTone(Boolean(ok))}`}>
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] opacity-80">{label}</p>
+            <p className="mt-2 text-xl font-semibold text-command-text">{String(value)}</p>
+          </article>
+        ))}
+      </section>
+      {auth.profile.role === "boss" ? (
+        <WhatsAppRecoveryPanel initialItems={recoveryQueue.items} initialAvailable={recoveryQueue.available} />
+      ) : null}
     </>
   );
 }

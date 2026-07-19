@@ -100,7 +100,7 @@ assert(browserRunner.includes('"-H", "127.0.0.1"'), "v4.2 browser runner must bi
 assert(browserRunner.includes('process.env.QA_E2E_MODE ?? "1"'), "v4.2 browser runner must default to isolated QA mode so Mock Mode route checks match the live application behavior.");
 assert(browserRunner.includes('[nextCli, "build"]') && browserRunner.includes('[nextCli, "start"'), "v4.2 browser QA must verify the production Next.js bundle instead of relying on the long-running development compiler.");
 const playwrightConfig = read("playwright.config.ts");
-assert(playwrightConfig.includes("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH") && playwrightConfig.includes('existsSync("/tmp/chromium")'), "Playwright config must support the managed Chromium executable without relying on a locked home cache.");
+assert(playwrightConfig.includes("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH") && playwrightConfig.includes('fallbackChromium = "/tmp/chromium"') && playwrightConfig.includes("statSync(path).size > 1_000_000"), "Playwright config must support a verified managed Chromium executable without relying on a locked home cache or accepting an empty shim.");
 assert(playwrightConfig.includes("-H 127.0.0.1"), "Playwright-managed Next.js server must bind explicitly for restricted CI environments.");
 assert(playwrightConfig.includes('name: "boss-ops-chromium"') && playwrightConfig.includes("testIgnore: /boss-ops-quotation-data-hygiene"), "Stateful boss-ops browser QA must run in its own final project so route smoke tests keep a clean mock server.");
 

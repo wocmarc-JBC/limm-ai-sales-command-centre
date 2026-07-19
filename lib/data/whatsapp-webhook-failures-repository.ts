@@ -1,8 +1,47 @@
 import "server-only";
 
+import { getDataMode } from "./data-source";
+import { findLeadMessageByProviderId, saveLeadMessage, upsertWhatsAppLead } from "./lead-messages-repository";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { hashProviderMessageId } from "@/lib/operations/observability";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
+
+export const WHATSAPP_RECOVERY_RELEASE = "11.1.2";
+
+export type WhatsAppWebhookFailureSummary = {
+  id: string;
+  providerMessageIdHash: string;
+  senderPhoneMasked: string;
+  messageBody: string;
+  messageType: string;
+  providerTimestamp: string | null;
+  failureStage: string;
+  errorCode: string;
+  safeReason: string;
+  attemptCount: number;
+  firstFailedAt: string;
+  lastFailedAt: string;
+  expiresAt: string;
+};
+
+export type WhatsAppProductionProofSnapshot = {
+  schemaReady: boolean;
+  pendingFailureCount: number;
+  recoveredLast24hCount: number;
+  lastFailureAt: string | null;
+  lastRecoveryAt: string | null;
+  lastReleaseInboundAt: string | null;
+};
+
+function maskPhone(phone: string) {
+  const compact = phone.replace(/\s+/g, "");
+  if (compact.length <= 4) return compact ? `••${compact.slice(-2)}` : "Unknown sender";
+  return `${compact.slice(0, 3)}••••${compact.slice(-3)}`;
+}
+
+function recoveryProviderMessageId(providerMessageIdHash: string) {
+  return `limm-recovery:${providerMessageIdHash}`;
+}
 
 function inboundBody(message: ParsedWhatsAppMessage) {
   return message.text || message.caption || `[Unsupported WhatsApp ${message.type || "message"} received]`;
@@ -43,6 +82,7 @@ export async function captureWhatsAppWebhookFailure(input: {
       mimeType: input.message.mimeType.slice(0, 120),
       mediaId: input.message.mediaId.slice(0, 255),
       isVoiceMessage: input.message.isVoiceMessage,
+      contactName: input.message.contactName.slice(0, 255),
       businessPhoneNumberId: input.message.businessPhoneNumberId.slice(0, 64)
     }
   });
@@ -54,6 +94,150 @@ export async function captureWhatsAppWebhookFailure(input: {
     return false;
   }
   return true;
+}
+
+export async function listPendingWhatsAppWebhookFailures(limit = 30): Promise<{
+  available: boolean;
+  items: WhatsAppWebhookFailureSummary[];
+}> {
+  if (getDataMode() === "Mock Mode") return { available: true, items: [] };
+  const admin = getSupabaseAdminClient();
+  if (!admin) return { available: false, items: [] };
+
+  const { data, error } = await admin
+    .from("whatsapp_webhook_failures")
+    .select("id,provider_message_id_hash,sender_phone,message_body,message_type,provider_timestamp,failure_stage,error_code,safe_reason,attempt_count,first_failed_at,last_failed_at,expires_at")
+    .is("recovered_at", null)
+    .order("last_failed_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 100));
+  if (error) {
+    console.warn("whatsapp_failure_queue_degraded", { code: error.code || "read_failed" });
+    return { available: false, items: [] };
+  }
+
+  return {
+    available: true,
+    items: (data ?? []).map((row) => ({
+      id: String(row.id),
+      providerMessageIdHash: String(row.provider_message_id_hash),
+      senderPhoneMasked: maskPhone(String(row.sender_phone || "")),
+      messageBody: String(row.message_body || ""),
+      messageType: String(row.message_type || ""),
+      providerTimestamp: row.provider_timestamp ? String(row.provider_timestamp) : null,
+      failureStage: String(row.failure_stage || "message_processing"),
+      errorCode: String(row.error_code || "message_processing_failed"),
+      safeReason: String(row.safe_reason || ""),
+      attemptCount: Number(row.attempt_count || 1),
+      firstFailedAt: String(row.first_failed_at),
+      lastFailedAt: String(row.last_failed_at),
+      expiresAt: String(row.expires_at)
+    }))
+  };
+}
+
+export async function recoverWhatsAppWebhookFailureToCrm(failureId: string) {
+  if (getDataMode() === "Mock Mode") return { ok: false as const, status: "not_found" as const };
+  const admin = getSupabaseAdminClient();
+  if (!admin) return { ok: false as const, status: "unavailable" as const };
+
+  const { data: failure, error } = await admin
+    .from("whatsapp_webhook_failures")
+    .select("id,provider_message_id_hash,sender_phone,message_body,message_type,provider_timestamp,message_metadata,recovered_at,recovered_lead_id")
+    .eq("id", failureId)
+    .maybeSingle();
+  if (error) throw new Error(`failure_queue_read_failed:${error.code || "unknown"}`);
+  if (!failure) return { ok: false as const, status: "not_found" as const };
+  if (failure.recovered_at) {
+    return {
+      ok: true as const,
+      status: "already_recovered" as const,
+      leadId: failure.recovered_lead_id ? String(failure.recovered_lead_id) : null
+    };
+  }
+
+  const providerMessageId = recoveryProviderMessageId(String(failure.provider_message_id_hash));
+  const existingMessage = await findLeadMessageByProviderId(providerMessageId);
+  let leadId = existingMessage?.leadId || "";
+  if (!leadId) {
+    const metadata = failure.message_metadata && typeof failure.message_metadata === "object"
+      ? failure.message_metadata as Record<string, unknown>
+      : {};
+    const lead = await upsertWhatsAppLead({
+      phone: String(failure.sender_phone || ""),
+      contactName: typeof metadata.contactName === "string" ? metadata.contactName : "Recovered WhatsApp Contact",
+      latestMessage: String(failure.message_body || ""),
+      preserveExistingActivity: true
+    });
+    leadId = lead.id;
+    try {
+      await saveLeadMessage({
+        leadId,
+        direction: "inbound",
+        body: String(failure.message_body || ""),
+        safeToSend: false,
+        providerMessageId,
+        providerTimestamp: failure.provider_timestamp ? String(failure.provider_timestamp) : null,
+        whatsappStatus: "received",
+        metadata: {
+          ...metadata,
+          recoveredFromFailureQueue: true,
+          recoveryRelease: WHATSAPP_RECOVERY_RELEASE,
+          originalMessageType: String(failure.message_type || "")
+        },
+        createdAt: failure.provider_timestamp ? String(failure.provider_timestamp) : undefined
+      });
+    } catch (caught) {
+      const concurrentMessage = await findLeadMessageByProviderId(providerMessageId);
+      if (!concurrentMessage) throw caught;
+      leadId = concurrentMessage.leadId;
+    }
+  }
+
+  const { error: markerError } = await admin
+    .from("whatsapp_webhook_failures")
+    .update({ recovered_at: new Date().toISOString(), recovered_lead_id: leadId })
+    .eq("id", failureId)
+    .is("recovered_at", null);
+  if (markerError) throw new Error(`failure_recovery_marker_failed:${markerError.code || "unknown"}`);
+  return { ok: true as const, status: "recovered" as const, leadId };
+}
+
+export async function getWhatsAppProductionProofSnapshot(): Promise<WhatsAppProductionProofSnapshot> {
+  const empty: WhatsAppProductionProofSnapshot = {
+    schemaReady: false,
+    pendingFailureCount: 0,
+    recoveredLast24hCount: 0,
+    lastFailureAt: null,
+    lastRecoveryAt: null,
+    lastReleaseInboundAt: null
+  };
+  const admin = getSupabaseAdminClient();
+  if (!admin) return empty;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const [pending, recovered, latestFailure, latestRecovery, latestInbound] = await Promise.all([
+    admin.from("whatsapp_webhook_failures").select("id", { count: "exact", head: true }).is("recovered_at", null),
+    admin.from("whatsapp_webhook_failures").select("id", { count: "exact", head: true }).gte("recovered_at", since),
+    admin.from("whatsapp_webhook_failures").select("last_failed_at").order("last_failed_at", { ascending: false }).limit(1).maybeSingle(),
+    admin.from("whatsapp_webhook_failures").select("recovered_at").not("recovered_at", "is", null).order("recovered_at", { ascending: false }).limit(1).maybeSingle(),
+    admin.from("operational_trace_events")
+      .select("created_at")
+      .eq("event_name", "whatsapp_webhook")
+      .eq("stage", "completed")
+      .in("status", ["ok", "degraded"])
+      .contains("metadata", { releaseVersion: WHATSAPP_RECOVERY_RELEASE })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  ]);
+  if (pending.error || recovered.error || latestFailure.error || latestRecovery.error || latestInbound.error) return empty;
+  return {
+    schemaReady: true,
+    pendingFailureCount: pending.count ?? 0,
+    recoveredLast24hCount: recovered.count ?? 0,
+    lastFailureAt: latestFailure.data?.last_failed_at ? String(latestFailure.data.last_failed_at) : null,
+    lastRecoveryAt: latestRecovery.data?.recovered_at ? String(latestRecovery.data.recovered_at) : null,
+    lastReleaseInboundAt: latestInbound.data?.created_at ? String(latestInbound.data.created_at) : null
+  };
 }
 
 export async function markWhatsAppWebhookFailureRecovered(input: {

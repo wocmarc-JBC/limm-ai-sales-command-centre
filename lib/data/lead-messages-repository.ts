@@ -99,7 +99,12 @@ export async function listLeadMessagesForRevenueIntelligence(leadIds: string[]) 
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export async function upsertWhatsAppLead(input: { phone: string; contactName?: string; latestMessage: string }) {
+export async function upsertWhatsAppLead(input: {
+  phone: string;
+  contactName?: string;
+  latestMessage: string;
+  preserveExistingActivity?: boolean;
+}) {
   const now = new Date().toISOString();
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();
@@ -112,6 +117,7 @@ export async function upsertWhatsAppLead(input: { phone: string; contactName?: s
       .maybeSingle();
 
     if (existing.data && !existing.error) {
+      if (input.preserveExistingActivity) return mapLeadRow(existing.data);
       const { data, error } = await supabase
         .from("leads")
         .update({
@@ -151,6 +157,7 @@ export async function upsertWhatsAppLead(input: { phone: string; contactName?: s
   const store = getMockStore();
   const existingIndex = store.leads.findIndex((lead) => lead.phone === input.phone);
   if (existingIndex >= 0) {
+    if (input.preserveExistingActivity) return mockClone(store.leads[existingIndex]);
     store.leads[existingIndex] = {
       ...store.leads[existingIndex],
       clientName: store.leads[existingIndex].clientName || input.contactName || "WhatsApp Lead",
@@ -226,8 +233,11 @@ export async function saveLeadMessage(input: {
   providerTimestamp?: string | null;
   whatsappStatus?: LeadMessage["whatsappStatus"];
   metadata?: Record<string, unknown>;
+  createdAt?: string;
 }) {
-  const now = new Date().toISOString();
+  const now = input.createdAt && !Number.isNaN(Date.parse(input.createdAt))
+    ? new Date(input.createdAt).toISOString()
+    : new Date().toISOString();
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseWriteClient();
     const { data, error } = await supabase

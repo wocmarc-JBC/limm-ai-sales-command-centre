@@ -10,6 +10,7 @@ import { getClientFilesStorageRuntime } from "@/lib/data/lead-files-repository";
 import { getWhatsAppConversationConcurrencyHealth } from "@/lib/data/whatsapp-conversation-lock-repository";
 import { getSupabasePublicKey } from "@/lib/data/data-source";
 import { hasSupabaseAdminEnv } from "@/lib/data/supabase-admin";
+import { getWhatsAppProductionProofSnapshot } from "@/lib/data/whatsapp-webhook-failures-repository";
 import { getOperationsSloSnapshot } from "@/lib/operations/observability";
 
 export const runtime = "nodejs";
@@ -87,6 +88,8 @@ export const dynamic = "force-dynamic";
 // uiVersion: "v10.6.0"
 // version: "v11_1_0_world_class_operations"
 // uiVersion: "v11.1.0"
+// version: "v11_1_2_production_proof"
+// uiVersion: "v11.1.2"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -108,8 +111,11 @@ export async function GET() {
     const instagramUrlConfigured = Boolean(getLimmInstagramUrl());
     const clientFilesStorage = getClientFilesStorageRuntime();
     const officialSingaporePlanningAreaMapAvailable = singaporeOfficialPlanningAreaMapAvailable();
-    const concurrencySafety = await getWhatsAppConversationConcurrencyHealth();
-    const operations = await getOperationsSloSnapshot();
+    const [concurrencySafety, operations, whatsappProof] = await Promise.all([
+      getWhatsAppConversationConcurrencyHealth(),
+      getOperationsSloSnapshot(),
+      getWhatsAppProductionProofSnapshot()
+    ]);
     const webhookSignatureEnforced = envPresent("WHATSAPP_APP_SECRET");
     const concurrencySafetyReady =
       concurrencySafety.databaseConnected &&
@@ -119,10 +125,10 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v11_1_0_world_class_operations",
+      version: "v11_1_2_production_proof",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v11.1.0",
+      uiVersion: "v11.1.2",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -142,6 +148,17 @@ export async function GET() {
       intakeProfileSchemaReady: concurrencySafety.intakeProfileReady,
       inboundFailureRecoveryAvailable: concurrencySafety.failureRecoveryReady,
       schemaCompatibilityRetryAvailable: true,
+      productionSchemaDeploymentGateAvailable: true,
+      bossOnlyFailureRecoveryWorkspaceAvailable: true,
+      noSendFailureRecoveryAvailable: true,
+      authenticatedQaReleaseGateAvailable: true,
+      whatsappRecoveryProofSchemaReady: whatsappProof.schemaReady,
+      unresolvedPreservedInboundCount: whatsappProof.pendingFailureCount,
+      recoveredInboundLast24hCount: whatsappProof.recoveredLast24hCount,
+      lastPreservedInboundFailureAt: whatsappProof.lastFailureAt,
+      lastPreservedInboundRecoveryAt: whatsappProof.lastRecoveryAt,
+      freshV1112RealInboundProofObserved: Boolean(whatsappProof.lastReleaseInboundAt),
+      freshV1112RealInboundProofAt: whatsappProof.lastReleaseInboundAt,
       whatsappProductionSafetyReady,
       whatsappProductionSafetyReason: !concurrencySafetyReady
         ? concurrencySafety.reason
@@ -649,10 +666,10 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       ok: true,
-      version: "v11_1_0_world_class_operations",
+      version: "v11_1_2_production_proof",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v11.1.0",
+      uiVersion: "v11.1.2",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
       webhookSignatureVerificationAvailable: true,
@@ -672,6 +689,17 @@ export async function GET() {
       intakeProfileSchemaReady: false,
       inboundFailureRecoveryAvailable: false,
       schemaCompatibilityRetryAvailable: true,
+      productionSchemaDeploymentGateAvailable: true,
+      bossOnlyFailureRecoveryWorkspaceAvailable: true,
+      noSendFailureRecoveryAvailable: true,
+      authenticatedQaReleaseGateAvailable: true,
+      whatsappRecoveryProofSchemaReady: false,
+      unresolvedPreservedInboundCount: 0,
+      recoveredInboundLast24hCount: 0,
+      lastPreservedInboundFailureAt: null,
+      lastPreservedInboundRecoveryAt: null,
+      freshV1112RealInboundProofObserved: false,
+      freshV1112RealInboundProofAt: null,
       whatsappProductionSafetyReady: false,
       whatsappProductionSafetyReason: "health_check_failed",
       intentGateAvailable: false,

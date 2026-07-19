@@ -1,10 +1,20 @@
 import { defineConfig, devices } from "@playwright/test";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+const fallbackChromium = "/tmp/chromium";
+function isUsableChromium(path: string) {
+  try {
+    return existsSync(path) && statSync(path).isFile() && statSync(path).size > 1_000_000;
+  } catch {
+    return false;
+  }
+}
+const fallbackChromiumUsable = process.platform === "linux" && isUsableChromium(fallbackChromium);
 const bundledChromium = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?.trim()
-  || (process.platform === "linux" && existsSync("/tmp/chromium") ? "/tmp/chromium" : "");
+  || (fallbackChromiumUsable ? fallbackChromium : "");
+const nextServerMode = process.env.PLAYWRIGHT_USE_PRODUCTION_SERVER === "1" ? "start" : "dev";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -59,7 +69,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER === "1"
     ? undefined
     : {
-        command: `${JSON.stringify(process.execPath)} node_modules/next/dist/bin/next dev -H 127.0.0.1 -p ${port}`,
+        command: `${JSON.stringify(process.execPath)} node_modules/next/dist/bin/next ${nextServerMode} -H 127.0.0.1 -p ${port}`,
         url: baseURL,
         reuseExistingServer: true,
         timeout: 120_000

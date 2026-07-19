@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
       status: results.some((result) => result.status === "auto_reply_failed") ? "degraded" : "ok",
       durationMs: performance.now() - startedAt,
       providerMessageId: first?.providerMessageId,
-      metadata: { messageCount: results.length, firstStatus: first?.status || "none" }
+      metadata: { messageCount: results.length, firstStatus: first?.status || "none", releaseVersion: "11.1.2" }
     }).catch(() => false);
     if (results.length === 1 && first) {
       return NextResponse.json(autoReplyResponseFromResult(first), { headers: { "X-LIMM-Trace-Id": traceId } });

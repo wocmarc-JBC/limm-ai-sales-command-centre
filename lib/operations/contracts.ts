@@ -1,6 +1,6 @@
 import type { UserRole } from "@/lib/auth/roles";
 
-export const WORLD_CLASS_RELEASE = "11.1.0";
+export const WORLD_CLASS_RELEASE = "11.1.2";
 
 export const AI_QUALITY_VERSIONS = {
   model: "configured-provider",
