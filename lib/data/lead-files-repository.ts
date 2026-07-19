@@ -192,6 +192,40 @@ export async function listAllLeadFiles() {
   return mockClone(getMockStore().leadFiles).sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
 }
 
+export async function listLeadFilesForLeads(leadIds: string[]) {
+  const unique = Array.from(new Set(leadIds.filter(Boolean)));
+  if (!unique.length) return [];
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = await getSupabaseServerClient();
+    const { data, error } = await supabase!
+      .from("lead_files")
+      .select("*")
+      .in("lead_id", unique)
+      .neq("file_status", "voided")
+      .order("uploaded_at", { ascending: false })
+      .limit(Math.min(1000, unique.length * 25));
+    if (!error && data) return data.map(mapLeadFileRow);
+    return [];
+  }
+  const visible = new Set(unique);
+  return mockClone(getMockStore().leadFiles).filter((file) => visible.has(file.leadId) && file.fileStatus !== "voided");
+}
+
+export async function getAuthorizedLeadFileById(fileId: string) {
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = await getSupabaseServerClient();
+    const { data, error } = await supabase!
+      .from("lead_files")
+      .select("*")
+      .eq("id", fileId)
+      .neq("file_status", "voided")
+      .maybeSingle();
+    if (error || !data) return null;
+    return mapLeadFileRow(data);
+  }
+  return getLeadFileById(fileId);
+}
+
 export async function getLeadFileById(fileId: string) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = adminClient();

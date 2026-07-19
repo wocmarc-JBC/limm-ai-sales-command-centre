@@ -152,7 +152,7 @@ for (const header of ["Content-Security-Policy", "X-Content-Type-Options", "Refe
 }
 assert.ok(packageJson.dependencies["@vercel/analytics"]);
 assert.ok(packageJson.dependencies["@vercel/speed-insights"]);
-assert.equal(packageJson.version, "11.1.3");
+assert.ok(packageJson.version >= "11.1.3");
 assert.ok(packageJson.scripts["test:v11.1.0"]?.includes("test_v11_1_world_class_operations.mjs"));
 
 console.log("PASS: v11.1 world-class operations, team inbox, AI quality, product experience, and revenue intelligence checks passed.");

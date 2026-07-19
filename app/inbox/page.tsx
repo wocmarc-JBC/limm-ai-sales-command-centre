@@ -2,9 +2,9 @@ import { MultiChatInbox, type MultiChatConversation, type MultiChatSummary } fro
 import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
-import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
+import { listLeadFilesForLeads } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
-import { listLeads } from "@/lib/data/leads-repository";
+import { getLeadById, listInboxLeadCandidates } from "@/lib/data/leads-repository";
 import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { attachLeadFilesToMessages } from "@/lib/inbox-message-attachments";
@@ -81,14 +81,17 @@ export default async function WhatsAppInboxPage({
   const canManageSpam = Boolean(auth.profile && can(auth.profile.role, "soft_delete_leads"));
 
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
-  const [leads, allFiles] = await Promise.all([
-    listLeads({ includeTest: showTestDemoRecords, includeNonSales: true }),
-    listAllLeadFiles()
-  ]);
+  // includeNonSales: true remains the inbox contract; the bounded query includes every route.
+  const pageLeads = await listInboxLeadCandidates({ limit: 60, includeTest: showTestDemoRecords });
+  const selectedCandidate = searchParams?.lead ? await getLeadById(searchParams.lead) : null;
+  const leads = selectedCandidate && !pageLeads.some((lead) => lead.id === selectedCandidate.id)
+    ? [selectedCandidate, ...pageLeads]
+    : pageLeads;
   const leadIds = leads.map((lead) => lead.id);
-  const [summaryMessagesByLead, assignmentsByLead] = await Promise.all([
+  const [summaryMessagesByLead, assignmentsByLead, allFiles] = await Promise.all([
     listLatestLeadMessagesForInbox(leadIds, 3),
-    listInboxAssignments(leadIds)
+    listInboxAssignments(leadIds),
+    listLeadFilesForLeads(leadIds)
   ]);
   const activeLeadPool = leads
     .filter((lead) => hasWhatsAppContactOrMessages(

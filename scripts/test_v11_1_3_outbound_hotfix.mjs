@@ -15,9 +15,9 @@ const schemaGate = read("scripts/verify_production_schema_gate.mjs");
 const teamWorkspace = read("components/inbox/InboxTeamWorkspace.tsx");
 const inbox = read("components/inbox/MultiChatInbox.tsx");
 
-assert.equal(packageJson.version, "11.1.3");
+assert.ok(packageJson.version >= "11.1.3");
 assert.ok(packageJson.scripts["test:v11.1.3"]?.includes("test_v11_1_3_outbound_hotfix.mjs"));
-assert.ok(packageJson.scripts.verify.includes("test:v11.1.3"));
+assert.ok(packageJson.scripts.verify.includes("test:v11.1.3") || packageJson.scripts.verify.includes("test:v11.2.0"));
 
 assert.ok(controlRepo.startsWith('import "server-only";'));
 assert.ok(controlRepo.includes("getSupabaseAdminClient"));
@@ -44,11 +44,17 @@ assert.ok(finalControlIndex > 0 && finalControlIndex < pauseIndex && pauseIndex 
 assert.ok(unavailableIndex > pauseIndex && unavailableIndex < sendIndex, "Unavailable control state must fail closed before Meta send.");
 assert.equal((autoReply.match(new RegExp(sendCall.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 1, "Live handler must retain exactly one Meta send call.");
 
-for (const marker of [
-  "unexpectedNoSendCount", "outboundSendFailedCount", "completionDegraded",
-  "firstTerminalOutcome", "outboundTerminalProof", 'releaseVersion: "11.1.3"'
-]) assert.ok(webhook.includes(marker), `Webhook completion telemetry missing ${marker}`);
-assert.ok(webhook.includes('status: completionDegraded ? "degraded" : "ok"'));
+if (packageJson.version === "11.1.3") {
+  for (const marker of [
+    "unexpectedNoSendCount", "outboundSendFailedCount", "completionDegraded",
+    "firstTerminalOutcome", "outboundTerminalProof", 'releaseVersion: "11.1.3"'
+  ]) assert.ok(webhook.includes(marker), `Webhook completion telemetry missing ${marker}`);
+  assert.ok(webhook.includes('status: completionDegraded ? "degraded" : "ok"'));
+} else {
+  for (const marker of ["enqueueWhatsAppInboundMessages", "processWhatsAppInboundJob", 'releaseVersion: "11.2.0"']) {
+    assert.ok(webhook.includes(marker), `Durable webhook telemetry missing ${marker}`);
+  }
+}
 
 for (const marker of [
   'WHATSAPP_OUTBOUND_PROOF_RELEASE = "11.1.3"', "lastReleaseOutboundAt",

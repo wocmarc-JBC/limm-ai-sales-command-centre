@@ -3,6 +3,10 @@
     {
       "path": "/api/operations/canary",
       "schedule": "15 0 * * *"
+    },
+    {
+      "path": "/api/operations/whatsapp-jobs",
+      "schedule": "* * * * *"
     }
   ]
 }

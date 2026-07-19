@@ -1,6 +1,6 @@
 {
   "name": "limm-ai-sales-command-centre-v3",
-  "version": "11.1.3",
+  "version": "11.2.0",
   "private": true,
   "description": "LIMM AI Sales Command Centre v3 live-app-ready foundation scaffold.",
   "scripts": {
@@ -61,6 +61,7 @@
     "test:v11.1.0": "npm run test:v10.6.0 && node scripts/test_v11_1_world_class_operations.mjs && npm run test:whatsapp-persistence",
     "test:v11.1.2": "npm run test:v11.1.0 && node scripts/test_v11_1_2_production_proof.mjs",
     "test:v11.1.3": "npm run test:v11.1.2 && node scripts/test_v11_1_3_outbound_hotfix.mjs",
+    "test:v11.2.0": "npm run test:v11.1.3 && node scripts/test_v11_2_durable_release.mjs",
     "test:media-inbox": "node scripts/test_inbox_whatsapp_media_visibility.mjs",
     "verify:ai-quality": "node scripts/test_v5_3_whatsapp_reply_coach_replay.mjs && node scripts/test_v11_1_world_class_operations.mjs",
     "test:bundle:v10.5.0": "node scripts/test_command_core_bundle_budget.mjs",
@@ -93,7 +94,7 @@
     "verify:authenticated-release": "node scripts/verify_authenticated_release_gate.mjs",
     "verify:deployed-production": "node scripts/verify_deployed_production_proof.mjs",
     "test:live-setup": "node scripts/test_v3_live_setup_static.mjs",
-    "verify": "npm run test && npm run test:v11.1.3 && npm run test:media-inbox && npm run test:generated-guard && npm run test:supabase && npm run test:auth && npm run test:live-setup && npm run test:review-route && npm run test:v4 && npm run audit",
+    "verify": "npm run test && npm run test:v11.2.0 && npm run test:media-inbox && npm run test:generated-guard && npm run test:supabase && npm run test:auth && npm run test:live-setup && npm run test:review-route && npm run test:v4 && npm run audit",
     "verify:all": "npm run verify && npm run test:v4.6 && npm run test:v4.7 && npm run test:v4.8 && npm run test:v4.8-live && npm run test:whatsapp-payload && npm run test:v4.9 && npm run test:v5 && npm run test:v5.2 && npm run test:v5.3 && npm run test:v5.3.1 && npm run test:v5.3.2 && npm run test:v6 && npm run test:v6:ultimate && npm run test:v6.1 && npm run test:v6.1.2 && npm run test:v6.1.4 && npm run test:v6.1.5 && npm run test:v6.1.6 && npm run test:v6.1.7 && npm run test:v6.1.8 && npm run test:v6.3 && npm run test:v6.4 && npm run test:v6.4.1 && npm run test:v6.4.2 && npm run test:v6.4.3 && npm run test:v6.4.4 && npm run test:v6.4.5 && npm run test:v6.4.6 && npm run test:v6.4.8 && npm run test:v6.4.9 && npm run test:v6.4.10 && npm run test:v6.5 && npm run test:v6.5.1 && npm run test:v6.7 && npm run test:v6-ui-100 && npm run test:v6.6 && npm run test:v6.6.2 && npm run test:v6.6.3 && npm run qa:dev-brain"
   },
   "dependencies": {

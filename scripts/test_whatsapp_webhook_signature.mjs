@@ -125,11 +125,11 @@ check("verifies the raw byte body before parsing or processing", () => {
   const bodyReadIndex = webhookSource.indexOf("await request.arrayBuffer()");
   const signatureIndex = webhookSource.indexOf("verifyWhatsAppWebhookSignature({", bodyReadIndex);
   const parseIndex = webhookSource.indexOf("JSON.parse(rawBody)");
-  const handlerIndex = webhookSource.indexOf("await handleWhatsAppInboundMessage(message)");
+  const enqueueIndex = webhookSource.indexOf("await enqueueWhatsAppInboundMessages(messages)");
   assert.ok(bodyReadIndex >= 0, "Webhook must read the exact raw bytes.");
   assert.ok(signatureIndex > bodyReadIndex, "Signature verification must follow raw-byte capture.");
   assert.ok(parseIndex > signatureIndex, "Payload parsing must happen after signature verification.");
-  assert.ok(handlerIndex > parseIndex, "CRM/reply processing must happen after parsing.");
+  assert.ok(enqueueIndex > parseIndex, "Durable CRM/reply enqueue must happen after parsing.");
 });
 
 check("fails closed with safe signature diagnostics", () => {

@@ -13,6 +13,16 @@ export type ParsedWhatsAppMessage = {
   businessPhoneNumberId: string;
 };
 
+export type ParsedWhatsAppStatus = {
+  providerMessageId: string;
+  status: "sent" | "delivered" | "read" | "failed" | "deleted";
+  timestamp: string | null;
+  recipientPhone: string;
+  errorCode: string;
+  errorTitle: string;
+  metadata: Record<string, unknown>;
+};
+
 function parseProviderTimestamp(timestamp: unknown) {
   if (timestamp === null || timestamp === undefined || timestamp === "") return null;
   const seconds = Number(timestamp);
@@ -63,4 +73,31 @@ export function parseWhatsAppInbound(payload: any): ParsedWhatsAppMessage[] {
   }
 
   return parsed;
+}
+
+export function parseWhatsAppStatuses(payload: any): ParsedWhatsAppStatus[] {
+  const parsed: ParsedWhatsAppStatus[] = [];
+  for (const entry of Array.isArray(payload?.entry) ? payload.entry : []) {
+    for (const change of Array.isArray(entry?.changes) ? entry.changes : []) {
+      for (const status of Array.isArray(change?.value?.statuses) ? change.value.statuses : []) {
+        const value = String(status?.status ?? "");
+        if (!["sent", "delivered", "read", "failed", "deleted"].includes(value)) continue;
+        const error = Array.isArray(status?.errors) ? status.errors[0] : undefined;
+        parsed.push({
+          providerMessageId: String(status?.id ?? ""),
+          status: value as ParsedWhatsAppStatus["status"],
+          timestamp: parseProviderTimestamp(status?.timestamp),
+          recipientPhone: String(status?.recipient_id ?? ""),
+          errorCode: String(error?.code ?? ""),
+          errorTitle: String(error?.title ?? error?.message ?? "").slice(0, 300),
+          metadata: {
+            conversationId: String(status?.conversation?.id ?? ""),
+            pricingModel: String(status?.pricing?.pricing_model ?? ""),
+            category: String(status?.pricing?.category ?? "")
+          }
+        });
+      }
+    }
+  }
+  return parsed.filter((status) => status.providerMessageId);
 }

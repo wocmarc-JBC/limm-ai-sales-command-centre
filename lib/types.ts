@@ -447,7 +447,7 @@ export interface LeadMessage {
   safeToSend: boolean;
   providerMessageId?: string;
   providerTimestamp?: string | null;
-  whatsappStatus?: "received" | "sent" | "blocked" | "failed" | "disabled" | "";
+  whatsappStatus?: "received" | "sent" | "delivered" | "read" | "blocked" | "failed" | "disabled" | "";
   metadata: Record<string, unknown>;
   attachments?: LeadMessageAttachment[];
   createdAt: string;

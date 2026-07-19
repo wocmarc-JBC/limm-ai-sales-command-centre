@@ -117,19 +117,18 @@ assert.equal(failureRepository.includes("console.warn(input.message"), false, "F
 assert.ok(failureRepository.includes('.lt("expires_at", now.toISOString())'), "Expired recovery content must be purged automatically.");
 
 const webhook = read("app/api/whatsapp/webhook/route.ts");
-const handlerIndex = webhook.indexOf("await handleWhatsAppInboundMessage(message)");
-const recoveredIndex = webhook.indexOf("await markWhatsAppWebhookFailureRecovered", handlerIndex);
-const catchIndex = webhook.indexOf("} catch (error) {", handlerIndex);
-const captureIndex = webhook.indexOf("await captureWhatsAppWebhookFailure", catchIndex);
-const telemetryIndex = webhook.indexOf("await recordOperationalEvent", captureIndex);
-assert.ok(handlerIndex >= 0 && recoveredIndex > handlerIndex, "Successful retries must mark captured failures recovered.");
-assert.ok(captureIndex > catchIndex && telemetryIndex > captureIndex, "Failed content must be captured before failure telemetry returns HTTP 500.");
-assert.ok(webhook.includes("failureCaptured"));
-const failureLogStart = webhook.indexOf('console.error("whatsapp_webhook_error"', catchIndex);
-const failureLogEnd = webhook.indexOf("await recordOperationalEvent", failureLogStart);
-const failureLog = webhook.slice(failureLogStart, failureLogEnd);
-assert.equal(failureLog.includes("providerMessageId: message.providerMessageId"), false, "Failure logs must hash provider message IDs.");
-assert.ok(webhook.includes("providerMessageIdHash: hashProviderMessageId(message.providerMessageId)"));
+const worker = read("lib/whatsapp-inbound-worker.ts");
+const enqueueIndex = webhook.indexOf("await enqueueWhatsAppInboundMessages(messages)");
+const afterIndex = webhook.indexOf("after(() => processWhatsAppInboundJob", enqueueIndex);
+const handlerIndex = worker.indexOf("await handleWhatsAppInboundMessage(job.message)");
+const recoveredIndex = worker.indexOf("await markWhatsAppWebhookFailureRecovered", handlerIndex);
+const catchIndex = worker.indexOf("} catch (error) {", handlerIndex);
+const captureIndex = worker.indexOf("await captureWhatsAppWebhookFailure", catchIndex);
+const retryIndex = worker.indexOf("await retryWhatsAppInboundJob", captureIndex);
+assert.ok(enqueueIndex >= 0 && afterIndex > enqueueIndex, "Webhook must durably enqueue before post-response processing.");
+assert.ok(handlerIndex >= 0 && recoveredIndex > handlerIndex, "Successful durable retries must mark captured failures recovered.");
+assert.ok(captureIndex > catchIndex && retryIndex > captureIndex, "Failed jobs must preserve content before scheduling retry.");
+assert.equal(worker.includes("console.warn(job.message"), false, "Failure logging must not print client content.");
 
 const canary = read("app/api/operations/canary/route.ts");
 assert.ok(canary.includes("purgeExpiredWhatsAppWebhookFailures"), "The daily operations canary must enforce failure-content retention.");

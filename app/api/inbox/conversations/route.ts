@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
-import { listAllLeadFiles } from "@/lib/data/lead-files-repository";
+import { listLeadFilesForLeads } from "@/lib/data/lead-files-repository";
 import { listLatestLeadMessagesForInbox } from "@/lib/data/lead-messages-repository";
-import { listLeads } from "@/lib/data/leads-repository";
+import { listInboxLeadCandidates } from "@/lib/data/leads-repository";
 import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
@@ -67,14 +67,16 @@ export async function GET(request: Request) {
   }
 
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
-  const [leads, allFiles] = await Promise.all([
-    listLeads({ includeTest: showTestDemoRecords, includeNonSales: true }),
-    listAllLeadFiles()
-  ]);
+  const url = new URL(request.url);
+  const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 30), 100));
+  const offset = Math.max(0, Number(url.searchParams.get("cursor") || 0));
+  // includeNonSales: true remains the inbox contract; the bounded query includes every route.
+  const leads = await listInboxLeadCandidates({ limit: limit * 3, offset, includeTest: showTestDemoRecords });
   const leadIds = leads.map((lead) => lead.id);
-  const [summaryMessagesByLead, assignmentsByLead] = await Promise.all([
+  const [summaryMessagesByLead, assignmentsByLead, allFiles] = await Promise.all([
     listLatestLeadMessagesForInbox(leadIds, 3),
-    listInboxAssignments(leadIds)
+    listInboxAssignments(leadIds),
+    listLeadFilesForLeads(leadIds)
   ]);
   const activeLeads = leads
     .filter((lead) => hasWhatsAppContactOrMessages(
@@ -85,15 +87,7 @@ export async function GET(request: Request) {
       { id: a.id, lastActivityAt: leadLastActivityAt(a, summaryMessagesByLead.get(a.id) ?? []) },
       { id: b.id, lastActivityAt: leadLastActivityAt(b, summaryMessagesByLead.get(b.id) ?? []) }
     ));
-  const url = new URL(request.url);
-  const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 30), 100));
-  const cursor = url.searchParams.get("cursor") || "";
-  const cursorIndex = cursor ? activeLeads.findIndex((lead) => lead.id === cursor) : -1;
-  const startIndex = cursorIndex >= 0 ? cursorIndex + 1 : 0;
-  const firstThirtyActiveLeads = activeLeads.slice(0, 30);
-  const pagedActiveLeads = startIndex === 0 && limit === 30
-    ? firstThirtyActiveLeads
-    : activeLeads.slice(startIndex, startIndex + limit);
+  const pagedActiveLeads = activeLeads.slice(0, limit);
   const conversations = pagedActiveLeads
     .map((lead) => buildSummary(
       lead,
@@ -106,7 +100,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     ok: true,
     conversations,
-    hasMore: startIndex + pagedActiveLeads.length < activeLeads.length,
-    nextCursor: pagedActiveLeads.at(-1)?.id ?? null
+    hasMore: leads.length > pagedActiveLeads.length,
+    nextCursor: leads.length > pagedActiveLeads.length ? String(offset + leads.length) : null
   });
 }

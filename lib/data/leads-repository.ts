@@ -185,6 +185,31 @@ export async function listLeads(options?: ListLeadsOptions) {
     .sort((a, b) => (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt));
 }
 
+export async function listInboxLeadCandidates(input: { limit?: number; offset?: number; includeTest?: boolean } = {}) {
+  const limit = Math.max(1, Math.min(input.limit ?? 60, 200));
+  const offset = Math.max(0, input.offset ?? 0);
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = await getSupabaseServerClient();
+    let query = supabase!
+      .from("leads")
+      .select("*")
+      .is("deleted_at", null)
+      .is("archived_at", null)
+      .eq("is_spam", false)
+      .order("last_whatsapp_activity_at", { ascending: false, nullsFirst: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + limit);
+    if (!input.includeTest) query = query.eq("is_test", false);
+    const { data, error } = await query;
+    if (!error && data) return data.map(mapLeadRow);
+    throw new Error(`Inbox lead page failed: ${error?.message ?? "unknown query error"}`);
+  }
+  return mockClone(getMockStore().leads)
+    .filter((lead) => !lead.deletedAt && !lead.archivedAt && !lead.isSpam && (input.includeTest || !lead.isTest))
+    .sort((a, b) => (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt))
+    .slice(offset, offset + limit + 1);
+}
+
 export async function getLeadById(id: string) {
   if (getDataMode() === "Supabase Mode") {
     const supabase = await getSupabaseServerClient();

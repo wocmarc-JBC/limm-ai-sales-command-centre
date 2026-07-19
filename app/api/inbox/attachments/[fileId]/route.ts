@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile, requirePermission } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/data/audit-repository";
-import { getLeadFileById, getSignedLeadFileUrl } from "@/lib/data/lead-files-repository";
+import { getAuthorizedLeadFileById, getLeadFileById, getSignedLeadFileUrl } from "@/lib/data/lead-files-repository";
 import { createTraceId, withOperationalTrace } from "@/lib/operations/observability";
 import { consumeRateLimit, rateLimitHeaders } from "@/lib/operations/rate-limit";
 import { retryWhatsAppMediaForLeadFile } from "@/lib/whatsapp-media-storage";
@@ -25,6 +25,13 @@ export async function GET(
 
   const { fileId } = await paramsPromise;
   const download = new URL(request.url).searchParams.get("download") === "1";
+  const authorizedFile = await getAuthorizedLeadFileById(fileId);
+  if (!authorizedFile) {
+    return NextResponse.json(
+      { ok: false, errorCode: "attachment_not_found", errorMessage: "This attachment is not available to your account." },
+      { status: 404, headers: privateHeaders }
+    );
+  }
   const signedUrl = await getSignedLeadFileUrl(fileId, 90, { download });
   if (!signedUrl) {
     return NextResponse.json(

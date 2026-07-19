@@ -480,14 +480,15 @@ assert(/actor:\s*audit\.actor/.test(auditRepo), "Audit repository must send lega
 assert(/actor_type:\s*audit\.actorType/.test(auditRepo), "Audit repository must send actor_type.");
 
 const whatsappRoute = read("app/api/whatsapp/webhook/route.ts");
+const whatsappWorker = read("lib/whatsapp-inbound-worker.ts");
 assert(whatsappRoute.includes("WHATSAPP_VERIFY_TOKEN") && whatsappRoute.includes("hub.challenge"), "WhatsApp webhook must verify Meta challenge.");
-assert(whatsappRoute.includes("handleWhatsAppInboundMessage"), "WhatsApp webhook must use the closed-test handler.");
+assert(whatsappRoute.includes("enqueueWhatsAppInboundMessages") && whatsappWorker.includes("handleWhatsAppInboundMessage"), "WhatsApp webhook must durably enqueue into the existing closed-test handler.");
 assert(whatsappRoute.includes('runtime = "nodejs"'), "WhatsApp production webhook must use Node.js runtime.");
 assert(/export\s+async\s+function\s+GET/.test(whatsappRoute), "WhatsApp production webhook GET handler missing.");
 assert(/export\s+async\s+function\s+POST/.test(whatsappRoute), "WhatsApp production webhook POST handler missing.");
 assert(whatsappRoute.includes("whatsapp_webhook_received_start"), "WhatsApp webhook must log first-line production diagnostic marker.");
 assert(whatsappRoute.includes("config_error") && whatsappRoute.includes("missing"), "WhatsApp webhook must return safe config_error JSON.");
-assert(whatsappRoute.includes("unsupported_or_status_payload"), "WhatsApp webhook must safely ignore unsupported/status-only payloads.");
+assert(whatsappRoute.includes("unsupported_payload") && whatsappRoute.includes("parseWhatsAppStatuses"), "WhatsApp webhook must safely ignore unsupported payloads and persist status payloads.");
 assert(!/localhost|127\.0\.0\.1|trycloudflare|pinggy/i.test(whatsappRoute), "WhatsApp production webhook must not hardcode local tunnel URLs.");
 const whatsappHealthRoute = read("app/api/whatsapp/health/route.ts");
 for (const field of ["hasSupabaseUrl", "hasServiceRoleKey", "hasWhatsappAccessToken", "testAutoReplyEnabled"]) {

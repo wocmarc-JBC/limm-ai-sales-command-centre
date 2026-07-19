@@ -106,10 +106,11 @@ check("server page orders the complete active pool before limiting it", () => {
   assert.ok(inboxPage.includes(".sort((a, b) => compareInboxLatestActivity(a.summary, b.summary))"));
 });
 
-check("polling API orders by message activity before taking 30 rows", () => {
+check("polling API uses the bounded database activity page before taking response rows", () => {
+  assert.ok(conversationsApi.includes("listInboxLeadCandidates({ limit: limit * 3, offset"));
   const activeStart = conversationsApi.indexOf("const activeLeads");
   const sortIndex = conversationsApi.indexOf(".sort((a, b) => compareInboxLatestActivity(", activeStart);
-  const sliceIndex = conversationsApi.indexOf(".slice(0, 30)", activeStart);
+  const sliceIndex = conversationsApi.indexOf("activeLeads.slice(0, limit)", activeStart);
   assert.ok(activeStart >= 0 && sortIndex > activeStart && sliceIndex > sortIndex);
   assert.ok(conversationsApi.includes(".sort(compareInboxLatestActivity)"));
 });
