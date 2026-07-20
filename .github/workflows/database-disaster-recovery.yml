@@ -89,11 +89,30 @@ jobs:
       - name: Create PostgreSQL 17 custom-format dump
         shell: bash
         run: |
+          printf '%s\n' \
+            'include schema public' \
+            'include schema auth' \
+            'include schema storage' \
+            'include schema supabase_migrations' \
+            'exclude table auth.custom_oauth_providers' \
+            'exclude table auth.oauth_authorizations' \
+            'exclude table auth.oauth_client_states' \
+            'exclude table auth.oauth_clients' \
+            'exclude table auth.oauth_consents' \
+            'exclude table auth.webauthn_challenges' \
+            'exclude table auth.webauthn_credentials' \
+            'exclude table storage.buckets_analytics' \
+            'exclude table storage.buckets_vectors' \
+            'exclude table storage.migrations' \
+            'exclude table storage.s3_multipart_uploads' \
+            'exclude table storage.s3_multipart_uploads_parts' \
+            'exclude table storage.vector_indexes' \
+            > "$RUNNER_TEMP/limm-db-dr/pg_dump.filter"
           docker run --rm --network host \
             -v "$RUNNER_TEMP/limm-db-dr:/work" \
             -e DR_DATABASE_URL \
             postgres:17-alpine \
-            sh -c 'pg_dump "$DR_DATABASE_URL" --format=custom --compress=9 --no-owner --no-privileges --schema=public --schema=auth --schema=storage --schema=supabase_migrations --exclude-extension=pg_net --file=/work/database.dump'
+            sh -c 'pg_dump "$DR_DATABASE_URL" --format=custom --compress=9 --no-owner --no-privileges --filter=/work/pg_dump.filter --exclude-extension=pg_net --file=/work/database.dump'
           test -s "$RUNNER_TEMP/limm-db-dr/database.dump"
 
       - name: Encrypt and checksum artifact
