@@ -206,13 +206,13 @@ export async function recordAiQualityObservation(input: {
   reviewedBy?: string | null;
   metadata?: Record<string, unknown>;
 }) {
-  if (getDataMode() === "Mock Mode") return false;
+  if (getDataMode() === "Mock Mode") return null;
   const admin = getSupabaseAdminClient();
-  if (!admin) return false;
+  if (!admin) return null;
   const replySignature = input.reply
     ? createHash("sha256").update(input.reply.trim().replace(/\s+/g, " ").toLowerCase()).digest("hex")
     : "";
-  const { error } = await admin.from("ai_reply_quality_events").insert({
+  const { data, error } = await admin.from("ai_reply_quality_events").insert({
     lead_id: input.leadId || null,
     message_id: input.messageId && /^[0-9a-f-]{36}$/i.test(input.messageId) ? input.messageId : null,
     trace_id: (input.traceId || "").slice(0, 128),
@@ -228,6 +228,105 @@ export async function recordAiQualityObservation(input: {
     metadata: input.metadata ?? {},
     reviewed_at: input.reviewedBy ? new Date().toISOString() : null,
     reviewed_by: input.reviewedBy || null
-  });
+  }).select("id").maybeSingle();
+  return error || !data?.id ? null : String(data.id);
+}
+
+export async function linkAiQualityObservationsToMessage(input: {
+  qualityEventIds: Array<string | null | undefined>;
+  messageId: string;
+}) {
+  const ids = input.qualityEventIds.filter((id): id is string => Boolean(id && /^[0-9a-f-]{36}$/i.test(id)));
+  if (!ids.length || !/^[0-9a-f-]{36}$/i.test(input.messageId) || getDataMode() === "Mock Mode") return false;
+  const admin = getSupabaseAdminClient();
+  if (!admin) return false;
+  const { error } = await admin
+    .from("ai_reply_quality_events")
+    .update({ message_id: input.messageId })
+    .in("id", ids);
   return !error;
+}
+
+function levenshteinDistance(left: string, right: string) {
+  const a = Array.from(left);
+  const b = Array.from(right);
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= a.length; row += 1) {
+    const current = [row];
+    for (let column = 1; column <= b.length; column += 1) {
+      current[column] = Math.min(
+        current[column - 1] + 1,
+        previous[column] + 1,
+        previous[column - 1] + (a[row - 1] === b[column - 1] ? 0 : 1)
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[b.length];
+}
+
+export async function reviewAiQualityObservation(input: {
+  leadId: string;
+  messageId: string;
+  qualityEventId?: string;
+  decision: Exclude<AiQualityDecision, "observed" | "unsafe">;
+  feedback?: string;
+  editedReply?: string;
+  reviewedBy: string;
+}) {
+  if (getDataMode() === "Mock Mode") return { updated: true, reason: "mock_recorded" };
+  const admin = getSupabaseAdminClient();
+  if (!admin) return { updated: false, reason: "database_unavailable" };
+
+  let query = admin
+    .from("ai_reply_quality_events")
+    .select("id,message_id,metadata")
+    .eq("lead_id", input.leadId)
+    .eq("shadow_candidate", false);
+  if (input.qualityEventId && /^[0-9a-f-]{36}$/i.test(input.qualityEventId)) {
+    query = query.eq("id", input.qualityEventId);
+  } else {
+    query = query.eq("message_id", input.messageId);
+  }
+  const { data: qualityRows, error: qualityLookupError } = await query
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (qualityLookupError) return { updated: false, reason: qualityLookupError.code || "quality_lookup_failed" };
+  const qualityEvent = qualityRows?.[0];
+  if (!qualityEvent?.id) return { updated: false, reason: "quality_observation_not_found" };
+  if (String(qualityEvent.message_id ?? "") !== input.messageId) {
+    return { updated: false, reason: "quality_observation_message_mismatch" };
+  }
+
+  let editDistance: number | null = null;
+  if (input.decision === "edited") {
+    const { data: message } = await admin
+      .from("lead_messages")
+      .select("body")
+      .eq("id", input.messageId)
+      .eq("lead_id", input.leadId)
+      .maybeSingle();
+    editDistance = levenshteinDistance(String(message?.body ?? ""), String(input.editedReply ?? ""));
+  }
+
+  const metadata = qualityEvent.metadata && typeof qualityEvent.metadata === "object"
+    ? qualityEvent.metadata as Record<string, unknown>
+    : {};
+  const operatorFeedback = input.decision === "edited"
+    ? String(input.editedReply ?? "").trim()
+    : String(input.feedback ?? "").trim();
+  const { error } = await admin
+    .from("ai_reply_quality_events")
+    .update({
+      decision: input.decision,
+      operator_feedback: operatorFeedback.slice(0, 500),
+      edit_distance: editDistance,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: input.reviewedBy,
+      metadata: { ...metadata, operatorReviewSource: "inbox", operatorReviewDecision: input.decision }
+    })
+    .eq("id", qualityEvent.id);
+  return error
+    ? { updated: false, reason: error.code || "quality_update_failed" }
+    : { updated: true, reason: "quality_observation_reviewed" };
 }

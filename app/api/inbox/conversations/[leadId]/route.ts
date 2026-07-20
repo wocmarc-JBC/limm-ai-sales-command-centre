@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { listLeadFiles } from "@/lib/data/lead-files-repository";
-import { listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
+import { getWhatsAppServiceWindowForLead, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { getLeadById } from "@/lib/data/leads-repository";
 import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
@@ -65,10 +65,11 @@ export async function GET(
   const lead = await getLeadById(params.leadId);
   if (!lead) return NextResponse.json({ ok: false, error: "lead_not_found" }, { status: 404 });
 
-  const [messagePage, leadFiles, assignmentsByLead] = await Promise.all([
+  const [messagePage, leadFiles, assignmentsByLead, serviceWindow] = await Promise.all([
     listLeadMessagesPage(lead.id, 30),
     listLeadFiles(lead.id),
-    listInboxAssignments([lead.id])
+    listInboxAssignments([lead.id]),
+    getWhatsAppServiceWindowForLead(lead.id)
   ]);
   const facts = buildLeadFacts(lead, messagePage.messages, leadFiles);
   const messages = attachLeadFilesToMessages(messagePage.messages, leadFiles);
@@ -111,6 +112,7 @@ export async function GET(
           ? facts.nextActionReason
           : "This legacy row has compatibility defaults, not a completed v10.2 intent decision."
       },
+      serviceWindow,
       hasOlderMessages: messagePage.hasOlder,
       oldestMessageCursor: messagePage.oldestCursor,
       auditTrail: []

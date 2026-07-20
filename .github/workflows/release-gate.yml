@@ -30,7 +30,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm run test:v11.4.0
+      - run: npm run test:v11.4.1
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium

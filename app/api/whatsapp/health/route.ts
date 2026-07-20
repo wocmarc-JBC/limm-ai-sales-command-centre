@@ -98,6 +98,7 @@ export const dynamic = "force-dynamic";
 // reliabilityVersion: "v11.3.0"
 // version: "v11_4_0_recovery_readiness"
 // reliabilityVersion: "v11.4.0"
+// version: "v11_4_1_conversation_intelligence"
 
 function envPresent(name: string) {
   return Boolean(process.env[name]);
@@ -137,10 +138,10 @@ export async function GET() {
     const whatsappProductionSafetyReady = concurrencySafetyReady && webhookSignatureEnforced;
     return NextResponse.json({
       ok: true,
-      version: "v11_4_0_recovery_readiness",
+      version: "v11_4_1_conversation_intelligence",
       salesBrainVersion: "v10.2.1",
       securityVersion: "v10.2.2",
-      uiVersion: "v11.4.0",
+      uiVersion: "v11.4.1",
       reliabilityVersion: "v11.4.0",
       underlyingSalesComposerVersion: "v9_clean_core",
       runtime: "vercel",
@@ -317,6 +318,9 @@ export async function GET() {
       versionedAiQualityObservationsAvailable: true,
       shadowReplyQualityEvaluationAvailable: true,
       operatorAiOutcomeFeedbackAvailable: true,
+      whatsappProviderTimestampServiceWindowGuardAvailable: true,
+      whatsappServiceWindowInboxBlockingAvailable: true,
+      marcusAiReplyLearningLoopAvailable: true,
       aiQualityReleaseGateAvailable: true,
       revenueIntelligenceAvailable: true,
       responseTimeImpactAvailable: true,

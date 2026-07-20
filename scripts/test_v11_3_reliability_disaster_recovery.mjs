@@ -16,7 +16,7 @@ const health = read("app/api/whatsapp/health/route.ts");
 const operations = read("components/operations/ReliabilityRecoveryPanel.tsx");
 const packageJson = JSON.parse(read("package.json"));
 
-assert.ok(["11.3.0", "11.4.0"].includes(packageJson.version));
+assert.ok(["11.3.0", "11.4.0", "11.4.1"].includes(packageJson.version));
 assert.match(migration, /create extension if not exists pg_cron with schema pg_catalog/);
 assert.match(migration, /create extension if not exists pg_net/);
 assert.match(migration, /job\.status = 'processing'[\s\S]*job\.locked_at < now\(\) - interval '5 minutes'/);
@@ -70,6 +70,6 @@ assert.match(health, /clientFileDisasterRecoveryReady/);
 assert.match(health, /expiredProcessingLeaseRecoveryAvailable: true/);
 assert.match(operations, /Dead-letter queue/);
 assert.match(operations, /same-project Storage is not counted as a backup/);
-assert.match(read(".github/workflows/release-gate.yml"), /npm run test:v11\.(?:3|4)\.0/);
+assert.match(read(".github/workflows/release-gate.yml"), /npm run test:v11\.(?:3\.0|4\.[01])/);
 
 console.log("PASS v11.3 minute recovery, expired-lease reclaim, dead letters, checksums, offsite manifests, and restore-drill gate");

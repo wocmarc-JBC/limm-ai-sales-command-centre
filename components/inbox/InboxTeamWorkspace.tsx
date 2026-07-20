@@ -33,7 +33,7 @@ export function InboxTeamWorkspace({
   realtimeRevision,
   notificationPermission,
   notificationsSupported,
-  latestOutboundMessageId,
+  latestAiReply,
   onEnableNotifications,
   onAssignmentChange
 }: {
@@ -45,16 +45,19 @@ export function InboxTeamWorkspace({
   realtimeRevision: number;
   notificationPermission: NotificationPermission;
   notificationsSupported: boolean;
-  latestOutboundMessageId?: string;
+  latestAiReply?: { messageId: string; qualityEventId: string; body: string };
   onEnableNotifications: () => Promise<NotificationPermission>;
   onAssignmentChange: (assignment: InboxAssignment | null) => void;
 }) {
   const [state, setState] = useState<TeamState>({ assignment: initialAssignment, notes: [] });
   const [notesOpen, setNotesOpen] = useState(false);
+  const [qualityOpen, setQualityOpen] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [pending, setPending] = useState("");
   const [notice, setNotice] = useState("");
   const [qualityDecision, setQualityDecision] = useState<AiQualityDecision | "">("");
+  const [qualityMode, setQualityMode] = useState<"rejected" | "edited" | "">("");
+  const [qualityText, setQualityText] = useState("");
 
   const refresh = useCallback(async () => {
     const response = await fetch(`/api/inbox/team/${encodeURIComponent(leadId)}`, { cache: "no-store" });
@@ -69,6 +72,8 @@ export function InboxTeamWorkspace({
     setState((current) => ({ assignment: current.assignment?.leadId === leadId ? current.assignment : null, notes: [] }));
     setNotice("");
     setQualityDecision("");
+    setQualityMode("");
+    setQualityText("");
     void refresh();
   }, [leadId, refresh]);
 
@@ -129,19 +134,33 @@ export function InboxTeamWorkspace({
     }
   };
 
-  const submitQuality = async (decision: AiQualityDecision) => {
-    if (!latestOutboundMessageId || pending) return;
+  const submitQuality = async (decision: "accepted" | "edited" | "rejected") => {
+    if (!latestAiReply || pending) return;
     setPending("quality");
     try {
       const response = await fetch(`/api/inbox/team/${encodeURIComponent(leadId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "quality_feedback", decision, messageId: latestOutboundMessageId })
+        body: JSON.stringify({
+          action: "quality_feedback",
+          decision,
+          messageId: latestAiReply.messageId,
+          qualityEventId: latestAiReply.qualityEventId,
+          feedback: decision === "rejected" ? qualityText : "",
+          editedReply: decision === "edited" ? qualityText : ""
+        })
       });
       if (response.ok) {
         setQualityDecision(decision);
-        setNotice("Reply outcome recorded for the quality release gate.");
-      } else setNotice("Quality feedback could not be recorded.");
+        setQualityMode("");
+        setQualityText("");
+        setNotice("AI reply review saved for Marcus's learning loop. Nothing was sent to the client.");
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setNotice(data?.error === "quality_observation_not_found"
+          ? "This older reply predates linked learning records. Review a newer AI reply instead."
+          : "Quality feedback could not be recorded.");
+      }
     } finally {
       setPending("");
     }
@@ -184,13 +203,46 @@ export function InboxTeamWorkspace({
           <button type="button" onClick={() => setNotesOpen((open) => !open)} aria-expanded={notesOpen} className="min-h-8 rounded-lg border border-command-line px-2 py-1 text-[10px] font-semibold text-command-muted transition hover:border-command-gold/40 hover:text-command-text sm:px-2.5 sm:py-1.5 sm:text-[11px]">
             Notes {state.notes.length ? `(${state.notes.length})` : ""}
           </button>
+          {latestAiReply && ["boss", "admin"].includes(operator.role) ? (
+            <button type="button" onClick={() => setQualityOpen((open) => !open)} aria-expanded={qualityOpen} className="min-h-8 rounded-lg border border-command-cyan/35 bg-command-cyan/5 px-2 py-1 text-[10px] font-semibold text-command-cyan transition hover:bg-command-cyan/10 sm:px-2.5 sm:py-1.5 sm:text-[11px]">
+              Review AI
+            </button>
+          ) : null}
         </div>
       </div>
 
       {notice ? <p className="border-t border-command-line/50 px-4 py-1.5 text-[11px] text-command-cyan" role="status">{notice}</p> : null}
 
+      {qualityOpen && latestAiReply ? (
+        <div className="border-t border-command-line px-3 py-3 sm:px-4" data-testid="inbox-ai-reply-review">
+          <div className="rounded-xl border border-command-cyan/25 bg-command-bg/55 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="mr-auto">
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-command-cyan">Marcus AI review</p>
+                <p className="mt-1 text-xs text-command-muted">Rate the latest AI reply. This trains the review dataset; it never messages the client.</p>
+              </div>
+              <button type="button" disabled={Boolean(pending)} onClick={() => void submitQuality("accepted")} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${qualityDecision === "accepted" ? "border-command-green bg-command-green/10 text-command-green" : "border-command-line text-command-muted hover:border-command-green/50 hover:text-command-green"}`}>Good</button>
+              <button type="button" disabled={Boolean(pending)} onClick={() => { setQualityMode("rejected"); setQualityText(""); }} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${qualityDecision === "rejected" || qualityMode === "rejected" ? "border-command-red bg-command-red/10 text-command-red" : "border-command-line text-command-muted hover:border-command-red/50 hover:text-command-red"}`}>Wrong</button>
+              <button type="button" disabled={Boolean(pending)} onClick={() => { setQualityMode("edited"); setQualityText(latestAiReply.body); }} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${qualityDecision === "edited" || qualityMode === "edited" ? "border-command-gold bg-command-gold/10 text-command-gold" : "border-command-line text-command-muted hover:border-command-gold/50 hover:text-command-gold"}`}>Edited</button>
+            </div>
+            {qualityMode ? (
+              <div className="mt-3">
+                <label className="text-xs font-semibold text-command-muted" htmlFor="ai_quality_feedback">
+                  {qualityMode === "edited" ? "Corrected reply" : "What was wrong? (optional)"}
+                </label>
+                <textarea id="ai_quality_feedback" value={qualityText} onChange={(event) => setQualityText(event.target.value)} maxLength={500} rows={3} className="mt-1.5 w-full rounded-xl border border-command-line bg-command-bg px-3 py-2 text-sm text-command-text outline-none focus:border-command-gold/60" />
+                <div className="mt-2 flex justify-end gap-2">
+                  <button type="button" onClick={() => { setQualityMode(""); setQualityText(""); }} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-command-muted">Cancel</button>
+                  <button type="button" disabled={Boolean(pending) || (qualityMode === "edited" && !qualityText.trim())} onClick={() => void submitQuality(qualityMode)} className="rounded-lg bg-command-gold px-3 py-1.5 text-xs font-semibold text-black disabled:opacity-40">{pending === "quality" ? "Saving…" : "Save review"}</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {notesOpen ? (
-        <div className="grid gap-3 border-t border-command-line px-3 py-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="border-t border-command-line px-3 py-3 sm:px-4">
           <div>
             <form onSubmit={submitNote} className="flex gap-2">
               <label className="min-w-0 flex-1">
@@ -208,17 +260,6 @@ export function InboxTeamWorkspace({
                 </div>
               ))}
               {!state.notes.length ? <p className="text-xs text-command-subtle">No internal notes yet.</p> : null}
-            </div>
-          </div>
-          <div className="rounded-xl border border-command-line bg-command-bg/55 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-command-cyan">Reply quality</p>
-            <p className="mt-1 text-xs text-command-muted">How did the latest sent reply perform?</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {(["accepted", "edited", "rejected", "unsafe"] as const).map((decision) => (
-                <button key={decision} type="button" disabled={!latestOutboundMessageId || Boolean(pending)} onClick={() => void submitQuality(decision)} className={`rounded-lg border px-2 py-1 text-[10px] font-semibold capitalize transition disabled:opacity-35 ${qualityDecision === decision ? "border-command-cyan bg-command-cyan/10 text-command-cyan" : "border-command-line text-command-muted hover:text-command-text"}`}>
-                  {decision}
-                </button>
-              ))}
             </div>
           </div>
         </div>

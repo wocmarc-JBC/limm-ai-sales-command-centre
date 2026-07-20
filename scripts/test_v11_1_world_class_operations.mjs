@@ -112,7 +112,10 @@ const reservationIndex = autoReply.indexOf("reserveWhatsAppConversationReply", q
 const sendIndex = autoReply.indexOf("adapter.sendReply(senderPhone, reply)", reservationIndex);
 assert.ok(semanticIndex >= 0 && qualityIndex > semanticIndex && reservationIndex > qualityIndex && sendIndex > reservationIndex, "Quality observation must use the final planned reply without replacing reservation or send ordering.");
 assert.ok(autoReply.includes("shadowCandidate: true"));
-assert.ok(autoReply.includes("]).catch(() => [false, false])"), "Quality telemetry failure must never break the reply path.");
+assert.ok(
+  autoReply.includes("]).catch(() => [false, false])") || autoReply.includes("]).catch(() => [null, null])"),
+  "Quality telemetry failure must never break the reply path."
+);
 assert.equal(canary.includes("sendReply("), false, "Synthetic canary must never call Meta.");
 assert.ok(canary.includes("externalSendAttempted: false"));
 

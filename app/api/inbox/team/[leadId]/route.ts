@@ -4,15 +4,15 @@ import {
   addInboxInternalNote,
   claimInboxConversation,
   getInboxTeamState,
-  recordAiQualityObservation,
   recordOperatorProductEvent,
+  reviewAiQualityObservation,
   releaseInboxConversation
 } from "@/lib/data/team-inbox-repository";
 import { createTraceId, recordOperationalEvent } from "@/lib/operations/observability";
 import { consumeRateLimit, rateLimitHeaders } from "@/lib/operations/rate-limit";
 import type { AiQualityDecision } from "@/lib/operations/contracts";
 
-const QUALITY_DECISIONS = new Set<AiQualityDecision>(["accepted", "edited", "rejected", "unsafe"]);
+const QUALITY_DECISIONS = new Set<AiQualityDecision>(["accepted", "edited", "rejected"]);
 
 function text(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -73,22 +73,29 @@ export async function POST(request: Request, { params: paramsPromise }: { params
       return NextResponse.json({ ok: true, traceId, note }, { headers: rateLimitHeaders(rate) });
     }
     if (action === "quality_feedback") {
+      if (!["boss", "admin"].includes(actor.role)) {
+        return NextResponse.json({ ok: false, error: "quality_review_requires_boss" }, { status: 403 });
+      }
       const decision = text(payload.decision, 20) as AiQualityDecision;
       if (!QUALITY_DECISIONS.has(decision)) return NextResponse.json({ ok: false, error: "invalid_decision" }, { status: 400 });
-      await recordAiQualityObservation({
+      const messageId = text(payload.messageId, 80);
+      if (!/^[0-9a-f-]{36}$/i.test(messageId)) return NextResponse.json({ ok: false, error: "invalid_message_id" }, { status: 400 });
+      const editedReply = text(payload.editedReply, 500);
+      if (decision === "edited" && !editedReply) return NextResponse.json({ ok: false, error: "edited_reply_required" }, { status: 400 });
+      const result = await reviewAiQualityObservation({
         leadId,
-        messageId: text(payload.messageId, 80) || null,
-        traceId,
-        reply: "",
-        primaryMove: "operator_review",
-        qualityScores: { operatorOutcome: decision },
-        decision,
+        messageId,
+        qualityEventId: text(payload.qualityEventId, 80),
+        decision: decision as "accepted" | "edited" | "rejected",
         feedback: text(payload.feedback, 500),
-        reviewedBy: actor.id,
-        metadata: { source: "inbox_operator_review" }
+        editedReply,
+        reviewedBy: actor.id
       });
+      if (!result.updated) {
+        return NextResponse.json({ ok: false, error: result.reason }, { status: result.reason === "quality_observation_not_found" ? 404 : 503 });
+      }
       await recordOperatorProductEvent({ eventName: "ai_quality_feedback", actorId: actor.id, leadId, metadata: { decision } });
-      return NextResponse.json({ ok: true, traceId, decision }, { headers: rateLimitHeaders(rate) });
+      return NextResponse.json({ ok: true, traceId, decision, result }, { headers: rateLimitHeaders(rate) });
     }
     return NextResponse.json({ ok: false, error: "unknown_action" }, { status: 400 });
   } catch (error) {

@@ -11,7 +11,7 @@ export function InboxCollaborationLayer({
   realtimeEnabled,
   initialAssignment,
   realtimeRevision,
-  latestOutboundMessageId,
+  latestAiReply,
   onActivity,
   onStatusChange,
   onAssignmentChange
@@ -21,7 +21,7 @@ export function InboxCollaborationLayer({
   realtimeEnabled: boolean;
   initialAssignment: InboxAssignment | null;
   realtimeRevision: number;
-  latestOutboundMessageId?: string;
+  latestAiReply?: { messageId: string; qualityEventId: string; body: string };
   onActivity: (activity: { leadId?: string }) => void;
   onStatusChange: (status: RealtimeStatus) => void;
   onAssignmentChange: (assignment: InboxAssignment | null) => void;
@@ -48,7 +48,7 @@ export function InboxCollaborationLayer({
       realtimeRevision={realtimeRevision}
       notificationPermission={realtime.notificationPermission}
       notificationsSupported={realtime.notificationsSupported}
-      latestOutboundMessageId={latestOutboundMessageId}
+      latestAiReply={latestAiReply}
       onEnableNotifications={realtime.enableNotifications}
       onAssignmentChange={onAssignmentChange}
     />

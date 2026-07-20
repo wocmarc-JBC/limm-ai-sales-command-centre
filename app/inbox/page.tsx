@@ -3,7 +3,7 @@ import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listLeadFilesForLeads } from "@/lib/data/lead-files-repository";
-import { listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
+import { getWhatsAppServiceWindowForLead, listLatestLeadMessagesForInbox, listLeadMessagesPage } from "@/lib/data/lead-messages-repository";
 import { getLeadById, listInboxLeadCandidates } from "@/lib/data/leads-repository";
 import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
@@ -16,6 +16,7 @@ import { inboxViewFilterFromParam } from "@/lib/operator-advantage";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 import type { InboxAssignment } from "@/lib/operations/contracts";
+import { getWhatsAppServiceWindowFromMessages } from "@/lib/whatsapp-service-window";
 import Link from "next/link";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
@@ -116,6 +117,9 @@ export default async function WhatsAppInboxPage({
   const selectedPage = selectedLead
     ? await listLeadMessagesPage(selectedLead.id, 30)
     : { messages: [], hasOlder: false, oldestCursor: null };
+  const selectedServiceWindow = selectedLead
+    ? await getWhatsAppServiceWindowForLead(selectedLead.id)
+    : getWhatsAppServiceWindowFromMessages([]);
   const selectedMessages = selectedLead
     ? attachLeadFilesToMessages(
         selectedPage.messages,
@@ -168,6 +172,9 @@ export default async function WhatsAppInboxPage({
           ? facts.nextActionReason
           : "This legacy row has compatibility defaults, not a completed v10.2 intent decision."
       },
+      serviceWindow: selected
+        ? selectedServiceWindow
+        : getWhatsAppServiceWindowFromMessages(orderedMessages),
       hasOlderMessages: selected ? selectedPage.hasOlder : false,
       oldestMessageCursor: selected ? selectedPage.oldestCursor : null,
       auditTrail: []

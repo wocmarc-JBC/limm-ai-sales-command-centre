@@ -46,6 +46,7 @@ import { OPERATOR_COMMAND_EVENT, type OperatorCommand } from "@/lib/operator-com
 import { trackOperatorEvent } from "@/lib/operator-product-analytics";
 import type { InboxAssignment, InboxOperator } from "@/lib/operations/contracts";
 import type { RealtimeStatus } from "@/components/inbox/useInboxRealtime";
+import { computeWhatsAppServiceWindow, type WhatsAppServiceWindow } from "@/lib/whatsapp-service-window";
 
 const MEDIA_HYDRATION_DELAYS_MS = [750, 1500, 3000, 6000, 12000] as const;
 
@@ -120,6 +121,7 @@ export type MultiChatConversation = {
   summary: MultiChatSummary;
   messages: LeadMessage[];
   context: MultiChatContext;
+  serviceWindow: WhatsAppServiceWindow;
   hasOlderMessages: boolean;
   oldestMessageCursor: string | null;
   auditTrail: Array<{
@@ -818,7 +820,11 @@ function ReplyComposer({
   const leadId = conversation.lead.id;
   const reply = drafts[leadId] ?? "";
   const isSending = Boolean(sendingState);
-  const canSend = reply.trim().length > 0 && !isSending;
+  const serviceWindow = conversation.serviceWindow.providerOpenedAt
+    ? computeWhatsAppServiceWindow(conversation.serviceWindow.providerOpenedAt)
+    : conversation.serviceWindow;
+  const serviceWindowOpen = serviceWindow.canSendFreeform;
+  const canSend = reply.trim().length > 0 && !isSending && serviceWindowOpen;
   const salesDraftingEnabled = conversation.context.intentClassified && conversation.context.leadEligible;
 
   useEffect(() => {
@@ -842,7 +848,7 @@ function ReplyComposer({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const body = reply.trim();
-    if (!body || isSending) return;
+    if (!body || isSending || !serviceWindowOpen) return;
 
     const clientTempId = randomClientTempId();
     const optimistic: LeadMessage = {
@@ -952,7 +958,20 @@ function ReplyComposer({
   };
 
   return (
-    <div data-testid="inbox-sticky-composer" className="shrink-0 border-t border-command-line bg-command-panel2/95 px-2.5 py-2 shadow-[0_-12px_30px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4 sm:py-3">
+    <>
+      {!serviceWindowOpen ? (
+        <div
+          data-testid="whatsapp-service-window-status"
+          data-window-status={serviceWindow.status}
+          className="shrink-0 border-t border-command-amber/35 bg-command-amber/10 px-3 py-1.5 text-[11px] leading-4 text-command-amber sm:px-4 sm:py-2 sm:text-xs sm:leading-5"
+          role="alert"
+        >
+          {serviceWindow.status === "closed"
+            ? "WhatsApp 24-hour reply window is closed. Wait for the client to message again; free-form sending is blocked."
+            : "WhatsApp reply window cannot be verified from Meta’s message timestamp. Free-form sending is blocked."}
+        </div>
+      ) : null}
+      <div data-testid="inbox-sticky-composer" className="shrink-0 border-t border-command-line bg-command-panel2/95 px-2.5 py-2 shadow-[0_-12px_30px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4 sm:py-3">
       {salesDraftingEnabled ? (
         <>
           <div className="thin-scrollbar mb-1.5 flex items-center gap-1 overflow-x-auto sm:mb-2 sm:pb-0.5">
@@ -1042,14 +1061,15 @@ function ReplyComposer({
             value={reply}
             onChange={(event) => setReply(event.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={!serviceWindowOpen}
             aria-keyshortcuts="Control+Enter Meta+Enter"
-            placeholder="Type a WhatsApp reply…"
-            className="h-[52px] max-h-40 min-h-[52px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-3.5 py-2.5 text-[16px] leading-6 text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/70 focus:ring-2 focus:ring-command-gold/10 sm:h-auto sm:min-h-[54px] sm:px-4 sm:py-3 sm:text-[15px]"
+            placeholder={serviceWindowOpen ? "Type a WhatsApp reply…" : "Wait for the client to message again"}
+            className="h-[52px] max-h-40 min-h-[52px] flex-1 resize-y rounded-2xl border border-command-line bg-command-bg/90 px-3.5 py-2.5 text-[16px] leading-6 text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/70 focus:ring-2 focus:ring-command-gold/10 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:min-h-[54px] sm:px-4 sm:py-3 sm:text-[15px]"
           />
           <button
             type="submit"
             disabled={!canSend}
-            title={!reply.trim() ? "Type a WhatsApp reply before sending." : isSending ? "Sending WhatsApp reply now." : "Send WhatsApp reply"}
+            title={!serviceWindowOpen ? "Meta's 24-hour free-form reply window is not open." : !reply.trim() ? "Type a WhatsApp reply before sending." : isSending ? "Sending WhatsApp reply now." : "Send WhatsApp reply"}
             className="inline-flex min-h-[52px] min-w-[76px] items-center justify-center gap-1.5 rounded-2xl border border-command-gold bg-command-gold px-3 py-2 text-sm font-semibold text-black transition hover:bg-command-goldHover disabled:cursor-not-allowed disabled:border-command-line disabled:bg-command-panel disabled:text-command-subtle sm:min-h-[54px] sm:min-w-[82px] sm:px-4"
           >
             {isSending ? "Sending…" : (
@@ -1068,7 +1088,8 @@ function ReplyComposer({
           {sendError ? <span className="text-right text-command-red" role="alert">{sendError}</span> : null}
         </div>
       </form>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -2122,12 +2143,20 @@ export function MultiChatInbox({
   }, []);
 
   const handleSendSettled = useCallback((leadId: string, clientTempId: string, result: SendResult) => {
+    const serviceWindowBlocked = result.errorCode === "whatsapp_service_window_closed"
+      || result.errorCode === "whatsapp_service_window_unknown";
     trackOperatorEvent({
-      eventName: result.ok ? "reply_sent" : "reply_failed",
+      eventName: result.ok ? "reply_sent" : serviceWindowBlocked ? "reply_blocked_service_window" : "reply_failed",
       leadId,
       metadata: { result: result.ok ? "sent" : result.errorCode || "failed" }
     });
     setOptimisticReplies((current) => {
+      if (serviceWindowBlocked) {
+        return {
+          ...current,
+          [leadId]: (current[leadId] ?? []).filter((message) => messageClientTempId(message) !== clientTempId)
+        };
+      }
       const updated = (current[leadId] ?? []).map((message) => {
         if (messageClientTempId(message) !== clientTempId) return message;
         return {
@@ -2150,6 +2179,14 @@ export function MultiChatInbox({
       });
       return { ...current, [leadId]: updated };
     });
+    if (serviceWindowBlocked) {
+      setErrorByLeadId((current) => ({
+        ...current,
+        [leadId]: result.errorMessage || "WhatsApp's 24-hour reply window is not open."
+      }));
+      void loadConversation(leadId, { background: true });
+      return;
+    }
     if (result.ok) {
       setConversationMap((current) => {
         const conversation = current[leadId];
@@ -2202,7 +2239,7 @@ export function MultiChatInbox({
       closedOrDone: false,
       botPaused: true
     });
-  }, [patchSummary]);
+  }, [loadConversation, patchSummary]);
 
   const handleRetryDraft = useCallback((leadId: string, body: string) => {
     const text = body.trim();
@@ -2356,7 +2393,18 @@ export function MultiChatInbox({
     updatedAt: chat.lastActivityAt,
     version: 1
   } : null;
-  const latestOutboundMessageId = activeMessagesNewestFirst.find((message) => message.direction === "outbound" && !message.id.startsWith("optimistic-"))?.id;
+  const latestAiReplyMessage = activeMessagesNewestFirst.find((message) =>
+    message.direction === "outbound"
+    && !message.id.startsWith("optimistic-")
+    && message.metadata?.aiGeneratedReply === true
+    && typeof message.metadata?.aiQualityEventId === "string"
+    && Boolean(message.metadata.aiQualityEventId)
+  );
+  const latestAiReply = latestAiReplyMessage ? {
+    messageId: latestAiReplyMessage.id,
+    qualityEventId: String(latestAiReplyMessage.metadata.aiQualityEventId),
+    body: latestAiReplyMessage.body
+  } : undefined;
 
   return (
     <>
@@ -2622,7 +2670,7 @@ export function MultiChatInbox({
               realtimeEnabled={realtimeEnabled}
               initialAssignment={initialAssignment}
               realtimeRevision={realtimeRevision}
-              latestOutboundMessageId={latestOutboundMessageId}
+              latestAiReply={latestAiReply}
               onActivity={handleRealtimeActivity}
               onStatusChange={setRealtimeStatus}
               onAssignmentChange={handleTeamAssignmentChange}

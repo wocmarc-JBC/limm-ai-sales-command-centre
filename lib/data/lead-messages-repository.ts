@@ -6,6 +6,7 @@ import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { getSupabaseServerClient } from "./supabase-server";
 import type { Lead, LeadMessage, LeadMessageDirection } from "@/lib/types";
+import { getWhatsAppServiceWindowFromMessages } from "@/lib/whatsapp-service-window";
 
 function getSupabaseWriteClient() {
   const supabase = getSupabaseAdminClient();
@@ -383,6 +384,33 @@ export async function listLeadMessagesPage(leadId: string, limit = 30, before?: 
     hasOlder: all.length > limit,
     oldestCursor: all[Math.min(all.length, limit) - 1]?.createdAt ?? null
   };
+}
+
+export async function getWhatsAppServiceWindowForLead(leadId: string, nowMs = Date.now()) {
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseWriteClient();
+    const { data, error } = await supabase
+      .from("lead_messages")
+      .select("direction,provider_timestamp,created_at")
+      .eq("lead_id", leadId)
+      .eq("channel", "whatsapp")
+      .eq("direction", "inbound")
+      .not("provider_timestamp", "is", null)
+      .order("provider_timestamp", { ascending: false })
+      .limit(1);
+    if (error) throw new Error(`WhatsApp service window lookup failed: ${error.message}`);
+    const row = data?.[0];
+    return getWhatsAppServiceWindowFromMessages(row ? [{
+      direction: "inbound",
+      providerTimestamp: row.provider_timestamp ? String(row.provider_timestamp) : null,
+      createdAt: String(row.created_at ?? "")
+    }] : [], nowMs);
+  }
+
+  return getWhatsAppServiceWindowFromMessages(
+    getMockStore().leadMessages.filter((message) => message.leadId === leadId),
+    nowMs
+  );
 }
 
 export async function listLeadMessagesAfter(leadId: string, after: string, limit = 30) {

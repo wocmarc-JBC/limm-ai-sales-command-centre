@@ -33,6 +33,6 @@ assert.match(inbox, /listLeadFilesForLeads/);
 assert.doesNotMatch(inbox, /listAllLeadFiles|listLeads\(/);
 assert.match(page, /listInboxLeadCandidates/);
 assert.doesNotMatch(page, /listAllLeadFiles|listLeads\(/);
-assert.match(read(".github/workflows/release-gate.yml"), /npm run test:v11\.(?:2|3|4)\.0/);
+assert.match(read(".github/workflows/release-gate.yml"), /npm run test:v11\.(?:2\.0|3\.0|4\.[01])/);
 
 console.log("PASS v11.2 durable ingestion, delivery receipts, bounded inbox, and attachment authorization gate");

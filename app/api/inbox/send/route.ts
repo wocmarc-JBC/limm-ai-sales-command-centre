@@ -6,11 +6,12 @@ import {
 } from "@/lib/adapters/whatsapp-adapter";
 import { requirePermission } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/data/audit-repository";
-import { saveLeadMessage } from "@/lib/data/lead-messages-repository";
+import { getWhatsAppServiceWindowForLead, saveLeadMessage } from "@/lib/data/lead-messages-repository";
 import { getLeadById, markLeadAwaitingClientAfterManualReply, pauseBotForLead } from "@/lib/data/leads-repository";
 import { isQaE2EMode, qaE2eSafetyMetadata } from "@/lib/qa-e2e-mode";
 import { createTraceId, recordOperationalEvent } from "@/lib/operations/observability";
 import { consumeRateLimit, rateLimitHeaders } from "@/lib/operations/rate-limit";
+import { whatsappServiceWindowErrorMessage, type WhatsAppServiceWindow } from "@/lib/whatsapp-service-window";
 
 function safeWhatsAppError(error: unknown) {
   if (error instanceof WhatsAppCloudApiSendError) {
@@ -61,7 +62,6 @@ export async function POST(request: Request) {
   const actor = permission.auth.profile?.fullName ?? "Marcus";
   const actorEmail = permission.auth.profile?.email ?? "";
   const actorId = permission.auth.profile?.id ?? null;
-  const adapter = new WhatsAppCloudApiAdapter();
   const payloadSummary = getWhatsAppSendPayloadSummary(lead.phone, body);
 
   if (isQaE2EMode()) {
@@ -108,6 +108,67 @@ export async function POST(request: Request) {
       clientTempId
     }, { headers: responseHeaders });
   }
+
+  let serviceWindow: WhatsAppServiceWindow;
+  try {
+    serviceWindow = await getWhatsAppServiceWindowForLead(leadId);
+  } catch (error) {
+    serviceWindow = {
+      status: "unknown",
+      canSendFreeform: false,
+      providerOpenedAt: null,
+      expiresAt: null,
+      remainingSeconds: 0,
+      reason: "provider_timestamp_missing"
+    };
+    console.error("inbox_whatsapp_service_window_lookup_failed", {
+      leadId,
+      reason: error instanceof Error ? error.message : "unknown"
+    });
+  }
+  if (!serviceWindow.canSendFreeform) {
+    const errorCode = serviceWindow.status === "closed"
+      ? "whatsapp_service_window_closed"
+      : "whatsapp_service_window_unknown";
+    const errorMessage = whatsappServiceWindowErrorMessage(serviceWindow);
+    await createAuditLog({
+      actorName: actor,
+      actorEmail,
+      actorId,
+      action: "whatsapp_manual_reply_service_window_blocked",
+      entityType: "lead",
+      entityId: leadId,
+      summary: "Manual WhatsApp reply was blocked before provider send because Meta's 24-hour customer-service window was not open.",
+      metadata: {
+        status: serviceWindow.status,
+        reason: serviceWindow.reason,
+        providerOpenedAt: serviceWindow.providerOpenedAt,
+        expiresAt: serviceWindow.expiresAt,
+        externalSendAttempted: false,
+        bodyLength: payloadSummary.bodyLength
+      }
+    }).catch(() => null);
+    await recordOperationalEvent({
+      traceId,
+      leadId,
+      eventName: "whatsapp_manual_send",
+      stage: "service_window_guard",
+      status: "ok",
+      durationMs: performance.now() - startedAt,
+      metadata: { policyOutcome: errorCode, serviceWindowStatus: serviceWindow.status, serviceWindowReason: serviceWindow.reason, externalSendAttempted: false }
+    }).catch(() => false);
+    return NextResponse.json({
+      ok: false,
+      errorCode,
+      errorMessage,
+      leadId,
+      clientTempId,
+      serviceWindow,
+      externalSendAttempted: false
+    }, { status: 409, headers: responseHeaders });
+  }
+
+  const adapter = new WhatsAppCloudApiAdapter();
 
   console.info("inbox_whatsapp_manual_reply_payload_summary", {
     leadId,

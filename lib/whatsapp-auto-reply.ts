@@ -57,8 +57,9 @@ import {
 import { validateWhatsAppAutoReply, WHATSAPP_ULTRA_SAFE_FALLBACK_REPLY } from "@/lib/whatsapp-safety";
 import { buildSilentCaptureNoteFromDecision } from "@/lib/whatsapp-silent-capture";
 import { evaluateWhatsAppReplyQuality } from "@/lib/ai-quality";
-import { recordAiQualityObservation } from "@/lib/data/team-inbox-repository";
+import { linkAiQualityObservationsToMessage, recordAiQualityObservation } from "@/lib/data/team-inbox-repository";
 import type { Lead } from "@/lib/types";
+import { getWhatsAppServiceWindowFromMessages, whatsappServiceWindowErrorMessage } from "@/lib/whatsapp-service-window";
 
 export type WhatsAppInboundTerminalOutcome =
   | "outbound_sent"
@@ -1199,10 +1200,47 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
+  const serviceWindow = getWhatsAppServiceWindowFromMessages(finalReplyMessages);
+  Object.assign(decision.blackBoxTrace, {
+    whatsappServiceWindowStatus: serviceWindow.status,
+    whatsappServiceWindowReason: serviceWindow.reason,
+    whatsappServiceWindowExpiresAt: serviceWindow.expiresAt,
+    whatsappServiceWindowProviderOpenedAt: serviceWindow.providerOpenedAt
+  });
+  brainMetadata = { providerMessageId, replyTriggerProviderMessageId, ...decision.blackBoxTrace };
+  if (!serviceWindow.canSendFreeform) {
+    await auditWhatsApp({
+      action: "whatsapp_auto_reply_service_window_blocked",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply was blocked before provider send because Meta's 24-hour customer-service window was not open.",
+      metadata: {
+        ...brainMetadata,
+        externalSendAttempted: false,
+        final_send_result: "service_window_blocked_before_reservation"
+      }
+    });
+    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      noReplySafetySuppression: true,
+      suppressionReason: `whatsapp_service_window_${serviceWindow.status}`
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_blocked",
+      reason: whatsappServiceWindowErrorMessage(serviceWindow),
+      reply: "",
+      terminalOutcome: "intentional_no_send",
+      externalSendAttempted: false
+    };
+  }
+
   const finalReplySignature = replySemanticSignature(reply);
   const liveQuality = evaluateWhatsAppReplyQuality(reply);
   const shadowQuality = evaluateWhatsAppReplyQuality(reply, { strict: true });
-  await Promise.all([
+  const [liveQualityEventId, shadowQualityEventId] = await Promise.all([
     recordAiQualityObservation({
       leadId: lead.id,
       traceId,
@@ -1243,7 +1281,7 @@ export async function handleWhatsAppInboundMessage(
         wouldPass: shadowQuality.releaseEligible
       }
     })
-  ]).catch(() => [false, false]);
+  ]).catch(() => [null, null]);
   try {
     const reservation = await reserveWhatsAppConversationReply({
       leadId: lead.id,
@@ -1342,7 +1380,7 @@ export async function handleWhatsAppInboundMessage(
         externalSendCompleted: true
       });
     }
-    await saveLeadMessage({
+    const savedOutboundMessage = await saveLeadMessage({
       leadId: lead.id,
       direction: "outbound",
       body: reply,
@@ -1354,10 +1392,17 @@ export async function handleWhatsAppInboundMessage(
         leaseOwnerInboundProviderMessageId: providerMessageId,
         outboundProviderMessageId: sent.providerMessageId,
         mode: sent.mode,
+        aiGeneratedReply: true,
+        aiQualityEventId: liveQualityEventId,
+        aiShadowQualityEventId: shadowQualityEventId,
         ...decision.blackBoxTrace,
         final_send_result: "sent"
       }
     });
+    await linkAiQualityObservationsToMessage({
+      qualityEventIds: [liveQualityEventId, shadowQualityEventId],
+      messageId: savedOutboundMessage.id
+    }).catch(() => false);
     await auditWhatsApp({
       action: "whatsapp_auto_reply_sent",
       leadId: lead.id,

@@ -266,4 +266,90 @@ test.describe("v11.1 world-class operator flow", () => {
     await expectNoHorizontalScroll(page);
     expect(errors).toEqual([]);
   });
+
+  test("blocks closed-window free-form sends and records Marcus AI review without messaging the client", async ({ page }) => {
+    const errors = captureErrors(page);
+    let qualityPayload: Record<string, unknown> | null = null;
+    let inboxSendRequests = 0;
+
+    await page.route("**/api/inbox/send", async (route) => {
+      inboxSendRequests += 1;
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ ok: false }) });
+    });
+    await page.route("**/api/inbox/team/*", async (route) => {
+      if (route.request().method() === "POST") {
+        const payload = route.request().postDataJSON() as Record<string, unknown>;
+        if (payload.action === "quality_feedback") {
+          qualityPayload = payload;
+          await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, decision: payload.decision }) });
+          return;
+        }
+      }
+      await route.continue();
+    });
+    await page.route("**/api/inbox/conversations/*", async (route) => {
+      const response = await route.fetch();
+      const payload = await response.json();
+      const conversation = payload?.conversation;
+      if (!conversation?.lead?.id) {
+        await route.fulfill({ response, json: payload });
+        return;
+      }
+      conversation.serviceWindow = {
+        status: "closed",
+        canSendFreeform: false,
+        providerOpenedAt: "2026-07-18T00:00:00.000Z",
+        expiresAt: "2026-07-19T00:00:00.000Z",
+        remainingSeconds: 0,
+        reason: "expired"
+      };
+      conversation.messages = [
+        ...(Array.isArray(conversation.messages) ? conversation.messages : []),
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          leadId: conversation.lead.id,
+          direction: "outbound",
+          channel: "whatsapp",
+          body: "Thanks for sharing. Could you send the floor plan when convenient?",
+          safeToSend: true,
+          providerMessageId: "wamid.qa.ai-review",
+          providerTimestamp: null,
+          whatsappStatus: "sent",
+          metadata: {
+            aiGeneratedReply: true,
+            aiQualityEventId: "22222222-2222-4222-8222-222222222222"
+          },
+          createdAt: "2099-01-01T00:00:00.000Z"
+        }
+      ];
+      await route.fulfill({ response, json: payload });
+    });
+
+    await page.goto("/inbox", { waitUntil: "domcontentloaded" });
+    const rows = page.getByTestId("inbox-chat-row");
+    await expect(rows.nth(1)).toBeVisible();
+    await rows.nth(1).getByRole("link", { name: /Open conversation with/ }).click();
+
+    const windowStatus = page.getByTestId("whatsapp-service-window-status");
+    await expect(windowStatus).toHaveAttribute("data-window-status", "closed");
+    await expect(windowStatus).toContainText("24-hour reply window is closed");
+    await expect(page.locator("#manual_reply_body")).toBeDisabled();
+
+    await page.getByRole("button", { name: "Review AI" }).click();
+    const review = page.getByTestId("inbox-ai-reply-review");
+    await expect(review.getByRole("button", { name: "Good" })).toBeVisible();
+    await expect(review.getByRole("button", { name: "Wrong" })).toBeVisible();
+    await expect(review.getByRole("button", { name: "Edited" })).toBeVisible();
+    await review.getByRole("button", { name: "Good" }).click();
+    await expect(page.getByTestId("inbox-team-workspace")).toContainText("Nothing was sent to the client");
+
+    expect(qualityPayload).toMatchObject({
+      action: "quality_feedback",
+      decision: "accepted",
+      messageId: "11111111-1111-4111-8111-111111111111",
+      qualityEventId: "22222222-2222-4222-8222-222222222222"
+    });
+    expect(inboxSendRequests).toBe(0);
+    expect(errors).toEqual([]);
+  });
 });

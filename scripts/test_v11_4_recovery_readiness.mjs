@@ -21,7 +21,7 @@ const observability = read("lib/operations/observability.ts");
 const rateLimit = read("lib/operations/rate-limit.ts");
 const packageJson = JSON.parse(read("package.json"));
 
-assert.equal(packageJson.version, "11.4.0");
+assert.match(packageJson.version, /^11\.4\.[01]$/);
 assert.match(packageJson.scripts["test:v11.4.0"], /test_v11_4_recovery_readiness\.mjs/);
 assert.match(packageJson.scripts.verify, /test:v11\.4\.0/);
 
