@@ -119,6 +119,11 @@ assert.match(workflow, /COPY "storage"\\\."objects"/);
 assert.match(workflow, /prefix = "COPY \\\"" schema "\\\"\.\\\"" table "\\\" \("/);
 assert.match(workflow, /rowCounts/);
 assert.match(workflow, /supabase db start --workdir/);
+assert.match(
+  workflow,
+  /backup:[\s\S]*github\.event\.schedule == '45 18 1 \* \*'[\s\S]*inputs\.action == 'restore_drill'[\s\S]*restore-drill:/
+);
+assert.match(workflow, /restore-drill:\n    needs:\n      - configuration\n      - backup/);
 assert.match(workflow, /17\.6\.1\.127/);
 assert.match(workflow, /session_replication_role = replica/);
 assert.match(workflow, /auth\.users where coalesce\(length\(encrypted_password\),0\)>0/);

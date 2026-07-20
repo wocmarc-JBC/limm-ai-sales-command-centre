@@ -84,7 +84,7 @@ The nightly full-database job:
 4. uploads the encrypted artifact and a versioned, non-secret manifest;
 5. reports full-scope evidence through the dedicated machine-authenticated endpoint.
 
-The monthly drill downloads the latest artifact, verifies size and SHA-256, decrypts it, and rejects unexpected archive entries before extraction. It starts an isolated local Supabase PostgreSQL target pinned to the production PostgreSQL release, restores roles/schema/data/migration history, verifies nine schema/dependency contracts, and exactly matches nine restored row counts to the source manifest. It then destroys the isolated target and reports evidence without row contents or secret values.
+The monthly drill first creates a fresh full-scope artifact, then downloads it, verifies size and SHA-256, decrypts it, and rejects unexpected archive entries before extraction. It starts an isolated local Supabase PostgreSQL target pinned to the production PostgreSQL release, restores roles/schema/data/migration history, verifies nine schema/dependency contracts, and exactly matches nine restored row counts to the source manifest. It then destroys the isolated target and reports evidence without row contents or secret values.
 
 Storage object bytes are not contained in a PostgreSQL backup. They remain independently protected and restore-tested by the separate client-file R2 workflow; this database workflow covers the corresponding Storage bucket/object metadata. A full successful database backup plus isolated restore clears the managed-schema risk only when the separate client-file controls are also green.
 
