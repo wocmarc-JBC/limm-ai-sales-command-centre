@@ -1,4 +1,5 @@
 name: Database Disaster Recovery
+# One-time scoped restore verification trigger; removed after proof is recorded.
 
 on:
   push:
