@@ -1,12 +1,6 @@
 name: Database Disaster Recovery
-# One-time scoped restore verification trigger, attempt 3; removed after proof is recorded.
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/database-disaster-recovery.yml"
   schedule:
     - cron: "30 18 * * *"
     - cron: "45 18 1 * *"
@@ -70,8 +64,7 @@ jobs:
     if: >-
       needs.configuration.outputs.ready == 'true' &&
       ((github.event_name == 'schedule' && github.event.schedule == '30 18 * * *') ||
-      (github.event_name == 'workflow_dispatch' && inputs.action == 'backup') ||
-      (github.event_name == 'push' && github.event.head_commit.message == 'fix: include private recovery functions and prove scoped core database DR'))
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'backup'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -240,8 +233,7 @@ jobs:
     if: >-
       needs.configuration.outputs.ready == 'true' &&
       ((github.event_name == 'schedule' && github.event.schedule == '45 18 1 * *') ||
-      (github.event_name == 'workflow_dispatch' && inputs.action == 'restore_drill') ||
-      (github.event_name == 'push' && github.event.head_commit.message == 'chore: trigger scoped core database restore drill'))
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'restore_drill'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
