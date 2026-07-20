@@ -6,6 +6,9 @@ export const DATABASE_BACKUP_RPO_HOURS = 24;
 export const DATABASE_BACKUP_FRESHNESS_HOURS = 26;
 export const DATABASE_RESTORE_RTO_HOURS = 4;
 export const DATABASE_RESTORE_DRILL_FRESHNESS_DAYS = 35;
+export const DATABASE_CORE_SCOPE_PROVIDER = "independent_pg_dump_s3_core_no_managed_schemas";
+export const DATABASE_FULL_SCOPE_PROVIDER = "independent_pg_dump_s3_full_managed_schemas";
+export const DATABASE_RECOVERY_MANAGED_SCHEMA_RISK = "supabase_managed_auth_and_storage_schemas_not_in_independent_backup";
 
 type DatabaseRecoveryRow = {
   id: string;
@@ -22,6 +25,7 @@ type DatabaseRecoveryRow = {
   error_code: string;
   started_at: string;
   completed_at: string | null;
+  metadata: Record<string, unknown> | null;
 };
 
 export type DatabaseRecoverySnapshot = {
@@ -32,11 +36,16 @@ export type DatabaseRecoverySnapshot = {
   latestBackupAt: string | null;
   latestBackupStatus: string;
   latestBackupArtifactVerified: boolean;
+  latestBackupScope: "full_database" | "core_business_data" | "unknown";
+  latestBackupScopeComplete: boolean;
   latestRestoreDrillAt: string | null;
   latestRestoreDrillStatus: string;
   latestRestoreIsolated: boolean;
+  latestRestoreMatchesBackup: boolean;
   latestRestoreSchemaChecks: number;
   latestRestoreRowChecks: number;
+  coreBusinessDataRecoveryProven: boolean;
+  unresolvedRisk: string | null;
   backupFresh: boolean;
   restoreDrillFresh: boolean;
   ready: boolean;
@@ -87,11 +96,16 @@ function fallbackSnapshot(): DatabaseRecoverySnapshot {
     latestBackupAt: null,
     latestBackupStatus: "unavailable",
     latestBackupArtifactVerified: false,
+    latestBackupScope: "unknown",
+    latestBackupScopeComplete: false,
     latestRestoreDrillAt: null,
     latestRestoreDrillStatus: "unavailable",
     latestRestoreIsolated: false,
+    latestRestoreMatchesBackup: false,
     latestRestoreSchemaChecks: 0,
     latestRestoreRowChecks: 0,
+    coreBusinessDataRecoveryProven: false,
+    unresolvedRisk: null,
     backupFresh: false,
     restoreDrillFresh: false,
     ready: false,
@@ -104,7 +118,7 @@ export async function getDatabaseRecoverySnapshot(): Promise<DatabaseRecoverySna
   try {
     const { data, error } = await adminClient()
       .from("database_recovery_runs")
-      .select("id,external_run_id,run_type,status,provider,artifact_sha256,artifact_size_bytes,source_backup_id,isolated_restore,schema_checks_passed,row_checks_passed,error_code,started_at,completed_at")
+      .select("id,external_run_id,run_type,status,provider,artifact_sha256,artifact_size_bytes,source_backup_id,isolated_restore,schema_checks_passed,row_checks_passed,error_code,started_at,completed_at,metadata")
       .order("completed_at", { ascending: false })
       .limit(100);
     if (error) throw error;
@@ -119,8 +133,48 @@ export async function getDatabaseRecoverySnapshot(): Promise<DatabaseRecoverySna
       count(backup.artifact_size_bytes) > 0
     );
     const latestRestoreIsolated = Boolean(restore?.isolated_restore);
+    const latestRestoreMatchesBackup = Boolean(backup?.id && restore?.source_backup_id === backup.id);
     const latestRestoreSchemaChecks = count(restore?.schema_checks_passed);
     const latestRestoreRowChecks = count(restore?.row_checks_passed);
+    const latestBackupScope = backup?.metadata?.databaseScope === "full_database"
+      ? "full_database"
+      : backup?.metadata?.databaseScope === "core_business_data" || backup?.provider === DATABASE_CORE_SCOPE_PROVIDER
+        ? "core_business_data"
+        : "unknown";
+    const latestBackupScopeComplete = Boolean(
+      backup?.provider === DATABASE_FULL_SCOPE_PROVIDER &&
+      latestBackupScope === "full_database" &&
+      backup.metadata?.managedAuthIncluded === true &&
+      backup.metadata?.managedStorageIncluded === true
+    );
+    const commonRecoveryProof = Boolean(
+      backup?.status === "succeeded" &&
+      backupFresh &&
+      latestBackupArtifactVerified &&
+      restore?.status === "succeeded" &&
+      restoreDrillFresh &&
+      latestRestoreIsolated &&
+      latestRestoreMatchesBackup &&
+      latestRestoreSchemaChecks > 0 &&
+      latestRestoreRowChecks > 0
+    );
+    const coreBusinessDataRecoveryProven = Boolean(
+      commonRecoveryProof &&
+      backup?.provider === DATABASE_CORE_SCOPE_PROVIDER &&
+      restore?.provider === DATABASE_CORE_SCOPE_PROVIDER &&
+      latestBackupScope === "core_business_data" &&
+      restore.metadata?.databaseScope === "core_business_data" &&
+      restore.metadata?.managedAuthIncluded === false &&
+      restore.metadata?.managedStorageIncluded === false
+    );
+    const fullDatabaseRecoveryProven = Boolean(
+      commonRecoveryProof &&
+      latestBackupScopeComplete &&
+      restore?.provider === DATABASE_FULL_SCOPE_PROVIDER &&
+      restore.metadata?.databaseScope === "full_database" &&
+      restore.metadata?.managedAuthIncluded === true &&
+      restore.metadata?.managedStorageIncluded === true
+    );
     return {
       available: true,
       evidenceReporterConfigured: Boolean(process.env.RELIABILITY_EVIDENCE_TOKEN),
@@ -129,21 +183,19 @@ export async function getDatabaseRecoverySnapshot(): Promise<DatabaseRecoverySna
       latestBackupAt: backup?.completed_at ?? null,
       latestBackupStatus: backup?.status ?? "not_run",
       latestBackupArtifactVerified,
+      latestBackupScope,
+      latestBackupScopeComplete,
       latestRestoreDrillAt: restore?.completed_at ?? null,
       latestRestoreDrillStatus: restore?.status ?? "not_run",
       latestRestoreIsolated,
+      latestRestoreMatchesBackup,
       latestRestoreSchemaChecks,
       latestRestoreRowChecks,
+      coreBusinessDataRecoveryProven,
+      unresolvedRisk: latestBackupScope === "core_business_data" ? DATABASE_RECOVERY_MANAGED_SCHEMA_RISK : null,
       backupFresh,
       restoreDrillFresh,
-      ready:
-        backup?.status === "succeeded" &&
-        backupFresh &&
-        latestBackupArtifactVerified &&
-        restore?.status === "succeeded" &&
-        restoreDrillFresh &&
-        latestRestoreIsolated &&
-        latestRestoreSchemaChecks > 0,
+      ready: fullDatabaseRecoveryProven,
       rpoHours: DATABASE_BACKUP_RPO_HOURS,
       rtoHours: DATABASE_RESTORE_RTO_HOURS
     };

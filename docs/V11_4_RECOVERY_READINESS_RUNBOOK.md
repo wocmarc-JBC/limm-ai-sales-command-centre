@@ -9,7 +9,8 @@ v11.4 turns the v11.3 recovery controls into an evidence-driven incident system.
 | Accepted WhatsApp inbound | RPO 0 after durable HTTP acceptance | provider-message keyed queue row |
 | WhatsApp processing | RTO under 2 minutes | successful worker heartbeat under 3 minutes, no old queue item, no stale lease, no dead letter |
 | Client files | RPO 24h / RTO 4h | checksum audit, independent backup under 26h old, isolated restore under 35 days old |
-| PostgreSQL business data | RPO 24h / RTO 4h | encrypted independent artifact under 26h old plus isolated PostgreSQL restore under 35 days old |
+| PostgreSQL core business data | RPO 24h / RTO 4h | encrypted independent artifact under 26h old plus isolated PostgreSQL restore under 35 days old |
+| Full Supabase database, including managed auth/storage schemas | Not yet proven | full-scope artifact and isolated restore; core-only evidence must remain fail-closed |
 | Incident detection | under 5 minutes | Supabase Cron dispatch and `reliability_watchdog` heartbeat |
 
 No configuration flag alone makes a control green. The application derives readiness from completed timestamps, checksums, status, and isolation evidence.
@@ -68,9 +69,17 @@ Add this Actions variable:
 RELIABILITY_EVIDENCE_URL=https://limm-ai-sales-command-centre.vercel.app/api/operations/database-recovery-evidence
 ```
 
-Use a read-only database role that can dump every required application schema/object without owning or mutating production data. The S3-compatible bucket must be private and independent of Supabase/Vercel. Enable provider-side versioning, retention/lifecycle policy, access logging, and MFA-protected deletion where available.
+Use a read-only database role that can dump every required application-owned schema/object without owning or mutating production data. The S3-compatible bucket must be private and independent of Supabase/Vercel. Enable provider-side versioning, retention/lifecycle policy, access logging, and MFA-protected deletion where available.
 
-The nightly job:
+### Current independent-backup scope and exact risk
+
+The scoped role can read all 41 table-like objects in `public` and `supabase_migrations`, but Supabase owns and protects its managed `auth` schema. The normal project `postgres` role cannot delegate that schema access to `limm_dr_backup`; granting a broader managed role or exporting an administrator credential to GitHub would violate least privilege.
+
+The workflow therefore records provider `independent_pg_dump_s3_core_no_managed_schemas` and scope `core_business_data`. It deliberately excludes Supabase-managed `auth` and `storage` schemas. The isolated drill creates ID-only auth stubs so `public.profiles → auth.users`, SQL helpers, and RLS policy dependencies can be rebuilt and checked without claiming that password hashes, sessions, or managed service state were recovered.
+
+This is useful evidence, but it is not full database DR. The application remains fail-closed with risk code `supabase_managed_auth_and_storage_schemas_not_in_independent_backup`. In a total Supabase-project loss, business records and independently protected client files can be recovered, but the current staff login must be recreated with a password reset and Supabase-managed service configuration/metadata must be rebuilt. Clear that risk only after a full-scope encrypted artifact—including managed auth/storage schemas—passes an isolated restore under an approved credential-handling design or a supported Supabase managed-backup recovery test.
+
+The nightly core-data job:
 
 1. creates a PostgreSQL 17 custom-format dump;
 2. encrypts it client-side with AES-256-CBC/PBKDF2 before upload;
@@ -78,7 +87,7 @@ The nightly job:
 4. uploads the encrypted artifact and latest manifest;
 5. reports evidence through the dedicated machine-authenticated endpoint.
 
-The monthly drill downloads the latest artifact, verifies size and SHA-256, decrypts it, restores it into an isolated PostgreSQL 17 container, verifies six required schema contracts and four read queries, destroys the container, and reports evidence. Failure evidence is reported without client data or secret values.
+The monthly drill downloads the latest artifact, verifies size and SHA-256, decrypts it, restores it into an isolated PostgreSQL 17 container, verifies six required schema contracts, the ID-only managed-auth dependency contract, and four read queries, destroys the container, and reports evidence. Failure evidence is reported without client data or secret values. A successful core drill sets `coreBusinessDataRecoveryProven`; it never sets full `databaseDisasterRecoveryReady` to true.
 
 If any required GitHub value is absent, the configuration job emits a warning, skips backup/restore, and creates no false green evidence.
 

@@ -139,7 +139,7 @@ export function ReliabilityRecoveryPanel({
           ["Dead letters", queue.deadLetterCount, queue.deadLetterCount === 0, `${queue.retryScheduledLast24hCount} retries in 24h`],
           ["File integrity", integrityHealthy ? "Verified" : files.latestIntegrityStatus.replace(/_/g, " "), integrityHealthy, formatTime(files.latestIntegrityAt)],
           ["Offsite restore", restoreHealthy ? "Drill passed" : backupHealthy ? "Drill due" : "Not ready", restoreHealthy, files.offsiteConfigured ? formatTime(files.latestRestoreDrillAt) : "Independent target required"],
-          ["Database recovery", database.ready ? "Proven" : "Not ready", database.ready, database.latestRestoreDrillAt ? formatTime(database.latestRestoreDrillAt) : "Restore evidence required"]
+          ["Database recovery", database.ready ? "Proven" : database.coreBusinessDataRecoveryProven ? "Core proven" : "Not ready", database.ready, database.latestRestoreDrillAt ? formatTime(database.latestRestoreDrillAt) : "Restore evidence required"]
         ].map(([label, value, ok, helper]) => (
           <article key={String(label)} className={`rounded-xl border p-4 ${tone(Boolean(ok))}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.13em] opacity-80">{String(label)}</p>
@@ -224,10 +224,11 @@ export function ReliabilityRecoveryPanel({
           <dl className="mt-4 divide-y divide-command-line text-sm">
             <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Latest backup</dt><dd className="font-semibold text-command-text">{database.latestBackupStatus.replace(/_/g, " ")} · {formatTime(database.latestBackupAt)}</dd></div>
             <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Artifact checksum</dt><dd className="font-semibold text-command-text">{database.latestBackupArtifactVerified ? "Verified" : "Not proven"}</dd></div>
+            <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Backup scope</dt><dd className="text-right font-semibold text-command-text">{database.latestBackupScopeComplete ? "Full database" : database.latestBackupScope === "core_business_data" ? "Core business data only" : "Not proven"}</dd></div>
             <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Isolated restore</dt><dd className="font-semibold text-command-text">{database.latestRestoreIsolated ? "Passed" : "Not proven"}</dd></div>
             <div className="flex justify-between gap-4 py-2"><dt className="text-command-muted">Schema checks</dt><dd className="font-semibold text-command-text">{database.latestRestoreSchemaChecks}</dd></div>
           </dl>
-          {!database.ready ? <p className="mt-3 text-xs leading-5 text-command-amber">The app will not report database DR readiness until the independent workflow records both a fresh backup and an isolated restore drill.</p> : null}
+          {database.unresolvedRisk ? <p className="mt-3 text-xs leading-5 text-command-amber">Exact unresolved risk: Supabase-managed auth credentials and provider-internal storage metadata are not in the independent artifact. Client business records and files can be proven separately, but a total project loss still requires recreating the staff login and managed service configuration.</p> : !database.ready ? <p className="mt-3 text-xs leading-5 text-command-amber">The app will not report database DR readiness until the independent workflow records both a fresh backup and an isolated restore drill.</p> : null}
         </article>
       </div>
 

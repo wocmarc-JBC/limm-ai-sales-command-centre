@@ -267,15 +267,23 @@ async function buildConditions(): Promise<IncidentCondition[]> {
       component: "database",
       severity: "critical",
       title: "Database disaster recovery is not proven",
-      safeSummary: "A fresh encrypted backup and a recent isolated restore drill are both required for RPO/RTO readiness.",
+      safeSummary: database.coreBusinessDataRecoveryProven
+        ? "Core business data passed encrypted backup and isolated restore, but Supabase-managed auth and storage schemas remain outside the independent artifact."
+        : "A fresh encrypted backup and a recent isolated restore drill are both required for RPO/RTO readiness.",
       metadata: {
         evidenceReporterConfigured: database.evidenceReporterConfigured,
         backupConfigured: database.backupConfigured,
+        provider: database.provider,
         latestBackupStatus: database.latestBackupStatus,
         backupFresh: database.backupFresh,
+        latestBackupScope: database.latestBackupScope,
+        latestBackupScopeComplete: database.latestBackupScopeComplete,
         latestRestoreStatus: database.latestRestoreDrillStatus,
         restoreFresh: database.restoreDrillFresh,
-        restoreIsolated: database.latestRestoreIsolated
+        restoreIsolated: database.latestRestoreIsolated,
+        restoreMatchesBackup: database.latestRestoreMatchesBackup,
+        coreBusinessDataRecoveryProven: database.coreBusinessDataRecoveryProven,
+        unresolvedRisk: database.unresolvedRisk
       }
     }));
   }

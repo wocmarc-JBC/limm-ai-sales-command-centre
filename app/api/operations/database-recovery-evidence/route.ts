@@ -52,7 +52,10 @@ function parseEvidence(payload: Record<string, unknown>): DatabaseRecoveryEviden
       repository: text(payload.repository, 160),
       commitSha: text(payload.commitSha, 64),
       encrypted: payload.encrypted === true,
-      compression: text(payload.compression, 40)
+      compression: text(payload.compression, 40),
+      databaseScope: text(payload.databaseScope, 40),
+      managedAuthIncluded: payload.managedAuthIncluded === true,
+      managedStorageIncluded: payload.managedStorageIncluded === true
     }
   };
 }
@@ -85,7 +88,11 @@ export async function POST(request: Request) {
         status: evidence.status,
         isolatedRestore: evidence.isolatedRestore,
         checksumRecorded: Boolean(evidence.artifactSha256),
-        artifactSizeRecorded: evidence.artifactSizeBytes > 0
+        artifactSizeRecorded: evidence.artifactSizeBytes > 0,
+        provider: evidence.provider,
+        databaseScope: evidence.metadata.databaseScope,
+        managedAuthIncluded: evidence.metadata.managedAuthIncluded,
+        managedStorageIncluded: evidence.metadata.managedStorageIncluded
       }
     });
     return NextResponse.json({
