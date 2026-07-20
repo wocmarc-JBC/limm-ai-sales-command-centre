@@ -1,5 +1,5 @@
 name: Database Disaster Recovery
-# One-time scoped backup verification trigger; removed after proof is recorded.
+# One-time scoped restore verification trigger, attempt 3; removed after proof is recorded.
 
 on:
   push:
