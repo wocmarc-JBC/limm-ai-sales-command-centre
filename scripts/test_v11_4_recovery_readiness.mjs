@@ -103,6 +103,7 @@ assert.match(workflow, /databaseScope:"core_business_data"/);
 assert.match(workflow, /managedAuthIncluded:false/);
 assert.match(workflow, /managedStorageIncluded:false/);
 assert.match(workflow, /include schema public/);
+assert.match(workflow, /include schema limm_private/);
 assert.match(workflow, /include schema supabase_migrations/);
 assert.doesNotMatch(workflow, /include schema auth|include schema storage/);
 assert.match(workflow, /create table auth\.users \(id uuid primary key\)/);

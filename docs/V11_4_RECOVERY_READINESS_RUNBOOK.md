@@ -72,7 +72,7 @@ Use a read-only database role that can dump every required application-owned sch
 
 ### Current independent-backup scope and exact risk
 
-The scoped role can read all 41 table-like objects in `public` and `supabase_migrations`, but Supabase owns and protects its managed `auth` schema. The normal project `postgres` role cannot delegate that schema access to `limm_dr_backup`; granting a broader managed role or exporting an administrator credential to GitHub would violate least privilege.
+The scoped role can read all 41 table-like objects in `public` and `supabase_migrations` plus the six application-owned function definitions in `limm_private`. It has zero private-function execution and zero write privileges. Supabase owns and protects its managed `auth` schema. The normal project `postgres` role cannot delegate that schema access to `limm_dr_backup`; granting a broader managed role or exporting an administrator credential to GitHub would violate least privilege.
 
 The workflow therefore records provider `independent_pg_dump_s3_core_no_managed_schemas` and scope `core_business_data`. It deliberately excludes Supabase-managed `auth` and `storage` schemas. The isolated drill creates ID-only auth stubs so `public.profiles → auth.users`, SQL helpers, and RLS policy dependencies can be rebuilt and checked without claiming that password hashes, sessions, or managed service state were recovered.
 
@@ -86,7 +86,7 @@ The nightly core-data job:
 4. uploads the encrypted artifact and latest manifest;
 5. reports evidence through the dedicated machine-authenticated endpoint.
 
-The monthly drill downloads the latest artifact, verifies size and SHA-256, decrypts it, restores it into an isolated PostgreSQL 17 container, verifies six required schema contracts, the ID-only managed-auth dependency contract, and four read queries, destroys the container, and reports evidence. Failure evidence is reported without client data or secret values. A successful core drill sets `coreBusinessDataRecoveryProven`; it never sets full `databaseDisasterRecoveryReady` to true.
+The monthly drill downloads the latest artifact, verifies size and SHA-256, decrypts it, restores it into an isolated PostgreSQL 17 container, verifies nine table, managed-auth dependency, private-function, and trigger contracts plus four read queries, destroys the container, and reports evidence. Failure evidence is reported without client data or secret values. A successful core drill sets `coreBusinessDataRecoveryProven`; it never sets full `databaseDisasterRecoveryReady` to true.
 
 If any required GitHub value is absent, the configuration job emits a warning, skips backup/restore, and creates no false green evidence.
 

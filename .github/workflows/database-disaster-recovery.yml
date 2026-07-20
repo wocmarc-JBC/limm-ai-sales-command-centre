@@ -1,5 +1,5 @@
 name: Database Disaster Recovery
-# One-time scoped restore verification trigger, attempt 2; removed after proof is recorded.
+# One-time scoped backup verification trigger; removed after proof is recorded.
 
 on:
   push:
@@ -71,7 +71,7 @@ jobs:
       needs.configuration.outputs.ready == 'true' &&
       ((github.event_name == 'schedule' && github.event.schedule == '30 18 * * *') ||
       (github.event_name == 'workflow_dispatch' && inputs.action == 'backup') ||
-      (github.event_name == 'push' && github.event.head_commit.message == 'fix: pin R2 endpoint and prove scoped core database DR'))
+      (github.event_name == 'push' && github.event.head_commit.message == 'fix: include private recovery functions and prove scoped core database DR'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -148,6 +148,7 @@ jobs:
         run: |
           printf '%s\n' \
             'include schema public' \
+            'include schema limm_private' \
             'include schema supabase_migrations' \
             > "$RUNNER_TEMP/limm-db-dr/pg_dump.filter"
           docker run --rm --network host \
@@ -332,9 +333,15 @@ jobs:
           missing_profile_stubs=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
             "select count(*) from public.profiles p left join auth.users u on u.id=p.id where u.id is null;")
           test "$missing_profile_stubs" = "0"
+          private_functions=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
+            "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='limm_private' and p.proname in ('broadcast_inbox_activity','dispatch_client_file_integrity','dispatch_reliability_endpoint','dispatch_reliability_watchdog','dispatch_whatsapp_worker','prune_reliability_history');")
+          test "$private_functions" = "6"
+          broadcast_triggers=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
+            "select count(*) from pg_trigger t join pg_proc p on p.oid=t.tgfoid join pg_namespace n on n.oid=p.pronamespace where not t.tgisinternal and n.nspname='limm_private' and p.proname='broadcast_inbox_activity';")
+          test "$broadcast_triggers" = "5"
           docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -v ON_ERROR_STOP=1 -Atc \
             "select count(*) from public.profiles; select count(*) from public.leads; select count(*) from public.lead_messages; select count(*) from public.audit_logs;" > /dev/null
-          echo "DR_SCHEMA_CHECKS=6" >> "$GITHUB_ENV"
+          echo "DR_SCHEMA_CHECKS=9" >> "$GITHUB_ENV"
           echo "DR_ROW_CHECKS=4" >> "$GITHUB_ENV"
           echo "Core business tables and their managed-auth dependency contract restored in isolation. Stub auth rows contain IDs only; no Supabase auth credentials were claimed as recovered." >> "$GITHUB_STEP_SUMMARY"
 
