@@ -36,7 +36,7 @@ jobs:
     env:
       DR_DATABASE_URL: ${{ secrets.DR_DATABASE_URL }}
       DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
-      DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
+      DR_S3_ENDPOINT: "https://4563b1bed738ba84a7445e35b9f59c4b.r2.cloudflarestorage.com"
       DR_S3_REGION: "auto"
       DR_S3_BUCKET: "limm-dr-primary"
       AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}
@@ -70,13 +70,13 @@ jobs:
       needs.configuration.outputs.ready == 'true' &&
       ((github.event_name == 'schedule' && github.event.schedule == '30 18 * * *') ||
       (github.event_name == 'workflow_dispatch' && inputs.action == 'backup') ||
-      (github.event_name == 'push' && github.event.head_commit.message == 'fix: prove scoped core database DR'))
+      (github.event_name == 'push' && github.event.head_commit.message == 'fix: pin R2 endpoint and prove scoped core database DR'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       DR_DATABASE_URL: ${{ secrets.DR_DATABASE_URL }}
       DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
-      DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
+      DR_S3_ENDPOINT: "https://4563b1bed738ba84a7445e35b9f59c4b.r2.cloudflarestorage.com"
       DR_S3_REGION: "auto"
       DR_S3_BUCKET: "limm-dr-primary"
       AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}
@@ -244,7 +244,7 @@ jobs:
     timeout-minutes: 45
     env:
       DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
-      DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
+      DR_S3_ENDPOINT: "https://4563b1bed738ba84a7445e35b9f59c4b.r2.cloudflarestorage.com"
       DR_S3_REGION: "auto"
       DR_S3_BUCKET: "limm-dr-primary"
       AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}

@@ -55,15 +55,14 @@ The `Database Disaster Recovery` workflow needs these Actions secrets:
 ```text
 DR_DATABASE_URL
 DR_BACKUP_PASSPHRASE
-DR_S3_ENDPOINT
-DR_S3_REGION
-DR_S3_BUCKET
 DR_S3_ACCESS_KEY_ID
 DR_S3_SECRET_ACCESS_KEY
 RELIABILITY_EVIDENCE_TOKEN
 ```
 
-Add this Actions variable:
+The workflow pins the non-secret R2 endpoint, `auto` region, primary bucket name, and evidence URL. This prevents malformed copied endpoint values while keeping credentials in Actions secrets.
+
+Evidence endpoint:
 
 ```text
 RELIABILITY_EVIDENCE_URL=https://limm-ai-sales-command-centre.vercel.app/api/operations/database-recovery-evidence
