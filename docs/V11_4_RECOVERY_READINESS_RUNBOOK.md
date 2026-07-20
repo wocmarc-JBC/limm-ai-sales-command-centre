@@ -4,6 +4,12 @@ v11.4 turns the v11.3 recovery controls into an evidence-driven incident system.
 
 ## Recovery objectives and proof
 
+Daily backup freshness and monthly restore proof are independent controls. The
+latest successful restore drill must match its recorded source artifact (hash,
+size, provider, and scope); a newer nightly backup does not invalidate that
+still-current drill. The newest backup is evaluated separately against the
+24-hour RPO and full-database scope requirements.
+
 | Asset | Objective | Proof required before green |
 |---|---:|---|
 | Accepted WhatsApp inbound | RPO 0 after durable HTTP acceptance | provider-message keyed queue row |

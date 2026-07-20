@@ -69,6 +69,10 @@ assert.match(database, /DATABASE_FULL_SCOPE_PROVIDER = "independent_pg_dump_s3_f
 assert.match(database, /supabase_managed_auth_and_storage_schemas_not_in_independent_backup/);
 assert.match(database, /latestBackupScopeComplete/);
 assert.match(database, /latestRestoreMatchesBackup/);
+assert.match(database, /const restoreSourceBackup = restore\?\.source_backup_id/);
+assert.match(database, /restore\.artifact_sha256\.toLowerCase\(\) === restoreSourceBackup\.artifact_sha256\.toLowerCase\(\)/);
+assert.match(database, /restoreSourceBackupScopeComplete/);
+assert.doesNotMatch(database, /restore\?\.source_backup_id === backup\.id/);
 assert.match(database, /coreBusinessDataRecoveryProven/);
 assert.match(database, /ready: fullDatabaseRecoveryProven/);
 assert.match(database, /restore_not_isolated/);

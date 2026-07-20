@@ -87,6 +87,23 @@ function fresh(value: string | null, maxAgeMs: number) {
   return Number.isFinite(timestamp) && Date.now() - timestamp >= 0 && Date.now() - timestamp <= maxAgeMs;
 }
 
+function backupScope(row: DatabaseRecoveryRow | undefined): DatabaseRecoverySnapshot["latestBackupScope"] {
+  if (row?.metadata?.databaseScope === "full_database") return "full_database";
+  if (row?.metadata?.databaseScope === "core_business_data" || row?.provider === DATABASE_CORE_SCOPE_PROVIDER) {
+    return "core_business_data";
+  }
+  return "unknown";
+}
+
+function fullScopeComplete(row: DatabaseRecoveryRow | undefined) {
+  return Boolean(
+    row?.provider === DATABASE_FULL_SCOPE_PROVIDER &&
+    backupScope(row) === "full_database" &&
+    row.metadata?.managedAuthIncluded === true &&
+    row.metadata?.managedStorageIncluded === true
+  );
+}
+
 function fallbackSnapshot(): DatabaseRecoverySnapshot {
   return {
     available: false,
@@ -125,6 +142,9 @@ export async function getDatabaseRecoverySnapshot(): Promise<DatabaseRecoverySna
     const rows = (data ?? []) as DatabaseRecoveryRow[];
     const backup = rows.find((row) => row.run_type === "backup");
     const restore = rows.find((row) => row.run_type === "restore_drill");
+    const restoreSourceBackup = restore?.source_backup_id
+      ? rows.find((row) => row.id === restore.source_backup_id && row.run_type === "backup")
+      : undefined;
     const backupFresh = fresh(backup?.completed_at ?? null, DATABASE_BACKUP_FRESHNESS_HOURS * 60 * 60 * 1000);
     const restoreDrillFresh = fresh(restore?.completed_at ?? null, DATABASE_RESTORE_DRILL_FRESHNESS_DAYS * 24 * 60 * 60 * 1000);
     const latestBackupArtifactVerified = Boolean(
@@ -133,20 +153,25 @@ export async function getDatabaseRecoverySnapshot(): Promise<DatabaseRecoverySna
       count(backup.artifact_size_bytes) > 0
     );
     const latestRestoreIsolated = Boolean(restore?.isolated_restore);
-    const latestRestoreMatchesBackup = Boolean(backup?.id && restore?.source_backup_id === backup.id);
+    // A restore drill proves the exact artifact it names. Newer nightly backups must
+    // not invalidate that monthly proof; they are evaluated separately for RPO.
+    const latestRestoreMatchesBackup = Boolean(
+      restore &&
+      restoreSourceBackup?.status === "succeeded" &&
+      restore.source_backup_id === restoreSourceBackup.id &&
+      /^[a-f0-9]{64}$/i.test(restore.artifact_sha256) &&
+      restore.artifact_sha256.toLowerCase() === restoreSourceBackup.artifact_sha256.toLowerCase() &&
+      count(restore.artifact_size_bytes) > 0 &&
+      count(restore.artifact_size_bytes) === count(restoreSourceBackup.artifact_size_bytes) &&
+      restore.provider === restoreSourceBackup.provider &&
+      restore.metadata?.databaseScope === restoreSourceBackup.metadata?.databaseScope
+    );
     const latestRestoreSchemaChecks = count(restore?.schema_checks_passed);
     const latestRestoreRowChecks = count(restore?.row_checks_passed);
-    const latestBackupScope = backup?.metadata?.databaseScope === "full_database"
-      ? "full_database"
-      : backup?.metadata?.databaseScope === "core_business_data" || backup?.provider === DATABASE_CORE_SCOPE_PROVIDER
-        ? "core_business_data"
-        : "unknown";
-    const latestBackupScopeComplete = Boolean(
-      backup?.provider === DATABASE_FULL_SCOPE_PROVIDER &&
-      latestBackupScope === "full_database" &&
-      backup.metadata?.managedAuthIncluded === true &&
-      backup.metadata?.managedStorageIncluded === true
-    );
+    const latestBackupScope = backupScope(backup);
+    const latestBackupScopeComplete = fullScopeComplete(backup);
+    const restoreSourceBackupScope = backupScope(restoreSourceBackup);
+    const restoreSourceBackupScopeComplete = fullScopeComplete(restoreSourceBackup);
     const commonRecoveryProof = Boolean(
       backup?.status === "succeeded" &&
       backupFresh &&
@@ -160,9 +185,9 @@ export async function getDatabaseRecoverySnapshot(): Promise<DatabaseRecoverySna
     );
     const coreBusinessDataRecoveryProven = Boolean(
       commonRecoveryProof &&
-      backup?.provider === DATABASE_CORE_SCOPE_PROVIDER &&
+      restoreSourceBackup?.provider === DATABASE_CORE_SCOPE_PROVIDER &&
       restore?.provider === DATABASE_CORE_SCOPE_PROVIDER &&
-      latestBackupScope === "core_business_data" &&
+      restoreSourceBackupScope === "core_business_data" &&
       restore.metadata?.databaseScope === "core_business_data" &&
       restore.metadata?.managedAuthIncluded === false &&
       restore.metadata?.managedStorageIncluded === false
@@ -170,6 +195,7 @@ export async function getDatabaseRecoverySnapshot(): Promise<DatabaseRecoverySna
     const fullDatabaseRecoveryProven = Boolean(
       commonRecoveryProof &&
       latestBackupScopeComplete &&
+      restoreSourceBackupScopeComplete &&
       restore?.provider === DATABASE_FULL_SCOPE_PROVIDER &&
       restore.metadata?.databaseScope === "full_database" &&
       restore.metadata?.managedAuthIncluded === true &&
