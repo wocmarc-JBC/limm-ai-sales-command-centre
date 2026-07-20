@@ -1,6 +1,11 @@
 name: Database Disaster Recovery
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/database-disaster-recovery.yml"
   schedule:
     - cron: "30 18 * * *"
     - cron: "45 18 1 * *"
@@ -64,7 +69,8 @@ jobs:
     if: >-
       needs.configuration.outputs.ready == 'true' &&
       ((github.event_name == 'schedule' && github.event.schedule == '30 18 * * *') ||
-      (github.event_name == 'workflow_dispatch' && inputs.action == 'backup'))
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'backup') ||
+      (github.event_name == 'push' && github.event.head_commit.message == 'chore: trigger database DR backup'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
