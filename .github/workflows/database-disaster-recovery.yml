@@ -32,12 +32,12 @@ jobs:
       DR_DATABASE_URL: ${{ secrets.DR_DATABASE_URL }}
       DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
       DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
-      DR_S3_REGION: ${{ secrets.DR_S3_REGION }}
-      DR_S3_BUCKET: ${{ secrets.DR_S3_BUCKET }}
+      DR_S3_REGION: "auto"
+      DR_S3_BUCKET: "limm-dr-primary"
       AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DR_S3_SECRET_ACCESS_KEY }}
       RELIABILITY_EVIDENCE_TOKEN: ${{ secrets.RELIABILITY_EVIDENCE_TOKEN }}
-      RELIABILITY_EVIDENCE_URL: ${{ vars.RELIABILITY_EVIDENCE_URL }}
+      RELIABILITY_EVIDENCE_URL: "https://limm-ai-sales-command-centre.vercel.app/api/operations/database-recovery-evidence"
     steps:
       - id: guard
         name: Fail-closed configuration guard
@@ -71,12 +71,12 @@ jobs:
       DR_DATABASE_URL: ${{ secrets.DR_DATABASE_URL }}
       DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
       DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
-      DR_S3_REGION: ${{ secrets.DR_S3_REGION }}
-      DR_S3_BUCKET: ${{ secrets.DR_S3_BUCKET }}
+      DR_S3_REGION: "auto"
+      DR_S3_BUCKET: "limm-dr-primary"
       AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DR_S3_SECRET_ACCESS_KEY }}
       RELIABILITY_EVIDENCE_TOKEN: ${{ secrets.RELIABILITY_EVIDENCE_TOKEN }}
-      RELIABILITY_EVIDENCE_URL: ${{ vars.RELIABILITY_EVIDENCE_URL }}
+      RELIABILITY_EVIDENCE_URL: "https://limm-ai-sales-command-centre.vercel.app/api/operations/database-recovery-evidence"
       AWS_EC2_METADATA_DISABLED: "true"
     steps:
       - name: Prepare run identity
@@ -202,12 +202,12 @@ jobs:
     env:
       DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
       DR_S3_ENDPOINT: ${{ secrets.DR_S3_ENDPOINT }}
-      DR_S3_REGION: ${{ secrets.DR_S3_REGION }}
-      DR_S3_BUCKET: ${{ secrets.DR_S3_BUCKET }}
+      DR_S3_REGION: "auto"
+      DR_S3_BUCKET: "limm-dr-primary"
       AWS_ACCESS_KEY_ID: ${{ secrets.DR_S3_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DR_S3_SECRET_ACCESS_KEY }}
       RELIABILITY_EVIDENCE_TOKEN: ${{ secrets.RELIABILITY_EVIDENCE_TOKEN }}
-      RELIABILITY_EVIDENCE_URL: ${{ vars.RELIABILITY_EVIDENCE_URL }}
+      RELIABILITY_EVIDENCE_URL: "https://limm-ai-sales-command-centre.vercel.app/api/operations/database-recovery-evidence"
       AWS_EC2_METADATA_DISABLED: "true"
     steps:
       - name: Prepare isolated restore drill
