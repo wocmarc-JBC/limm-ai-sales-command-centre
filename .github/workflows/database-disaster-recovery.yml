@@ -86,6 +86,56 @@ jobs:
           echo "DR_EXTERNAL_RUN_ID=github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-backup" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/limm-db-dr"
 
+      - name: Resolve assigned Supabase pooler safely
+        shell: bash
+        run: |
+          database_user="${DR_DATABASE_URL#*://}"
+          database_user="${database_user%%:*}"
+          current_host="${DR_DATABASE_URL#*@}"
+          current_host="${current_host%%:*}"
+          pooler_region="${current_host#aws-}"
+          pooler_region="${pooler_region#*-}"
+          pooler_region="${pooler_region%.pooler.supabase.com}"
+          if [[ -z "$database_user" || -z "$pooler_region" || "$current_host" != aws-*.pooler.supabase.com ]]; then
+            echo "::error::The scoped database URL is not a supported Supabase shared-pooler URL."
+            exit 1
+          fi
+
+          resolved_host=""
+          for shard in 0 1 2 3; do
+            candidate="aws-${shard}-${pooler_region}.pooler.supabase.com"
+            if probe_output=$(docker run --rm --network host \
+              -e PGPASSWORD="limm-intentional-invalid-probe-only" \
+              postgres:17-alpine \
+              psql "host=${candidate} port=5432 dbname=postgres user=${database_user} sslmode=require connect_timeout=5" \
+              -v ON_ERROR_STOP=1 -Atc "select 1" 2>&1); then
+              echo "::error::Pooler probe unexpectedly authenticated."
+              exit 1
+            fi
+            if grep -Eiq "password authentication failed|SASL" <<< "$probe_output"; then
+              resolved_host="$candidate"
+              break
+            fi
+            if grep -Eiq "tenant.*user.*not found|tenant or user not found|could not translate host name" <<< "$probe_output"; then
+              continue
+            fi
+            echo "::notice::Pooler candidate ${candidate} returned a non-matching rejection."
+          done
+
+          if [[ -z "$resolved_host" ]]; then
+            echo "::error::Unable to resolve the assigned Supabase pooler shard without using the real credential."
+            exit 1
+          fi
+
+          normalized_url="${DR_DATABASE_URL/@${current_host}:/@${resolved_host}:}"
+          if [[ "$normalized_url" != *"@${resolved_host}:"* ]]; then
+            echo "::error::Resolved pooler host could not be applied to the scoped database URL."
+            exit 1
+          fi
+          echo "::add-mask::$normalized_url"
+          echo "DR_DATABASE_URL=$normalized_url" >> "$GITHUB_ENV"
+          echo "Supabase pooler shard resolved without sending the real database credential to guessed hosts." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Create PostgreSQL 17 custom-format dump
         shell: bash
         run: |
