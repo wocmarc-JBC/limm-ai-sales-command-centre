@@ -10,7 +10,7 @@ v11.4 turns the v11.3 recovery controls into an evidence-driven incident system.
 | WhatsApp processing | RTO under 2 minutes | successful worker heartbeat under 3 minutes, no old queue item, no stale lease, no dead letter |
 | Client files | RPO 24h / RTO 4h | checksum audit, independent backup under 26h old, isolated restore under 35 days old |
 | PostgreSQL core business data | RPO 24h / RTO 4h | encrypted independent artifact under 26h old plus isolated PostgreSQL restore under 35 days old |
-| Full Supabase database, including managed auth/storage schemas | Not yet proven | full-scope artifact and isolated restore; core-only evidence must remain fail-closed |
+| Full Supabase database, including managed auth data and storage metadata | RPO 24h / RTO 4h | encrypted full-scope artifact under 26h old plus isolated Supabase PostgreSQL restore under 35 days old |
 | Incident detection | under 5 minutes | Supabase Cron dispatch and `reliability_watchdog` heartbeat |
 
 No configuration flag alone makes a control green. The application derives readiness from completed timestamps, checksums, status, and isolation evidence.
@@ -68,25 +68,27 @@ Evidence endpoint:
 RELIABILITY_EVIDENCE_URL=https://limm-ai-sales-command-centre.vercel.app/api/operations/database-recovery-evidence
 ```
 
-Use a read-only database role that can dump every required application-owned schema/object without owning or mutating production data. The S3-compatible bucket must be private and independent of Supabase/Vercel. Enable provider-side versioning, retention/lifecycle policy, access logging, and MFA-protected deletion where available.
+`DR_DATABASE_URL` must be the project's `postgres.<project-ref>` shared-pooler URL, with its database password percent-encoded. A scoped application role cannot read Supabase-managed Auth and Storage rows; the workflow fails closed if that older URL is supplied. The owner-level credential exists only as a masked Actions secret, is passed only to the official Supabase CLI, and is never printed. Limit workflow-edit permission to trusted maintainers and rotate the database password if repository or Actions-secret access changes. The S3-compatible bucket must be private and independent of Supabase/Vercel. Enable provider-side versioning, retention/lifecycle policy, access logging, and MFA-protected deletion where available.
 
-### Current independent-backup scope and exact risk
+### Independent full-database backup scope
 
-The scoped role can read all 41 table-like objects in `public` and `supabase_migrations` plus the six application-owned function definitions in `limm_private`. It has zero private-function execution and zero write privileges. Supabase owns and protects its managed `auth` schema. The normal project `postgres` role cannot delegate that schema access to `limm_dr_backup`; granting a broader managed role or exporting an administrator credential to GitHub would violate least privilege.
+Earlier v11.4 evidence used a deliberately scoped `limm_dr_backup` role. That proved core business-data recovery but could not read Supabase-managed `auth` and `storage`, so the health endpoint correctly remained fail-closed with risk code `supabase_managed_auth_and_storage_schemas_not_in_independent_backup`.
 
-The workflow therefore records provider `independent_pg_dump_s3_core_no_managed_schemas` and scope `core_business_data`. It deliberately excludes Supabase-managed `auth` and `storage` schemas. The isolated drill creates ID-only auth stubs so `public.profiles → auth.users`, SQL helpers, and RLS policy dependencies can be rebuilt and checked without claiming that password hashes, sessions, or managed service state were recovered.
+The current workflow uses the official Supabase CLI portable-backup sequence. It creates separate role, schema, data, and migration-history SQL files. The data file includes application rows, Auth users and password hashes, identities, sessions, and Storage database metadata. It excludes only Supabase Storage vector tables that the official migration procedure excludes. The five SQL files are archived, encrypted client-side with AES-256-CBC/PBKDF2, checksummed, and uploaded to the private independent R2 bucket. No plaintext backup is uploaded or retained as an Actions artifact.
 
-This is useful evidence, but it is not full database DR. The application remains fail-closed with risk code `supabase_managed_auth_and_storage_schemas_not_in_independent_backup`. In a total Supabase-project loss, business records and independently protected client files can be recovered, but the current staff login must be recreated with a password reset and Supabase-managed service configuration/metadata must be rebuilt. Clear that risk only after a full-scope encrypted artifact—including managed auth/storage schemas—passes an isolated restore under an approved credential-handling design or a supported Supabase managed-backup recovery test.
+The nightly full-database job:
 
-The nightly core-data job:
+1. creates the official Supabase portable SQL bundle and asserts that Auth and Storage `COPY` sections exist;
+2. records source row counts for five critical application tables plus Auth users/identities and Storage buckets/objects;
+3. encrypts the bundle client-side and records its SHA-256 and byte size;
+4. uploads the encrypted artifact and a versioned, non-secret manifest;
+5. reports full-scope evidence through the dedicated machine-authenticated endpoint.
 
-1. creates a PostgreSQL 17 custom-format dump;
-2. encrypts it client-side with AES-256-CBC/PBKDF2 before upload;
-3. records SHA-256 and byte size;
-4. uploads the encrypted artifact and latest manifest;
-5. reports evidence through the dedicated machine-authenticated endpoint.
+The monthly drill downloads the latest artifact, verifies size and SHA-256, decrypts it, and rejects unexpected archive entries before extraction. It starts an isolated local Supabase PostgreSQL target pinned to the production PostgreSQL release, restores roles/schema/data/migration history, verifies nine schema/dependency contracts, and exactly matches nine restored row counts to the source manifest. It then destroys the isolated target and reports evidence without row contents or secret values.
 
-The monthly drill downloads the latest artifact, verifies size and SHA-256, decrypts it, restores it into an isolated PostgreSQL 17 container, verifies nine table, managed-auth dependency, private-function, and trigger contracts plus four read queries, destroys the container, and reports evidence. Failure evidence is reported without client data or secret values. A successful core drill sets `coreBusinessDataRecoveryProven`; it never sets full `databaseDisasterRecoveryReady` to true.
+Storage object bytes are not contained in a PostgreSQL backup. They remain independently protected and restore-tested by the separate client-file R2 workflow; this database workflow covers the corresponding Storage bucket/object metadata. A full successful database backup plus isolated restore clears the managed-schema risk only when the separate client-file controls are also green.
+
+Portable database recovery does not clone Supabase project-level configuration. In a total project replacement, recreate Auth provider settings, API/JWT keys, Vault secrets, Cron jobs, and other platform configuration from their controlled sources. Existing browser sessions may require sign-in again because a replacement project uses new JWT signing keys. The current project has no Edge Functions. These are recovery-runbook steps, not missing database rows, and must be verified during a real project-replacement exercise.
 
 If any required GitHub value is absent, the configuration job emits a warning, skips backup/restore, and creates no false green evidence.
 

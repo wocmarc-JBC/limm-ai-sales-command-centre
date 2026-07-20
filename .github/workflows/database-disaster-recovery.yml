@@ -96,8 +96,8 @@ jobs:
           pooler_region="${current_host#aws-}"
           pooler_region="${pooler_region#*-}"
           pooler_region="${pooler_region%.pooler.supabase.com}"
-          if [[ -z "$database_user" || -z "$pooler_region" || "$current_host" != aws-*.pooler.supabase.com ]]; then
-            echo "::error::The scoped database URL is not a supported Supabase shared-pooler URL."
+          if [[ "$database_user" != postgres.* || -z "$pooler_region" || "$current_host" != aws-*.pooler.supabase.com ]]; then
+            echo "::error::Full-scope recovery requires the project postgres shared-pooler URL; a scoped application role cannot read Supabase-managed Auth and Storage data."
             exit 1
           fi
 
@@ -136,33 +136,87 @@ jobs:
           printf 'DR_DATABASE_URL=%s\n' "$normalized_url" >> "$GITHUB_ENV"
           echo "Supabase pooler shard resolved without sending the real database credential to guessed hosts." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Create PostgreSQL 17 custom-format dump
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Create portable full-scope Supabase dump bundle
         shell: bash
         run: |
-          printf '%s\n' \
-            'include schema public' \
-            'include schema limm_private' \
-            'include schema supabase_migrations' \
-            > "$RUNNER_TEMP/limm-db-dr/pg_dump.filter"
-          docker run --rm --network host \
-            -v "$RUNNER_TEMP/limm-db-dr:/work" \
-            -e DR_DATABASE_URL \
-            postgres:17-alpine \
-            sh -c 'pg_dump "$DR_DATABASE_URL" --format=custom --compress=9 --no-owner --no-privileges --filter=/work/pg_dump.filter --exclude-extension=pg_net --file=/work/database.dump'
-          test -s "$RUNNER_TEMP/limm-db-dr/database.dump"
-          echo "The encrypted artifact contains public business data and migration history. Supabase-managed auth and storage schemas are excluded and do not count as full database recovery." >> "$GITHUB_STEP_SUMMARY"
+          supabase db dump --db-url "$DR_DATABASE_URL" \
+            --file "$RUNNER_TEMP/limm-db-dr/roles.sql" --role-only
+          supabase db dump --db-url "$DR_DATABASE_URL" \
+            --file "$RUNNER_TEMP/limm-db-dr/schema.sql"
+          supabase db dump --db-url "$DR_DATABASE_URL" \
+            --file "$RUNNER_TEMP/limm-db-dr/data.sql" --use-copy --data-only \
+            --exclude "storage.buckets_vectors" --exclude "storage.vector_indexes"
+          supabase db dump --db-url "$DR_DATABASE_URL" \
+            --file "$RUNNER_TEMP/limm-db-dr/history_schema.sql" --schema supabase_migrations
+          supabase db dump --db-url "$DR_DATABASE_URL" \
+            --file "$RUNNER_TEMP/limm-db-dr/history_data.sql" --schema supabase_migrations --use-copy --data-only
+
+          for file in roles.sql schema.sql data.sql history_schema.sql history_data.sql; do
+            test -s "$RUNNER_TEMP/limm-db-dr/$file"
+          done
+          grep -Eq '^COPY "auth"\."users" \(.*"encrypted_password"' "$RUNNER_TEMP/limm-db-dr/data.sql"
+          grep -Eq '^COPY "auth"\."identities" ' "$RUNNER_TEMP/limm-db-dr/data.sql"
+          grep -Eq '^COPY "storage"\."buckets" ' "$RUNNER_TEMP/limm-db-dr/data.sql"
+          grep -Eq '^COPY "storage"\."objects" ' "$RUNNER_TEMP/limm-db-dr/data.sql"
+
+          count_copy_rows() {
+            local schema="$1"
+            local table="$2"
+            awk -v schema="$schema" -v table="$table" '
+              BEGIN {
+                prefix = "COPY \"" schema "\".\"" table "\" ("
+                found = 0
+                copying = 0
+                done = 0
+                count = 0
+              }
+              index($0, prefix) == 1 { found = 1; copying = 1; next }
+              copying && $0 == "\\." { print count; done = 1; exit }
+              copying { count += 1 }
+              END { if (!found || !done) exit 2 }
+            ' "$RUNNER_TEMP/limm-db-dr/data.sql"
+          }
+
+          while read -r name schema table; do
+            value=$(count_copy_rows "$schema" "$table")
+            [[ "$value" =~ ^[0-9]+$ ]]
+            printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
+          done <<'COUNTS'
+          DR_PROFILE_COUNT public profiles
+          DR_LEAD_COUNT public leads
+          DR_MESSAGE_COUNT public lead_messages
+          DR_AUDIT_COUNT public audit_logs
+          DR_INBOUND_JOB_COUNT public whatsapp_inbound_jobs
+          DR_AUTH_USER_COUNT auth users
+          DR_AUTH_IDENTITY_COUNT auth identities
+          DR_STORAGE_BUCKET_COUNT storage buckets
+          DR_STORAGE_OBJECT_COUNT storage objects
+          COUNTS
+
+          tar -C "$RUNNER_TEMP/limm-db-dr" -czf "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz" \
+            roles.sql schema.sql data.sql history_schema.sql history_data.sql
+          echo "The encrypted artifact contains business data, Auth users and password hashes, Storage metadata, roles, schema, and migration history. Storage object bytes remain protected by the separate client-file R2 backup." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Encrypt and checksum artifact
         shell: bash
         run: |
           openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
-            -in "$RUNNER_TEMP/limm-db-dr/database.dump" \
-            -out "$RUNNER_TEMP/limm-db-dr/database.dump.enc" \
+            -in "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz" \
+            -out "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz.enc" \
             -pass env:DR_BACKUP_PASSPHRASE
-          rm "$RUNNER_TEMP/limm-db-dr/database.dump"
-          sha=$(sha256sum "$RUNNER_TEMP/limm-db-dr/database.dump.enc" | cut -d ' ' -f 1)
-          bytes=$(stat -c %s "$RUNNER_TEMP/limm-db-dr/database.dump.enc")
-          object_key="database-backups/$(date -u +%Y/%m/%d)/limm-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.dump.enc"
+          rm "$RUNNER_TEMP/limm-db-dr/roles.sql" \
+            "$RUNNER_TEMP/limm-db-dr/schema.sql" \
+            "$RUNNER_TEMP/limm-db-dr/data.sql" \
+            "$RUNNER_TEMP/limm-db-dr/history_schema.sql" \
+            "$RUNNER_TEMP/limm-db-dr/history_data.sql" \
+            "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz"
+          sha=$(sha256sum "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz.enc" | cut -d ' ' -f 1)
+          bytes=$(stat -c %s "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz.enc")
+          object_key="database-backups/$(date -u +%Y/%m/%d)/limm-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.tar.gz.enc"
           echo "DR_ARTIFACT_SHA256=$sha" >> "$GITHUB_ENV"
           echo "DR_ARTIFACT_BYTES=$bytes" >> "$GITHUB_ENV"
           echo "DR_OBJECT_KEY=$object_key" >> "$GITHUB_ENV"
@@ -170,7 +224,7 @@ jobs:
       - name: Upload encrypted artifact and latest manifest
         shell: bash
         run: |
-          aws s3 cp "$RUNNER_TEMP/limm-db-dr/database.dump.enc" "s3://${DR_S3_BUCKET}/${DR_OBJECT_KEY}" \
+          aws s3 cp "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz.enc" "s3://${DR_S3_BUCKET}/${DR_OBJECT_KEY}" \
             --endpoint-url "$DR_S3_ENDPOINT" --region "$DR_S3_REGION" --no-progress
           completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           jq -n \
@@ -179,7 +233,16 @@ jobs:
             --arg sha256 "$DR_ARTIFACT_SHA256" \
             --arg completedAt "$completed_at" \
             --argjson bytes "$DR_ARTIFACT_BYTES" \
-            '{schemaVersion:"limm-database-backup-v2",databaseScope:"core_business_data",managedAuthIncluded:false,managedStorageIncluded:false,externalRunId:$externalRunId,objectKey:$objectKey,sha256:$sha256,bytes:$bytes,completedAt:$completedAt,encrypted:true}' \
+            --argjson profiles "$DR_PROFILE_COUNT" \
+            --argjson leads "$DR_LEAD_COUNT" \
+            --argjson leadMessages "$DR_MESSAGE_COUNT" \
+            --argjson auditLogs "$DR_AUDIT_COUNT" \
+            --argjson whatsappInboundJobs "$DR_INBOUND_JOB_COUNT" \
+            --argjson authUsers "$DR_AUTH_USER_COUNT" \
+            --argjson authIdentities "$DR_AUTH_IDENTITY_COUNT" \
+            --argjson storageBuckets "$DR_STORAGE_BUCKET_COUNT" \
+            --argjson storageObjects "$DR_STORAGE_OBJECT_COUNT" \
+            '{schemaVersion:"limm-database-backup-v3",databaseScope:"full_database",managedAuthIncluded:true,managedStorageIncluded:true,externalRunId:$externalRunId,objectKey:$objectKey,sha256:$sha256,bytes:$bytes,completedAt:$completedAt,encrypted:true,format:"supabase_cli_portable_sql_bundle",rowCounts:{profiles:$profiles,leads:$leads,leadMessages:$leadMessages,auditLogs:$auditLogs,whatsappInboundJobs:$whatsappInboundJobs,authUsers:$authUsers,authIdentities:$authIdentities,storageBuckets:$storageBuckets,storageObjects:$storageObjects}}' \
             > "$RUNNER_TEMP/limm-db-dr/latest.json"
           aws s3 cp "$RUNNER_TEMP/limm-db-dr/latest.json" "s3://${DR_S3_BUCKET}/database-backups/latest.json" \
             --endpoint-url "$DR_S3_ENDPOINT" --region "$DR_S3_REGION" --no-progress
@@ -198,7 +261,7 @@ jobs:
             --arg commitSha "$GITHUB_SHA" \
             --argjson artifactSizeBytes "$DR_ARTIFACT_BYTES" \
             --argjson workflowRunAttempt "$GITHUB_RUN_ATTEMPT" \
-            '{externalRunId:$externalRunId,runType:"backup",status:"succeeded",provider:"independent_pg_dump_s3_core_no_managed_schemas",databaseScope:"core_business_data",managedAuthIncluded:false,managedStorageIncluded:false,artifactSha256:$artifactSha256,artifactSizeBytes:$artifactSizeBytes,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"pg_custom_gzip"}' \
+            '{externalRunId:$externalRunId,runType:"backup",status:"succeeded",provider:"independent_pg_dump_s3_full_managed_schemas",databaseScope:"full_database",managedAuthIncluded:true,managedStorageIncluded:true,artifactSha256:$artifactSha256,artifactSizeBytes:$artifactSizeBytes,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"tar_gzip_portable_sql"}' \
             > "$RUNNER_TEMP/limm-db-dr/evidence.json"
           curl --silent --show-error --fail-with-body \
             -H "Authorization: Bearer ${RELIABILITY_EVIDENCE_TOKEN}" \
@@ -220,7 +283,7 @@ jobs:
             --arg repository "$GITHUB_REPOSITORY" \
             --arg commitSha "$GITHUB_SHA" \
             --argjson workflowRunAttempt "$GITHUB_RUN_ATTEMPT" \
-            '{externalRunId:$externalRunId,runType:"backup",status:"failed",provider:"independent_pg_dump_s3_core_no_managed_schemas",databaseScope:"core_business_data",managedAuthIncluded:false,managedStorageIncluded:false,artifactSha256:"",artifactSizeBytes:0,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"workflow_backup_failed",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"pg_custom_gzip"}' \
+            '{externalRunId:$externalRunId,runType:"backup",status:"failed",provider:"independent_pg_dump_s3_full_managed_schemas",databaseScope:"full_database",managedAuthIncluded:true,managedStorageIncluded:true,artifactSha256:"",artifactSizeBytes:0,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"workflow_backup_failed",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"tar_gzip_portable_sql"}' \
             > "$RUNNER_TEMP/limm-db-dr/failed-evidence.json"
           curl --silent --show-error --fail-with-body \
             -H "Authorization: Bearer ${RELIABILITY_EVIDENCE_TOKEN}" \
@@ -235,7 +298,7 @@ jobs:
       ((github.event_name == 'schedule' && github.event.schedule == '45 18 1 * *') ||
       (github.event_name == 'workflow_dispatch' && inputs.action == 'restore_drill'))
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       DR_BACKUP_PASSPHRASE: ${{ secrets.DR_BACKUP_PASSPHRASE }}
       DR_S3_ENDPOINT: "https://4563b1bed738ba84a7445e35b9f59c4b.r2.cloudflarestorage.com"
@@ -255,87 +318,116 @@ jobs:
           mkdir -p "$RUNNER_TEMP/limm-db-dr"
           aws s3 cp "s3://${DR_S3_BUCKET}/database-backups/latest.json" "$RUNNER_TEMP/limm-db-dr/latest.json" \
             --endpoint-url "$DR_S3_ENDPOINT" --region "$DR_S3_REGION" --no-progress
-          jq -e '.schemaVersion == "limm-database-backup-v2" and .databaseScope == "core_business_data" and .managedAuthIncluded == false and .managedStorageIncluded == false and .encrypted == true' "$RUNNER_TEMP/limm-db-dr/latest.json" > /dev/null
+          jq -e '
+            .schemaVersion == "limm-database-backup-v3" and
+            .databaseScope == "full_database" and
+            .managedAuthIncluded == true and
+            .managedStorageIncluded == true and
+            .format == "supabase_cli_portable_sql_bundle" and
+            .encrypted == true and
+            ([.rowCounts.profiles,.rowCounts.leads,.rowCounts.leadMessages,.rowCounts.auditLogs,.rowCounts.whatsappInboundJobs,.rowCounts.authUsers,.rowCounts.authIdentities,.rowCounts.storageBuckets,.rowCounts.storageObjects] | all(type == "number" and . >= 0))
+          ' "$RUNNER_TEMP/limm-db-dr/latest.json" > /dev/null
           object_key=$(jq -r '.objectKey' "$RUNNER_TEMP/limm-db-dr/latest.json")
           sha=$(jq -r '.sha256' "$RUNNER_TEMP/limm-db-dr/latest.json")
           bytes=$(jq -r '.bytes' "$RUNNER_TEMP/limm-db-dr/latest.json")
           source_run=$(jq -r '.externalRunId' "$RUNNER_TEMP/limm-db-dr/latest.json")
-          [[ "$object_key" == database-backups/* ]] && [[ "$sha" =~ ^[a-f0-9]{64}$ ]] && [[ "$bytes" =~ ^[0-9]+$ ]]
+          [[ "$object_key" == database-backups/*.tar.gz.enc ]] && [[ "$sha" =~ ^[a-f0-9]{64}$ ]] && [[ "$bytes" =~ ^[0-9]+$ ]]
           echo "DR_OBJECT_KEY=$object_key" >> "$GITHUB_ENV"
           echo "DR_ARTIFACT_SHA256=$sha" >> "$GITHUB_ENV"
           echo "DR_ARTIFACT_BYTES=$bytes" >> "$GITHUB_ENV"
           echo "DR_SOURCE_BACKUP_RUN_ID=$source_run" >> "$GITHUB_ENV"
+          while read -r name path; do
+            value=$(jq -r "$path" "$RUNNER_TEMP/limm-db-dr/latest.json")
+            [[ "$value" =~ ^[0-9]+$ ]]
+            printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
+          done <<'COUNTS'
+          DR_PROFILE_COUNT .rowCounts.profiles
+          DR_LEAD_COUNT .rowCounts.leads
+          DR_MESSAGE_COUNT .rowCounts.leadMessages
+          DR_AUDIT_COUNT .rowCounts.auditLogs
+          DR_INBOUND_JOB_COUNT .rowCounts.whatsappInboundJobs
+          DR_AUTH_USER_COUNT .rowCounts.authUsers
+          DR_AUTH_IDENTITY_COUNT .rowCounts.authIdentities
+          DR_STORAGE_BUCKET_COUNT .rowCounts.storageBuckets
+          DR_STORAGE_OBJECT_COUNT .rowCounts.storageObjects
+          COUNTS
 
       - name: Download, verify, and decrypt backup
         shell: bash
         run: |
-          aws s3 cp "s3://${DR_S3_BUCKET}/${DR_OBJECT_KEY}" "$RUNNER_TEMP/limm-db-dr/database.dump.enc" \
+          aws s3 cp "s3://${DR_S3_BUCKET}/${DR_OBJECT_KEY}" "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz.enc" \
             --endpoint-url "$DR_S3_ENDPOINT" --region "$DR_S3_REGION" --no-progress
-          echo "${DR_ARTIFACT_SHA256}  $RUNNER_TEMP/limm-db-dr/database.dump.enc" | sha256sum --check --strict
-          test "$(stat -c %s "$RUNNER_TEMP/limm-db-dr/database.dump.enc")" = "$DR_ARTIFACT_BYTES"
+          echo "${DR_ARTIFACT_SHA256}  $RUNNER_TEMP/limm-db-dr/database-backup.tar.gz.enc" | sha256sum --check --strict
+          test "$(stat -c %s "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz.enc")" = "$DR_ARTIFACT_BYTES"
           openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
-            -in "$RUNNER_TEMP/limm-db-dr/database.dump.enc" \
-            -out "$RUNNER_TEMP/limm-db-dr/database.dump" \
+            -in "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz.enc" \
+            -out "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz" \
             -pass env:DR_BACKUP_PASSPHRASE
-          test -s "$RUNNER_TEMP/limm-db-dr/database.dump"
+          test -s "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz"
+          archive_entries=$(tar -tzf "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz" | sort)
+          expected_entries=$(printf '%s\n' data.sql history_data.sql history_schema.sql roles.sql schema.sql | sort)
+          test "$archive_entries" = "$expected_entries"
+          tar -xzf "$RUNNER_TEMP/limm-db-dr/database-backup.tar.gz" -C "$RUNNER_TEMP/limm-db-dr"
+          for file in roles.sql schema.sql data.sql history_schema.sql history_data.sql; do
+            test -s "$RUNNER_TEMP/limm-db-dr/$file"
+          done
 
-      - name: Restore into isolated PostgreSQL and verify contracts
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Restore into isolated Supabase PostgreSQL and verify contracts
         shell: bash
         run: |
-          container="limm-restore-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          password=$(openssl rand -hex 24)
-          cleanup() { docker rm -f "$container" >/dev/null 2>&1 || true; }
+          target="$RUNNER_TEMP/limm-db-restore-target"
+          cleanup() { supabase stop --workdir "$target" --no-backup --yes >/dev/null 2>&1 || true; }
           trap cleanup EXIT
-          docker run -d --name "$container" -p 127.0.0.1:55432:5432 \
-            -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=limm_restore postgres:17-alpine > /dev/null
-          for attempt in $(seq 1 30); do
-            if docker exec "$container" pg_isready -U postgres -d limm_restore > /dev/null 2>&1; then break; fi
-            sleep 2
-          done
-          docker exec "$container" pg_isready -U postgres -d limm_restore
+          mkdir -p "$target"
+          supabase init --workdir "$target" --yes
+          mkdir -p "$target/supabase/.temp"
+          printf '%s\n' '17.6.1.127' > "$target/supabase/.temp/postgres-version"
+          supabase db start --workdir "$target" --yes
+          restore_url="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
-          docker exec -i -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -v ON_ERROR_STOP=1 <<'SQL'
-          create role authenticated nologin;
-          create role service_role nologin bypassrls;
-          create schema auth;
-          create table auth.users (id uuid primary key);
-          create function auth.uid() returns uuid language sql stable as 'select null::uuid';
-          create function auth.role() returns text language sql stable as 'select null::text';
-          create schema extensions;
-          create extension pgcrypto with schema extensions;
-          create schema vault;
-          create table vault.decrypted_secrets (name text, decrypted_secret text);
-          drop schema public cascade;
-          SQL
+          docker run --rm --network host -v "$RUNNER_TEMP/limm-db-dr:/work:ro" postgres:17-alpine \
+            psql "$restore_url" --single-transaction --variable ON_ERROR_STOP=1 \
+              --file /work/roles.sql \
+              --file /work/schema.sql \
+              --command 'SET session_replication_role = replica' \
+              --file /work/data.sql
+          docker run --rm --network host -v "$RUNNER_TEMP/limm-db-dr:/work:ro" postgres:17-alpine \
+            psql "$restore_url" --single-transaction --variable ON_ERROR_STOP=1 \
+              --file /work/history_schema.sql \
+              --file /work/history_data.sql
 
-          docker run --rm --network host -v "$RUNNER_TEMP/limm-db-dr:/work" -e PGPASSWORD="$password" postgres:17-alpine \
-            pg_restore --host 127.0.0.1 --port 55432 --username postgres --dbname limm_restore --no-owner --no-privileges --section=pre-data /work/database.dump
-          docker run --rm --network host -v "$RUNNER_TEMP/limm-db-dr:/work" -e PGPASSWORD="$password" postgres:17-alpine \
-            pg_restore --host 127.0.0.1 --port 55432 --username postgres --dbname limm_restore --no-owner --no-privileges --section=data /work/database.dump
-          docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -v ON_ERROR_STOP=1 -c \
-            "insert into auth.users (id) select id from public.profiles on conflict (id) do nothing;"
-          docker run --rm --network host -v "$RUNNER_TEMP/limm-db-dr:/work" -e PGPASSWORD="$password" postgres:17-alpine \
-            pg_restore --host 127.0.0.1 --port 55432 --username postgres --dbname limm_restore --no-owner --no-privileges --section=post-data /work/database.dump
-          required=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
-            "select count(*) from information_schema.tables where table_schema='public' and table_name in ('profiles','leads','lead_messages','audit_logs','whatsapp_inbound_jobs','client_file_recovery_runs');")
+          schema_contracts=$(docker run --rm --network host postgres:17-alpine psql "$restore_url" -v ON_ERROR_STOP=1 -AtF '|' -c \
+            "select (select count(*) from information_schema.tables where table_schema='public' and table_name in ('profiles','leads','lead_messages','audit_logs','whatsapp_inbound_jobs','client_file_recovery_runs')),(select count(*) from information_schema.tables where table_schema='auth' and table_name in ('users','identities','sessions','refresh_tokens')),(select count(*) from information_schema.tables where table_schema='storage' and table_name in ('buckets','objects')),(select count(*) from pg_constraint where conname='profiles_auth_user_fk' and conrelid='public.profiles'::regclass and confrelid='auth.users'::regclass),(select count(*) from public.profiles p left join auth.users u on u.id=p.id where u.id is null),(select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='limm_private' and p.proname in ('broadcast_inbox_activity','dispatch_client_file_integrity','dispatch_reliability_endpoint','dispatch_reliability_watchdog','dispatch_whatsapp_worker','prune_reliability_history')),(select count(*) from pg_trigger t join pg_proc p on p.oid=t.tgfoid join pg_namespace n on n.oid=p.pronamespace where not t.tgisinternal and n.nspname='limm_private' and p.proname='broadcast_inbox_activity'),(select count(*) from auth.users where coalesce(length(encrypted_password),0)>0),(select count(*) from supabase_migrations.schema_migrations);")
+          IFS='|' read -r required auth_tables storage_tables dependency_contract missing_profiles private_functions broadcast_triggers password_credentials migration_history <<< "$schema_contracts"
           test "$required" = "6"
-          dependency_contract=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
-            "select count(*) from pg_constraint where conname='profiles_auth_user_fk' and conrelid='public.profiles'::regclass and confrelid='auth.users'::regclass;")
+          test "$auth_tables" = "4"
+          test "$storage_tables" = "2"
           test "$dependency_contract" = "1"
-          missing_profile_stubs=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
-            "select count(*) from public.profiles p left join auth.users u on u.id=p.id where u.id is null;")
-          test "$missing_profile_stubs" = "0"
-          private_functions=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
-            "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='limm_private' and p.proname in ('broadcast_inbox_activity','dispatch_client_file_integrity','dispatch_reliability_endpoint','dispatch_reliability_watchdog','dispatch_whatsapp_worker','prune_reliability_history');")
+          test "$missing_profiles" = "0"
           test "$private_functions" = "6"
-          broadcast_triggers=$(docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -Atc \
-            "select count(*) from pg_trigger t join pg_proc p on p.oid=t.tgfoid join pg_namespace n on n.oid=p.pronamespace where not t.tgisinternal and n.nspname='limm_private' and p.proname='broadcast_inbox_activity';")
           test "$broadcast_triggers" = "5"
-          docker exec -e PGPASSWORD="$password" "$container" psql -U postgres -d limm_restore -v ON_ERROR_STOP=1 -Atc \
-            "select count(*) from public.profiles; select count(*) from public.leads; select count(*) from public.lead_messages; select count(*) from public.audit_logs;" > /dev/null
+          test "$password_credentials" -gt 0
+          test "$migration_history" -gt 0
+
+          restored_counts=$(docker run --rm --network host postgres:17-alpine psql "$restore_url" -v ON_ERROR_STOP=1 -AtF '|' -c \
+            "select (select count(*) from public.profiles),(select count(*) from public.leads),(select count(*) from public.lead_messages),(select count(*) from public.audit_logs),(select count(*) from public.whatsapp_inbound_jobs),(select count(*) from auth.users),(select count(*) from auth.identities),(select count(*) from storage.buckets),(select count(*) from storage.objects);")
+          IFS='|' read -r profiles leads messages audits inbound_jobs auth_users auth_identities storage_buckets storage_objects <<< "$restored_counts"
+          test "$profiles" = "$DR_PROFILE_COUNT"
+          test "$leads" = "$DR_LEAD_COUNT"
+          test "$messages" = "$DR_MESSAGE_COUNT"
+          test "$audits" = "$DR_AUDIT_COUNT"
+          test "$inbound_jobs" = "$DR_INBOUND_JOB_COUNT"
+          test "$auth_users" = "$DR_AUTH_USER_COUNT"
+          test "$auth_identities" = "$DR_AUTH_IDENTITY_COUNT"
+          test "$storage_buckets" = "$DR_STORAGE_BUCKET_COUNT"
+          test "$storage_objects" = "$DR_STORAGE_OBJECT_COUNT"
           echo "DR_SCHEMA_CHECKS=9" >> "$GITHUB_ENV"
-          echo "DR_ROW_CHECKS=4" >> "$GITHUB_ENV"
-          echo "Core business tables and their managed-auth dependency contract restored in isolation. Stub auth rows contain IDs only; no Supabase auth credentials were claimed as recovered." >> "$GITHUB_STEP_SUMMARY"
+          echo "DR_ROW_CHECKS=9" >> "$GITHUB_ENV"
+          echo "Business data, Auth users/password credentials, Storage metadata, and migration history restored into an isolated Supabase PostgreSQL target with source-artifact row counts matched. Storage object bytes remain covered by the separate client-file restore drill." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Record successful restore evidence
         shell: bash
@@ -354,7 +446,7 @@ jobs:
             --argjson schemaChecksPassed "$DR_SCHEMA_CHECKS" \
             --argjson rowChecksPassed "$DR_ROW_CHECKS" \
             --argjson workflowRunAttempt "$GITHUB_RUN_ATTEMPT" \
-            '{externalRunId:$externalRunId,runType:"restore_drill",status:"succeeded",provider:"independent_pg_dump_s3_core_no_managed_schemas",databaseScope:"core_business_data",managedAuthIncluded:false,managedStorageIncluded:false,artifactSha256:$artifactSha256,artifactSizeBytes:$artifactSizeBytes,sourceBackupExternalRunId:$sourceBackupExternalRunId,isolatedRestore:true,schemaChecksPassed:$schemaChecksPassed,rowChecksPassed:$rowChecksPassed,errorCode:"",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"pg_custom_gzip"}' \
+            '{externalRunId:$externalRunId,runType:"restore_drill",status:"succeeded",provider:"independent_pg_dump_s3_full_managed_schemas",databaseScope:"full_database",managedAuthIncluded:true,managedStorageIncluded:true,artifactSha256:$artifactSha256,artifactSizeBytes:$artifactSizeBytes,sourceBackupExternalRunId:$sourceBackupExternalRunId,isolatedRestore:true,schemaChecksPassed:$schemaChecksPassed,rowChecksPassed:$rowChecksPassed,errorCode:"",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"tar_gzip_portable_sql"}' \
             > "$RUNNER_TEMP/limm-db-dr/evidence.json"
           curl --silent --show-error --fail-with-body \
             -H "Authorization: Bearer ${RELIABILITY_EVIDENCE_TOKEN}" \
@@ -376,7 +468,7 @@ jobs:
             --arg repository "$GITHUB_REPOSITORY" \
             --arg commitSha "$GITHUB_SHA" \
             --argjson workflowRunAttempt "$GITHUB_RUN_ATTEMPT" \
-            '{externalRunId:$externalRunId,runType:"restore_drill",status:"failed",provider:"independent_pg_dump_s3_core_no_managed_schemas",databaseScope:"core_business_data",managedAuthIncluded:false,managedStorageIncluded:false,artifactSha256:"",artifactSizeBytes:0,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"workflow_restore_failed",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"pg_custom_gzip"}' \
+            '{externalRunId:$externalRunId,runType:"restore_drill",status:"failed",provider:"independent_pg_dump_s3_full_managed_schemas",databaseScope:"full_database",managedAuthIncluded:true,managedStorageIncluded:true,artifactSha256:"",artifactSizeBytes:0,isolatedRestore:false,schemaChecksPassed:0,rowChecksPassed:0,errorCode:"workflow_restore_failed",startedAt:$startedAt,completedAt:$completedAt,workflowRunId:$workflowRunId,workflowRunAttempt:$workflowRunAttempt,repository:$repository,commitSha:$commitSha,encrypted:true,compression:"tar_gzip_portable_sql"}' \
             > "$RUNNER_TEMP/limm-db-dr/failed-evidence.json"
           curl --silent --show-error --fail-with-body \
             -H "Authorization: Bearer ${RELIABILITY_EVIDENCE_TOKEN}" \
