@@ -15,6 +15,12 @@ const fallbackChromiumUsable = process.platform === "linux" && isUsableChromium(
 const bundledChromium = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?.trim()
   || (fallbackChromiumUsable ? fallbackChromium : "");
 const nextServerMode = process.env.PLAYWRIGHT_USE_PRODUCTION_SERVER === "1" ? "start" : "dev";
+const ci = process.env.CI === "true";
+const chromiumArgs = [
+  "--no-sandbox",
+  "--disable-dev-shm-usage",
+  ...(ci ? ["--disable-gpu"] : [])
+];
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -29,15 +35,17 @@ export default defineConfig({
   ],
   fullyParallel: false,
   workers: 1,
+  retries: ci ? 1 : 0,
   use: {
     baseURL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     actionTimeout: 10_000,
     navigationTimeout: 20_000,
-    launchOptions: bundledChromium
-      ? { executablePath: bundledChromium, args: ["--no-sandbox", "--disable-dev-shm-usage"] }
-      : undefined
+    launchOptions: {
+      ...(bundledChromium ? { executablePath: bundledChromium } : {}),
+      args: chromiumArgs
+    }
   },
   projects: [
     {
