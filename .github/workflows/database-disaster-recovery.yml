@@ -1,5 +1,5 @@
 name: Database Disaster Recovery
-# One-time scoped restore verification trigger; removed after proof is recorded.
+# One-time scoped restore verification trigger, attempt 2; removed after proof is recorded.
 
 on:
   push:
@@ -312,6 +312,7 @@ jobs:
           create extension pgcrypto with schema extensions;
           create schema vault;
           create table vault.decrypted_secrets (name text, decrypted_secret text);
+          drop schema public cascade;
           SQL
 
           docker run --rm --network host -v "$RUNNER_TEMP/limm-db-dr:/work" -e PGPASSWORD="$password" postgres:17-alpine \
