@@ -168,7 +168,7 @@ export function InboxTeamWorkspace({
 
   return (
     <section className="shrink-0 border-b border-command-line bg-command-panel2/85" data-testid="inbox-team-workspace">
-      <div className="flex min-h-10 flex-nowrap items-center gap-1.5 px-3 py-1.5 sm:min-h-11 sm:flex-wrap sm:gap-2 sm:px-4 sm:py-2">
+      <div className="flex min-h-[3.25rem] flex-nowrap items-center gap-1.5 px-3 py-1 sm:min-h-11 sm:flex-wrap sm:gap-2 sm:px-4 sm:py-2">
         <span className={`h-2 w-2 rounded-full ${realtimeStatus === "live" ? "bg-command-green" : realtimeStatus === "recovering" ? "bg-command-amber" : "bg-command-subtle"}`} aria-hidden="true" />
         <span className="hidden text-[11px] font-semibold text-command-muted sm:inline">
           {realtimeStatus === "live" ? "Realtime team" : realtimeStatus === "recovering" ? "Polling fallback" : realtimeStatus === "connecting" ? "Connecting team" : "Local team mode"}
@@ -195,17 +195,17 @@ export function InboxTeamWorkspace({
               disabled={Boolean(pending)}
               onClick={() => void mutate(mine ? "release" : "claim")}
               title={mine ? "Release this conversation to the team queue. Bot state is unchanged." : "Assign this conversation to yourself for 30 minutes. This does not pause the bot."}
-              className={`min-h-8 rounded-lg border px-2 py-1 text-[10px] font-semibold transition disabled:opacity-50 sm:px-2.5 sm:py-1.5 sm:text-[11px] ${mine ? "border-command-line text-command-muted hover:text-command-text" : "border-command-gold/45 bg-command-gold/10 text-command-gold hover:bg-command-gold/15"}`}
+              className={`min-h-11 rounded-lg border px-2 py-1 text-[11px] font-semibold transition disabled:opacity-50 sm:min-h-8 sm:px-2.5 sm:py-1.5 ${mine ? "border-command-line text-command-muted hover:text-command-text" : "border-command-gold/45 bg-command-gold/10 text-command-gold hover:bg-command-gold/15"}`}
             >
               {pending === "claim" ? "Assigning…" : pending === "release" ? "Releasing…" : mine ? "Release" : <><span className="sm:hidden">Assign</span><span className="hidden sm:inline">Assign to me</span></>}
             </button>
           ) : null}
-          <button type="button" onClick={() => setNotesOpen((open) => !open)} aria-expanded={notesOpen} className="min-h-8 rounded-lg border border-command-line px-2 py-1 text-[10px] font-semibold text-command-muted transition hover:border-command-gold/40 hover:text-command-text sm:px-2.5 sm:py-1.5 sm:text-[11px]">
+          <button type="button" onClick={() => setNotesOpen((open) => !open)} aria-expanded={notesOpen} className="min-h-11 rounded-lg border border-command-line px-2 py-1 text-[11px] font-semibold text-command-muted transition hover:border-command-gold/40 hover:text-command-text sm:min-h-8 sm:px-2.5 sm:py-1.5">
             Notes {state.notes.length ? `(${state.notes.length})` : ""}
           </button>
           {latestAiReply && ["boss", "admin"].includes(operator.role) ? (
-            <button type="button" onClick={() => setQualityOpen((open) => !open)} aria-expanded={qualityOpen} className="min-h-8 rounded-lg border border-command-cyan/35 bg-command-cyan/5 px-2 py-1 text-[10px] font-semibold text-command-cyan transition hover:bg-command-cyan/10 sm:px-2.5 sm:py-1.5 sm:text-[11px]">
-              Review AI
+            <button type="button" onClick={() => setQualityOpen((open) => !open)} aria-expanded={qualityOpen} className="min-h-11 rounded-lg border border-command-cyan/35 bg-command-cyan/5 px-2 py-1 text-[11px] font-semibold text-command-cyan transition hover:bg-command-cyan/10 sm:min-h-8 sm:px-2.5 sm:py-1.5">
+              <span className="sm:hidden">AI review</span><span className="hidden sm:inline">Review AI</span>
             </button>
           ) : null}
         </div>

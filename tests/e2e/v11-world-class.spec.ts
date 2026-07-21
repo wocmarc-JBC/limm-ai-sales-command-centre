@@ -70,9 +70,36 @@ test.describe("v11.1 world-class operator flow", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/inbox", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("inbox-layout")).toHaveAttribute("data-mobile-pane", "queue");
+    expect((await page.getByPlaceholder("Search").boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect((await page.getByTestId("inbox-chat-row").first().getByTestId("inbox-mark-spam").boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     await page.getByTestId("inbox-chat-row").first().getByRole("link", { name: /Open conversation with/ }).click();
     await expect(page.getByTestId("inbox-layout")).toHaveAttribute("data-mobile-pane", "chat");
     await expect(page.getByRole("button", { name: "Back to conversations" })).toBeVisible();
+    const mobileActionsTrigger = page.getByRole("button", { name: "Conversation actions" });
+    await expect(mobileActionsTrigger).toBeVisible();
+    expect((await mobileActionsTrigger.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await mobileActionsTrigger.click();
+    const mobileActions = page.getByTestId("inbox-mobile-actions");
+    await expect(mobileActions.getByRole("button", { name: "Conversation details" })).toBeVisible();
+    await expect(mobileActions.getByRole("link", { name: "Open full lead" })).toBeVisible();
+    await expect(page.getByTestId("inbox-mobile-automation-control")).toBeVisible();
+    await mobileActions.getByRole("button", { name: "Conversation details" }).click();
+    await expect(page.getByRole("dialog", { name: "Conversation details" })).toBeVisible();
+    await page.getByRole("button", { name: "Close conversation details" }).click();
+    await expect(mobileActionsTrigger).toBeFocused();
+    const mobileTeamButtons = page.getByTestId("inbox-team-workspace").getByRole("button");
+    const mobileTeamButtonHeights = await mobileTeamButtons.evaluateAll((buttons) => buttons
+      .filter((button) => window.getComputedStyle(button).display !== "none")
+      .map((button) => button.getBoundingClientRect().height));
+    expect(Math.min(...mobileTeamButtonHeights)).toBeGreaterThanOrEqual(44);
+    await expectNoHorizontalScroll(page);
+    await page.setViewportSize({ width: 320, height: 740 });
+    await expect(mobileActionsTrigger).toBeVisible();
+    const narrowTeamWidth = await page.getByTestId("inbox-team-workspace").evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth
+    }));
+    expect(narrowTeamWidth.scrollWidth).toBeLessThanOrEqual(narrowTeamWidth.clientWidth + 1);
     await expectNoHorizontalScroll(page);
 
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -258,11 +285,17 @@ test.describe("v11.1 world-class operator flow", () => {
     });
     expect(mobileReadability.paneHeight).toBeGreaterThanOrEqual(300);
     expect(mobileReadability.paneHeight / mobileReadability.chatHeight).toBeGreaterThanOrEqual(0.45);
-    expect(mobileReadability.teamHeight).toBeLessThanOrEqual(52);
+    expect(mobileReadability.teamHeight).toBeLessThanOrEqual(56);
     expect(mobileReadability.briefHeight).toBeLessThanOrEqual(50);
     expect(mobileReadability.composerHeight).toBeLessThanOrEqual(112);
     expect(mobileReadability.clientFontSize).toBeGreaterThanOrEqual(16);
     expect(mobileReadability.clientLineHeight).toBeGreaterThanOrEqual(26);
+    await messagePane.evaluate((element) => element.scrollTo({ top: Math.min(500, element.scrollHeight), behavior: "auto" }));
+    const jumpToLatest = page.getByTestId("inbox-jump-to-latest");
+    await expect(jumpToLatest).toBeVisible();
+    expect((await jumpToLatest.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await jumpToLatest.click();
+    await expect.poll(() => messagePane.evaluate((element) => element.scrollTop)).toBeLessThan(10);
     await expectNoHorizontalScroll(page);
     expect(errors).toEqual([]);
   });

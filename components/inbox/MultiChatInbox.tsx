@@ -28,6 +28,7 @@ import {
 } from "@/lib/actions";
 import { InboxSpamDialog } from "@/components/inbox/InboxSpamDialog";
 import { InboxOperatorBrief } from "@/components/inbox/InboxOperatorBrief";
+import { InboxMobileActions } from "@/components/inbox/InboxMobileActions";
 import { sortInboxLatestFirst } from "@/lib/inbox-conversation-order";
 import { getInboxQueueState, type InboxPrimaryStatus } from "@/lib/inbox-queue";
 import { collapseHistoricalDuplicateAiMessages, inboxMessageBodyText, inboxMessagePreview } from "@/lib/inbox-message-display";
@@ -567,16 +568,16 @@ const ChatRow = memo(function ChatRow({
           onClick={() => onMarkSpam(chat)}
           disabled={spamPending}
           data-testid="inbox-mark-spam"
-          className="absolute bottom-2.5 right-2 inline-flex min-h-7 items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold text-command-subtle opacity-80 transition hover:bg-command-red/10 hover:text-command-red group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-40"
+          className="absolute bottom-1.5 right-1.5 inline-flex h-11 w-11 items-center justify-center gap-1 rounded-lg text-[10px] font-semibold text-command-subtle opacity-80 transition hover:bg-command-red/10 hover:text-command-red group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-wait disabled:opacity-40 sm:bottom-2.5 sm:right-2 sm:h-auto sm:w-auto sm:min-h-7 sm:px-2 sm:py-1"
           aria-label={`Remove ${chat.displayName || chat.phone} as spam`}
           title="Remove from inbox as spam"
         >
-          {spamPending ? "Removing…" : (
+          {spamPending ? <><span className="sm:hidden">…</span><span className="hidden sm:inline">Removing…</span></> : (
             <>
-              <svg viewBox="0 0 20 20" fill="none" className="h-3 w-3" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 sm:h-3 sm:w-3" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                 <path d="M3.5 5.5h13M8 3.5h4M6 5.5l.7 11h6.6l.7-11M8.5 8.5v5M11.5 8.5v5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Spam
+              <span className="hidden sm:inline">Spam</span>
             </>
           )}
         </button>
@@ -1376,9 +1377,11 @@ export function MultiChatInbox({
   const [loadingMoreQueue, setLoadingMoreQueue] = useState(false);
   const [realtimeRevision, setRealtimeRevision] = useState(0);
   const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>(realtimeEnabled ? "connecting" : "disabled");
+  const [awayFromLatest, setAwayFromLatest] = useState(false);
   const messagePaneRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const detailsButtonRef = useRef<HTMLButtonElement>(null);
+  const desktopDetailsButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileActionsButtonRef = useRef<HTMLButtonElement>(null);
   const detailsDrawerRef = useRef<HTMLDivElement>(null);
   const previousDrawerFocusRef = useRef<HTMLElement | null>(null);
   const filterPreferenceReadyRef = useRef(false);
@@ -1431,7 +1434,8 @@ export function MultiChatInbox({
     if (!contextOpen) return;
     previousDrawerFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const drawer = detailsDrawerRef.current;
-    const detailsTrigger = detailsButtonRef.current;
+    const detailsTrigger = [desktopDetailsButtonRef.current, mobileActionsButtonRef.current]
+      .find((element) => element && element.getClientRects().length > 0);
     const focusableSelector = "button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary";
     const focusables = () => Array.from(drawer?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
     window.requestAnimationFrame(() => focusables()[0]?.focus());
@@ -1731,14 +1735,25 @@ export function MultiChatInbox({
   }, [activeLeadId, conversationMap, latestPersistedCursor, loadConversation, patchSummary, realtimeStatus]);
 
   useEffect(() => {
-    if (stickToLatestRef.current) messagePaneRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    if (stickToLatestRef.current) {
+      messagePaneRef.current?.scrollTo({ top: 0, behavior: "auto" });
+      setAwayFromLatest(false);
+    }
   }, [activeLeadId, latestVisibleMessageId]);
 
   const handleMessagePaneScroll = () => {
     const pane = messagePaneRef.current;
     if (!pane) return;
-    stickToLatestRef.current = pane.scrollTop < 160;
+    const isAtLatest = pane.scrollTop < 160;
+    stickToLatestRef.current = isAtLatest;
+    setAwayFromLatest(!isAtLatest);
   };
+
+  const jumpToLatest = useCallback(() => {
+    stickToLatestRef.current = true;
+    setAwayFromLatest(false);
+    messagePaneRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
 
   const visibleChatSummaries = useMemo(
     () => sortQueue(chatSummaries),
@@ -1803,6 +1818,7 @@ export function MultiChatInbox({
     setActiveLeadId(leadId);
     setMobilePane("chat");
     stickToLatestRef.current = true;
+    setAwayFromLatest(false);
     if (typeof window !== "undefined") {
       const nextUrl = new URL(window.location.href);
       nextUrl.pathname = "/inbox";
@@ -1870,6 +1886,7 @@ export function MultiChatInbox({
       setActiveLeadId(nextLeadId);
       setMobilePane(nextLeadId ? "chat" : "queue");
       stickToLatestRef.current = true;
+      setAwayFromLatest(false);
       const nextUrl = new URL(window.location.href);
       nextUrl.pathname = "/inbox";
       if (nextLeadId) nextUrl.searchParams.set("lead", nextLeadId);
@@ -2483,7 +2500,7 @@ export function MultiChatInbox({
                   <button
                     type="button"
                     onClick={nextWaitingChat}
-                    className="inline-flex min-h-9 items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-command-gold transition hover:bg-command-gold/10"
+                    className="inline-flex min-h-11 items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-command-gold transition hover:bg-command-gold/10 sm:min-h-9"
                     title="Open the next conversation waiting for Marcus"
                     aria-label="Next waiting chat"
                   >
@@ -2493,7 +2510,7 @@ export function MultiChatInbox({
                     <button
                       type="button"
                       onClick={() => selectionMode ? cancelSpamSelection() : setSelectionMode(true)}
-                      className={`inline-flex min-h-9 items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${selectionMode ? "bg-command-red/10 text-command-red" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
+                      className={`inline-flex min-h-11 items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold transition sm:min-h-9 ${selectionMode ? "bg-command-red/10 text-command-red" : "text-command-muted hover:bg-command-bg hover:text-command-text"}`}
                     >
                       {selectionMode ? "Cancel" : "Select"}
                     </button>
@@ -2512,7 +2529,7 @@ export function MultiChatInbox({
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search"
                     aria-keyshortcuts="/"
-                    className="w-full rounded-xl border border-command-line bg-command-bg/80 py-2 pl-9 pr-3 text-sm text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/60 focus:ring-2 focus:ring-command-gold/10"
+                    className="min-h-11 w-full rounded-xl border border-command-line bg-command-bg/80 py-2 pl-9 pr-3 text-sm text-command-text outline-none transition placeholder:text-command-subtle focus:border-command-gold/60 focus:ring-2 focus:ring-command-gold/10 sm:min-h-0"
                   />
                 </label>
                 <label>
@@ -2520,7 +2537,7 @@ export function MultiChatInbox({
                   <select
                     value={filter}
                     onChange={(event) => setFilter(event.target.value as InboxViewFilter)}
-                    className="w-[6.75rem] rounded-xl border border-command-line bg-command-bg/80 px-2 py-2 text-xs font-semibold text-command-muted outline-none focus:border-command-gold/60"
+                    className="min-h-11 w-[6.75rem] rounded-xl border border-command-line bg-command-bg/80 px-2 py-2 text-xs font-semibold text-command-muted outline-none focus:border-command-gold/60 sm:min-h-0"
                   >
                     {filters.map((item) => <option key={item} value={item}>{item}</option>)}
                   </select>
@@ -2551,7 +2568,7 @@ export function MultiChatInbox({
 
             {selectionMode ? (
               <div className="flex shrink-0 items-center gap-2 border-b border-command-red/25 bg-command-red/5 px-3 py-2" data-testid="inbox-bulk-spam-toolbar">
-                <button type="button" onClick={toggleSelectAllVisible} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-command-muted hover:bg-command-bg hover:text-command-text">
+                <button type="button" onClick={toggleSelectAllVisible} className="min-h-11 rounded-lg px-2 py-1.5 text-xs font-semibold text-command-muted hover:bg-command-bg hover:text-command-text sm:min-h-0">
                   {allVisibleSelected ? "Clear all" : "Select all"}
                 </button>
                 <span className="min-w-0 flex-1 text-xs text-command-subtle">{selectedSpamLeadIds.length} selected</span>
@@ -2559,7 +2576,7 @@ export function MultiChatInbox({
                   type="button"
                   onClick={requestBulkSpamRemoval}
                   disabled={!selectedSpamLeadIds.length || Boolean(spamPendingLeadIds.length)}
-                  className="rounded-lg bg-command-red px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-command-red/90 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="min-h-11 rounded-lg bg-command-red px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-command-red/90 disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-0"
                 >
                   Remove spam
                 </button>
@@ -2603,7 +2620,7 @@ export function MultiChatInbox({
                 <button
                   type="button"
                   onClick={() => setMobilePane("queue")}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-command-muted transition hover:bg-command-bg hover:text-command-text sm:h-10 sm:w-10 lg:hidden"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-command-muted transition hover:bg-command-bg hover:text-command-text sm:h-10 sm:w-10 lg:hidden"
                   aria-label="Back to conversations"
                 >
                   <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -2652,15 +2669,25 @@ export function MultiChatInbox({
                   </button>
                 </form>
                 <button
-                  ref={detailsButtonRef}
+                  ref={desktopDetailsButtonRef}
                   type="button"
                   onClick={() => setContextOpen(true)}
-                  className="inline-flex min-h-9 items-center rounded-xl border border-command-line bg-command-bg/60 px-2.5 py-1.5 text-command-muted transition hover:border-command-gold/50 hover:text-command-text sm:min-h-10 sm:px-3 sm:py-2"
+                  className="hidden min-h-10 items-center rounded-xl border border-command-line bg-command-bg/60 px-3 py-2 text-command-muted transition hover:border-command-gold/50 hover:text-command-text sm:inline-flex"
                   aria-haspopup="dialog"
                   aria-keyshortcuts="D"
                 >
                   Details
                 </button>
+                <InboxMobileActions
+                  leadId={activeConversation.lead.id}
+                  leadName={chat.displayName}
+                  botPaused={Boolean(activeConversation.lead.botPaused)}
+                  canManageSpam={canManageSpam}
+                  spamPending={Boolean(spamPendingLeadIds.length)}
+                  triggerRef={mobileActionsButtonRef}
+                  onOpenDetails={() => setContextOpen(true)}
+                  onMarkSpam={() => markConversationSpam(chat)}
+                />
               </div>
             </header>
 
@@ -2697,6 +2724,21 @@ export function MultiChatInbox({
             ) : null}
 
             <div ref={messagePaneRef} onScroll={handleMessagePaneScroll} data-testid="inbox-message-pane" className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2 sm:px-5 sm:py-4">
+              {awayFromLatest ? (
+                <div className="pointer-events-none sticky top-1 z-20 -mb-11 flex h-11 justify-center">
+                  <button
+                    type="button"
+                    onClick={jumpToLatest}
+                    data-testid="inbox-jump-to-latest"
+                    className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-command-gold/45 bg-command-panel2/95 px-4 py-2 text-xs font-semibold text-command-gold shadow-premium backdrop-blur transition hover:bg-command-card"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                      <path d="m7 14 5-5 5 5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Jump to latest
+                  </button>
+                </div>
+              ) : null}
               {activeMessagesNewestFirst.length ? (
                 <div className="mx-auto max-w-4xl space-y-3 sm:space-y-3.5">
                   <div className="hidden items-center justify-between gap-3 pb-1 sm:flex">
