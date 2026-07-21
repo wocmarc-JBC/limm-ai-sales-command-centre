@@ -1,3 +1,4 @@
+import { InboxWebVitals } from "@/components/InboxWebVitals";
 import { MultiChatInbox, type MultiChatConversation, type MultiChatSummary } from "@/components/inbox/MultiChatInbox";
 import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
@@ -183,6 +184,7 @@ export default async function WhatsAppInboxPage({
 
   return (
     <>
+      <InboxWebVitals />
       <header className="mb-3 hidden min-h-11 items-center justify-between gap-3 sm:flex">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">

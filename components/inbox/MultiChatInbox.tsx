@@ -571,7 +571,7 @@ const ChatRow = memo(function ChatRow({
           <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-command-subtle">
             <span className={`h-2 w-2 shrink-0 rounded-full ${chatStatusDotTone(chat)}`} aria-hidden="true" />
             <span className="truncate">{chatStatusLabel(chat)}</span>
-            {sla.status !== "inactive" ? <span className={`shrink-0 ${slaTextTone(sla.status)}`}>· {sla.label}</span> : null}
+            {sla.status !== "inactive" ? <span data-testid="inbox-sla" className={`shrink-0 ${slaTextTone(sla.status)}`}>· {sla.label}</span> : null}
             {!chat.intentClassified ? <span className="truncate text-command-amber">· Unclassified</span> : null}
             {chat.floorPlanReceived || chat.sitePhotosReceived ? <span className="shrink-0 text-command-green">· Files</span> : null}
             {activeAssignment(chat, clock) ? <span className="truncate text-command-cyan">· {chat.assignedName || "Owned"}</span> : null}

@@ -12,7 +12,8 @@ const ALLOWED_EVENTS = new Set([
   "queue_filter_changed",
   "older_messages_loaded",
   "realtime_recovered",
-  "notification_enabled"
+  "notification_enabled",
+  "web_vital"
 ]);
 
 function clean(value: unknown, max: number) {
@@ -30,11 +31,12 @@ export async function POST(request: Request) {
   if (!ALLOWED_EVENTS.has(eventName)) return NextResponse.json({ ok: false, error: "unsupported_event" }, { status: 400 });
   const metadata = payload.metadata && typeof payload.metadata === "object" && !Array.isArray(payload.metadata)
     ? Object.fromEntries(Object.entries(payload.metadata as Record<string, unknown>).flatMap(([key, value]) => {
-      if (!/^(filter|source|status|result|pane|count|realtimeStatus)$/.test(key)) return [];
+      if (!/^(filter|source|status|result|pane|count|realtimeStatus|metric|value|delta|rating|route|device|navigationType)$/.test(key)) return [];
       return [[key, typeof value === "string" ? value.slice(0, 80) : typeof value === "number" || typeof value === "boolean" ? value : String(value).slice(0, 80)]];
     }))
     : {};
-  await recordOperatorProductEvent({
+  const startedAt = Date.now();
+  const stored = await recordOperatorProductEvent({
     eventName,
     actorId: auth.profile.id,
     leadId: clean(payload.leadId, 80) || null,
@@ -42,5 +44,18 @@ export async function POST(request: Request) {
     durationMs: typeof payload.durationMs === "number" ? Math.max(0, Math.min(payload.durationMs, 86400000)) : null,
     metadata
   });
+  if (eventName === "web_vital") {
+    console.log(JSON.stringify({
+      level: "info",
+      message: "operator_web_vital_recorded",
+      metric: metadata.metric,
+      value: metadata.value,
+      rating: metadata.rating,
+      route: metadata.route,
+      device: metadata.device,
+      stored,
+      duration_ms: Date.now() - startedAt
+    }));
+  }
   return NextResponse.json({ ok: true }, { headers: rateLimitHeaders(rate) });
 }

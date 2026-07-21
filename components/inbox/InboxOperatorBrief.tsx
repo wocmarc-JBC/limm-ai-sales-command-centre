@@ -31,7 +31,7 @@ export function InboxOperatorBrief({
           <p className="truncate text-xs font-semibold text-command-text sm:mt-1 sm:text-sm">{brief.nextAction}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className={`relative rounded-full border py-0.5 pl-4 pr-2 text-[9px] font-semibold before:absolute before:left-2 before:top-1/2 before:h-1.5 before:w-1.5 before:-translate-y-1/2 before:rounded-full sm:py-1 sm:pl-[1.125rem] sm:pr-2.5 sm:text-[10px] ${slaTone[sla.status]}`} title={sla.detail}>
+          <span data-testid="inbox-sla" className={`relative rounded-full border py-0.5 pl-4 pr-2 text-[9px] font-semibold before:absolute before:left-2 before:top-1/2 before:h-1.5 before:w-1.5 before:-translate-y-1/2 before:rounded-full sm:py-1 sm:pl-[1.125rem] sm:pr-2.5 sm:text-[10px] ${slaTone[sla.status]}`} title={sla.detail}>
             {sla.label}
           </span>
           <button type="button" onClick={onOpenDetails} className="hidden min-h-8 items-center rounded-lg border border-command-line/80 bg-command-bg/35 px-2.5 py-1 text-[11px] font-semibold text-command-muted transition hover:border-command-gold/40 hover:bg-command-bg hover:text-command-text sm:inline-flex">
