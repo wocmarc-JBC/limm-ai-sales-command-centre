@@ -1432,7 +1432,10 @@ export function MultiChatInbox({
 
   useEffect(() => {
     if (!contextOpen) return;
-    previousDrawerFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const activeElement = document.activeElement;
+    previousDrawerFocusRef.current = activeElement instanceof HTMLElement && activeElement !== document.body
+      ? activeElement
+      : null;
     const drawer = detailsDrawerRef.current;
     const detailsTrigger = [desktopDetailsButtonRef.current, mobileActionsButtonRef.current]
       .find((element) => element && element.getClientRects().length > 0);
