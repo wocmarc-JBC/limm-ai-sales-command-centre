@@ -24,6 +24,7 @@ const chromiumArgs = [
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
   outputDir: "test-results/playwright",
   timeout: 30_000,
   expect: {

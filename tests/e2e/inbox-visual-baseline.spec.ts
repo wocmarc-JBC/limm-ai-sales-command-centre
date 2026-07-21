@@ -61,7 +61,7 @@ test.describe("operator inbox responsive visual baseline", () => {
       await expectNoHorizontalScroll(page);
       await settleVisualState(page);
       const target = path.join(evidenceRoot, `${viewport.name}.png`);
-      await page.screenshot({
+      const screenshot = await page.screenshot({
         path: target,
         fullPage: false,
         animations: "disabled",
@@ -70,6 +70,10 @@ test.describe("operator inbox responsive visual baseline", () => {
         maskColor: "#18202a"
       });
       expect(fs.statSync(target).size, `${viewport.name} must contain meaningful visual evidence.`).toBeGreaterThan(20_000);
+      expect(screenshot).toMatchSnapshot(`${viewport.name}.png`, {
+        maxDiffPixelRatio: 0.01,
+        threshold: 0.2
+      });
     }
   });
 });

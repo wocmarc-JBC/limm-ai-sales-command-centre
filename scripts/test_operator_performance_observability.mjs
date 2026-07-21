@@ -13,6 +13,7 @@ const endpoint = read("app/api/analytics/events/route.ts");
 const health = read("app/api/whatsapp/health/route.ts");
 const visualSpec = read("tests/e2e/inbox-visual-baseline.spec.ts");
 const workflow = read(".github/workflows/release-gate.yml");
+const visualBaselineRoot = path.join(ROOT, "tests/e2e/__screenshots__/inbox-visual-baseline.spec.ts");
 
 for (const metric of ["LCP", "INP", "CLS"]) {
   assert.ok(reporter.includes(`"${metric}"`), `${metric} must be captured by the operator Web Vitals reporter.`);
@@ -38,6 +39,17 @@ for (const marker of [
 }
 for (const viewport of ["320", "390", "900", "1440"]) {
   assert.ok(visualSpec.includes(`width: ${viewport}`), `Visual evidence must include the ${viewport}px viewport.`);
+}
+assert.ok(visualSpec.includes("toMatchSnapshot"), "Responsive inbox screenshots must be compared against committed baselines.");
+for (const baseline of [
+  "mobile-320-queue.png",
+  "mobile-390-actions.png",
+  "tablet-900-chat.png",
+  "desktop-1440-details.png"
+]) {
+  const baselinePath = path.join(visualBaselineRoot, baseline);
+  assert.ok(fs.existsSync(baselinePath), `Visual regression baseline is missing ${baseline}.`);
+  assert.ok(fs.statSync(baselinePath).size > 20_000, `Visual regression baseline ${baseline} is unexpectedly small.`);
 }
 assert.ok(workflow.includes("inbox-visual-baseline"), "Release Gate must retain responsive inbox visual evidence.");
 

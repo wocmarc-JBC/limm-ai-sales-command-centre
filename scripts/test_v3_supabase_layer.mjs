@@ -24,9 +24,12 @@ function exists(relativePath) {
 function walk(dir, output = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory() && isGeneratedFolderPath(path.relative(root, full))) continue;
-    output.push(full);
-    if (entry.isDirectory()) walk(full, output);
+    if (entry.isDirectory()) {
+      if (isGeneratedFolderPath(path.relative(root, full))) continue;
+      walk(full, output);
+    } else {
+      output.push(full);
+    }
   }
   return output;
 }
