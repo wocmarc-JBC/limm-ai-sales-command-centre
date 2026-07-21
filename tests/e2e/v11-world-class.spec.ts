@@ -261,6 +261,14 @@ test.describe("v11.1 world-class operator flow", () => {
     await expect(page.getByTestId("inbox-image-attachment").first()).toBeVisible();
     await expect(page.getByTestId("inbox-document-attachment")).toBeVisible();
     const messagePane = page.getByTestId("inbox-message-pane");
+    await expect.poll(() => messagePane.evaluate((element) =>
+      Math.max(0, element.scrollHeight - element.clientHeight - element.scrollTop)
+    )).toBeLessThan(10);
+    const messageTimestamps = await messagePane.locator("[data-testid='inbox-message-bubble'] time").evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("datetime") ?? "")
+    );
+    expect(messageTimestamps).toEqual([...messageTimestamps].sort((a, b) => a.localeCompare(b)));
+    await expect(messagePane.getByTestId("inbox-message-bubble").last()).toContainText("Hydrated site photo.jpg");
     await messagePane.evaluate((element) => element.scrollTo({ top: 0, behavior: "auto" }));
     const readableClientText = page.getByText("Client mobile readability check: I need help reviewing the kitchen scope and floor plan.", { exact: true });
     await expect(readableClientText).toBeVisible();
@@ -290,12 +298,14 @@ test.describe("v11.1 world-class operator flow", () => {
     expect(mobileReadability.composerHeight).toBeLessThanOrEqual(112);
     expect(mobileReadability.clientFontSize).toBeGreaterThanOrEqual(16);
     expect(mobileReadability.clientLineHeight).toBeGreaterThanOrEqual(26);
-    await messagePane.evaluate((element) => element.scrollTo({ top: Math.min(500, element.scrollHeight), behavior: "auto" }));
+    await messagePane.evaluate((element) => element.scrollTo({ top: 0, behavior: "auto" }));
     const jumpToLatest = page.getByTestId("inbox-jump-to-latest");
     await expect(jumpToLatest).toBeVisible();
     expect((await jumpToLatest.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     await jumpToLatest.click();
-    await expect.poll(() => messagePane.evaluate((element) => element.scrollTop)).toBeLessThan(10);
+    await expect.poll(() => messagePane.evaluate((element) =>
+      Math.max(0, element.scrollHeight - element.clientHeight - element.scrollTop)
+    )).toBeLessThan(10);
     await expectNoHorizontalScroll(page);
     expect(errors).toEqual([]);
   });
