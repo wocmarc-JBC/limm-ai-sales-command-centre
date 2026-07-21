@@ -177,7 +177,7 @@ check("publishes and chains the v10.6.0 Operator Advantage release", () => {
     "operatorSavedInboxViewsAvailable",
     "operatorSpamUndoAvailable",
     "operatorQueueSyncHealthAvailable",
-    "operatorInboxInitialBundleBudgetKb: 140"
+    "operatorInboxInitialBundleBudgetKb: 136"
   ]) {
     const count = (health.match(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length;
     const historicalVersionMarker = marker === "v10_6_0_operator_advantage" || marker === 'uiVersion: "v10.6.0"';

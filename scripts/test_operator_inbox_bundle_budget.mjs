@@ -22,11 +22,11 @@ const measured = routeFiles.map((relativePath) => {
 
 const totalGzipBytes = measured.reduce((sum, file) => sum + file.gzipBytes, 0);
 const routeSpecific = measured.filter((file) => file.relativePath.includes("/app/inbox/page-"));
-const initialBudgetBytes = 140 * 1024;
-const routeBudgetBytes = 30 * 1024;
+const initialBudgetBytes = 136 * 1024;
+const routeBudgetBytes = 27 * 1024;
 
-assert.ok(totalGzipBytes <= initialBudgetBytes, `Inbox initial JS is ${(totalGzipBytes / 1024).toFixed(1)} KB gzip; budget is 140 KB.`);
+assert.ok(totalGzipBytes <= initialBudgetBytes, `Inbox initial JS is ${(totalGzipBytes / 1024).toFixed(1)} KB gzip; budget is 136 KB.`);
 assert.equal(routeSpecific.length, 1, "Expected exactly one route-specific Inbox chunk.");
-assert.ok(routeSpecific[0].gzipBytes <= routeBudgetBytes, `Inbox route chunk is ${(routeSpecific[0].gzipBytes / 1024).toFixed(1)} KB gzip; budget is 30 KB.`);
+assert.ok(routeSpecific[0].gzipBytes <= routeBudgetBytes, `Inbox route chunk is ${(routeSpecific[0].gzipBytes / 1024).toFixed(1)} KB gzip; budget is 27 KB.`);
 
 console.log(`PASS: Inbox initial JS ${(totalGzipBytes / 1024).toFixed(1)} KB gzip; route chunk ${(routeSpecific[0].gzipBytes / 1024).toFixed(1)} KB gzip.`);

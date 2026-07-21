@@ -78,11 +78,12 @@ const outsideWindow = collapseHistoricalDuplicateAiMessages([
 ]);
 check("Identical AI replies outside ten minutes remain separate", outsideWindow.length === 2, JSON.stringify(outsideWindow));
 
-const component = fs.readFileSync(path.join(ROOT, "components/inbox/MultiChatInbox.tsx"), "utf8");
-check("Inbox labels legacy conversations as not yet classified", component.includes("Legacy — not yet classified") && component.includes("Pending classification"));
-check("Legacy conversations cannot generate sales AI drafts", component.includes("salesDraftingEnabled = conversation.context.intentClassified && conversation.context.leadEligible"));
-check("Raw delivery details still use the uncollapsed active message array", component.includes("activeMessages.filter((message) => message.providerMessageId)"));
-check("Operator can explicitly classify legacy history without sending", component.includes("reclassifyWhatsAppConversationAction"));
+const inboxComponent = fs.readFileSync(path.join(ROOT, "components/inbox/MultiChatInbox.tsx"), "utf8");
+const contextPanel = fs.readFileSync(path.join(ROOT, "components/inbox/InboxLeadContextPanel.tsx"), "utf8");
+check("Inbox labels legacy conversations as not yet classified", contextPanel.includes("Legacy — not yet classified") && contextPanel.includes("Pending classification"));
+check("Legacy conversations cannot generate sales AI drafts", inboxComponent.includes("salesDraftingEnabled = conversation.context.intentClassified && conversation.context.leadEligible"));
+check("Raw delivery details still use the uncollapsed active message array", contextPanel.includes("activeMessages.filter((message) => message.providerMessageId)"));
+check("Operator can explicitly classify legacy history without sending", contextPanel.includes("reclassifyWhatsAppConversationAction"));
 
 const failures = checks.filter((item) => !item.passed);
 for (const item of checks) console.log(`${item.passed ? "PASS" : "FAIL"}: ${item.name}${!item.passed && item.detail ? ` — ${item.detail}` : ""}`);
