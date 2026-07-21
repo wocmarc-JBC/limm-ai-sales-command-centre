@@ -42,7 +42,7 @@ test.describe("operator inbox responsive visual baseline", () => {
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto("/inbox", { waitUntil: "domcontentloaded" });
-      await expect(page.getByRole("heading", { name: "WhatsApp Inbox" })).toBeVisible();
+      await expect(page.getByTestId("inbox-layout")).toBeVisible();
       await expect(page.getByTestId("inbox-chat-row").first()).toBeVisible();
 
       if (viewport.state !== "queue" && viewport.width < 1024) {
