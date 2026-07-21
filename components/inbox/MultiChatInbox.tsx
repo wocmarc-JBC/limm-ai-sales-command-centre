@@ -445,10 +445,6 @@ function sortMessages(messages: LeadMessage[]) {
   return [...messages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-function sortMessagesNewestFirst(messages: LeadMessage[]) {
-  return [...messages].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
 function normalizedOutboundBody(message: LeadMessage) {
   return message.body.trim().replace(/\s+/g, " ").toLowerCase();
 }
@@ -1180,6 +1176,11 @@ export function MultiChatInbox({
   const filterPreferenceReadyRef = useRef(false);
   const savedViewsReadyRef = useRef(false);
   const stickToLatestRef = useRef(true);
+  const olderLoadSnapshotRef = useRef<{
+    leadId: string;
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
   const conversationCacheRef = useRef(conversationCache);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
   const realtimeActiveDirtyRef = useRef(false);
@@ -1404,11 +1405,11 @@ export function MultiChatInbox({
     ...(activeConversation?.messages ?? []),
     ...(activeConversation ? optimisticReplies[activeConversation.lead.id] ?? [] : [])
   ]), [activeConversation, olderMessages, optimisticReplies]);
-  const activeMessagesNewestFirst = useMemo(
-    () => sortMessagesNewestFirst(collapseHistoricalDuplicateAiMessages(activeMessages)),
+  const activeMessagesChronological = useMemo(
+    () => sortMessages(collapseHistoricalDuplicateAiMessages(activeMessages)),
     [activeMessages]
   );
-  const latestVisibleMessageId = activeMessagesNewestFirst[0]?.id ?? "";
+  const latestVisibleMessageId = activeMessagesChronological[activeMessagesChronological.length - 1]?.id ?? "";
   const pendingAttachmentSignature = useMemo(() => activeMessages
     .flatMap((message) => message.attachments ?? [])
     .filter((attachment) => attachment.availability !== "ready" && attachment.id.startsWith("missing-"))
@@ -1531,16 +1532,31 @@ export function MultiChatInbox({
   }, [activeLeadId, conversationMap, latestPersistedCursor, loadConversation, patchSummary, realtimeStatus]);
 
   useEffect(() => {
+    if (olderLoadSnapshotRef.current?.leadId === activeLeadId) return;
     if (stickToLatestRef.current) {
-      messagePaneRef.current?.scrollTo({ top: 0, behavior: "auto" });
+      const pane = messagePaneRef.current;
+      pane?.scrollTo({ top: pane.scrollHeight, behavior: "auto" });
       setAwayFromLatest(false);
     }
-  }, [activeLeadId, latestVisibleMessageId]);
+  }, [activeLeadId, latestVisibleMessageId, pendingAttachmentSignature]);
+
+  useEffect(() => {
+    const snapshot = olderLoadSnapshotRef.current;
+    const pane = messagePaneRef.current;
+    if (!snapshot) return;
+    if (!pane || snapshot.leadId !== activeLeadId) {
+      olderLoadSnapshotRef.current = null;
+      return;
+    }
+    pane.scrollTop = snapshot.scrollTop + (pane.scrollHeight - snapshot.scrollHeight);
+    olderLoadSnapshotRef.current = null;
+  }, [activeLeadId, activeMessagesChronological]);
 
   const handleMessagePaneScroll = () => {
     const pane = messagePaneRef.current;
     if (!pane) return;
-    const isAtLatest = pane.scrollTop < 160;
+    const distanceFromLatest = pane.scrollHeight - pane.clientHeight - pane.scrollTop;
+    const isAtLatest = distanceFromLatest < 160;
     stickToLatestRef.current = isAtLatest;
     setAwayFromLatest(!isAtLatest);
   };
@@ -1548,7 +1564,8 @@ export function MultiChatInbox({
   const jumpToLatest = useCallback(() => {
     stickToLatestRef.current = true;
     setAwayFromLatest(false);
-    messagePaneRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    const pane = messagePaneRef.current;
+    pane?.scrollTo({ top: pane.scrollHeight, behavior: "auto" });
   }, []);
 
   const visibleChatSummaries = useMemo(
@@ -2089,6 +2106,12 @@ export function MultiChatInbox({
       const response = await fetch(`/api/inbox/messages?leadId=${encodeURIComponent(activeConversation.lead.id)}&before=${encodeURIComponent(activeOlderState.cursor)}`, { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (data?.ok) {
+        const pane = messagePaneRef.current;
+        olderLoadSnapshotRef.current = pane ? {
+          leadId: activeConversation.lead.id,
+          scrollHeight: pane.scrollHeight,
+          scrollTop: pane.scrollTop
+        } : null;
         trackOperatorEvent({ eventName: "older_messages_loaded", leadId: activeConversation.lead.id, metadata: { count: Array.isArray(data.messages) ? data.messages.length : 0 } });
         setOlderMessages((current) => ({
           ...current,
@@ -2206,7 +2229,7 @@ export function MultiChatInbox({
     updatedAt: chat.lastActivityAt,
     version: 1
   } : null;
-  const latestAiReplyMessage = activeMessagesNewestFirst.find((message) =>
+  const latestAiReplyMessage = [...activeMessagesChronological].reverse().find((message) =>
     message.direction === "outbound"
     && !message.id.startsWith("optimistic-")
     && message.metadata?.aiGeneratedReply === true
@@ -2531,31 +2554,23 @@ export function MultiChatInbox({
                     className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-command-gold/45 bg-command-panel2/95 px-4 py-2 text-xs font-semibold text-command-gold shadow-premium backdrop-blur transition hover:bg-command-card"
                   >
                     <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                      <path d="m7 14 5-5 5 5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="m7 10 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                     Jump to latest
                   </button>
                 </div>
               ) : null}
-              {activeMessagesNewestFirst.length ? (
-                <div className="mx-auto max-w-4xl space-y-3 sm:space-y-3.5">
+              {activeMessagesChronological.length ? (
+                <div className="mx-auto flex min-h-full max-w-4xl flex-col justify-end gap-3 sm:gap-3.5">
                   <div className="hidden items-center justify-between gap-3 pb-1 sm:flex">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-command-gold">Latest messages</p>
-                      <p className="text-[10px] text-command-subtle">Newest first · older messages continue below</p>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-command-gold">Conversation history</p>
+                      <p className="text-[10px] text-command-subtle">Oldest first · latest message stays by the reply box</p>
                     </div>
-                    <span className="text-xs text-command-subtle">{activeMessagesNewestFirst.length} shown</span>
+                    <span className="text-xs text-command-subtle">{activeMessagesChronological.length} shown</span>
                   </div>
-                  {activeMessagesNewestFirst.map((message) => (
-                    <MessageBubble
-                      key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`}
-                      message={message}
-                      onRetry={handleRetryDraft}
-                      onRetryAttachment={operator.role === "viewer" ? undefined : handleRetryAttachment}
-                    />
-                  ))}
                   {activeOlderState.hasOlder ? (
-                    <div className="flex justify-center pt-2">
+                    <div className="flex justify-center pb-2">
                       <button
                         type="button"
                         onClick={loadEarlierMessages}
@@ -2567,6 +2582,14 @@ export function MultiChatInbox({
                       </button>
                     </div>
                   ) : null}
+                  {activeMessagesChronological.map((message) => (
+                    <MessageBubble
+                      key={`${message.id}-${message.providerMessageId || messageClientTempId(message)}`}
+                      message={message}
+                      onRetry={handleRetryDraft}
+                      onRetryAttachment={operator.role === "viewer" ? undefined : handleRetryAttachment}
+                    />
+                  ))}
                 </div>
               ) : (
                 <div className="flex h-full min-h-48 items-center justify-center">
