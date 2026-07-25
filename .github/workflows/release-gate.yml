@@ -31,7 +31,19 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - name: Verify through v11.2 durable release
-        run: npm run test:v11.2.0
+        shell: bash
+        run: |
+          mkdir -p test-results/release-gate
+          set -o pipefail
+          npm run test:v11.2.0 2>&1 | tee test-results/release-gate/v11-2.log
+      - name: Upload legacy gate diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gate-v11-2-diagnostics
+          path: test-results/release-gate/v11-2.log
+          if-no-files-found: warn
+          retention-days: 7
       - name: Verify v11.3 reliability and disaster recovery
         run: node scripts/test_v11_3_reliability_disaster_recovery.mjs
       - name: Verify v11.4 recovery readiness
