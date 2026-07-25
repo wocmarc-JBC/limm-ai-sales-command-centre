@@ -4,25 +4,35 @@ import {
   runClientFileOffsiteBackup,
   runClientFileRestoreDrill
 } from "@/lib/data/client-file-recovery-repository";
+import {
+  closeAbandonedClientFileRecoveryRuns,
+  type ClientFileRecoveryTask
+} from "@/lib/data/client-file-recovery-runtime-guard";
 import { authorizeReliabilityScheduler } from "@/lib/reliability-scheduler-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   const scheduler = await authorizeReliabilityScheduler(request);
   if (!scheduler) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  const task = new URL(request.url).searchParams.get("task") || "integrity";
+
+  const requestedTask = new URL(request.url).searchParams.get("task") || "integrity";
+  const task: ClientFileRecoveryTask | null = requestedTask === "backup"
+    || requestedTask === "restore_drill"
+    || requestedTask === "integrity"
+    ? requestedTask
+    : null;
+  if (!task) return NextResponse.json({ ok: false, error: "unknown_task" }, { status: 400 });
+
   try {
+    const abandonedRunsClosed = await closeAbandonedClientFileRecoveryRuns(task);
     const result = task === "backup"
       ? await runClientFileOffsiteBackup()
       : task === "restore_drill"
         ? await runClientFileRestoreDrill()
-        : task === "integrity"
-          ? await runClientFileIntegrityAudit()
-          : null;
-    if (!result) return NextResponse.json({ ok: false, error: "unknown_task" }, { status: 400 });
+        : await runClientFileIntegrityAudit();
 
     const ok = result.status === "succeeded" || result.status === "partial";
     return NextResponse.json({
@@ -37,7 +47,8 @@ export async function GET(request: Request) {
       copiedObjects: result.copiedObjectCount,
       failedObjects: result.failedObjectCount,
       manifestRecorded: Boolean(result.manifestSha256),
-      errorCode: result.errorCode
+      errorCode: result.errorCode,
+      abandonedRunsClosed
     }, {
       status: ok ? 200 : 503,
       headers: { "Cache-Control": "no-store" }

@@ -11,6 +11,8 @@ const evidenceAuth = read("lib/reliability-evidence-auth.ts");
 const watchdogRoute = read("app/api/operations/reliability-watchdog/route.ts");
 const evidenceRoute = read("app/api/operations/database-recovery-evidence/route.ts");
 const reliabilityRoute = read("app/api/operations/reliability/route.ts");
+const clientFileRoute = read("app/api/operations/client-file-recovery/route.ts");
+const clientFileRuntimeGuard = read("lib/data/client-file-recovery-runtime-guard.ts");
 const operations = read("components/operations/ReliabilityRecoveryPanel.tsx");
 const health = read("app/api/whatsapp/health/route.ts");
 const workflow = read(".github/workflows/database-disaster-recovery.yml");
@@ -91,6 +93,15 @@ assert.match(watchdogRoute, /clientMessagesSent: 0/);
 assert.match(reliabilityRoute, /acknowledgeReliabilityIncident/);
 assert.match(reliabilityRoute, /manualResolutionAllowed: false/);
 
+assert.match(clientFileRoute, /export const maxDuration = 300/);
+assert.match(clientFileRoute, /closeAbandonedClientFileRecoveryRuns\(task\)/);
+assert.match(clientFileRoute, /abandonedRunsClosed/);
+assert.match(clientFileRuntimeGuard, /ABANDONED_RECOVERY_RUN_MINUTES = 15/);
+assert.match(clientFileRuntimeGuard, /runtime_timeout_or_abandoned/);
+assert.match(clientFileRuntimeGuard, /\.eq\("status", "running"\)/);
+assert.match(clientFileRuntimeGuard, /\.lt\("started_at", cutoff\)/);
+assert.doesNotMatch(clientFileRuntimeGuard, /sendWhatsApp|WHATSAPP_ACCESS_TOKEN/);
+
 assert.match(alertEmail, /RELIABILITY_ALERT_EMAIL_ENABLED/);
 assert.match(alertEmail, /AbortSignal\.timeout\(8_000\)/);
 assert.match(alertEmail, /No client message was sent/);
@@ -120,7 +131,7 @@ assert.match(workflow, /COPY "auth"\\\."users" .*encrypted_password/);
 assert.match(workflow, /COPY "auth"\\\."identities"/);
 assert.match(workflow, /COPY "storage"\\\."buckets"/);
 assert.match(workflow, /COPY "storage"\\\."objects"/);
-assert.match(workflow, /prefix = "COPY \\\"" schema "\\\"\.\\\"" table "\\\" \("/);
+assert.match(workflow, /prefix = "COPY \\"" schema "\\"\.\\"" table "\\" \("/);
 assert.match(workflow, /rowCounts/);
 assert.match(workflow, /supabase db start --workdir/);
 assert.match(
@@ -159,4 +170,4 @@ assert.match(teamRepository, /recordOperatorProductEvent[\s\S]*getDataMode\(\) =
 assert.match(observability, /getDataMode\(\) === "Mock Mode"/);
 assert.match(rateLimit, /getDataMode\(\) === "Mock Mode"/);
 
-console.log("PASS v11.4 durable incident detection, fail-closed alerts, encrypted database backup evidence, and isolated restore readiness");
+console.log("PASS v11.4 durable incident detection, fail-closed alerts, bounded client-file recovery execution, encrypted database backup evidence, and isolated restore readiness");
