@@ -73,6 +73,12 @@ function metadataCount(metadata: Record<string, unknown> | null, key: string) {
   return safeCount(metadata?.[key]);
 }
 
+function ageMs(value: string | null | undefined) {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? Math.max(0, Date.now() - timestamp) : Number.POSITIVE_INFINITY;
+}
+
 async function latestRun(runType: string, status?: string) {
   let query = adminClient()
     .from("client_file_recovery_runs")
@@ -111,6 +117,22 @@ export async function getClientFileRecoverySnapshot(): Promise<ClientFileRecover
       safeCount(successfulBackup.processed_object_count) === safeCount(successfulBackup.copied_object_count) &&
       safeCount(successfulBackup.failed_object_count) === 0
     );
+    const latestSuccessTime = new Date(successfulBackup?.completed_at ?? 0).getTime();
+    const latestAttemptTime = new Date(latestBackupAttempt?.created_at ?? 0).getTime();
+    const newerFailedAttempt = Boolean(
+      latestBackupAttempt &&
+      ["failed", "not_configured"].includes(latestBackupAttempt.status) &&
+      latestAttemptTime > latestSuccessTime
+    );
+    const activeRunStalled = Boolean(
+      activeBackup && ageMs(activeBackup.last_progress_at) > 15 * 60 * 1000
+    );
+    const coveragePastRpo = uncoveredObjectCount > 0 && ageMs(coverage?.oldest_uncovered_at) > 26 * 60 * 60 * 1000;
+    const effectiveBackupStatus = newerFailedAttempt || activeRunStalled
+      ? "failed"
+      : coveragePastRpo
+        ? "partial"
+        : successfulBackup?.status ?? "not_run";
 
     return {
       available: true,
@@ -120,7 +142,7 @@ export async function getClientFileRecoverySnapshot(): Promise<ClientFileRecover
       latestIntegrityAt: integrity?.completed_at ?? null,
       latestIntegrityStatus: integrity?.status ?? "not_run",
       latestBackupAt: successfulBackup?.completed_at ?? null,
-      latestBackupStatus: successfulBackup?.status ?? "not_run",
+      latestBackupStatus: effectiveBackupStatus,
       latestBackupAttemptAt: latestBackupAttempt?.completed_at ?? latestBackupAttempt?.started_at ?? null,
       latestBackupAttemptStatus: latestBackupAttempt?.status ?? "not_run",
       latestRestoreDrillAt: restore?.completed_at ?? null,
@@ -129,7 +151,9 @@ export async function getClientFileRecoverySnapshot(): Promise<ClientFileRecover
       activeObjectCount,
       uncoveredObjectCount,
       oldestUncoveredAt: coverage?.oldest_uncovered_at ?? null,
-      failedObjectCount: safeCount(successfulBackup?.failed_object_count),
+      failedObjectCount: newerFailedAttempt
+        ? safeCount(latestBackupAttempt?.failed_object_count)
+        : safeCount(successfulBackup?.failed_object_count),
       manifestSha256: String(successfulBackup?.manifest_sha256 ?? ""),
       fullCoverageProven: latestSuccessComplete && uncoveredObjectCount === 0 && protectedObjectCount === activeObjectCount,
       backupInProgress: Boolean(activeBackup),
