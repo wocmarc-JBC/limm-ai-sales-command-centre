@@ -5,6 +5,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 const migration = read("supabase/migrations/20260725044500_v11_4_2_resumable_client_file_backups.sql");
 const finalizationLease = read("supabase/migrations/20260725044600_v11_4_2_backup_finalization_lease.sql");
 const finalizationRetry = read("supabase/migrations/20260725044700_v11_4_2_finalization_retry_dispatch.sql");
+const conflictFix = read("supabase/migrations/20260725065000_v11_4_2_backup_start_conflict_fix.sql");
 const batch = read("lib/data/client-file-backup-batch-repository.ts");
 const shared = read("lib/data/client-file-recovery-shared.ts");
 const repository = read("lib/data/client-file-recovery-repository.ts");
@@ -53,6 +54,13 @@ assert.match(finalizationLease, /finalizationRequired/);
 assert.match(finalizationRetry, /continuation_required = true/);
 assert.match(finalizationRetry, /finalizationRetryArmed/);
 assert.match(finalizationRetry, /make_interval\(secs => 55\)/);
+
+assert.match(conflictFix, /create or replace function public\.start_or_resume_client_file_backup/);
+assert.match(conflictFix, /on conflict on constraint client_file_recovery_items_run_id_storage_bucket_storage_pa_key/);
+assert.doesNotMatch(conflictFix, /on conflict \(run_id, storage_bucket, storage_path\)/);
+assert.match(conflictFix, /queueConflictTarget/);
+assert.match(conflictFix, /revoke all on function public\.start_or_resume_client_file_backup/);
+assert.doesNotMatch(conflictFix, /sendWhatsApp|WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/);
 
 assert.match(shared, /CLIENT_FILE_DAILY_MANIFEST_RETENTION = 35/);
 assert.match(shared, /CLIENT_FILE_MONTHLY_MANIFEST_RETENTION = 12/);
@@ -106,4 +114,4 @@ assert.match(schemaGate, /attempt_count/);
 assert.match(schemaGate, /client_file_resumable_backup_schema_ready/);
 assert.match(schemaGate, /4 readiness contracts/);
 
-console.log("PASS v11.4.2 resumable paginated client-file backup, durable checkpoints, lease safety, full-inventory coverage proof, and minute continuation recovery");
+console.log("PASS v11.4.2 resumable paginated client-file backup, durable checkpoints, unambiguous queue creation, lease safety, full-inventory coverage proof, and minute continuation recovery");
