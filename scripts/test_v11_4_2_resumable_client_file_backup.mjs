@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const migration = read("supabase/migrations/20260725044500_v11_4_2_resumable_client_file_backups.sql");
 const finalizationLease = read("supabase/migrations/20260725044600_v11_4_2_backup_finalization_lease.sql");
+const finalizationRetry = read("supabase/migrations/20260725044700_v11_4_2_finalization_retry_dispatch.sql");
 const batch = read("lib/data/client-file-backup-batch-repository.ts");
 const shared = read("lib/data/client-file-recovery-shared.ts");
 const repository = read("lib/data/client-file-recovery-repository.ts");
@@ -14,7 +15,10 @@ const schemaGate = read("scripts/verify_production_schema_gate.mjs");
 const packageJson = JSON.parse(read("package.json"));
 
 assert.match(packageJson.scripts["test:v11.4.2"], /test_v11_4_2_resumable_client_file_backup\.mjs/);
-assert.match(packageJson.scripts.verify, /test:v11\.4\.2/);
+assert.ok(
+  packageJson.scripts.verify.includes("test:v11.4.2") ||
+  packageJson.scripts.verify.includes("test_v11_4_2_resumable_client_file_backup.mjs")
+);
 
 assert.match(migration, /add column if not exists inventory_snapshot_at timestamptz/);
 assert.match(migration, /add column if not exists batch_count integer not null default 0/);
@@ -46,6 +50,9 @@ assert.doesNotMatch(migration, /grant execute[\s\S]*to anon|grant execute[\s\S]*
 assert.match(finalizationLease, /continuation_required = true/);
 assert.match(finalizationLease, /lease_token = case when v_pending > 0 then null else p_lease_token end/);
 assert.match(finalizationLease, /finalizationRequired/);
+assert.match(finalizationRetry, /continuation_required = true/);
+assert.match(finalizationRetry, /finalizationRetryArmed/);
+assert.match(finalizationRetry, /make_interval\(secs => 55\)/);
 
 assert.match(shared, /CLIENT_FILE_DAILY_MANIFEST_RETENTION = 35/);
 assert.match(shared, /CLIENT_FILE_MONTHLY_MANIFEST_RETENTION = 12/);
