@@ -11,6 +11,8 @@ const schedulerAuth = read("lib/reliability-scheduler-auth.ts");
 const jobs = read("lib/data/whatsapp-inbound-jobs-repository.ts");
 const retryPolicy = read("lib/whatsapp-job-reliability.ts");
 const recovery = read("lib/data/client-file-recovery-repository.ts");
+const backupBatch = read("lib/data/client-file-backup-batch-repository.ts");
+const recoveryShared = read("lib/data/client-file-recovery-shared.ts");
 const fileRepository = read("lib/data/lead-files-repository.ts");
 const health = read("app/api/whatsapp/health/route.ts");
 const operations = read("components/operations/ReliabilityRecoveryPanel.tsx");
@@ -56,20 +58,20 @@ assert.match(retryPolicy, /WHATSAPP_JOB_MAX_RETRY_DELAY_SECONDS = 5 \* 60/);
 
 assert.match(fileRepository, /createHash\("sha256"\)\.update\(input\.bytes\)\.digest\("hex"\)/);
 assert.match(fileRepository, /integrity_status: "verified"/);
-assert.match(recovery, /@aws-sdk\/client-s3/);
-assert.match(recovery, /objects\/\$\{inspection\.observedSha\.slice\(0, 2\)\}\/\$\{inspection\.observedSha\}/);
-assert.match(recovery, /DAILY_MANIFEST_RETENTION = 35/);
-assert.match(recovery, /MONTHLY_MANIFEST_RETENTION = 12/);
-assert.match(recovery, /DR_S3_RESTORE_BUCKET/);
+assert.match(backupBatch, /@aws-sdk\/client-s3/);
+assert.match(backupBatch, /objects\/\$\{inspection\.observedSha\.slice\(0, 2\)\}\/\$\{inspection\.observedSha\}/);
+assert.match(recoveryShared, /CLIENT_FILE_DAILY_MANIFEST_RETENTION = 35/);
+assert.match(recoveryShared, /CLIENT_FILE_MONTHLY_MANIFEST_RETENTION = 12/);
+assert.match(recoveryShared, /DR_S3_RESTORE_BUCKET/);
 assert.match(recovery, /restore-drills\/\$\{runId\}/);
 assert.match(recovery, /DeleteObjectCommand/);
-assert.doesNotMatch(recovery, /NEXT_PUBLIC_DR_|NEXT_PUBLIC_S3_/);
+assert.doesNotMatch(`${recovery}\n${backupBatch}\n${recoveryShared}`, /NEXT_PUBLIC_DR_|NEXT_PUBLIC_S3_/);
 
 assert.match(health, /v11_3_0_reliability_disaster_recovery/);
 assert.match(health, /clientFileDisasterRecoveryReady/);
 assert.match(health, /expiredProcessingLeaseRecoveryAvailable: true/);
 assert.match(operations, /Dead-letter queue/);
 assert.match(operations, /same-project Storage is not counted as a backup/);
-assert.match(read(".github/workflows/release-gate.yml"), /npm run test:v11\.(?:3\.0|4\.[01])/);
+assert.match(read(".github/workflows/release-gate.yml"), /npm run test:v11\.(?:3\.0|4\.[012])/);
 
 console.log("PASS v11.3 minute recovery, expired-lease reclaim, dead letters, checksums, offsite manifests, and restore-drill gate");
