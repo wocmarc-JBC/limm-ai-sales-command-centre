@@ -96,21 +96,59 @@ const requiredTables = [
   "project_accounts", "payment_records", "monthly_targets"
 ];
 
-const timeoutMs = Math.max(2000, Number(process.env.SUPABASE_VERIFY_TIMEOUT_MS || 12000));
+function boundedInteger(value, fallback, minimum, maximum) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(minimum, Math.min(maximum, Math.round(parsed)));
+}
+
+const timeoutMs = boundedInteger(process.env.SUPABASE_VERIFY_TIMEOUT_MS, 20_000, 5_000, 60_000);
+const maxAttempts = boundedInteger(process.env.SUPABASE_VERIFY_ATTEMPTS, 2, 1, 3);
+const retryDelayMs = boundedInteger(process.env.SUPABASE_VERIFY_RETRY_DELAY_MS, 500, 100, 2_000);
 const headers = {
   apikey: serviceKey,
   Authorization: `Bearer ${serviceKey}`,
   Accept: "application/json"
 };
 
+function retryableStatus(status) {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function retryableError(error) {
+  return error instanceof Error && (error.name === "AbortError" || error.name === "TypeError");
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 async function request(path, init = {}) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(`${url}${path}`, { ...init, headers: { ...headers, ...(init.headers || {}) }, signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`${url}${path}`, {
+        ...init,
+        headers: { ...headers, ...(init.headers || {}) },
+        signal: controller.signal
+      });
+      if (retryableStatus(response.status) && attempt < maxAttempts) {
+        await response.arrayBuffer().catch(() => undefined);
+        await delay(retryDelayMs * attempt);
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (!retryableError(error) || attempt >= maxAttempts) throw error;
+      await delay(retryDelayMs * attempt);
+    } finally {
+      clearTimeout(timeout);
+    }
   }
+  throw lastError ?? new Error("schema_gate_request_failed");
 }
 
 async function checkTable(table, columns) {
@@ -146,10 +184,10 @@ try {
   await checkRpc("world_class_operations_schema_ready");
   await checkRpc("client_file_resumable_backup_schema_ready");
   await checkRpcAvailable("get_whatsapp_queue_health");
-  console.log(`PASS: production schema deployment gate verified ${Object.keys(contract).length + requiredTables.length} tables and 4 readiness contracts.`);
+  console.log(`PASS: production schema deployment gate verified ${Object.keys(contract).length + requiredTables.length} tables and 4 readiness contracts with up to ${maxAttempts} bounded attempts.`);
 } catch (error) {
   const reason = error instanceof Error
-    ? (error.name === "AbortError" ? "schema_gate_timeout" : error.message)
+    ? (error.name === "AbortError" ? `schema_gate_timeout_after_${maxAttempts}_attempts` : error.message)
     : "schema_gate_failed";
   console.error(`FAIL: production schema deployment gate blocked this build (${reason.slice(0, 160)}).`);
   process.exit(1);
