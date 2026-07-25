@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdminClient } from "@/lib/data/supabase-admin";
-import { getClientFileRecoveryRuntime } from "@/lib/data/client-file-recovery-repository";
+import { getClientFileRecoveryRuntime } from "@/lib/data/client-file-recovery-shared";
 
 type RecoveryRunRow = {
   id: string;
