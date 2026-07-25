@@ -63,12 +63,14 @@ const contract = {
     "id", "run_type", "status", "destination", "source_object_count", "processed_object_count",
     "verified_object_count", "copied_object_count", "failed_object_count", "source_bytes",
     "copied_bytes", "manifest_key", "manifest_sha256", "error_code", "metadata",
-    "started_at", "completed_at", "created_at"
+    "inventory_snapshot_at", "batch_count", "last_progress_at", "continuation_required",
+    "lease_token", "lease_expires_at", "started_at", "completed_at", "created_at"
   ],
   client_file_recovery_items: [
     "id", "run_id", "lead_file_id", "storage_bucket", "storage_path", "mime_type",
     "expected_size_bytes", "observed_size_bytes", "expected_sha256", "observed_sha256",
-    "backup_object_key", "status", "error_code", "checked_at"
+    "backup_object_key", "status", "error_code", "source_uploaded_at", "attempt_count",
+    "last_attempt_at", "checked_at"
   ],
   reliability_incidents: [
     "id", "fingerprint", "incident_type", "component", "severity", "status", "title",
@@ -142,8 +144,9 @@ try {
   for (const table of requiredTables) await checkTable(table, [table === "settings" ? "key" : "id"]);
   await checkRpc("whatsapp_conversation_concurrency_schema_ready");
   await checkRpc("world_class_operations_schema_ready");
+  await checkRpc("client_file_resumable_backup_schema_ready");
   await checkRpcAvailable("get_whatsapp_queue_health");
-  console.log(`PASS: production schema deployment gate verified ${Object.keys(contract).length + requiredTables.length} tables and 3 readiness contracts.`);
+  console.log(`PASS: production schema deployment gate verified ${Object.keys(contract).length + requiredTables.length} tables and 4 readiness contracts.`);
 } catch (error) {
   const reason = error instanceof Error
     ? (error.name === "AbortError" ? "schema_gate_timeout" : error.message)
