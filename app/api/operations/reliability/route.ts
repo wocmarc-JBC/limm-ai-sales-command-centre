@@ -4,9 +4,9 @@ import { createAuditLog } from "@/lib/data/audit-repository";
 import {
   getClientFileRecoverySnapshot,
   runClientFileIntegrityAudit,
-  runClientFileOffsiteBackup,
   runClientFileRestoreDrill
 } from "@/lib/data/client-file-recovery-repository";
+import { runClientFileOffsiteBackupBatch } from "@/lib/data/client-file-backup-batch-repository";
 import { getDatabaseRecoverySnapshot } from "@/lib/data/database-recovery-repository";
 import {
   acknowledgeReliabilityIncident,
@@ -146,7 +146,10 @@ export async function POST(request: Request) {
 
   if (action === "run_backup" || action === "run_restore_drill") {
     if (access.actor.role !== "boss") return NextResponse.json({ ok: false, error: "boss_access_required" }, { status: 403, headers: rateLimitHeaders(rate) });
-    const result = action === "run_backup" ? await runClientFileOffsiteBackup() : await runClientFileRestoreDrill();
+    const backupBatch = action === "run_backup"
+      ? await runClientFileOffsiteBackupBatch({ mode: "scheduled" })
+      : null;
+    const result = backupBatch?.result ?? await runClientFileRestoreDrill();
     await createAuditLog({
       actorType: access.actor.role,
       actorName: access.actor.fullName,
@@ -155,11 +158,21 @@ export async function POST(request: Request) {
       action: action === "run_backup" ? "client_file_offsite_backup_run" : "client_file_restore_drill_run",
       entityType: "client_file_recovery_run",
       entityId: result.runId,
-      summary: `${action === "run_backup" ? "Offsite client-file backup" : "Client-file restore drill"} finished with status ${result.status}.`,
-      metadata: { processedObjects: result.processedObjectCount, copiedObjects: result.copiedObjectCount, failedObjects: result.failedObjectCount, manifestRecorded: Boolean(result.manifestSha256) }
+      summary: action === "run_backup" && backupBatch?.continuationRequired
+        ? `Offsite client-file backup checkpointed a batch and will continue automatically.`
+        : `${action === "run_backup" ? "Offsite client-file backup" : "Client-file restore drill"} finished with status ${result.status}.`,
+      metadata: {
+        processedObjects: result.processedObjectCount,
+        copiedObjects: result.copiedObjectCount,
+        failedObjects: result.failedObjectCount,
+        manifestRecorded: Boolean(result.manifestSha256),
+        continuationRequired: backupBatch?.continuationRequired ?? false,
+        batchProcessedObjects: backupBatch?.batchProcessedObjectCount ?? 0,
+        batchDurationMs: backupBatch?.batchDurationMs ?? 0
+      }
     });
     const ok = result.status === "succeeded" || result.status === "partial";
-    return NextResponse.json({ ok, result }, { status: ok ? 200 : 503, headers: { ...rateLimitHeaders(rate), "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok, result, continuationRequired: backupBatch?.continuationRequired ?? false }, { status: ok ? 200 : 503, headers: { ...rateLimitHeaders(rate), "Cache-Control": "no-store" } });
   }
 
   return NextResponse.json({ ok: false, error: "unknown_action" }, { status: 400, headers: rateLimitHeaders(rate) });

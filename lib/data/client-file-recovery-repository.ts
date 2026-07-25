@@ -1,25 +1,32 @@
 import "server-only";
 
-import { createHash, randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
+import { createHash, randomUUID } from "node:crypto";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
-  HeadObjectCommand,
-  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   type ServerSideEncryption
 } from "@aws-sdk/client-s3";
 import { getSupabaseAdminClient } from "@/lib/data/supabase-admin";
+import {
+  getClientFileRecoveryRuntime,
+  type ClientFileRecoveryRunResult,
+  type RecoveryRunStatus,
+  type RecoveryRunType
+} from "@/lib/data/client-file-recovery-shared";
 
-const DAILY_MANIFEST_RETENTION = 35;
-const MONTHLY_MANIFEST_RETENTION = 12;
-const DEFAULT_OBJECT_LIMIT = 100;
+export { getClientFileRecoveryRuntime } from "@/lib/data/client-file-recovery-shared";
+export type { ClientFileRecoveryRunResult } from "@/lib/data/client-file-recovery-shared";
+export {
+  getClientFileRecoverySnapshot,
+  type ClientFileRecoverySnapshot
+} from "@/lib/data/client-file-recovery-snapshot-repository";
+
+const DEFAULT_OBJECT_LIMIT = 500;
 const MAX_OBJECT_LIMIT = 500;
 
-type RecoveryRunType = "integrity" | "backup" | "restore_drill";
-type RecoveryRunStatus = "running" | "succeeded" | "partial" | "failed" | "not_configured";
 type RecoveryItemStatus = "verified" | "copied" | "missing" | "size_mismatch" | "checksum_mismatch" | "error" | "skipped";
 
 type LeadFileRecoveryRow = {
@@ -45,38 +52,6 @@ type RecoveryItem = {
   errorCode: string;
 };
 
-export type ClientFileRecoverySnapshot = {
-  available: boolean;
-  offsiteConfigured: boolean;
-  destination: string;
-  restoreBucketIsolated: boolean;
-  latestIntegrityAt: string | null;
-  latestIntegrityStatus: string;
-  latestBackupAt: string | null;
-  latestBackupStatus: string;
-  latestRestoreDrillAt: string | null;
-  latestRestoreDrillStatus: string;
-  protectedObjectCount: number;
-  failedObjectCount: number;
-  manifestSha256: string;
-};
-
-export type ClientFileRecoveryRunResult = {
-  runId: string;
-  runType: RecoveryRunType;
-  status: RecoveryRunStatus;
-  sourceObjectCount: number;
-  processedObjectCount: number;
-  verifiedObjectCount: number;
-  copiedObjectCount: number;
-  failedObjectCount: number;
-  sourceBytes: number;
-  copiedBytes: number;
-  manifestKey: string;
-  manifestSha256: string;
-  errorCode: string;
-};
-
 function adminClient() {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase admin credentials are required for client-file recovery operations.");
@@ -84,49 +59,19 @@ function adminClient() {
 }
 
 function safeCount(value: unknown) {
-  const number = Number(value ?? 0);
-  return Number.isFinite(number) && number >= 0 ? number : 0;
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-function sha256(bytes: Uint8Array | Buffer | string) {
-  return createHash("sha256").update(bytes).digest("hex");
+function sha256(value: Uint8Array | Buffer | string) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function safeErrorCode(error: unknown) {
-  const candidate = error && typeof error === "object" && "name" in error ? String(error.name) : "recovery_operation_failed";
+  const candidate = error && typeof error === "object" && "name" in error
+    ? String((error as { name?: unknown }).name ?? "recovery_operation_failed")
+    : "recovery_operation_failed";
   return candidate.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 100) || "recovery_operation_failed";
-}
-
-function destinationLabel() {
-  try {
-    const host = new URL(process.env.DR_S3_ENDPOINT || "").hostname;
-    return host ? `s3:${host}` : "s3-compatible";
-  } catch {
-    return "s3-compatible";
-  }
-}
-
-export function getClientFileRecoveryRuntime() {
-  const required = [
-    "DR_S3_ENDPOINT",
-    "DR_S3_REGION",
-    "DR_S3_BUCKET",
-    "DR_S3_ACCESS_KEY_ID",
-    "DR_S3_SECRET_ACCESS_KEY"
-  ];
-  const missing = required.filter((name) => !process.env[name]);
-  return {
-    configured: missing.length === 0,
-    missing,
-    destination: destinationLabel(),
-    bucketConfigured: Boolean(process.env.DR_S3_BUCKET),
-    restoreBucketIsolated: Boolean(
-      process.env.DR_S3_RESTORE_BUCKET &&
-      process.env.DR_S3_RESTORE_BUCKET !== process.env.DR_S3_BUCKET
-    ),
-    dailyManifestRetention: DAILY_MANIFEST_RETENTION,
-    monthlyManifestRetention: MONTHLY_MANIFEST_RETENTION
-  };
 }
 
 function getS3Client() {
@@ -166,7 +111,12 @@ async function createRun(runType: RecoveryRunType, destination: string) {
   return String(data.id);
 }
 
-async function finishRun(runId: string, result: Omit<ClientFileRecoveryRunResult, "runId" | "runType">, metadata: Record<string, unknown> = {}) {
+async function finishRun(
+  runId: string,
+  result: Omit<ClientFileRecoveryRunResult, "runId" | "runType">,
+  metadata: Record<string, unknown> = {}
+) {
+  const completedAt = new Date().toISOString();
   const { error } = await adminClient().from("client_file_recovery_runs").update({
     status: result.status,
     source_object_count: result.sourceObjectCount,
@@ -180,7 +130,11 @@ async function finishRun(runId: string, result: Omit<ClientFileRecoveryRunResult
     manifest_sha256: result.manifestSha256,
     error_code: result.errorCode,
     metadata,
-    completed_at: new Date().toISOString()
+    continuation_required: false,
+    lease_token: null,
+    lease_expires_at: null,
+    last_progress_at: completedAt,
+    completed_at: completedAt
   }).eq("id", runId);
   if (error) throw new Error(`Client-file recovery run completion failed: ${error.message}`);
 }
@@ -215,6 +169,7 @@ async function listSourceFiles(limit: number) {
     .neq("file_status", "voided")
     .gt("file_size_bytes", 0)
     .order("uploaded_at", { ascending: true })
+    .order("id", { ascending: true })
     .limit(normalizedLimit);
   if (error) throw new Error(`Client-file source inventory failed: ${error.message}`);
   return { rows: (data ?? []) as LeadFileRecoveryRow[], total: count ?? data?.length ?? 0 };
@@ -245,33 +200,41 @@ async function updateSourceIntegrity(row: LeadFileRecoveryRow, item: RecoveryIte
     integrity_verified_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
-  if (verified && !row.content_sha256) update.content_sha256 = item.observedSha256;
+  if (verified && item.observedSha256) update.content_sha256 = item.observedSha256;
   const { error } = await adminClient().from("lead_files").update(update).eq("id", row.id);
   if (error) throw new Error(`Client-file integrity state update failed: ${error.message}`);
 }
 
 function manifestFor(runId: string, items: RecoveryItem[]) {
   return {
-    schemaVersion: "limm-client-files-backup-manifest-v1",
+    schemaVersion: "limm-client-files-integrity-manifest-v1",
     runId,
     generatedAt: new Date().toISOString(),
     objectCount: items.length,
     objects: items
-      .filter((item) => item.status === "copied" || item.status === "verified")
+      .filter((item) => item.status === "verified")
       .map((item) => ({
         leadFileId: item.leadFileId,
         sourceBucket: item.storageBucket,
         sourcePath: item.storagePath,
         mimeType: item.mimeType,
         sizeBytes: item.observedSizeBytes,
-        sha256: item.observedSha256,
-        backupObjectKey: item.backupObjectKey
+        sha256: item.observedSha256
       }))
       .sort((a, b) => a.sourcePath.localeCompare(b.sourcePath))
   };
 }
 
-function summarize(runId: string, runType: RecoveryRunType, status: RecoveryRunStatus, sourceObjectCount: number, items: RecoveryItem[], manifestKey = "", manifestSha256 = "", errorCode = ""): ClientFileRecoveryRunResult {
+function summarize(
+  runId: string,
+  runType: RecoveryRunType,
+  status: RecoveryRunStatus,
+  sourceObjectCount: number,
+  items: RecoveryItem[],
+  manifestKey = "",
+  manifestSha256 = "",
+  errorCode = ""
+): ClientFileRecoveryRunResult {
   return {
     runId,
     runType,
@@ -345,7 +308,10 @@ export async function runClientFileIntegrityAudit(limit = DEFAULT_OBJECT_LIMIT):
     const failed = items.some((item) => !["verified", "skipped"].includes(item.status));
     const status: RecoveryRunStatus = failed ? "failed" : items.length < sourceObjectCount ? "partial" : "succeeded";
     const result = summarize(runId, "integrity", status, sourceObjectCount, items, "", manifestSha, failed ? "source_integrity_failed" : "");
-    await finishRun(runId, result, { objectLimit: Math.max(1, Math.min(limit, MAX_OBJECT_LIMIT)), fullInventoryProcessed: items.length >= sourceObjectCount });
+    await finishRun(runId, result, {
+      objectLimit: Math.max(1, Math.min(limit, MAX_OBJECT_LIMIT)),
+      fullInventoryProcessed: items.length >= sourceObjectCount
+    });
     return result;
   } catch (error) {
     const result = summarize(runId, "integrity", "failed", sourceObjectCount, items, "", "", safeErrorCode(error));
@@ -354,20 +320,14 @@ export async function runClientFileIntegrityAudit(limit = DEFAULT_OBJECT_LIMIT):
   }
 }
 
-async function objectExists(client: S3Client, bucket: string, key: string) {
-  try {
-    await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
-    return true;
-  } catch (error) {
-    const status = error && typeof error === "object" && "$metadata" in error
-      ? Number((error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode ?? 0)
-      : 0;
-    if (status === 404 || safeErrorCode(error) === "NotFound") return false;
-    throw error;
-  }
-}
-
-async function putPrivateObject(client: S3Client, bucket: string, key: string, body: Buffer, contentType: string, metadata: Record<string, string> = {}) {
+async function putPrivateObject(
+  client: S3Client,
+  bucket: string,
+  key: string,
+  body: Buffer,
+  contentType: string,
+  metadata: Record<string, string> = {}
+) {
   await client.send(new PutObjectCommand({
     Bucket: bucket,
     Key: key,
@@ -378,118 +338,9 @@ async function putPrivateObject(client: S3Client, bucket: string, key: string, b
   }));
 }
 
-async function enforceManifestRetention(client: S3Client, bucket: string, prefix: string, keep: number) {
-  const response = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix }));
-  const objects = (response.Contents ?? [])
-    .filter((item) => item.Key)
-    .sort((a, b) => Number(b.LastModified ?? 0) - Number(a.LastModified ?? 0));
-  for (const item of objects.slice(keep)) {
-    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: item.Key! }));
-  }
-  return Math.max(0, objects.length - keep);
-}
-
-export async function runClientFileOffsiteBackup(limit = DEFAULT_OBJECT_LIMIT): Promise<ClientFileRecoveryRunResult> {
-  const runtime = getClientFileRecoveryRuntime();
-  const runId = await createRun("backup", runtime.destination);
-  if (!runtime.configured) {
-    const result = summarize(runId, "backup", "not_configured", 0, [], "", "", "offsite_target_not_configured");
-    await finishRun(runId, result, { missingConfigurationCount: runtime.missing.length });
-    return result;
-  }
-
-  const items: RecoveryItem[] = [];
-  let sourceObjectCount = 0;
-  try {
-    const client = getS3Client();
-    const bucket = process.env.DR_S3_BUCKET!;
-    const source = await listSourceFiles(limit);
-    sourceObjectCount = source.total;
-    let newlyCopiedCount = 0;
-    for (const row of source.rows) {
-      try {
-        const bytes = await downloadSourceFile(row);
-        const inspection = inspectBytes(row, bytes);
-        if (inspection.status !== "verified") throw Object.assign(new Error("Source integrity check failed before backup."), { name: inspection.status });
-        const objectKey = `objects/${inspection.observedSha.slice(0, 2)}/${inspection.observedSha}`;
-        if (!(await objectExists(client, bucket, objectKey))) {
-          await putPrivateObject(client, bucket, objectKey, bytes, row.mime_type || "application/octet-stream", {
-            sha256: inspection.observedSha,
-            size: String(bytes.byteLength)
-          });
-          newlyCopiedCount += 1;
-        }
-        const item: RecoveryItem = {
-          leadFileId: row.id,
-          storageBucket: row.storage_bucket,
-          storagePath: row.storage_path,
-          mimeType: row.mime_type,
-          expectedSizeBytes: inspection.expectedSize,
-          observedSizeBytes: bytes.byteLength,
-          expectedSha256: inspection.expectedSha,
-          observedSha256: inspection.observedSha,
-          backupObjectKey: objectKey,
-          status: "copied",
-          errorCode: ""
-        };
-        await updateSourceIntegrity(row, { ...item, status: "verified" });
-        items.push(item);
-      } catch (error) {
-        items.push({
-          leadFileId: row.id,
-          storageBucket: row.storage_bucket,
-          storagePath: row.storage_path,
-          mimeType: row.mime_type,
-          expectedSizeBytes: safeCount(row.file_size_bytes),
-          observedSizeBytes: null,
-          expectedSha256: row.content_sha256 || "",
-          observedSha256: "",
-          backupObjectKey: "",
-          status: safeErrorCode(error) === "source_object_unavailable" ? "missing" : "error",
-          errorCode: safeErrorCode(error)
-        });
-      }
-    }
-
-    const manifest = manifestFor(runId, items);
-    const manifestBytes = Buffer.from(JSON.stringify(manifest));
-    const manifestSha = sha256(manifestBytes);
-    const date = new Date().toISOString().slice(0, 10);
-    const month = date.slice(0, 7);
-    const manifestKey = `manifests/daily/${date}/${runId}.json`;
-    await putPrivateObject(client, bucket, manifestKey, manifestBytes, "application/json", { sha256: manifestSha });
-    const monthlyKey = `manifests/monthly/${month}/${runId}.json`;
-    const existingMonthly = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: `manifests/monthly/${month}/`, MaxKeys: 1 }));
-    if (!existingMonthly.Contents?.length) {
-      await putPrivateObject(client, bucket, monthlyKey, manifestBytes, "application/json", { sha256: manifestSha });
-    }
-
-    await insertItems(runId, items);
-    const failed = items.some((item) => item.status !== "copied");
-    const status: RecoveryRunStatus = failed ? "failed" : items.length < sourceObjectCount ? "partial" : "succeeded";
-    const result = summarize(runId, "backup", status, sourceObjectCount, items, manifestKey, manifestSha, failed ? "offsite_copy_failed" : "");
-    const dailyDeleted = await enforceManifestRetention(client, bucket, "manifests/daily/", DAILY_MANIFEST_RETENTION);
-    const monthlyDeleted = await enforceManifestRetention(client, bucket, "manifests/monthly/", MONTHLY_MANIFEST_RETENTION);
-    await finishRun(runId, result, {
-      fullInventoryProcessed: items.length >= sourceObjectCount,
-      newlyCopiedCount,
-      contentAddressedObjects: true,
-      dailyManifestsDeleted: dailyDeleted,
-      monthlyManifestsDeleted: monthlyDeleted
-    });
-    return result;
-  } catch (error) {
-    await insertItems(runId, items).catch(() => undefined);
-    const result = summarize(runId, "backup", "failed", sourceObjectCount, items, "", "", safeErrorCode(error));
-    await finishRun(runId, result).catch(() => undefined);
-    return result;
-  }
-}
-
 async function responseBytes(body: { transformToByteArray?: () => Promise<Uint8Array> } | undefined) {
-  const stream = body;
-  if (!stream?.transformToByteArray) throw Object.assign(new Error("Backup object body was unavailable."), { name: "backup_object_body_unavailable" });
-  return Buffer.from(await stream.transformToByteArray());
+  if (!body?.transformToByteArray) throw Object.assign(new Error("Backup object body was unavailable."), { name: "backup_object_body_unavailable" });
+  return Buffer.from(await body.transformToByteArray());
 }
 
 export async function runClientFileRestoreDrill(): Promise<ClientFileRecoveryRunResult> {
@@ -526,10 +377,13 @@ export async function runClientFileRestoreDrill(): Promise<ClientFileRecoveryRun
     await finishRun(runId, result, { restoreBucketIsolated: runtime.restoreBucketIsolated });
     return result;
   }
+
   const all = candidates ?? [];
   const image = all.find((item) => String(item.mime_type).startsWith("image/"));
   const pdf = all.find((item) => String(item.mime_type) === "application/pdf");
-  const selected = Array.from(new Map([image, pdf, ...all].filter(Boolean).map((item) => [String(item!.backup_object_key), item!])).values()).slice(0, 2);
+  const selected = Array.from(
+    new Map([image, pdf, ...all].filter(Boolean).map((item) => [String(item!.backup_object_key), item!])).values()
+  ).slice(0, 2);
   const items: RecoveryItem[] = [];
   const client = getS3Client();
   const sourceBucket = process.env.DR_S3_BUCKET!;
@@ -608,53 +462,5 @@ export async function runClientFileRestoreDrill(): Promise<ClientFileRecoveryRun
     const result = summarize(runId, "restore_drill", "failed", selected.length, items, "", "", safeErrorCode(error));
     await finishRun(runId, result).catch(() => undefined);
     return result;
-  }
-}
-
-export async function getClientFileRecoverySnapshot(): Promise<ClientFileRecoverySnapshot> {
-  const runtime = getClientFileRecoveryRuntime();
-  try {
-    const { data, error } = await adminClient()
-      .from("client_file_recovery_runs")
-      .select("run_type,status,processed_object_count,copied_object_count,failed_object_count,manifest_sha256,completed_at")
-      .in("run_type", ["integrity", "backup", "restore_drill"])
-      .order("completed_at", { ascending: false })
-      .limit(100);
-    if (error) throw error;
-    const latest = (type: RecoveryRunType) => (data ?? []).find((row) => row.run_type === type);
-    const integrity = latest("integrity");
-    const backup = latest("backup");
-    const restore = latest("restore_drill");
-    return {
-      available: true,
-      offsiteConfigured: runtime.configured,
-      destination: runtime.destination,
-      restoreBucketIsolated: runtime.restoreBucketIsolated,
-      latestIntegrityAt: integrity?.completed_at ?? null,
-      latestIntegrityStatus: integrity?.status ?? "not_run",
-      latestBackupAt: backup?.completed_at ?? null,
-      latestBackupStatus: backup?.status ?? "not_run",
-      latestRestoreDrillAt: restore?.completed_at ?? null,
-      latestRestoreDrillStatus: restore?.status ?? "not_run",
-      protectedObjectCount: safeCount(backup?.copied_object_count),
-      failedObjectCount: safeCount(backup?.failed_object_count),
-      manifestSha256: String(backup?.manifest_sha256 ?? "")
-    };
-  } catch {
-    return {
-      available: false,
-      offsiteConfigured: runtime.configured,
-      destination: runtime.destination,
-      restoreBucketIsolated: runtime.restoreBucketIsolated,
-      latestIntegrityAt: null,
-      latestIntegrityStatus: "unavailable",
-      latestBackupAt: null,
-      latestBackupStatus: "unavailable",
-      latestRestoreDrillAt: null,
-      latestRestoreDrillStatus: "unavailable",
-      protectedObjectCount: 0,
-      failedObjectCount: 0,
-      manifestSha256: ""
-    };
   }
 }
