@@ -25,7 +25,7 @@ const packageJson = JSON.parse(read("package.json"));
 
 assert.match(packageJson.version, /^11\.4\.[01]$/);
 assert.match(packageJson.scripts["test:v11.4.0"], /test_v11_4_recovery_readiness\.mjs/);
-assert.match(packageJson.scripts.verify, /test:v11\.4\.0/);
+assert.match(packageJson.scripts.verify, /test:v11\.4\.[012]/);
 
 assert.match(migration, /create table if not exists public\.reliability_incidents/);
 assert.match(migration, /fingerprint text not null unique/);
@@ -99,7 +99,8 @@ assert.match(clientFileRoute, /abandonedRunsClosed/);
 assert.match(clientFileRuntimeGuard, /ABANDONED_RECOVERY_RUN_MINUTES = 15/);
 assert.match(clientFileRuntimeGuard, /runtime_timeout_or_abandoned/);
 assert.match(clientFileRuntimeGuard, /\.eq\("status", "running"\)/);
-assert.match(clientFileRuntimeGuard, /\.lt\("started_at", cutoff\)/);
+assert.match(clientFileRuntimeGuard, /\.lt\("last_progress_at", cutoff\)/);
+assert.doesNotMatch(clientFileRuntimeGuard, /\.lt\("started_at", cutoff\)/);
 assert.doesNotMatch(clientFileRuntimeGuard, /sendWhatsApp|WHATSAPP_ACCESS_TOKEN/);
 
 assert.match(alertEmail, /RELIABILITY_ALERT_EMAIL_ENABLED/);
