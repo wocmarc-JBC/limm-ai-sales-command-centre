@@ -16,6 +16,7 @@ const recoveryShared = read("lib/data/client-file-recovery-shared.ts");
 const fileRepository = read("lib/data/lead-files-repository.ts");
 const health = read("app/api/whatsapp/health/route.ts");
 const operations = read("components/operations/ReliabilityRecoveryPanel.tsx");
+const releaseGate = read(".github/workflows/release-gate.yml");
 const packageJson = JSON.parse(read("package.json"));
 
 assert.ok(["11.3.0", "11.4.0", "11.4.1"].includes(packageJson.version));
@@ -72,6 +73,7 @@ assert.match(health, /clientFileDisasterRecoveryReady/);
 assert.match(health, /expiredProcessingLeaseRecoveryAvailable: true/);
 assert.match(operations, /Dead-letter queue/);
 assert.match(operations, /same-project Storage is not counted as a backup/);
-assert.match(read(".github/workflows/release-gate.yml"), /npm run test:v11\.(?:3\.0|4\.[012])/);
+assert.match(releaseGate, /Verify v11\.3 reliability and disaster recovery/);
+assert.match(releaseGate, /Verify v11\.4\.2 resumable client-file backup/);
 
 console.log("PASS v11.3 minute recovery, expired-lease reclaim, dead letters, checksums, offsite manifests, and restore-drill gate");
