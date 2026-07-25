@@ -113,5 +113,12 @@ assert.match(schemaGate, /source_uploaded_at/);
 assert.match(schemaGate, /attempt_count/);
 assert.match(schemaGate, /client_file_resumable_backup_schema_ready/);
 assert.match(schemaGate, /4 readiness contracts/);
+assert.match(schemaGate, /SUPABASE_VERIFY_TIMEOUT_MS, 20_000/);
+assert.match(schemaGate, /SUPABASE_VERIFY_ATTEMPTS, 2/);
+assert.match(schemaGate, /retryableStatus/);
+assert.match(schemaGate, /retryableError/);
+assert.match(schemaGate, /response\.arrayBuffer\(\)/);
+assert.match(schemaGate, /schema_gate_timeout_after_\$\{maxAttempts\}_attempts/);
+assert.doesNotMatch(schemaGate, /WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/);
 
-console.log("PASS v11.4.2 resumable paginated client-file backup, durable checkpoints, unambiguous queue creation, lease safety, full-inventory coverage proof, and minute continuation recovery");
+console.log("PASS v11.4.2 resumable paginated client-file backup, durable checkpoints, unambiguous queue creation, lease safety, full-inventory coverage proof, bounded production schema retries, and minute continuation recovery");
