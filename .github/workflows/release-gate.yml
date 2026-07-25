@@ -30,7 +30,16 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm run test:v11.4.1
+      - name: Verify through v11.2 durable release
+        run: npm run test:v11.2.0
+      - name: Verify v11.3 reliability and disaster recovery
+        run: node scripts/test_v11_3_reliability_disaster_recovery.mjs
+      - name: Verify v11.4 recovery readiness
+        run: node scripts/test_v11_4_recovery_readiness.mjs
+      - name: Verify v11.4.1 conversation intelligence
+        run: node scripts/test_v11_4_1_conversation_intelligence.mjs
+      - name: Verify v11.4.2 resumable client-file backup
+        run: node scripts/test_v11_4_2_resumable_client_file_backup.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium
