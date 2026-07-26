@@ -52,6 +52,8 @@ jobs:
         run: node scripts/test_v11_4_1_conversation_intelligence.mjs
       - name: Verify v11.4.2 resumable client-file backup
         run: node scripts/test_v11_4_2_resumable_client_file_backup.mjs
+      - name: Verify v11.4.3 human handoff reliability
+        run: node scripts/test_v11_4_3_human_handoff_reliability.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium
