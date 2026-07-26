@@ -94,27 +94,40 @@ export async function GET(request: Request) {
       { id: a.id, lastActivityAt: leadLastActivityAt(a, summaryMessagesByLead.get(a.id) ?? []) },
       { id: b.id, lastActivityAt: leadLastActivityAt(b, summaryMessagesByLead.get(b.id) ?? []) }
     ));
-  const summaries = activeLeads.map((lead) => buildSummary(
+
+  const pagedActiveLeads = activeLeads.slice(0, limit);
+  const latestActivityConversations = pagedActiveLeads
+    .map((lead) => buildSummary(
+      lead,
+      summaryMessagesByLead.get(lead.id) ?? [],
+      allFiles.filter((file) => file.leadId === lead.id),
+      assignmentsByLead.get(lead.id)
+    ))
+    .sort(compareInboxLatestActivity);
+
+  const allSummaries = activeLeads.map((lead) => buildSummary(
     lead,
     summaryMessagesByLead.get(lead.id) ?? [],
     allFiles.filter((file) => file.leadId === lead.id),
     assignmentsByLead.get(lead.id)
   ));
-  const ranked = summaries
-    .filter((conversation) => !priorityOnly || conversation.requiresReply || conversation.needsMarcus || conversation.failedSend)
-    .sort((a, b) => b.bossPriorityScore - a.bossPriorityScore || compareInboxLatestActivity(a, b));
-  const conversations = ranked.slice(0, limit);
+  const priorityConversations = allSummaries
+    .filter((conversation) => conversation.requiresReply || conversation.needsMarcus || conversation.failedSend)
+    .sort((a, b) => b.bossPriorityScore - a.bossPriorityScore || compareInboxLatestActivity(a, b))
+    .slice(0, limit);
+  const conversations = priorityOnly ? priorityConversations : latestActivityConversations;
+  const triagePool = priorityOnly ? priorityConversations : allSummaries;
 
   return NextResponse.json({
     ok: true,
     conversations,
     triage: {
-      requiresReplyCount: ranked.filter((conversation) => conversation.requiresReply).length,
-      criticalCount: ranked.filter((conversation) => conversation.bossTriageCategory === "critical_client_issue").length,
-      qualifiedLeadCount: ranked.filter((conversation) => conversation.bossTriageCategory === "qualified_sales_lead").length,
-      nonSalesCount: ranked.filter((conversation) => ["vendor_or_business", "job_or_subcontractor", "spam_or_irrelevant"].includes(conversation.bossTriageCategory)).length
+      requiresReplyCount: triagePool.filter((conversation) => conversation.requiresReply).length,
+      criticalCount: triagePool.filter((conversation) => conversation.bossTriageCategory === "critical_client_issue").length,
+      qualifiedLeadCount: triagePool.filter((conversation) => conversation.bossTriageCategory === "qualified_sales_lead").length,
+      nonSalesCount: triagePool.filter((conversation) => ["vendor_or_business", "job_or_subcontractor", "spam_or_irrelevant"].includes(conversation.bossTriageCategory)).length
     },
-    hasMore: ranked.length > conversations.length || leads.length >= limit * 3,
-    nextCursor: ranked.length > conversations.length || leads.length >= limit * 3 ? String(offset + leads.length) : null
+    hasMore: activeLeads.length > pagedActiveLeads.length || leads.length >= limit * 3,
+    nextCursor: activeLeads.length > pagedActiveLeads.length || leads.length >= limit * 3 ? String(offset + leads.length) : null
   });
 }
