@@ -85,7 +85,7 @@ export function classifyBossTriage(lead: Lead, messages: LeadMessage[]): BossTri
     return { category: "vendor_or_business", priorityScore: latestInbound ? 30 : 18, reason: "Vendor or business proposal outside the renovation sales queue.", requiresReply: false };
   }
 
-  if (intent === "spam_scam_irrelevant" || route === "spam" || /loan|crypto|casino|betting|investment return/.test(text)) {
+  if (intent === "spam_scam_irrelevant" || /loan|crypto|casino|betting|investment return/.test(text)) {
     return { category: "spam_or_irrelevant", priorityScore: 0, reason: "Spam or irrelevant conversation.", requiresReply: false };
   }
 
