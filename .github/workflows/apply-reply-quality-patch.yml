@@ -1,24 +1,21 @@
 name: Apply Reply Quality Patch
 
 on:
-  push:
-    branches: [agent/reply-quality-gate]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, '[reply-quality-patched]') }}
+    if: ${{ github.head_ref == 'agent/reply-quality-gate' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/reply-quality-gate
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
       - name: Patch production composer and release gate
         shell: python
         run: |
@@ -63,14 +60,8 @@ jobs:
 
           release_path = Path('.github/workflows/release-gate.yml')
           release = release_path.read_text(encoding='utf-8')
-          anchor = '''      - name: Verify v11.4.3 human handoff reliability
-                run: node scripts/test_v11_4_3_human_handoff_reliability.mjs
-          '''
-          addition = '''      - name: Verify v11.4.3 human handoff reliability
-                run: node scripts/test_v11_4_3_human_handoff_reliability.mjs
-              - name: Verify v11.4.4 reply quality gate
-                run: node scripts/test_v11_4_4_reply_quality_gate.mjs
-          '''
+          anchor = '      - name: Verify v11.4.3 human handoff reliability\n        run: node scripts/test_v11_4_3_human_handoff_reliability.mjs\n'
+          addition = anchor + '      - name: Verify v11.4.4 reply quality gate\n        run: node scripts/test_v11_4_4_reply_quality_gate.mjs\n'
           if 'Verify v11.4.4 reply quality gate' not in release:
               assert anchor in release
               release = release.replace(anchor, addition, 1)
