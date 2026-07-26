@@ -56,6 +56,7 @@ export default async function ReplyPerformancePage({
     <>
       <PageHeader title="Reply Performance" eyebrow="Actual client outcomes after AI replies">
         <Link href="/revenue-intelligence" className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-sm font-semibold text-command-muted">Revenue intelligence</Link>
+        {auth.profile.role === "boss" ? <Link href="/reply-strategy-recommendations" className="inline-flex min-h-11 items-center rounded-xl border border-command-cyan/45 bg-command-cyan/10 px-4 py-2 text-sm font-semibold text-command-cyan">Strategy recommendations</Link> : null}
         <Link href="/inbox/priority" className="inline-flex min-h-11 items-center rounded-xl border border-command-gold/45 bg-command-gold/10 px-4 py-2 text-sm font-semibold text-command-gold">Marcus priority queue</Link>
       </PageHeader>
 
