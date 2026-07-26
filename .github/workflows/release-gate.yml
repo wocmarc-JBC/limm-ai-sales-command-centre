@@ -6,47 +6,13 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  patch-sales-inbox-heading-test:
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/non-sales-inbox-routing'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/non-sales-inbox-routing
-          fetch-depth: 0
-      - name: Update stale browser assertion
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('tests/e2e/v11-world-class.spec.ts')
-          text = path.read_text()
-          old = 'await expect(page.getByRole("heading", { name: "WhatsApp Inbox" })).toBeVisible();'
-          new = 'await expect(page.getByRole("heading", { name: /WhatsApp (?:Sales )?Inbox/ })).toBeVisible();'
-          if old in text:
-              path.write_text(text.replace(old, new, 1))
-          elif new not in text:
-              raise SystemExit('Expected inbox heading assertion was not found.')
-          PY
-      - name: Commit patched browser expectation when changed
-        shell: bash
-        run: |
-          if git diff --quiet -- tests/e2e/v11-world-class.spec.ts; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/e2e/v11-world-class.spec.ts
-          git commit -m "test: align browser QA with the sales-first inbox heading"
-          git push origin HEAD:agent/non-sales-inbox-routing
-
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
