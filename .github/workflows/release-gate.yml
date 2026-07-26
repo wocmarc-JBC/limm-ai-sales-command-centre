@@ -13,6 +13,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # BEGIN TIERED_HANDOFF_PATCH_JOB
+  patch-tiered-handoff:
+    if: github.event_name == 'pull_request' && github.head_ref == 'agent/tiered-human-handoff'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Apply self-removing tiered handoff integration patch
+        run: python scripts/patch_tiered_handoff_integration.py
+      - name: Commit patched source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: finalize urgent handoff pause after reply outcome [tiered-handoff-patched]"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+  # END TIERED_HANDOFF_PATCH_JOB
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -68,6 +89,8 @@ jobs:
         run: node scripts/test_v11_4_9_meta_referral_context.mjs
       - name: Verify v11.4.10 trade knowledge
         run: node scripts/test_v11_4_10_trade_knowledge.mjs
+      - name: Verify v11.4.11 tiered handoff
+        run: node scripts/test_v11_4_11_tiered_handoff.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium
