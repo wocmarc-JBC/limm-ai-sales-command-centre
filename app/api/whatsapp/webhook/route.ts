@@ -1,6 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { getWhatsAppRuntime } from "@/lib/whatsapp-config";
-import { parseWhatsAppInbound, parseWhatsAppStatuses } from "@/lib/whatsapp-parser";
+import { parseWhatsAppStatuses } from "@/lib/whatsapp-parser";
+import { parseWhatsAppInboundWithReferral } from "@/lib/whatsapp-referral-ingestion";
 import { verifyWhatsAppWebhookSignature } from "@/lib/whatsapp-webhook-signature";
 import { getSupabasePublicKey } from "@/lib/data/data-source";
 import { hasSupabaseAdminEnv } from "@/lib/data/supabase-admin";
@@ -87,10 +88,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "payload_parse_failed" }, { status: 400 });
     }
 
-    const messages = parseWhatsAppInbound(payload);
+    const messages = parseWhatsAppInboundWithReferral(payload);
     const statuses = parseWhatsAppStatuses(payload);
     const { runtime: whatsappRuntime, missing } = getMissingWebhookConfig();
-    console.info("whatsapp_payload_parsed", { messageCount: messages.length, statusCount: statuses.length });
+    console.info("whatsapp_payload_parsed", {
+      messageCount: messages.length,
+      statusCount: statuses.length,
+      confirmedReferralCount: messages.filter((message) => Boolean(message.whatsappReferral)).length
+    });
     console.info("whatsapp_config_checked", {
       liveInboundEnabled: whatsappRuntime.liveInboundEnabled,
       testAutoReplyEnabled: whatsappRuntime.testAutoReplyEnabled,
@@ -121,7 +126,13 @@ export async function POST(request: NextRequest) {
       status: "ok",
       durationMs: performance.now() - startedAt,
       providerMessageId: messages[0]?.providerMessageId,
-      metadata: { messageCount: messages.length, statusCount, jobCount: jobIds.length, releaseVersion: "11.2.0" }
+      metadata: {
+        messageCount: messages.length,
+        statusCount,
+        jobCount: jobIds.length,
+        confirmedReferralCount: messages.filter((message) => Boolean(message.whatsappReferral)).length,
+        releaseVersion: "11.4.9"
+      }
     }).catch(() => false);
 
     return NextResponse.json({
