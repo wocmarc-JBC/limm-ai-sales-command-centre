@@ -1,11 +1,12 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import type { Lead, LeadMessage } from "@/lib/types";
 import type { WhatsAppReplyDecision } from "@/lib/whatsapp-reply-decision";
+import { getSupabaseAdminClient } from "@/lib/data/supabase-admin";
 
 const DEFAULT_HANDOFF_EMAIL_TO = "limmwork@gmail.com";
-const HANDOFF_COOLDOWN_MS = 30 * 60 * 1000;
-const handoffCooldown = new Map<string, number>();
+const HANDOFF_COOLDOWN_SECONDS = 30 * 60;
 
 function envFlag(name: string, fallback = false) {
   const value = process.env[name];
@@ -23,10 +24,16 @@ function maskEmail(email: string) {
   return `${user.slice(0, 1)}***@${domain}`;
 }
 
+function adminClient() {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error("Supabase admin credentials are required for durable human handoff.");
+  return client;
+}
+
 export function getHandoffEmailRuntime() {
   const to = (process.env.HANDOFF_EMAIL_TO || DEFAULT_HANDOFF_EMAIL_TO).trim();
   const providerConfigured = Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST);
-  const enabled = envFlag("HANDOFF_EMAIL_ENABLED", false);
+  const enabled = envFlag("HANDOFF_EMAIL_ENABLED", providerConfigured);
   const domain = to.includes("@") ? to.split("@").pop() || "" : "";
 
   return {
@@ -42,11 +49,7 @@ export function getHandoffEmailRuntime() {
 }
 
 function latestConversationSummary(messages: LeadMessage[]) {
-  return messages
-    .slice(0, 5)
-    .reverse()
-    .map((message) => `${message.direction}: ${message.body}`.slice(0, 240))
-    .join("\n");
+  return messages.slice(0, 5).reverse().map((message) => `${message.direction}: ${message.body}`.slice(0, 240)).join("\n");
 }
 
 function handoffReasons(decision: WhatsAppReplyDecision) {
@@ -63,7 +66,6 @@ function handoffReasons(decision: WhatsAppReplyDecision) {
     Boolean(trace.needsHuman) ? safeString(trace.escalationReason) || "Human follow-up needed" : "",
     decision.confidence < 75 ? "Bot confidence low" : ""
   ].filter(Boolean);
-
   return [...new Set(reasons)];
 }
 
@@ -76,189 +78,90 @@ function subjectFor(reasons: string[]) {
   return "LIMM Lead Needs Attention - Human Follow-Up";
 }
 
-function buildEmailBody(input: {
-  lead: Lead;
-  phone: string;
-  latestMessage: string;
-  recentMessages: LeadMessage[];
-  decision: WhatsAppReplyDecision;
-  botReply: string;
-  reasons: string[];
-  traceId: string;
-}) {
+function buildEmailBody(input: { lead: Lead; phone: string; latestMessage: string; recentMessages: LeadMessage[]; decision: WhatsAppReplyDecision; botReply: string; reasons: string[]; traceId: string; }) {
   const trace = input.decision.blackBoxTrace;
   return [
-    "New WhatsApp lead needs human follow-up.",
-    "",
-    "Client:",
-    `Name: ${input.lead.clientName || "Unknown"}`,
-    `Phone: ${input.phone ? `+${input.phone}` : "Unknown"}`,
-    "",
-    "Reason:",
-    input.reasons.join(" + "),
-    "",
-    "Latest client message:",
-    input.latestMessage,
-    "",
+    "New WhatsApp lead needs human follow-up.", "",
+    "Client:", `Name: ${input.lead.clientName || "Unknown"}`, `Phone: ${input.phone ? `+${input.phone}` : "Unknown"}`, "",
+    "Reason:", input.reasons.join(" + "), "",
+    "Latest client message:", input.latestMessage, "",
     "Known details:",
     `Property type: ${input.lead.propertyType || safeString(trace.knownPropertyType) || "Unknown"}`,
     `Scope: ${input.lead.scopeSummary || "Unknown"}`,
     `Floor plan/image: ${trace.likelyFloorPlanDetected ? "Received" : "Not confirmed"}`,
     `Site photos: ${trace.likelySitePhotoDetected ? "Received" : "Not confirmed"}`,
-    `Address/area: ${safeString(trace.knownContextSummary).includes("address") ? "Received" : "Not confirmed"}`,
-    `Preferred appointment: ${input.decision.appointmentStatus !== "none" ? "Requested or pending review" : "Not requested"}`,
-    "",
-    "Detected intent(s):",
-    Array.isArray(trace.detectedIntents) ? trace.detectedIntents.join(", ") : input.decision.intent,
-    "",
-    "Bot reply sent:",
-    input.botReply || "(no bot reply)",
-    "",
-    "Short conversation summary:",
-    latestConversationSummary(input.recentMessages) || "(no previous messages loaded)",
-    "",
-    "Recommended Marcus action:",
-    input.decision.nextAction || "Review the lead and decide the next safe reply.",
-    "",
-    "CRM lead link:",
-    `/leads/${input.lead.id}`,
-    "",
-    "Timestamp:",
-    new Date().toISOString(),
-    "",
-    "Trace:",
-    input.traceId
+    `Preferred appointment: ${input.decision.appointmentStatus !== "none" ? "Requested or pending review" : "Not requested"}`, "",
+    "Bot status:", "Paused automatically. Needs Marcus is active.", "",
+    "Bot reply sent:", input.botReply || "(no bot reply)", "",
+    "Short conversation summary:", latestConversationSummary(input.recentMessages) || "(no previous messages loaded)", "",
+    "Recommended Marcus action:", input.decision.nextAction || "Review the lead and decide the next safe reply.", "",
+    "CRM lead link:", `/leads/${input.lead.id}`, "",
+    "Timestamp:", new Date().toISOString(), "", "Trace:", input.traceId
   ].join("\n");
 }
 
 async function sendViaResend(input: { to: string; subject: string; body: string }) {
   const key = process.env.RESEND_API_KEY;
-  if (!key) return { sent: false, skippedReason: "provider_not_configured" };
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: process.env.HANDOFF_EMAIL_FROM || "LIMM CRM <onboarding@resend.dev>",
-      to: input.to,
-      subject: input.subject,
-      text: input.body
-    })
-  });
-
-  if (!response.ok) {
-    return { sent: false, skippedReason: `provider_error_${response.status}` };
+  if (!key) return { sent: false, skippedReason: "provider_not_configured", providerMessageId: "" };
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: process.env.HANDOFF_EMAIL_FROM || "LIMM CRM <onboarding@resend.dev>", to: input.to, subject: input.subject, text: input.body }),
+      signal: AbortSignal.timeout(8_000)
+    });
+    const payload = await response.json().catch(() => ({})) as { id?: string };
+    if (!response.ok) return { sent: false, skippedReason: `provider_error_${response.status}`, providerMessageId: "" };
+    return { sent: true, skippedReason: "", providerMessageId: String(payload.id || "") };
+  } catch (error) {
+    return { sent: false, skippedReason: error instanceof Error && error.name === "TimeoutError" ? "provider_timeout" : "provider_request_failed", providerMessageId: "" };
   }
-  return { sent: true, skippedReason: "" };
 }
 
-export async function processWhatsAppHandoffEmail(input: {
-  lead: Lead;
-  phone: string;
-  latestMessage: string;
-  recentMessages: LeadMessage[];
-  decision: WhatsAppReplyDecision;
-  botReply: string;
-  traceId: string;
-}) {
+async function reserveDurableHandoff(input: { leadId: string; reasons: string[]; latestMessage: string; traceId: string }) {
+  const dedupeKey = createHash("sha256").update(`${input.leadId}:${input.reasons.slice().sort().join("|")}`).digest("hex");
+  const { data, error } = await adminClient().rpc("reserve_human_handoff", {
+    p_lead_id: input.leadId,
+    p_dedupe_key: dedupeKey,
+    p_reasons: input.reasons,
+    p_latest_message_preview: input.latestMessage.slice(0, 500),
+    p_trace_id: input.traceId,
+    p_cooldown_seconds: HANDOFF_COOLDOWN_SECONDS
+  });
+  if (error) throw new Error(`Human handoff reservation failed: ${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  return { reserved: Boolean(row?.reserved), eventId: String(row?.event_id || "") };
+}
+
+async function completeDurableHandoff(eventId: string, status: string, providerMessageId = "", errorCode = "") {
+  if (!eventId) return;
+  await adminClient().rpc("complete_human_handoff", {
+    p_event_id: eventId,
+    p_status: status,
+    p_provider: "resend",
+    p_provider_message_id: providerMessageId,
+    p_error_code: errorCode
+  }).then(() => undefined);
+}
+
+export async function processWhatsAppHandoffEmail(input: { lead: Lead; phone: string; latestMessage: string; recentMessages: LeadMessage[]; decision: WhatsAppReplyDecision; botReply: string; traceId: string; }) {
   const runtime = getHandoffEmailRuntime();
   const reasons = handoffReasons(input.decision);
-  const trigger = reasons.length > 0;
-  const cooldownKey = `${input.lead.id}:${reasons.join("|")}`;
-  const now = Date.now();
-  const previous = handoffCooldown.get(cooldownKey) ?? 0;
-  const cooldownApplied = trigger && previous > 0 && now - previous < HANDOFF_COOLDOWN_MS;
+  if (!reasons.length) return { triggered: false, sent: false, skippedReason: "not_required", cooldownApplied: false, reasons, trace: { handoffEmailTriggered: false, handoffEmailSent: false, handoffEmailSkippedReason: "not_required", handoffEmailCooldownApplied: false, handoffEmailToMasked: runtime.maskedTo } };
 
-  if (!trigger) {
-    return {
-      triggered: false,
-      sent: false,
-      skippedReason: "not_required",
-      cooldownApplied: false,
-      reasons,
-      trace: {
-        handoffEmailTriggered: false,
-        handoffEmailSent: false,
-        handoffEmailSkippedReason: "not_required",
-        handoffEmailCooldownApplied: false,
-        handoffEmailToMasked: runtime.maskedTo
-      }
-    };
-  }
-
-  if (cooldownApplied) {
-    return {
-      triggered: true,
-      sent: false,
-      skippedReason: "cooldown_active",
-      cooldownApplied: true,
-      reasons,
-      trace: {
-        handoffEmailTriggered: true,
-        handoffEmailSent: false,
-        handoffEmailSkippedReason: "cooldown_active",
-        handoffEmailCooldownApplied: true,
-        handoffEmailToMasked: runtime.maskedTo
-      }
-    };
-  }
+  const reservation = await reserveDurableHandoff({ leadId: input.lead.id, reasons, latestMessage: input.latestMessage, traceId: input.traceId });
+  if (!reservation.reserved) return { triggered: true, sent: false, skippedReason: "cooldown_active", cooldownApplied: true, reasons, trace: { handoffEmailTriggered: true, handoffEmailSent: false, handoffEmailSkippedReason: "cooldown_active", handoffEmailCooldownApplied: true, handoffEmailToMasked: runtime.maskedTo } };
 
   if (!runtime.enabled) {
-    handoffCooldown.set(cooldownKey, now);
-    return {
-      triggered: true,
-      sent: false,
-      skippedReason: "handoff_email_disabled",
-      cooldownApplied: false,
-      reasons,
-      trace: {
-        handoffEmailTriggered: true,
-        handoffEmailSent: false,
-        handoffEmailSkippedReason: "handoff_email_disabled",
-        handoffEmailCooldownApplied: false,
-        handoffEmailToMasked: runtime.maskedTo
-      }
-    };
+    await completeDurableHandoff(reservation.eventId, "disabled", "", "handoff_email_disabled");
+    return { triggered: true, sent: false, skippedReason: "handoff_email_disabled", cooldownApplied: false, reasons, trace: { handoffEmailTriggered: true, handoffEmailSent: false, handoffEmailSkippedReason: "handoff_email_disabled", handoffEmailCooldownApplied: false, handoffEmailToMasked: runtime.maskedTo } };
   }
-
   if (!runtime.providerConfigured) {
-    handoffCooldown.set(cooldownKey, now);
-    return {
-      triggered: true,
-      sent: false,
-      skippedReason: "provider_not_configured",
-      cooldownApplied: false,
-      reasons,
-      trace: {
-        handoffEmailTriggered: true,
-        handoffEmailSent: false,
-        handoffEmailSkippedReason: "provider_not_configured",
-        handoffEmailCooldownApplied: false,
-        handoffEmailToMasked: runtime.maskedTo
-      }
-    };
+    await completeDurableHandoff(reservation.eventId, "provider_not_configured", "", "provider_not_configured");
+    return { triggered: true, sent: false, skippedReason: "provider_not_configured", cooldownApplied: false, reasons, trace: { handoffEmailTriggered: true, handoffEmailSent: false, handoffEmailSkippedReason: "provider_not_configured", handoffEmailCooldownApplied: false, handoffEmailToMasked: runtime.maskedTo } };
   }
 
-  const subject = subjectFor(reasons);
-  const body = buildEmailBody({ ...input, reasons });
-  const sendResult = await sendViaResend({ to: runtime.to, subject, body });
-  handoffCooldown.set(cooldownKey, now);
-
-  return {
-    triggered: true,
-    sent: sendResult.sent,
-    skippedReason: sendResult.skippedReason,
-    cooldownApplied: false,
-    reasons,
-    trace: {
-      handoffEmailTriggered: true,
-      handoffEmailSent: sendResult.sent,
-      handoffEmailSkippedReason: sendResult.skippedReason,
-      handoffEmailCooldownApplied: false,
-      handoffEmailToMasked: runtime.maskedTo
-    }
-  };
+  const sendResult = await sendViaResend({ to: runtime.to, subject: subjectFor(reasons), body: buildEmailBody({ ...input, reasons }) });
+  await completeDurableHandoff(reservation.eventId, sendResult.sent ? "sent" : "delivery_failed", sendResult.providerMessageId, sendResult.skippedReason);
+  return { triggered: true, sent: sendResult.sent, skippedReason: sendResult.skippedReason, cooldownApplied: false, reasons, trace: { handoffEmailTriggered: true, handoffEmailSent: sendResult.sent, handoffEmailSkippedReason: sendResult.skippedReason, handoffEmailCooldownApplied: false, handoffEmailToMasked: runtime.maskedTo } };
 }
