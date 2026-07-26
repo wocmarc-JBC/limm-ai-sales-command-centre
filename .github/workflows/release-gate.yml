@@ -72,6 +72,8 @@ jobs:
         run: node scripts/test_v11_4_11_tiered_handoff.mjs
       - name: Verify v11.4.12 reply strategy recommendations
         run: node scripts/test_v11_4_12_reply_strategy_recommendations.mjs
+      - name: Verify v11.4.13 non-sales inbox routing
+        run: node scripts/test_v11_4_13_non_sales_inbox_routing.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium
