@@ -17,7 +17,9 @@ assert.match(priorityPage, /Login required/);
 
 assert.match(exportPanel, /conversation-export/);
 assert.match(exportPanel, /includeQa/);
-assert.match(exportPanel, /Download.*CSV/);
+assert.match(exportPanel, /Download \$\{format\.toUpperCase\(\)\}/);
+assert.match(exportPanel, /value="csv"/);
+assert.match(exportPanel, /value="json"/);
 assert.match(exportPanel, /credentials: "same-origin"/);
 assert.match(exportPanel, /never sends a WhatsApp message/);
 assert.match(exportPage, /auth\.profile\.role !== "boss"/);
