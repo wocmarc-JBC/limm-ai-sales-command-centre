@@ -10,6 +10,8 @@ export type WhatsAppReplyQualityGateResult = {
   questionCount: number;
   knownFloorPlan: boolean;
   knownSitePhotos: boolean;
+  repeatedQuestionTopic?: string;
+  repeatedQuestionCount?: number;
 };
 
 function normalize(value: unknown) {
@@ -75,49 +77,74 @@ function detectsSitePhotos(text: string) {
   return /site photo|site photos|photos?.*(?:sent|received|uploaded|attached)|image.*(?:sent|received|uploaded|attached)|message type image|image\/jpeg|image\/png/.test(text);
 }
 
+function isPriceQuestion(text: string) {
+  return /how much|roughly|rough cost|price|cost|quotation|quote|estimate|within budget/.test(text);
+}
+
+function repeatedQuestionCount(messages: LeadMessage[], matcher: (text: string) => boolean) {
+  return messages.filter((message) => message.direction === "inbound" && matcher(normalize(messageText(message)))).length;
+}
+
 function directAnswer(input: {
   text: string;
   intent: string;
   knownFloorPlan: boolean;
   knownSitePhotos: boolean;
+  repeatedPriceCount: number;
 }) {
-  const { text, intent, knownFloorPlan, knownSitePhotos } = input;
+  const { text, intent, knownFloorPlan, knownSitePhotos, repeatedPriceCount } = input;
 
   if (/laminated? wall cladding|laminate wall cladding/.test(text)) {
-    return "Yes, we can do laminated wall cladding. The suitable backing, laminate type and joint detailing will depend on the wall condition and the finish you want. Is this for a feature wall, bedroom, living room or another area?";
+    return { reply: "Yes, we can do laminated wall cladding. The suitable backing, laminate type and joint detailing will depend on the wall condition and the finish you want. Is this for a feature wall, bedroom, living room or another area?", reason: "answer_first_override", handoffRequired: false };
   }
 
   if (intent === "hacking_wall" || /can (?:you )?(?:hack|remove|demo).*(?:wall)|wall.*(?:hack|remove|demo)/.test(text)) {
     const evidence = knownFloorPlan
       ? "We already have the floor plan, so the next step is to identify the exact wall and check whether it is structural or contains concealed services."
       : "We will need the floor plan and exact wall location to check whether it is structural or contains concealed services.";
-    return `We can assess the wall hacking, but we cannot confirm it from a photo alone. ${evidence} Which wall are you planning to remove?`;
+    return { reply: `We can assess the wall hacking, but we cannot confirm it from a photo alone. ${evidence} Which wall are you planning to remove?`, reason: "answer_first_override", handoffRequired: false };
   }
 
   if (intent === "timeline_question" || intent === "timeline_followup" || /\b\d+\s*months?.*(?:finish|complete)|(?:finish|complete).*\b\d+\s*months?/.test(text)) {
-    return "Three months may be possible for some renovation scopes, but it can be tight for a full landed A&A project. It depends on approvals, structural work, material lead times and the final scope. Is the deadline tied to your move-in date?";
+    return { reply: "Three months may be possible for some renovation scopes, but it can be tight for a full landed A&A project. It depends on approvals, structural work, material lead times and the final scope. Is the deadline tied to your move-in date?", reason: "answer_first_override", handoffRequired: false };
   }
 
   if (intent === "appointment_request" || intent === "office_visit_request" || /\b(?:appointment|meeting|meet|appt|office visit)\b/.test(text)) {
-    return "Your preferred meeting time is noted, but it is not confirmed yet because Marcus needs to check availability. We will confirm the slot or propose the nearest available timing.";
+    return { reply: "Your preferred meeting time is noted, but it is not confirmed yet because Marcus needs to check availability. We will confirm the slot or propose the nearest available timing.", reason: "answer_first_override", handoffRequired: false };
   }
 
   if (intent === "portfolio_request" || /past works?|portfolio|project photos?/.test(text)) {
-    return "You can view our past works here: https://www.instagram.com/limmworks/\n\nWe can also shortlist more relevant examples after reviewing your property and scope.";
+    return { reply: "You can view our past works here: https://www.instagram.com/limmworks/\n\nWe can also shortlist more relevant examples after reviewing your property and scope.", reason: "answer_first_override", handoffRequired: false };
   }
 
   if (intent === "identity_question" || /are you (?:ai|human)|chatbot|\bbot\b/.test(text)) {
-    return "This WhatsApp chat is assisted by LIMM's enquiry assistant. Important project details and any matters needing judgment are routed to Marcus and the team.";
+    return { reply: "This WhatsApp chat is assisted by LIMM's enquiry assistant. Important project details and any matters needing judgment are routed to Marcus and the team.", reason: "answer_first_override", handoffRequired: false };
   }
 
-  if (intent === "price_question" || /how much|roughly|rough cost|price|cost|quotation|quote/.test(text)) {
-    if (knownFloorPlan || knownSitePhotos) {
-      return "I understand you are checking whether the project is within budget. We already have the files you sent, so I will not ask for them again. The useful next step is for the team to review the proposed scope and advise a realistic cost direction.";
+  if (intent === "price_question" || isPriceQuestion(text)) {
+    if (repeatedPriceCount >= 3) {
+      return {
+        reply: "I understand you need a clearer cost direction. You have already asked about pricing and provided enough information for the next review step, so I will stop the intake questions and route the conversation to Marcus and the team.",
+        reason: "repeated_price_question_handoff",
+        handoffRequired: true
+      };
     }
-    return "Cost depends mainly on the property, work scope, site condition and material level, so I do not want to give you a misleading figure. What are the main areas you plan to renovate?";
+    if (repeatedPriceCount >= 2) {
+      return {
+        reply: knownFloorPlan || knownSitePhotos
+          ? "I understand you are trying to confirm whether the project fits your budget. We already have the files and details you sent, so I will not repeat the same questions. The team should now review the proposed scope and advise a realistic cost direction."
+          : "I understand you are trying to confirm whether the project fits your budget. Rather than repeat the same general answer, the useful next step is for the team to review the main scope and advise a realistic cost direction.",
+        reason: "repeated_price_question_escalation",
+        handoffRequired: false
+      };
+    }
+    if (knownFloorPlan || knownSitePhotos) {
+      return { reply: "I understand you are checking whether the project is within budget. We already have the files you sent, so I will not ask for them again. The useful next step is for the team to review the proposed scope and advise a realistic cost direction.", reason: "answer_first_override", handoffRequired: false };
+    }
+    return { reply: "Cost depends mainly on the property, work scope, site condition and material level, so I do not want to give you a misleading figure. What are the main areas you plan to renovate?", reason: "answer_first_override", handoffRequired: false };
   }
 
-  return "";
+  return null;
 }
 
 function stripKnownFileRequests(reply: string, knownFloorPlan: boolean, knownSitePhotos: boolean) {
@@ -163,6 +190,7 @@ export function improveWhatsAppReplyQuality(input: {
   const history = normalize(`${inboundHistory(input.previousMessages)} ${leadContext(input.lead)}`);
   const knownFloorPlan = detectsFloorPlan(history) || normalize(input.lead.intakeProfile?.floorPlanStatus).includes("received");
   const knownSitePhotos = detectsSitePhotos(history) || normalize(input.lead.intakeProfile?.sitePhotosStatus).includes("received");
+  const repeatedPriceCount = isPriceQuestion(inbound) ? repeatedQuestionCount(input.previousMessages, isPriceQuestion) : 0;
 
   if (detectsFrustration(inbound)) {
     const known = [
@@ -190,9 +218,10 @@ export function improveWhatsAppReplyQuality(input: {
     text: inbound,
     intent: input.intent,
     knownFloorPlan,
-    knownSitePhotos
+    knownSitePhotos,
+    repeatedPriceCount
   });
-  let replyText = direct || input.candidateReply.trim();
+  let replyText = direct?.reply || input.candidateReply.trim();
   const initial = replyText;
   replyText = stripKnownFileRequests(replyText, knownFloorPlan, knownSitePhotos);
   replyText = capQuestions(replyText);
@@ -205,12 +234,14 @@ export function improveWhatsAppReplyQuality(input: {
   return {
     replyText,
     rewritten: replyText !== input.candidateReply.trim(),
-    reason: direct ? "answer_first_override" : replyText !== initial ? "memory_or_question_budget_rewrite" : "pass",
-    handoffRequired: false,
+    reason: direct?.reason || (replyText !== initial ? "memory_or_question_budget_rewrite" : "pass"),
+    handoffRequired: direct?.handoffRequired ?? false,
     answeredDirectQuestion: Boolean(direct) || !/[?]/.test(inbound),
     askedNextBestQuestion: questionCount === 1,
     questionCount,
     knownFloorPlan,
-    knownSitePhotos
+    knownSitePhotos,
+    repeatedQuestionTopic: repeatedPriceCount >= 2 ? "price" : undefined,
+    repeatedQuestionCount: repeatedPriceCount || undefined
   };
 }
