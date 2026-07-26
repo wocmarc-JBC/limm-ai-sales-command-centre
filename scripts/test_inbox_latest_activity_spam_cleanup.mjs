@@ -106,8 +106,10 @@ check("server page orders the complete active pool before limiting it", () => {
   assert.ok(inboxPage.includes(".sort((a, b) => compareInboxLatestActivity(a.summary, b.summary))"));
 });
 
-check("polling API uses the bounded database activity page before taking response rows", () => {
-  assert.ok(conversationsApi.includes("listInboxLeadCandidates({ limit: limit * 3, offset"));
+check("polling API uses a bounded database activity page before taking response rows", () => {
+  const legacyOverscan = conversationsApi.includes("listInboxLeadCandidates({ limit: limit * 3, offset");
+  const laneIsolationOverscan = conversationsApi.includes("listInboxLeadCandidates({ limit: 200, offset");
+  assert.ok(legacyOverscan || laneIsolationOverscan);
   const activeStart = conversationsApi.indexOf("const activeLeads");
   const sortIndex = conversationsApi.indexOf(".sort((a, b) => compareInboxLatestActivity(", activeStart);
   const sliceIndex = conversationsApi.indexOf("activeLeads.slice(0, limit)", activeStart);

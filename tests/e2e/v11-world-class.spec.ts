@@ -26,7 +26,7 @@ test.describe("v11.1 world-class operator flow", () => {
     const errors = captureErrors(page);
 
     await page.goto("/inbox", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "WhatsApp Inbox" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /WhatsApp (?:Sales )?Inbox/ })).toBeVisible();
     await expect(page.getByText("Latest chat first · view remembered")).toBeVisible();
 
     const rows = page.getByTestId("inbox-chat-row");

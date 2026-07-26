@@ -89,7 +89,13 @@ check("Quotation send gate rejects non-sales", quotationRepository.includes('mis
 
 const inboxPage = read("app/inbox/page.tsx");
 const inboxApi = read("app/api/inbox/conversations/route.ts");
-check("Operator inbox explicitly includes routed non-sales conversations", inboxPage.includes("includeNonSales: true") && inboxApi.includes("includeNonSales: true"));
+const legacyAllRoutesInbox = inboxPage.includes("includeNonSales: true") && inboxApi.includes("includeNonSales: true");
+const dedicatedNonSalesLanes =
+  inboxPage.includes("leadMatchesInboxLane(lead, lane)") &&
+  inboxPage.includes('href="/inbox?view=non-sales"') &&
+  inboxApi.includes("leadMatchesInboxLane(lead, lane)") &&
+  inboxApi.includes('request.headers.get("referer")');
+check("Operator inbox explicitly supports routed non-sales review", legacyAllRoutesInbox || dedicatedNonSalesLanes);
 check("Non-sales bypasses sales lifecycle hiding only in inbox", inboxPage.includes("lead.leadEligible === false || isActiveProductionLeadForDailyScreens"));
 
 const leadList = read("app/leads/page.tsx");
