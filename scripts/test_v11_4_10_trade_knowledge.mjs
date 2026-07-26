@@ -28,11 +28,11 @@ for (const marker of [
 
 assert.match(knowledge, /priceQuestion\(text\)/);
 assert.match(knowledge, /if \(!text \|\| !questionLike\(text\) \|\| priceQuestion\(text\)\) return null/);
-assert.match(knowledge, /cannot be confirmed as removable from a photo alone/);
+assert.match(knowledge, /should not be confirmed as removable from a photo alone/);
 assert.match(knowledge, /Approval requirements depend on the property/);
 assert.match(knowledge, /Which appliance, light or socket are you adding or relocating\?/);
 assert.match(knowledge, /Which fixture are you moving or installing\?/);
-assert.doesNotMatch(knowledge, /\$\d|S\$\d|guaranteed approval|guarantee approval|zero leakage guaranteed/i);
+assert.doesNotMatch(knowledge, /\$\d|S\$\d|We guarantee|approval is guaranteed|zero leakage is guaranteed/i);
 assert.doesNotMatch(knowledge, /WHATSAPP_ACCESS_TOKEN|sendWhatsApp|WhatsAppCloudApiAdapter/);
 
 assert.match(qualityGate, /buildTradeKnowledgeReply/);
