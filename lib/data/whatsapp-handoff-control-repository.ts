@@ -6,6 +6,11 @@ import { getMockStore } from "@/lib/data/mock-store";
 import { getSupabaseAdminClient } from "@/lib/data/supabase-admin";
 import type { WhatsAppHandoffTier } from "@/lib/whatsapp-handoff-tier";
 
+export type WhatsAppHandoffFinalOutcome =
+  | "reply_sent"
+  | "reply_send_failed"
+  | "post_send_persistence_failed";
+
 function adminClient() {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase admin credentials are required for tiered WhatsApp handoff control.");
@@ -57,6 +62,7 @@ async function audit(input: {
   action: string;
   pauseApplied: boolean;
   botContinues: boolean;
+  outcome?: WhatsAppHandoffFinalOutcome;
 }) {
   await createAuditLog({
     actorType: "system",
@@ -78,6 +84,7 @@ async function audit(input: {
       handoffReasons: input.reasons,
       pauseApplied: input.pauseApplied,
       botContinues: input.botContinues,
+      handoffFinalOutcome: input.outcome ?? "",
       noClientMessageSentByControl: true,
       noPriceChange: true,
       noCalendarBooking: true
@@ -96,12 +103,7 @@ export async function prepareWhatsAppHandoffControl(input: {
   }
   const reason = input.reasons.join(" + ") || "Tiered WhatsApp handoff";
   const pauseNow = input.tier === "pause_and_escalate" && !input.replyPlanned;
-  await updateControl({
-    leadId: input.leadId,
-    needsMarcus: true,
-    pause: pauseNow,
-    reason
-  });
+  await updateControl({ leadId: input.leadId, needsMarcus: true, pause: pauseNow, reason });
   await audit({
     leadId: input.leadId,
     tier: input.tier,
@@ -117,29 +119,28 @@ export async function prepareWhatsAppHandoffControl(input: {
   };
 }
 
-export async function finalizeWhatsAppHandoffAfterReply(input: {
+export async function finalizeWhatsAppHandoffPause(input: {
   leadId: string;
   tier: WhatsAppHandoffTier;
   reasons: string[];
   pauseAfterReply: boolean;
+  outcome: WhatsAppHandoffFinalOutcome;
 }) {
   if (!input.pauseAfterReply || input.tier !== "pause_and_escalate") {
-    return { pauseApplied: false };
+    return { pauseApplied: false, outcome: input.outcome };
   }
   const reason = input.reasons.join(" + ") || "Tiered WhatsApp handoff after acknowledgement";
-  await updateControl({
-    leadId: input.leadId,
-    needsMarcus: true,
-    pause: true,
-    reason
-  });
+  await updateControl({ leadId: input.leadId, needsMarcus: true, pause: true, reason });
   await audit({
     leadId: input.leadId,
     tier: input.tier,
     reasons: input.reasons,
-    action: "whatsapp_handoff_pause_applied_after_reply",
+    action: input.outcome === "reply_sent"
+      ? "whatsapp_handoff_pause_applied_after_reply"
+      : "whatsapp_handoff_pause_applied_after_reply_failure",
     pauseApplied: true,
-    botContinues: false
+    botContinues: false,
+    outcome: input.outcome
   });
-  return { pauseApplied: true };
+  return { pauseApplied: true, outcome: input.outcome };
 }
