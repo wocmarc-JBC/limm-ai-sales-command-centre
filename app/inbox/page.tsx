@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { InboxWebVitals } from "@/components/InboxWebVitals";
 import { MultiChatInbox, type MultiChatConversation, type MultiChatSummary } from "@/components/inbox/MultiChatInbox";
 import { can } from "@/lib/auth/roles";
@@ -10,6 +11,7 @@ import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { attachLeadFilesToMessages } from "@/lib/inbox-message-attachments";
 import { inboxMessagePreview } from "@/lib/inbox-message-display";
+import { inboxLaneFromParam, inboxLaneLabel, leadMatchesInboxLane } from "@/lib/inbox-lanes";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { buildLeadFacts, leadFactsLocationLabel } from "@/lib/lead-facts";
@@ -18,7 +20,6 @@ import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lif
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
 import type { InboxAssignment } from "@/lib/operations/contracts";
 import { getWhatsAppServiceWindowFromMessages } from "@/lib/whatsapp-service-window";
-import Link from "next/link";
 
 function latestWhatsAppMessage(messages: LeadMessage[]) {
   return latestMeaningfulWhatsAppMessage(messages);
@@ -81,10 +82,13 @@ export default async function WhatsAppInboxPage({
   const auth = await getCurrentProfile();
   if (!auth.authenticated) return null;
   const canManageSpam = Boolean(auth.profile && can(auth.profile.role, "soft_delete_leads"));
+  const lane = inboxLaneFromParam(searchParams?.view);
+  const nonSalesLane = lane !== "sales";
 
   const showTestDemoRecords = await getShowTestDemoRecordsPreference();
-  // includeNonSales: true remains the inbox contract; the bounded query includes every route.
-  const pageLeads = await listInboxLeadCandidates({ limit: 60, includeTest: showTestDemoRecords });
+  // Fetch a bounded cross-route pool, then keep only the selected operational lane.
+  // Direct lead links remain recoverable even when their current classification belongs to another lane.
+  const pageLeads = await listInboxLeadCandidates({ limit: 200, includeTest: showTestDemoRecords });
   const selectedCandidate = searchParams?.lead ? await getLeadById(searchParams.lead) : null;
   const leads = selectedCandidate && !pageLeads.some((lead) => lead.id === selectedCandidate.id)
     ? [selectedCandidate, ...pageLeads]
@@ -96,10 +100,13 @@ export default async function WhatsAppInboxPage({
     listLeadFilesForLeads(leadIds)
   ]);
   const activeLeadPool = leads
-    .filter((lead) => hasWhatsAppContactOrMessages(
-      lead,
-      summaryMessagesByLead.get(lead.id) ?? []
-    ) && (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? [])))
+    .filter((lead) => {
+      const messages = summaryMessagesByLead.get(lead.id) ?? [];
+      const directlySelected = searchParams?.lead === lead.id;
+      const active = hasWhatsAppContactOrMessages(lead, messages) &&
+        (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, messages));
+      return active && (directlySelected || leadMatchesInboxLane(lead, lane));
+    })
     .sort((a, b) => compareInboxLatestActivity(
       { id: a.id, lastActivityAt: leadLastActivityAt(a, summaryMessagesByLead.get(a.id) ?? []) },
       { id: b.id, lastActivityAt: leadLastActivityAt(b, summaryMessagesByLead.get(b.id) ?? []) }
@@ -182,33 +189,51 @@ export default async function WhatsAppInboxPage({
     };
   }).sort((a, b) => compareInboxLatestActivity(a.summary, b.summary));
 
+  const laneSubtitle = lane === "sales"
+    ? "Genuine leads, existing clients and unclear enquiries requiring review"
+    : lane === "jobs"
+      ? "Recruitment and job-seeker messages kept out of the sales queue"
+      : lane === "vendors"
+        ? "Suppliers, service providers and partnership outreach"
+        : lane === "spam"
+          ? "Spam, wrong-number and irrelevant messages"
+          : "Jobs, vendors, partnerships and irrelevant conversations";
+
   return (
     <>
       <InboxWebVitals />
       <header className="mb-3 hidden min-h-11 items-center justify-between gap-3 sm:flex">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <h1 className="truncate text-xl font-semibold tracking-[-0.02em] text-command-text sm:text-2xl">WhatsApp Inbox</h1>
+            <h1 className="truncate text-xl font-semibold tracking-[-0.02em] text-command-text sm:text-2xl">{inboxLaneLabel(lane)}</h1>
             <span className="hidden items-center gap-1.5 rounded-full border border-command-green/25 bg-command-green/10 px-2 py-0.5 text-[10px] font-semibold text-command-green sm:inline-flex">
               <span className="h-1.5 w-1.5 rounded-full bg-command-green" aria-hidden="true" />
               Live
             </span>
           </div>
-          <p className="hidden text-[11px] text-command-subtle sm:block">Operator console · newest client activity first</p>
+          <p className="hidden text-[11px] text-command-subtle sm:block">{laneSubtitle}</p>
         </div>
-        <nav className="flex shrink-0 items-center gap-1 text-xs font-semibold sm:text-sm" aria-label="Inbox links">
+        <nav className="flex shrink-0 items-center gap-1 text-xs font-semibold sm:text-sm" aria-label="Inbox lanes">
           <Link
-            href="/leads"
-            className="inline-flex min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text"
+            href="/inbox"
+            className={`inline-flex min-h-10 items-center rounded-xl px-3 py-2 transition ${lane === "sales" ? "bg-command-gold/15 text-command-gold" : "text-command-muted hover:bg-command-card hover:text-command-text"}`}
           >
-            Leads
+            Sales
           </Link>
           <Link
-            href="/settings"
-            className="hidden min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text sm:inline-flex"
+            href="/inbox?view=non-sales"
+            className={`inline-flex min-h-10 items-center rounded-xl px-3 py-2 transition ${nonSalesLane ? "bg-command-cyan/10 text-command-cyan" : "text-command-muted hover:bg-command-card hover:text-command-text"}`}
           >
-            Settings
+            Non-Sales
           </Link>
+          {nonSalesLane ? (
+            <>
+              <Link href="/inbox?view=jobs" className="hidden min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text lg:inline-flex">Jobs</Link>
+              <Link href="/inbox?view=vendors" className="hidden min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text lg:inline-flex">Vendors</Link>
+              <Link href="/inbox?view=spam" className="hidden min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text lg:inline-flex">Spam</Link>
+            </>
+          ) : null}
+          <Link href="/leads" className="inline-flex min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text">Leads</Link>
         </nav>
       </header>
       <MultiChatInbox
@@ -219,7 +244,7 @@ export default async function WhatsAppInboxPage({
         initialHasMore={activeLeadPool.length > activeLeads.length}
         initialQueueCursor={activeLeads.at(-1)?.id ?? null}
         selectedLeadId={searchParams?.lead}
-        initialFilter={inboxViewFilterFromParam(searchParams?.view)}
+        initialFilter={lane === "sales" ? inboxViewFilterFromParam(searchParams?.view) : "All"}
         manualReplyStatus={searchParams?.manualReplyStatus}
         manualReplyError={searchParams?.manualReplyError}
       />
