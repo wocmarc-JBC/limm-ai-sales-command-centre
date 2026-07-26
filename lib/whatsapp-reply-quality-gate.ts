@@ -1,4 +1,8 @@
 import type { Lead, LeadMessage } from "@/lib/types";
+import {
+  composeReferralAwareFirstTouchReply,
+  getWhatsAppReferralContext
+} from "@/lib/whatsapp-referral-context";
 
 export type WhatsAppReplyQualityGateResult = {
   replyText: string;
@@ -12,6 +16,8 @@ export type WhatsAppReplyQualityGateResult = {
   knownSitePhotos: boolean;
   repeatedQuestionTopic?: string;
   repeatedQuestionCount?: number;
+  confirmedReferralContextUsed?: boolean;
+  referralServiceKey?: string;
 };
 
 function normalize(value: unknown) {
@@ -83,6 +89,14 @@ function isPriceQuestion(text: string) {
 
 function repeatedQuestionCount(messages: LeadMessage[], matcher: (text: string) => boolean) {
   return messages.filter((message) => message.direction === "inbound" && matcher(normalize(messageText(message)))).length;
+}
+
+function hasPreviousWhatsAppReply(messages: LeadMessage[]) {
+  return messages.some((message) =>
+    message.direction === "outbound" &&
+    message.channel === "whatsapp" &&
+    Boolean(message.body.trim())
+  );
 }
 
 function directAnswer(input: {
@@ -214,6 +228,27 @@ export function improveWhatsAppReplyQuality(input: {
     };
   }
 
+  const referralContext = getWhatsAppReferralContext(input.lead, input.previousMessages);
+  const referralReply = referralContext && !hasPreviousWhatsAppReply(input.previousMessages)
+    ? composeReferralAwareFirstTouchReply(referralContext, input.inboundMessageText)
+    : "";
+  if (referralContext && referralReply) {
+    const replyText = capQuestions(referralReply);
+    return {
+      replyText,
+      rewritten: replyText !== input.candidateReply.trim(),
+      reason: "confirmed_meta_referral_first_touch",
+      handoffRequired: false,
+      answeredDirectQuestion: true,
+      askedNextBestQuestion: countQuestions(replyText) === 1,
+      questionCount: countQuestions(replyText),
+      knownFloorPlan,
+      knownSitePhotos,
+      confirmedReferralContextUsed: true,
+      referralServiceKey: referralContext.serviceKey
+    };
+  }
+
   const direct = directAnswer({
     text: inbound,
     intent: input.intent,
@@ -242,6 +277,7 @@ export function improveWhatsAppReplyQuality(input: {
     knownFloorPlan,
     knownSitePhotos,
     repeatedQuestionTopic: repeatedPriceCount >= 2 ? "price" : undefined,
-    repeatedQuestionCount: repeatedPriceCount || undefined
+    repeatedQuestionCount: repeatedPriceCount || undefined,
+    confirmedReferralContextUsed: false
   };
 }
