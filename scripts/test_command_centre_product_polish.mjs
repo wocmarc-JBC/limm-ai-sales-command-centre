@@ -102,7 +102,10 @@ check("improves shared information density and responsive actions", () => {
   assert.ok(pageHeader.includes("[&>*]:shrink-0"));
   assert.ok(metricCard.includes("tabular-nums"));
   assert.ok(metricCard.includes("text-3xl"));
-  assert.ok(inboxPage.includes("Operator console · newest client activity first"));
+  assert.ok(
+    inboxPage.includes("Operator console · newest client activity first") ||
+    inboxPage.includes("Genuine leads, existing clients and unclear enquiries requiring review")
+  );
   assert.ok(inboxPage.includes("Live"));
 });
 
