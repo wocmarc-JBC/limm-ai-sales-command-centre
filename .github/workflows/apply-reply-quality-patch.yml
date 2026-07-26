@@ -1,0 +1,86 @@
+name: Apply Reply Quality Patch
+
+on:
+  push:
+    branches: [agent/reply-quality-gate]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[reply-quality-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/reply-quality-gate
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch production composer and release gate
+        shell: python
+        run: |
+          from pathlib import Path
+
+          decision_path = Path('lib/whatsapp-reply-decision.ts')
+          decision = decision_path.read_text(encoding='utf-8')
+
+          import_anchor = '} from "@/lib/whatsapp-v9-sales-brain";\n'
+          import_addition = '} from "@/lib/whatsapp-v9-sales-brain";\nimport { improveWhatsAppReplyQuality } from "@/lib/whatsapp-reply-quality-gate";\n'
+          if 'whatsapp-reply-quality-gate' not in decision:
+              assert import_anchor in decision
+              decision = decision.replace(import_anchor, import_addition, 1)
+
+          old_candidate = '  const candidateReply = v9.replyText;\n'
+          new_candidate = '''  const replyQuality = improveWhatsAppReplyQuality({
+            candidateReply: v9.replyText,
+            inboundMessageText: input.inboundMessageText,
+            intent: v9.intent,
+            lead: input.lead,
+            previousMessages: input.previousMessages
+          });
+          const candidateReply = replyQuality.replyText;
+          '''
+          if 'const replyQuality = improveWhatsAppReplyQuality' not in decision:
+              assert old_candidate in decision
+              decision = decision.replace(old_candidate, new_candidate, 1)
+
+          replacements = {
+              '    answeredClientQuestion: v9.answeredClientQuestion,\n': '    answeredClientQuestion: replyQuality.answeredDirectQuestion || v9.answeredClientQuestion,\n',
+              '    askedNextBestQuestion: v9.askedNextBestQuestion,\n': '    askedNextBestQuestion: replyQuality.askedNextBestQuestion,\n',
+              '    handoffRequired: v9.handoffRequired,\n': '    handoffRequired: v9.handoffRequired || replyQuality.handoffRequired,\n',
+              '    qualityResult: v9.qualityResult,\n': '    qualityResult: replyQuality.rewritten ? "rewritten" : v9.qualityResult,\n',
+              '      plannerInboundText,\n': '      plannerInboundText,\n      replyQualityGate: replyQuality,\n'
+          }
+          for old, new in replacements.items():
+              if new not in decision:
+                  assert old in decision, old
+                  decision = decision.replace(old, new, 1)
+
+          decision_path.write_text(decision, encoding='utf-8')
+
+          release_path = Path('.github/workflows/release-gate.yml')
+          release = release_path.read_text(encoding='utf-8')
+          anchor = '''      - name: Verify v11.4.3 human handoff reliability
+                run: node scripts/test_v11_4_3_human_handoff_reliability.mjs
+          '''
+          addition = '''      - name: Verify v11.4.3 human handoff reliability
+                run: node scripts/test_v11_4_3_human_handoff_reliability.mjs
+              - name: Verify v11.4.4 reply quality gate
+                run: node scripts/test_v11_4_4_reply_quality_gate.mjs
+          '''
+          if 'Verify v11.4.4 reply quality gate' not in release:
+              assert anchor in release
+              release = release.replace(anchor, addition, 1)
+          release_path.write_text(release, encoding='utf-8')
+
+          Path('.github/workflows/apply-reply-quality-patch.yml').unlink()
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/whatsapp-reply-decision.ts .github/workflows/release-gate.yml .github/workflows/apply-reply-quality-patch.yml
+          git commit -m "feat: enforce final reply quality gate [reply-quality-patched]"
+          git push origin HEAD:agent/reply-quality-gate
