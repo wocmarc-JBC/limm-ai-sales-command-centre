@@ -131,7 +131,8 @@ export async function POST(request: NextRequest) {
         statusCount,
         jobCount: jobIds.length,
         confirmedReferralCount: messages.filter((message) => Boolean(message.whatsappReferral)).length,
-        releaseVersion: "11.4.9"
+        releaseVersion: "11.2.0",
+        metaReferralVersion: "11.4.9"
       }
     }).catch(() => false);
 
