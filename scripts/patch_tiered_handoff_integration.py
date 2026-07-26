@@ -1,8 +1,6 @@
 from pathlib import Path
 
 AUTO_REPLY = Path("lib/whatsapp-auto-reply.ts")
-WORKFLOW = Path(".github/workflows/release-gate.yml")
-SELF = Path("scripts/patch_tiered_handoff_integration.py")
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -171,13 +169,3 @@ failure_new = '''    await auditWhatsApp({
       status: "auto_reply_failed",'''
 text = replace_once(text, failure_old, failure_new, "send failure")
 AUTO_REPLY.write_text(text)
-
-workflow = WORKFLOW.read_text()
-start = "  # BEGIN TIERED_HANDOFF_PATCH_JOB\n"
-end = "  # END TIERED_HANDOFF_PATCH_JOB\n"
-if start not in workflow or end not in workflow:
-    raise SystemExit("Tiered handoff patch job markers are missing from release-gate.yml")
-head, rest = workflow.split(start, 1)
-_, tail = rest.split(end, 1)
-WORKFLOW.write_text(head + tail)
-SELF.unlink()
