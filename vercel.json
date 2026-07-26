@@ -8,6 +8,10 @@
     {
       "path": "/api/operations/whatsapp-jobs",
       "schedule": "30 0 * * *"
+    },
+    {
+      "path": "/api/operations/reply-outcome-learning",
+      "schedule": "45 0 * * *"
     }
   ]
 }
