@@ -1,0 +1,211 @@
+name: Patch Tiered Handoff Integration
+
+on:
+  push:
+    branches: [agent/tiered-human-handoff]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: patch-tiered-handoff-integration
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[tiered-handoff-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/tiered-human-handoff
+          fetch-depth: 0
+      - name: Wire tiered pause finalization
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('lib/whatsapp-auto-reply.ts')
+          text = path.read_text()
+
+          old_import = 'import { processWhatsAppHandoffEmail } from "@/lib/handoff-email";'
+          new_import = old_import + '\nimport { finalizeWhatsAppHandoffPause } from "@/lib/data/whatsapp-handoff-control-repository";'
+          if new_import not in text:
+              if old_import not in text:
+                  raise SystemExit('handoff import insertion point missing')
+              text = text.replace(old_import, new_import, 1)
+
+          success_old = '''    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      acknowledgementIntent: decision.acknowledgementIntent,
+      replySent: true,
+      replySignature: decision.replySignature || String(decision.blackBoxTrace.finalReplyHash ?? "")
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_sent",
+      reason: "WhatsApp auto-reply sent after safety validation.",'''
+          success_new = '''    await recordConversationSafetyOutcomeSafely({
+      lead,
+      providerMessageId,
+      conversationIntent: decision.conversationIntent,
+      acknowledgementIntent: decision.acknowledgementIntent,
+      replySent: true,
+      replySignature: decision.replySignature || String(decision.blackBoxTrace.finalReplyHash ?? "")
+    });
+    const sentHandoffControl = await finalizeWhatsAppHandoffPause({
+      leadId: lead.id,
+      tier: handoffEmail.tier,
+      reasons: handoffEmail.reasons,
+      pauseAfterReply: handoffEmail.pauseAfterReply,
+      outcome: "reply_sent"
+    }).catch((handoffControlError) => {
+      logWhatsAppError("tiered_handoff_pause_finalize", {
+        providerMessageId,
+        leadId: lead.id,
+        outcome: "reply_sent",
+        reason: safeError(handoffControlError)
+      });
+      return { pauseApplied: false, outcome: "reply_sent" as const };
+    });
+    Object.assign(decision.blackBoxTrace, {
+      handoffPauseFinalized: sentHandoffControl.pauseApplied,
+      handoffFinalOutcome: sentHandoffControl.outcome
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_sent",
+      reason: "WhatsApp auto-reply sent after safety validation.",'''
+          if success_new not in text:
+              if success_old not in text:
+                  raise SystemExit('success handoff insertion point missing')
+              text = text.replace(success_old, success_new, 1)
+
+          persistence_old = '''      await recordConversationSafetyOutcomeSafely({
+        lead,
+        providerMessageId,
+        conversationIntent: decision.conversationIntent,
+        acknowledgementIntent: decision.acknowledgementIntent,
+        replySent: true,
+        replySignature: decision.replySignature || String(decision.blackBoxTrace.finalReplyHash ?? "")
+      });
+      return {
+        providerMessageId,
+        leadId: lead.id,
+        status: "auto_reply_sent",
+        reason: "WhatsApp auto-reply was sent, but post-send persistence needs operator review.",'''
+          persistence_new = '''      await recordConversationSafetyOutcomeSafely({
+        lead,
+        providerMessageId,
+        conversationIntent: decision.conversationIntent,
+        acknowledgementIntent: decision.acknowledgementIntent,
+        replySent: true,
+        replySignature: decision.replySignature || String(decision.blackBoxTrace.finalReplyHash ?? "")
+      });
+      const persistenceHandoffControl = await finalizeWhatsAppHandoffPause({
+        leadId: lead.id,
+        tier: handoffEmail.tier,
+        reasons: handoffEmail.reasons,
+        pauseAfterReply: handoffEmail.pauseAfterReply,
+        outcome: "post_send_persistence_failed"
+      }).catch((handoffControlError) => {
+        logWhatsAppError("tiered_handoff_pause_finalize", {
+          providerMessageId,
+          leadId: lead.id,
+          outcome: "post_send_persistence_failed",
+          reason: safeError(handoffControlError)
+        });
+        return { pauseApplied: false, outcome: "post_send_persistence_failed" as const };
+      });
+      Object.assign(decision.blackBoxTrace, {
+        handoffPauseFinalized: persistenceHandoffControl.pauseApplied,
+        handoffFinalOutcome: persistenceHandoffControl.outcome
+      });
+      return {
+        providerMessageId,
+        leadId: lead.id,
+        status: "auto_reply_sent",
+        reason: "WhatsApp auto-reply was sent, but post-send persistence needs operator review.",'''
+          if persistence_new not in text:
+              if persistence_old not in text:
+                  raise SystemExit('post-send persistence handoff insertion point missing')
+              text = text.replace(persistence_old, persistence_new, 1)
+
+          failure_old = '''    await auditWhatsApp({
+      action: "whatsapp_auto_reply_send_failed",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply send failed and was logged without starting a retry loop.",
+      metadata: {
+        providerMessageId,
+        error: error instanceof Error ? error.message : "Unknown WhatsApp send failure",
+        status: sendError.status,
+        metaCode: sendError.metaCode,
+        metaMessage: sendError.metaMessage,
+        metaType: sendError.metaType,
+        ...decision.blackBoxTrace,
+        final_send_result: "failed"
+      }
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_failed",'''
+          failure_new = '''    await auditWhatsApp({
+      action: "whatsapp_auto_reply_send_failed",
+      leadId: lead.id,
+      summary: "WhatsApp auto-reply send failed and was logged without starting a retry loop.",
+      metadata: {
+        providerMessageId,
+        error: error instanceof Error ? error.message : "Unknown WhatsApp send failure",
+        status: sendError.status,
+        metaCode: sendError.metaCode,
+        metaMessage: sendError.metaMessage,
+        metaType: sendError.metaType,
+        ...decision.blackBoxTrace,
+        final_send_result: "failed"
+      }
+    });
+    const failedHandoffControl = await finalizeWhatsAppHandoffPause({
+      leadId: lead.id,
+      tier: handoffEmail.tier,
+      reasons: handoffEmail.reasons,
+      pauseAfterReply: handoffEmail.pauseAfterReply,
+      outcome: "reply_send_failed"
+    }).catch((handoffControlError) => {
+      logWhatsAppError("tiered_handoff_pause_finalize", {
+        providerMessageId,
+        leadId: lead.id,
+        outcome: "reply_send_failed",
+        reason: safeError(handoffControlError)
+      });
+      return { pauseApplied: false, outcome: "reply_send_failed" as const };
+    });
+    Object.assign(decision.blackBoxTrace, {
+      handoffPauseFinalized: failedHandoffControl.pauseApplied,
+      handoffFinalOutcome: failedHandoffControl.outcome
+    });
+    return {
+      providerMessageId,
+      leadId: lead.id,
+      status: "auto_reply_failed",'''
+          if failure_new not in text:
+              if failure_old not in text:
+                  raise SystemExit('send failure handoff insertion point missing')
+              text = text.replace(failure_old, failure_new, 1)
+
+          path.write_text(text)
+          PY
+      - name: Remove one-shot patch files
+        run: |
+          rm -f .github/workflows/patch-tiered-handoff.yml .tiered-handoff-trigger
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: finalize urgent handoff pause after reply outcome [tiered-handoff-patched]"
+          git push
