@@ -8,6 +8,7 @@ import { listInboxAssignments } from "@/lib/data/team-inbox-repository";
 import { formatLeadDisplayName } from "@/lib/lead-display";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { inboxMessagePreview } from "@/lib/inbox-message-display";
+import { inboxLaneFromParam, leadMatchesInboxLane } from "@/lib/inbox-lanes";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
 import { classifyBossTriage } from "@/lib/inbox-boss-triage";
 import { buildLeadFacts } from "@/lib/lead-facts";
@@ -25,6 +26,18 @@ function hasWhatsAppContactOrMessages(lead: Lead, messages: LeadMessage[]) {
 
 function leadLastActivityAt(lead: Lead, messages: LeadMessage[]) {
   return latestWhatsAppMessage(messages)?.createdAt ?? inboxLeadFallbackActivityAt(lead);
+}
+
+function requestedView(request: Request, url: URL) {
+  const direct = url.searchParams.get("view");
+  if (direct) return direct;
+  const referer = request.headers.get("referer");
+  if (!referer) return "";
+  try {
+    return new URL(referer).searchParams.get("view") ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[], assignment?: InboxAssignment) {
@@ -77,8 +90,10 @@ export async function GET(request: Request) {
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 30), 100));
   const offset = Math.max(0, Number(url.searchParams.get("cursor") || 0));
   const priorityOnly = url.searchParams.get("priority") === "true";
-  // includeNonSales: true is the inbox contract; routed vendors, job seekers and other non-sales contacts remain visible for review.
-  const leads = await listInboxLeadCandidates({ limit: limit * 3, offset, includeTest: showTestDemoRecords });
+  const lane = inboxLaneFromParam(requestedView(request, url));
+  // A bounded cross-route pool supports sales and non-sales lanes without allowing
+  // nuisance conversations to repopulate the default queue during realtime refreshes.
+  const leads = await listInboxLeadCandidates({ limit: 200, offset, includeTest: showTestDemoRecords });
   const leadIds = leads.map((lead) => lead.id);
   const [summaryMessagesByLead, assignmentsByLead, allFiles] = await Promise.all([
     listLatestLeadMessagesForInbox(leadIds, 6),
@@ -86,10 +101,12 @@ export async function GET(request: Request) {
     listLeadFilesForLeads(leadIds)
   ]);
   const activeLeads = leads
-    .filter((lead) => hasWhatsAppContactOrMessages(
-      lead,
-      summaryMessagesByLead.get(lead.id) ?? []
-    ) && (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, summaryMessagesByLead.get(lead.id) ?? [])))
+    .filter((lead) => {
+      const messages = summaryMessagesByLead.get(lead.id) ?? [];
+      const active = hasWhatsAppContactOrMessages(lead, messages) &&
+        (lead.leadEligible === false || isActiveProductionLeadForDailyScreens(lead, messages));
+      return active && leadMatchesInboxLane(lead, lane);
+    })
     .sort((a, b) => compareInboxLatestActivity(
       { id: a.id, lastActivityAt: leadLastActivityAt(a, summaryMessagesByLead.get(a.id) ?? []) },
       { id: b.id, lastActivityAt: leadLastActivityAt(b, summaryMessagesByLead.get(b.id) ?? []) }
@@ -120,6 +137,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
+    lane,
     conversations,
     triage: {
       requiresReplyCount: triagePool.filter((conversation) => conversation.requiresReply).length,
@@ -127,7 +145,7 @@ export async function GET(request: Request) {
       qualifiedLeadCount: triagePool.filter((conversation) => conversation.bossTriageCategory === "qualified_sales_lead").length,
       nonSalesCount: triagePool.filter((conversation) => ["vendor_or_business", "job_or_subcontractor", "spam_or_irrelevant"].includes(conversation.bossTriageCategory)).length
     },
-    hasMore: activeLeads.length > pagedActiveLeads.length || leads.length >= limit * 3,
-    nextCursor: activeLeads.length > pagedActiveLeads.length || leads.length >= limit * 3 ? String(offset + leads.length) : null
+    hasMore: activeLeads.length > pagedActiveLeads.length || leads.length >= 200,
+    nextCursor: activeLeads.length > pagedActiveLeads.length || leads.length >= 200 ? String(offset + leads.length) : null
   });
 }
