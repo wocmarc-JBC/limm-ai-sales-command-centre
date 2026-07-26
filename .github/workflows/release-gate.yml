@@ -68,6 +68,8 @@ jobs:
         run: node scripts/test_v11_4_9_meta_referral_context.mjs
       - name: Verify v11.4.10 trade knowledge
         run: node scripts/test_v11_4_10_trade_knowledge.mjs
+      - name: Verify v11.4.11 tiered handoff
+        run: node scripts/test_v11_4_11_tiered_handoff.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium

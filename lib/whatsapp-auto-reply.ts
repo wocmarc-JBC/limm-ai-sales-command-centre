@@ -32,6 +32,7 @@ import {
 } from "@/lib/data/whatsapp-conversation-lock-repository";
 import { getWhatsAppRuntime, normalizeWhatsAppPhone } from "@/lib/whatsapp-config";
 import { processWhatsAppHandoffEmail } from "@/lib/handoff-email";
+import { finalizeWhatsAppHandoffPause } from "@/lib/data/whatsapp-handoff-control-repository";
 import { storeWhatsAppMediaForLead } from "@/lib/whatsapp-media-storage";
 import type { ParsedWhatsAppMessage } from "@/lib/whatsapp-parser";
 import {
@@ -1417,6 +1418,25 @@ export async function handleWhatsAppInboundMessage(
       replySent: true,
       replySignature: decision.replySignature || String(decision.blackBoxTrace.finalReplyHash ?? "")
     });
+    const sentHandoffControl = await finalizeWhatsAppHandoffPause({
+      leadId: lead.id,
+      tier: handoffEmail.tier,
+      reasons: handoffEmail.reasons,
+      pauseAfterReply: handoffEmail.pauseAfterReply,
+      outcome: "reply_sent"
+    }).catch((handoffControlError) => {
+      logWhatsAppError("tiered_handoff_pause_finalize", {
+        providerMessageId,
+        leadId: lead.id,
+        outcome: "reply_sent",
+        reason: safeError(handoffControlError)
+      });
+      return { pauseApplied: false, outcome: "reply_sent" as const };
+    });
+    Object.assign(decision.blackBoxTrace, {
+      handoffPauseFinalized: sentHandoffControl.pauseApplied,
+      handoffFinalOutcome: sentHandoffControl.outcome
+    });
     return {
       providerMessageId,
       leadId: lead.id,
@@ -1466,6 +1486,25 @@ export async function handleWhatsAppInboundMessage(
         acknowledgementIntent: decision.acknowledgementIntent,
         replySent: true,
         replySignature: decision.replySignature || String(decision.blackBoxTrace.finalReplyHash ?? "")
+      });
+      const persistenceHandoffControl = await finalizeWhatsAppHandoffPause({
+        leadId: lead.id,
+        tier: handoffEmail.tier,
+        reasons: handoffEmail.reasons,
+        pauseAfterReply: handoffEmail.pauseAfterReply,
+        outcome: "post_send_persistence_failed"
+      }).catch((handoffControlError) => {
+        logWhatsAppError("tiered_handoff_pause_finalize", {
+          providerMessageId,
+          leadId: lead.id,
+          outcome: "post_send_persistence_failed",
+          reason: safeError(handoffControlError)
+        });
+        return { pauseApplied: false, outcome: "post_send_persistence_failed" as const };
+      });
+      Object.assign(decision.blackBoxTrace, {
+        handoffPauseFinalized: persistenceHandoffControl.pauseApplied,
+        handoffFinalOutcome: persistenceHandoffControl.outcome
       });
       return {
         providerMessageId,
@@ -1556,6 +1595,25 @@ export async function handleWhatsAppInboundMessage(
         ...decision.blackBoxTrace,
         final_send_result: "failed"
       }
+    });
+    const failedHandoffControl = await finalizeWhatsAppHandoffPause({
+      leadId: lead.id,
+      tier: handoffEmail.tier,
+      reasons: handoffEmail.reasons,
+      pauseAfterReply: handoffEmail.pauseAfterReply,
+      outcome: "reply_send_failed"
+    }).catch((handoffControlError) => {
+      logWhatsAppError("tiered_handoff_pause_finalize", {
+        providerMessageId,
+        leadId: lead.id,
+        outcome: "reply_send_failed",
+        reason: safeError(handoffControlError)
+      });
+      return { pauseApplied: false, outcome: "reply_send_failed" as const };
+    });
+    Object.assign(decision.blackBoxTrace, {
+      handoffPauseFinalized: failedHandoffControl.pauseApplied,
+      handoffFinalOutcome: failedHandoffControl.outcome
     });
     return {
       providerMessageId,
