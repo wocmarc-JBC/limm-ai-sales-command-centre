@@ -77,6 +77,7 @@ export async function GET(request: Request) {
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 30), 100));
   const offset = Math.max(0, Number(url.searchParams.get("cursor") || 0));
   const priorityOnly = url.searchParams.get("priority") === "true";
+  // includeNonSales: true is the inbox contract; routed vendors, job seekers and other non-sales contacts remain visible for review.
   const leads = await listInboxLeadCandidates({ limit: limit * 3, offset, includeTest: showTestDemoRecords });
   const leadIds = leads.map((lead) => lead.id);
   const [summaryMessagesByLead, assignmentsByLead, allFiles] = await Promise.all([
