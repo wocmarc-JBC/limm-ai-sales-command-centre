@@ -21,6 +21,7 @@ import {
   buildV9WhatsAppSalesBrainDecision,
   type V9SalesMove
 } from "@/lib/whatsapp-v9-sales-brain";
+import { improveWhatsAppReplyQuality } from "@/lib/whatsapp-reply-quality-gate";
 
 /*
  * v10.2 production order: intent/eligibility routing precedes the sole v9 sales
@@ -401,7 +402,14 @@ export function orchestrateWhatsAppConversationReply(input: WhatsAppReplyDecisio
     providerMessageId: input.providerMessageId
   });
   const humanGuard = applyHumanTakeoverGuard({ botPaused: input.lead.botPaused });
-  const candidateReply = v9.replyText;
+  const replyQuality = improveWhatsAppReplyQuality({
+  candidateReply: v9.replyText,
+  inboundMessageText: input.inboundMessageText,
+  intent: v9.intent,
+  lead: input.lead,
+  previousMessages: input.previousMessages
+});
+const candidateReply = replyQuality.replyText;
   const semantic = v9.shouldSendAutoReply && candidateReply.trim()
     ? applySemanticDuplicateGuard(candidateReply, input.previousMessages)
     : semanticPass(candidateReply);
@@ -426,9 +434,9 @@ export function orchestrateWhatsAppConversationReply(input: WhatsAppReplyDecisio
     confidence: v9.confidence,
     replySource: shouldReply ? v9.replySource : "intentional_no_reply",
     salesMove: semantic.blocked || humanGuard.blocked ? "suppress_unsafe_conversation" : v9.salesMove,
-    answeredClientQuestion: v9.answeredClientQuestion,
-    askedNextBestQuestion: v9.askedNextBestQuestion,
-    handoffRequired: v9.handoffRequired,
+    answeredClientQuestion: replyQuality.answeredDirectQuestion || v9.answeredClientQuestion,
+    askedNextBestQuestion: replyQuality.askedNextBestQuestion,
+    handoffRequired: v9.handoffRequired || replyQuality.handoffRequired,
     riskFlags: v9.riskFlags,
     missingInfo: v9.missingInfo,
     nextAction: semantic.blocked
@@ -438,7 +446,7 @@ export function orchestrateWhatsAppConversationReply(input: WhatsAppReplyDecisio
         : v9.nextAction,
     safetyResult: humanGuard.blocked ? "blocked" : v9.safetyResult,
     repetitionResult: semantic.blocked ? "blocked" : v9.repetitionResult,
-    qualityResult: v9.qualityResult,
+    qualityResult: replyQuality.rewritten ? "rewritten" : v9.qualityResult,
     noSilenceGuardResult: shouldReply ? v9.noSilenceGuardResult : "intentional_no_reply",
     appointmentStatus: v9.appointmentStatus,
     calendarEventId: input.calendarEventId ?? null,
@@ -461,6 +469,7 @@ export function orchestrateWhatsAppConversationReply(input: WhatsAppReplyDecisio
       plannerVersion: "v9_clean_core",
       plannerInboundRecoveredLatestQuestion: shouldRecoverPriorQuestion,
       plannerInboundText,
+      replyQualityGate: replyQuality,
       semanticDuplicateGuard: semantic,
       semanticDuplicateBlocked: semantic.blocked,
       unrelatedReplyBlocked: false,
