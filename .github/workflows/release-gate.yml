@@ -64,6 +64,8 @@ jobs:
         run: node scripts/test_v11_4_7_reply_outcome_learning.mjs
       - name: Verify v11.4.8 reply performance dashboard
         run: node scripts/test_v11_4_8_reply_performance_dashboard.mjs
+      - name: Verify v11.4.9 Meta referral context
+        run: node scripts/test_v11_4_9_meta_referral_context.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium
