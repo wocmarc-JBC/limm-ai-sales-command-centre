@@ -51,7 +51,7 @@ export async function processWhatsAppInboundJob(jobId?: string) {
   const message = job.message as ParsedWhatsAppMessageWithReferral;
   try {
     const referralPersistence = await prepareReferralContext(message);
-    const result = await handleWhatsAppInboundMessage(message);
+    const result = await handleWhatsAppInboundMessage(job.message);
     await completeWhatsAppInboundJob(
       job.id,
       job.attempt_count,
