@@ -58,6 +58,8 @@ jobs:
         run: node scripts/test_v11_4_4_reply_quality_gate.mjs
       - name: Verify v11.4.5 conversation data hygiene and boss triage
         run: node scripts/test_v11_4_5_conversation_data_hygiene_triage.mjs
+      - name: Verify v11.4.6 boss triage UI
+        run: node scripts/test_v11_4_6_boss_triage_ui.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium
