@@ -54,6 +54,8 @@ jobs:
         run: node scripts/test_v11_4_2_resumable_client_file_backup.mjs
       - name: Verify v11.4.3 human handoff reliability
         run: node scripts/test_v11_4_3_human_handoff_reliability.mjs
+      - name: Verify v11.4.4 reply quality gate
+        run: node scripts/test_v11_4_4_reply_quality_gate.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium
