@@ -1,0 +1,36 @@
+name: Patch Reply Performance Navigation
+
+on:
+  push:
+    branches: [agent/reply-performance-navigation]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[reply-performance-nav-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/reply-performance-navigation
+      - name: Add main navigation link
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('components/ShellChrome.tsx')
+          text = path.read_text()
+          old = '      { href: "/reports", label: "Boss Report", icon: "reports" },\n      { href: "/revenue-intelligence", label: "Revenue Intelligence", icon: "targets" }'
+          new = '      { href: "/reports", label: "Boss Report", icon: "reports" },\n      { href: "/revenue-intelligence", label: "Revenue Intelligence", icon: "targets" },\n      { href: "/reply-performance", label: "Reply Performance", icon: "reports" }'
+          if old not in text:
+              raise SystemExit('Navigation insertion point not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/ShellChrome.tsx
+          git commit -m "feat: expose Reply Performance in main navigation [reply-performance-nav-patched]"
+          git push
