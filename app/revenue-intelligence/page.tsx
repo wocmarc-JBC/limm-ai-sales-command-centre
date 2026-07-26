@@ -23,6 +23,7 @@ export default async function RevenueIntelligencePage() {
   return (
     <>
       <PageHeader title="Revenue Intelligence" eyebrow="Source → response → appointment → quote → won">
+        <Link href="/reply-performance" className="inline-flex min-h-11 items-center rounded-xl border border-command-cyan/45 bg-command-cyan/10 px-4 py-2 text-sm font-semibold text-command-cyan">Reply performance</Link>
         <Link href="/sales-pipeline" className="inline-flex min-h-11 items-center rounded-xl border border-command-line bg-command-card px-4 py-2 text-sm font-semibold text-command-muted">Sales pipeline</Link>
         <Link href="/inbox?view=mine" className="inline-flex min-h-11 items-center rounded-xl border border-command-gold/45 bg-command-gold/10 px-4 py-2 text-sm font-semibold text-command-gold">Work my queue</Link>
       </PageHeader>
