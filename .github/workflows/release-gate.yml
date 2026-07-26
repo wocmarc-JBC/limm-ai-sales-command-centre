@@ -62,6 +62,8 @@ jobs:
         run: node scripts/test_v11_4_6_boss_triage_ui.mjs
       - name: Verify v11.4.7 reply outcome learning
         run: node scripts/test_v11_4_7_reply_outcome_learning.mjs
+      - name: Verify v11.4.8 reply performance dashboard
+        run: node scripts/test_v11_4_8_reply_performance_dashboard.mjs
       - run: npm run verify
       - run: npm run build
       - run: npx playwright install --with-deps chromium
