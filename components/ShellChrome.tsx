@@ -46,7 +46,9 @@ const appNavGroups = [
       { href: "/sales-collection", label: "Collection Queue", icon: "money" },
       { href: "/targets", label: "Targets", icon: "targets" },
       { href: "/reports", label: "Boss Report", icon: "reports" },
-      { href: "/revenue-intelligence", label: "Revenue Intelligence", icon: "targets" }
+      { href: "/revenue-intelligence", label: "Revenue Intelligence", icon: "targets" },
+      { href: "/reply-performance", label: "Reply Performance", icon: "reports" },
+      { href: "/reply-performance", label: "Reply Performance", icon: "reports" }
     ]
   },
   {
