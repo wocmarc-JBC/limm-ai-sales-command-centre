@@ -3,6 +3,7 @@ import {
   composeReferralAwareFirstTouchReply,
   getWhatsAppReferralContext
 } from "@/lib/whatsapp-referral-context";
+import { buildTradeKnowledgeReply } from "@/lib/whatsapp-trade-knowledge";
 
 export type WhatsAppReplyQualityGateResult = {
   replyText: string;
@@ -18,6 +19,9 @@ export type WhatsAppReplyQualityGateResult = {
   repeatedQuestionCount?: number;
   confirmedReferralContextUsed?: boolean;
   referralServiceKey?: string;
+  tradeKnowledgeUsed?: boolean;
+  tradeKnowledgeKey?: string;
+  tradeKnowledgeTrade?: string;
 };
 
 function normalize(value: unknown) {
@@ -245,7 +249,8 @@ export function improveWhatsAppReplyQuality(input: {
       knownFloorPlan,
       knownSitePhotos,
       confirmedReferralContextUsed: true,
-      referralServiceKey: referralContext.serviceKey
+      referralServiceKey: referralContext.serviceKey,
+      tradeKnowledgeUsed: false
     };
   }
 
@@ -256,7 +261,12 @@ export function improveWhatsAppReplyQuality(input: {
     knownSitePhotos,
     repeatedPriceCount
   });
-  let replyText = direct?.reply || input.candidateReply.trim();
+  const tradeKnowledge = direct ? null : buildTradeKnowledgeReply({
+    inboundMessageText: input.inboundMessageText,
+    knownFloorPlan,
+    knownSitePhotos
+  });
+  let replyText = direct?.reply || tradeKnowledge?.reply || input.candidateReply.trim();
   const initial = replyText;
   replyText = stripKnownFileRequests(replyText, knownFloorPlan, knownSitePhotos);
   replyText = capQuestions(replyText);
@@ -269,15 +279,18 @@ export function improveWhatsAppReplyQuality(input: {
   return {
     replyText,
     rewritten: replyText !== input.candidateReply.trim(),
-    reason: direct?.reason || (replyText !== initial ? "memory_or_question_budget_rewrite" : "pass"),
-    handoffRequired: direct?.handoffRequired ?? false,
-    answeredDirectQuestion: Boolean(direct) || !/[?]/.test(inbound),
+    reason: direct?.reason || (tradeKnowledge ? "trade_knowledge_answer" : (replyText !== initial ? "memory_or_question_budget_rewrite" : "pass")),
+    handoffRequired: direct?.handoffRequired ?? tradeKnowledge?.handoffRequired ?? false,
+    answeredDirectQuestion: Boolean(direct || tradeKnowledge) || !/[?]/.test(inbound),
     askedNextBestQuestion: questionCount === 1,
     questionCount,
     knownFloorPlan,
     knownSitePhotos,
     repeatedQuestionTopic: repeatedPriceCount >= 2 ? "price" : undefined,
     repeatedQuestionCount: repeatedPriceCount || undefined,
-    confirmedReferralContextUsed: false
+    confirmedReferralContextUsed: false,
+    tradeKnowledgeUsed: Boolean(tradeKnowledge),
+    tradeKnowledgeKey: tradeKnowledge?.knowledgeKey,
+    tradeKnowledgeTrade: tradeKnowledge?.trade
   };
 }
