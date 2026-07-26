@@ -78,6 +78,18 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run qa:browser
+      - name: Upload browser QA diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-qa-diagnostics
+          path: |
+            test-results/v4_2_qa_summary/**
+            test-results/playwright/**
+            playwright-report/**
+            V4_2_FULL_BROWSER_HUMAN_QA_REPORT.md
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload inbox visual baseline evidence
         if: always()
         uses: actions/upload-artifact@v4
