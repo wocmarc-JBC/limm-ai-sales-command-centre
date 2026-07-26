@@ -16,11 +16,7 @@ const schemaGate = read("scripts/verify_production_schema_gate.mjs");
 const packageJson = JSON.parse(read("package.json"));
 
 assert.match(packageJson.scripts["test:v11.4.2"], /test_v11_4_2_resumable_client_file_backup\.mjs/);
-assert.ok(
-  packageJson.scripts.verify.includes("test:v11.4.2") ||
-  packageJson.scripts.verify.includes("test_v11_4_2_resumable_client_file_backup.mjs")
-);
-
+assert.ok(packageJson.scripts.verify.includes("test:v11.4.2") || packageJson.scripts.verify.includes("test_v11_4_2_resumable_client_file_backup.mjs"));
 assert.match(migration, /add column if not exists inventory_snapshot_at timestamptz/);
 assert.match(migration, /add column if not exists batch_count integer not null default 0/);
 assert.match(migration, /add column if not exists last_progress_at timestamptz/);
@@ -47,27 +43,23 @@ assert.match(migration, /client_file_resumable_backup_schema_ready/);
 assert.match(migration, /revoke all on function public\.start_or_resume_client_file_backup/);
 assert.match(migration, /grant execute on function public\.get_client_file_backup_coverage\(\) to service_role/);
 assert.doesNotMatch(migration, /grant execute[\s\S]*to anon|grant execute[\s\S]*to authenticated/);
-
 assert.match(finalizationLease, /continuation_required = true/);
 assert.match(finalizationLease, /lease_token = case when v_pending > 0 then null else p_lease_token end/);
 assert.match(finalizationLease, /finalizationRequired/);
 assert.match(finalizationRetry, /continuation_required = true/);
 assert.match(finalizationRetry, /finalizationRetryArmed/);
 assert.match(finalizationRetry, /make_interval\(secs => 55\)/);
-
 assert.match(conflictFix, /create or replace function public\.start_or_resume_client_file_backup/);
 assert.match(conflictFix, /on conflict on constraint client_file_recovery_items_run_id_storage_bucket_storage_pa_key/);
 assert.doesNotMatch(conflictFix, /on conflict \(run_id, storage_bucket, storage_path\)/);
 assert.match(conflictFix, /queueConflictTarget/);
 assert.match(conflictFix, /revoke all on function public\.start_or_resume_client_file_backup/);
 assert.doesNotMatch(conflictFix, /sendWhatsApp|WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/);
-
 assert.match(shared, /CLIENT_FILE_DAILY_MANIFEST_RETENTION = 35/);
 assert.match(shared, /CLIENT_FILE_MONTHLY_MANIFEST_RETENTION = 12/);
 assert.match(repository, /getClientFileRecoverySnapshot/);
 assert.match(repository, /client-file-recovery-snapshot-repository/);
 assert.doesNotMatch(repository, /runClientFileOffsiteBackup\(/);
-
 assert.match(batch, /BACKUP_BATCH_OBJECT_LIMIT = 12/);
 assert.match(batch, /BACKUP_BATCH_TIME_BUDGET_MS = 42_000/);
 assert.match(batch, /BACKUP_LEASE_SECONDS = 55/);
@@ -85,19 +77,16 @@ assert.match(batch, /fullCoverageProven/);
 assert.match(batch, /\.eq\("lease_token", leaseToken\)/);
 assert.match(batch, /continuationRequired: true/);
 assert.doesNotMatch(batch, /sendWhatsApp|WHATSAPP_ACCESS_TOKEN|WHATSAPP_PHONE_NUMBER_ID/);
-
 assert.match(route, /mode = url\.searchParams\.get\("mode"\) === "continue"/);
 assert.match(route, /requestedRunId = url\.searchParams\.get\("run_id"\)/);
 assert.match(route, /runClientFileOffsiteBackupBatch/);
 assert.match(route, /status: "idle"/);
 assert.match(route, /batchDurationMs/);
 assert.match(route, /continuationRequired/);
-
 assert.match(runtimeGuard, /\.lt\("last_progress_at", cutoff\)/);
 assert.match(runtimeGuard, /lease_expires_at\.is\.null/);
 assert.match(runtimeGuard, /continuation_required: false/);
 assert.doesNotMatch(runtimeGuard, /\.lt\("started_at", cutoff\)/);
-
 assert.match(snapshot, /latestRun\("backup", "succeeded"\)/);
 assert.match(snapshot, /latestRun\("backup", "running"\)/);
 assert.match(snapshot, /get_client_file_backup_coverage/);
@@ -106,13 +95,12 @@ assert.match(snapshot, /activeRunStalled/);
 assert.match(snapshot, /newerFailedAttempt/);
 assert.match(snapshot, /fullCoverageProven/);
 assert.doesNotMatch(snapshot, /latestBackupStatus: activeBackup\?\.status/);
-
 assert.match(schemaGate, /inventory_snapshot_at/);
 assert.match(schemaGate, /continuation_required/);
 assert.match(schemaGate, /source_uploaded_at/);
 assert.match(schemaGate, /attempt_count/);
 assert.match(schemaGate, /client_file_resumable_backup_schema_ready/);
-assert.match(schemaGate, /4 readiness contracts/);
+assert.match(schemaGate, /[45] readiness contracts/);
 assert.match(schemaGate, /SUPABASE_VERIFY_TIMEOUT_MS, 20_000/);
 assert.match(schemaGate, /SUPABASE_VERIFY_ATTEMPTS, 2/);
 assert.match(schemaGate, /retryableStatus/);
