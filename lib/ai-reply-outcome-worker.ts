@@ -10,7 +10,7 @@ function asMessage(row: Record<string, unknown>): LeadMessage {
     id: String(row.id ?? ""),
     leadId: String(row.lead_id ?? ""),
     direction: String(row.direction ?? "inbound") as LeadMessage["direction"],
-    channel: String(row.channel ?? "whatsapp"),
+    channel: String(row.channel ?? "whatsapp") as LeadMessage["channel"],
     body: String(row.body ?? ""),
     safeToSend: Boolean(row.safe_to_send),
     providerMessageId: row.provider_message_id ? String(row.provider_message_id) : undefined,
