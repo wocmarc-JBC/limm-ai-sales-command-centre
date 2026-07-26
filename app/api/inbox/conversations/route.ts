@@ -9,6 +9,7 @@ import { formatLeadDisplayName } from "@/lib/lead-display";
 import { compareInboxLatestActivity, inboxLeadFallbackActivityAt } from "@/lib/inbox-conversation-order";
 import { inboxMessagePreview } from "@/lib/inbox-message-display";
 import { getInboxQueueState, latestMeaningfulWhatsAppMessage } from "@/lib/inbox-queue";
+import { classifyBossTriage } from "@/lib/inbox-boss-triage";
 import { buildLeadFacts } from "@/lib/lead-facts";
 import { isActiveProductionLeadForDailyScreens } from "@/lib/production-lead-lifecycle";
 import type { Lead, LeadFile, LeadMessage } from "@/lib/types";
@@ -30,6 +31,7 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[], as
   const latestMessage = latestWhatsAppMessage(messages);
   const queue = getInboxQueueState(lead, messages);
   const facts = buildLeadFacts(lead, messages, files);
+  const triage = classifyBossTriage(lead, messages);
   return {
     id: lead.id,
     displayName: formatLeadDisplayName(lead),
@@ -56,7 +58,11 @@ function buildSummary(lead: Lead, messages: LeadMessage[], files: LeadFile[], as
     sitePhotosReceived: facts.sitePhotosReceived.value,
     assignedProfileId: assignment?.assignedProfileId ?? null,
     assignedName: assignment?.assignedName ?? lead.assignedTo ?? "",
-    assignmentLeaseExpiresAt: assignment?.leaseExpiresAt ?? null
+    assignmentLeaseExpiresAt: assignment?.leaseExpiresAt ?? null,
+    bossTriageCategory: triage.category,
+    bossPriorityScore: triage.priorityScore,
+    bossTriageReason: triage.reason,
+    requiresReply: triage.requiresReply
   };
 }
 
@@ -70,11 +76,11 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") || 30), 100));
   const offset = Math.max(0, Number(url.searchParams.get("cursor") || 0));
-  // includeNonSales: true remains the inbox contract; the bounded query includes every route.
+  const priorityOnly = url.searchParams.get("priority") === "true";
   const leads = await listInboxLeadCandidates({ limit: limit * 3, offset, includeTest: showTestDemoRecords });
   const leadIds = leads.map((lead) => lead.id);
   const [summaryMessagesByLead, assignmentsByLead, allFiles] = await Promise.all([
-    listLatestLeadMessagesForInbox(leadIds, 3),
+    listLatestLeadMessagesForInbox(leadIds, 6),
     listInboxAssignments(leadIds),
     listLeadFilesForLeads(leadIds)
   ]);
@@ -87,20 +93,27 @@ export async function GET(request: Request) {
       { id: a.id, lastActivityAt: leadLastActivityAt(a, summaryMessagesByLead.get(a.id) ?? []) },
       { id: b.id, lastActivityAt: leadLastActivityAt(b, summaryMessagesByLead.get(b.id) ?? []) }
     ));
-  const pagedActiveLeads = activeLeads.slice(0, limit);
-  const conversations = pagedActiveLeads
-    .map((lead) => buildSummary(
-      lead,
-      summaryMessagesByLead.get(lead.id) ?? [],
-      allFiles.filter((file) => file.leadId === lead.id),
-      assignmentsByLead.get(lead.id)
-    ))
-    .sort(compareInboxLatestActivity);
+  const summaries = activeLeads.map((lead) => buildSummary(
+    lead,
+    summaryMessagesByLead.get(lead.id) ?? [],
+    allFiles.filter((file) => file.leadId === lead.id),
+    assignmentsByLead.get(lead.id)
+  ));
+  const ranked = summaries
+    .filter((conversation) => !priorityOnly || conversation.requiresReply || conversation.needsMarcus || conversation.failedSend)
+    .sort((a, b) => b.bossPriorityScore - a.bossPriorityScore || compareInboxLatestActivity(a, b));
+  const conversations = ranked.slice(0, limit);
 
   return NextResponse.json({
     ok: true,
     conversations,
-    hasMore: leads.length > pagedActiveLeads.length,
-    nextCursor: leads.length > pagedActiveLeads.length ? String(offset + leads.length) : null
+    triage: {
+      requiresReplyCount: ranked.filter((conversation) => conversation.requiresReply).length,
+      criticalCount: ranked.filter((conversation) => conversation.bossTriageCategory === "critical_client_issue").length,
+      qualifiedLeadCount: ranked.filter((conversation) => conversation.bossTriageCategory === "qualified_sales_lead").length,
+      nonSalesCount: ranked.filter((conversation) => ["vendor_or_business", "job_or_subcontractor", "spam_or_irrelevant"].includes(conversation.bossTriageCategory)).length
+    },
+    hasMore: ranked.length > conversations.length || leads.length >= limit * 3,
+    nextCursor: ranked.length > conversations.length || leads.length >= limit * 3 ? String(offset + leads.length) : null
   });
 }
