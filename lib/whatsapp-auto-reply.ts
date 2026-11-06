@@ -1240,8 +1240,19 @@ export async function handleWhatsAppInboundMessage(
   }
 
   const finalReplySignature = replySemanticSignature(reply);
-  const liveQuality = evaluateWhatsAppReplyQuality(reply);
-  const shadowQuality = evaluateWhatsAppReplyQuality(reply, { strict: true });
+  const qualityContext = {
+    inboundMessageText: replyInboundBody,
+    intent: decision.intent,
+    directQuestion: isDirectClientQuestion(replyInboundBody),
+    answeredDirectQuestion: decision.answeredClientQuestion,
+    knownFactsAvailable: Boolean(decision.blackBoxTrace.knownFactsSummary),
+    knownFactsUsed: Boolean(decision.blackBoxTrace.knownFactsUsed),
+    handoffRequired: decision.handoffRequired,
+    salesReady: Boolean(decision.blackBoxTrace.salesReadyIntent),
+    semanticDuplicate: decision.semanticDuplicateBlocked
+  };
+  const liveQuality = evaluateWhatsAppReplyQuality(reply, { context: qualityContext });
+  const shadowQuality = evaluateWhatsAppReplyQuality(reply, { strict: true, context: qualityContext });
   const [liveQualityEventId, shadowQualityEventId] = await Promise.all([
     recordAiQualityObservation({
       leadId: lead.id,
@@ -1253,6 +1264,9 @@ export async function handleWhatsAppInboundMessage(
         safety: liveQuality.safety,
         focus: liveQuality.focus,
         humanTone: liveQuality.humanTone,
+        directness: liveQuality.directness,
+        contextUse: liveQuality.contextUse,
+        salesProgression: liveQuality.salesProgression,
         questionCount: liveQuality.questionCount,
         releaseEligible: liveQuality.releaseEligible
       },
@@ -1273,6 +1287,9 @@ export async function handleWhatsAppInboundMessage(
         safety: shadowQuality.safety,
         focus: shadowQuality.focus,
         humanTone: shadowQuality.humanTone,
+        directness: shadowQuality.directness,
+        contextUse: shadowQuality.contextUse,
+        salesProgression: shadowQuality.salesProgression,
         questionCount: shadowQuality.questionCount,
         releaseEligible: shadowQuality.releaseEligible
       },

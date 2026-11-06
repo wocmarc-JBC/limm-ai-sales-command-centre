@@ -1,7 +1,7 @@
 import type { Lead, LeadMessage } from "@/lib/types";
 import type { WhatsAppReplyDecision } from "@/lib/whatsapp-reply-decision";
 
-export const WHATSAPP_HANDOFF_TIER_VERSION = "v11.4.11_tiered_handoff";
+export const WHATSAPP_HANDOFF_TIER_VERSION = "v12_sales_ready_handoff";
 
 export type WhatsAppHandoffTier =
   | "pause_and_escalate"
@@ -79,13 +79,20 @@ function authorityProblem(text: string) {
 
 function appointmentSignal(text: string, intents: string[], decision: WhatsAppReplyDecision) {
   return decision.appointmentStatus !== "none" ||
-    intents.some((intent) => /appointment|meeting_availability/.test(intent)) ||
+    ["site_visit_request", "appointment_request", "office_visit_request"].includes(decision.intent) ||
+    intents.some((intent) => /site_visit_request|appointment_request|office_visit_request|meeting_availability/.test(intent)) ||
     /\b(?:appointment|site visit|meet|meeting|come down|office visit|available on|available this|book a slot)\b/.test(text);
 }
 
 function quotationSignal(text: string, intents: string[]) {
-  return intents.some((intent) => /price_question|quotation|quote/.test(intent)) ||
-    /\b(?:prepare|send|need|want|request)\s+(?:a\s+)?(?:quote|quotation|proposal|estimate)|\bready to quote\b/.test(text);
+  return intents.some((intent) => /quotation_request/.test(intent)) ||
+    /\b(?:prepare|send|need|want|request|provide|get)\s+(?:me\s+)?(?:a\s+)?(?:quote|quotation|proposal|estimate)|\bready (?:for|to) (?:quote|quotation)\b/.test(text);
+}
+
+function callOrChatSignal(text: string, intents: string[], decision: WhatsAppReplyDecision) {
+  return decision.intent === "call_request" ||
+    intents.includes("call_request") ||
+    /\bcall me\b|\bgive me (?:a )?call\b|\bcan (?:you|marcus|someone|your team) call\b|\bcan we (?:chat|talk|speak)\b/.test(text);
 }
 
 function seriousBudgetOrTimeline(text: string, lead: Lead) {
@@ -136,7 +143,15 @@ export function classifyWhatsAppHandoffTier(input: {
     seriousFrustration(text) ? "Serious client frustration" : "",
     legalOrPaymentDispute(text) ? "Legal or payment dispute" : "",
     safetyOrDamageIssue(text) ? "Safety or property-damage issue" : "",
-    authorityProblem(text) ? "Authority or approval enforcement issue" : ""
+    authorityProblem(text) ? "Authority or approval enforcement issue" : "",
+    callOrChatSignal(text, intents, input.decision) ? "Call or chat requested" : "",
+    input.decision.intent === "site_visit_request"
+      ? "Appointment interest - site visit requested"
+      : appointmentSignal(text, intents, input.decision)
+        ? "Appointment interest - human review requested"
+        : "",
+    quotationSignal(text, intents) || input.decision.intent === "quotation_request" ? "Quotation or proposal interest - human review requested" : "",
+    traceFlag(input.decision, "majorLandedAa") ? "Serious landed A&A enquiry" : ""
   ].filter(Boolean);
   if (pauseReasons.length) {
     return {
@@ -150,8 +165,6 @@ export function classifyWhatsAppHandoffTier(input: {
   }
 
   const notifyReasons = [
-    appointmentSignal(text, intents, input.decision) ? "Appointment interest" : "",
-    quotationSignal(text, intents) ? "Quotation or proposal interest" : "",
     fileSignal(input.decision, input.recentMessages) ? "Floor plan, site photo or project file received" : "",
     seriousBudgetOrTimeline(text, input.lead) ? "Serious budget and timeline shared" : "",
     highlyQualified(input.lead) ? "Highly qualified renovation lead" : "",

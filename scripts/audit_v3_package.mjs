@@ -839,7 +839,7 @@ const whatsappAdapter = read("lib/adapters/whatsapp-adapter.ts");
 assert(whatsappAdapter.includes("server-only"), "WhatsApp adapter must be server-only.");
 assert(!/console\.(log|error|warn)/.test(whatsappAdapter), "WhatsApp adapter must not log provider responses.");
 const whatsappService = read("lib/whatsapp-auto-reply.ts");
-for (const phrase of ["whatsapp_inbound_received", "whatsapp_auto_reply_sent", "whatsapp_auto_reply_blocked_unsafe", "recentReplyCount >= 3", "validateWhatsAppAutoReply"]) {
+for (const phrase of ["whatsapp_inbound_received", "whatsapp_auto_reply_provider_accepted", "whatsapp_auto_reply_blocked_unsafe", "recentReplyCount >= 3", "validateWhatsAppAutoReply"]) {
   assert(whatsappService.includes(phrase), `WhatsApp closed-test service missing ${phrase}`);
 }
 for (const phrase of [

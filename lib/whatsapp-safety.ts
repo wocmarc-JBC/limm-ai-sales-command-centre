@@ -20,7 +20,8 @@ const blockedPatterns = [
   { pattern: /\bstructural(?:ly)? (?:safe|confirmed|certain|feasible)\b/i, code: "structural_certainty", reason: "structural certainty" },
   { pattern: /\bwe can definitely\b|\bguaranteed\b/i, code: "over_promise", reason: "over-promise" },
   { pattern: /\b(?:legal|medical|financial) advice\b|\b(?:legally|medically|financially) (?:confirmed|guaranteed|safe)\b/i, code: "unsafe_professional_claim", reason: "unsafe legal/medical/financial claim" },
-  { pattern: /\b(?:service[_-]?role|supabase[_-]?service|whatsapp[_-]?access[_-]?token|openai[_-]?api[_-]?key)\b/i, code: "secret_or_token_reference", reason: "secret or token reference" }
+  { pattern: /\b(?:service[_-]?role|supabase[_-]?service|whatsapp[_-]?access[_-]?token|openai[_-]?api[_-]?key)\b/i, code: "secret_or_token_reference", reason: "secret or token reference" },
+  { pattern: /\bwamid\b|whatsapp[_-](?:image|document|audio|video)|\b(?:inbound|outbound)[_-]?provider[_-]?message[_-]?id\b|\b[a-f0-9]{24,}\.(?:jpg|jpeg|png|webp|pdf|docx?)\b/i, code: "internal_identifier_or_filename", reason: "internal identifier or filename" }
 ];
 
 const calendarConfirmationPattern = /\bcalendar booking confirmed\b|\bwe have booked\b|\bappointment confirmed\b|\byour appointment has been arranged\b|\bbooked\b|\bsee you tomorrow\b/i;
