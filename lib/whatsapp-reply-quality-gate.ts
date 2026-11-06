@@ -88,7 +88,11 @@ function detectsSitePhotos(text: string) {
 }
 
 function isPriceQuestion(text: string) {
-  return /how much|roughly|rough cost|price|cost|quotation|quote|estimate|within budget/.test(text);
+  return /how much|roughly|rough cost|price|cost|estimate|within budget/.test(text);
+}
+
+function isSalesReadyIntent(intent: string) {
+  return ["call_request", "quotation_request", "site_visit_request", "appointment_request", "office_visit_request"].includes(intent);
 }
 
 function repeatedQuestionCount(messages: LeadMessage[], matcher: (text: string) => boolean) {
@@ -112,6 +116,10 @@ function directAnswer(input: {
 }) {
   const { text, intent, knownFloorPlan, knownSitePhotos, repeatedPriceCount } = input;
 
+  // The single v9 planner uses merged memory to compose these high-value
+  // acknowledgements. Do not overwrite them with a context-free fallback.
+  if (isSalesReadyIntent(intent) || intent === "unsupported_service_question" || intent === "simple_acknowledgement") return null;
+
   if (/laminated? wall cladding|laminate wall cladding/.test(text)) {
     return { reply: "Yes, we can do laminated wall cladding. The suitable backing, laminate type and joint detailing will depend on the wall condition and the finish you want. Is this for a feature wall, bedroom, living room or another area?", reason: "answer_first_override", handoffRequired: false };
   }
@@ -127,7 +135,7 @@ function directAnswer(input: {
     return { reply: "Three months may be possible for some renovation scopes, but it can be tight for a full landed A&A project. It depends on approvals, structural work, material lead times and the final scope. Is the deadline tied to your move-in date?", reason: "answer_first_override", handoffRequired: false };
   }
 
-  if (intent === "appointment_request" || intent === "office_visit_request" || /\b(?:appointment|meeting|meet|appt|office visit)\b/.test(text)) {
+  if (/\b(?:appointment|meeting|meet|appt|office visit)\b/.test(text)) {
     return { reply: "Your preferred meeting time is noted, but it is not confirmed yet because Marcus needs to check availability. We will confirm the slot or propose the nearest available timing.", reason: "answer_first_override", handoffRequired: false };
   }
 
@@ -280,7 +288,7 @@ export function improveWhatsAppReplyQuality(input: {
     replyText,
     rewritten: replyText !== input.candidateReply.trim(),
     reason: direct?.reason || (tradeKnowledge ? "trade_knowledge_answer" : (replyText !== initial ? "memory_or_question_budget_rewrite" : "pass")),
-    handoffRequired: direct?.handoffRequired ?? tradeKnowledge?.handoffRequired ?? false,
+    handoffRequired: isSalesReadyIntent(input.intent) || (direct?.handoffRequired ?? tradeKnowledge?.handoffRequired ?? false),
     answeredDirectQuestion: Boolean(direct || tradeKnowledge) || !/[?]/.test(inbound),
     askedNextBestQuestion: questionCount === 1,
     questionCount,

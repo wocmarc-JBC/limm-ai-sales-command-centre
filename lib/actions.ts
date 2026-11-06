@@ -19,6 +19,7 @@ import {
 import { decideApprovalRequest } from "@/lib/data/approvals-repository";
 import { saveAppointmentSettings } from "@/lib/data/appointment-settings-repository";
 import { createAuditLog } from "@/lib/data/audit-repository";
+import { beginVerifiedCompletion, observeVerifiedCompletion } from "@/lib/data/verified-completion-repository";
 import { generateAndSaveAiDryRunRecommendation, recordAiDraftReviewAction } from "@/lib/data/ai-decisions-repository";
 import {
   LEAD_FILE_CATEGORIES,
@@ -493,6 +494,20 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
   }
 
   const adapter = new WhatsAppCloudApiAdapter();
+  const completionReceipt = await beginVerifiedCompletion({
+    actionType: "whatsapp_message",
+    entityType: "lead",
+    entityId: leadId,
+    leadId,
+    intent: "Deliver the operator-authored WhatsApp message to the intended lead.",
+    expectedPostcondition: {
+      providerMessageId: "matching delivery webhook",
+      whatsappStatus: ["sent", "delivered", "read"]
+    },
+    actorType: "boss",
+    actorName: actor,
+    metadata: { sourceAction: "legacy_manual_whatsapp_reply" }
+  });
   console.info("whatsapp_manual_reply_send_payload_summary", {
     leadId,
     phoneNumberIdPresent: payloadSummary.phoneNumberIdPresent,
@@ -504,8 +519,21 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
     graphVersion: payloadSummary.graphVersion
   });
 
+  let externalSendCompleted = false;
+  let acceptedProviderMessageId = "";
   try {
     const sent = await adapter.sendReply(lead.phone, body);
+    externalSendCompleted = true;
+    acceptedProviderMessageId = sent.providerMessageId || "";
+    await observeVerifiedCompletion(completionReceipt, {
+      independentlyObserved: false,
+      postconditionMatched: false,
+      observedEvidence: {
+        providerAccepted: true,
+        providerMessageId: sent.providerMessageId || "",
+        deliveryWebhookObserved: false
+      }
+    }).catch(() => null);
     console.info("whatsapp_manual_reply_sent", {
       leadId,
       providerMessageIdPresent: Boolean(sent.providerMessageId),
@@ -518,7 +546,7 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
       body,
       safeToSend: true,
       providerMessageId: sent.providerMessageId || undefined,
-      whatsappStatus: "sent",
+      whatsappStatus: "accepted",
       metadata: {
         manualReply: true,
         manualTakeover: true,
@@ -526,6 +554,9 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
         mode: sent.mode,
         metaMessageId: sent.providerMessageId || "",
         replaySafePostRedirect: true,
+        completionReceiptId: completionReceipt.receiptId,
+        completionStatus: "pending",
+        expectedPostcondition: completionReceipt.expectedPostcondition,
         noAutoPricing: true,
         noCalendarBooking: true,
         noVoiceTranscription: true
@@ -536,10 +567,10 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
       actorName: actor,
       actorEmail,
       actorId,
-      action: "whatsapp_manual_reply_sent",
+      action: "whatsapp_manual_reply_provider_accepted",
       entityType: "lead",
       entityId: leadId,
-      summary: "Manual WhatsApp reply sent by Marcus/admin and bot paused for human takeover.",
+      summary: "Meta accepted the manual WhatsApp reply; verified completion remains pending until a delivery webhook arrives.",
       metadata: {
         providerMessageIdPresent: Boolean(sent.providerMessageId),
         metaMessageId: sent.providerMessageId || "",
@@ -554,6 +585,15 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
   } catch (error) {
     if (isNextRedirectError(error)) throw error;
     const reason = safeWhatsAppError(error);
+    if (!externalSendCompleted) {
+      await observeVerifiedCompletion(completionReceipt, {
+        independentlyObserved: true,
+        postconditionMatched: false,
+        terminalFailure: true,
+        failureReason: reason,
+        observedEvidence: { providerAccepted: false, providerMessageId: "" }
+      }).catch(() => null);
+    }
     console.error("whatsapp_manual_reply_failed", {
       leadId,
       reason,
@@ -564,14 +604,18 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
       leadId,
       direction: "outbound",
       body,
-      safeToSend: false,
-      whatsappStatus: "failed",
+      safeToSend: externalSendCompleted,
+      providerMessageId: acceptedProviderMessageId || undefined,
+      whatsappStatus: externalSendCompleted ? "accepted" : "failed",
       metadata: {
         manualReply: true,
         manualTakeover: true,
         failedBy: actor,
         error: reason,
         replaySafePostRedirect: true,
+        completionReceiptId: completionReceipt.receiptId,
+        completionStatus: externalSendCompleted ? "pending" : "failed",
+        expectedPostcondition: completionReceipt.expectedPostcondition,
         noTokenLogged: true
       }
     }).catch(() => null);
@@ -580,10 +624,12 @@ export async function sendManualWhatsAppReplyAction(formData: FormData) {
       actorName: actor,
       actorEmail,
       actorId,
-      action: "whatsapp_manual_reply_failed",
+      action: externalSendCompleted ? "whatsapp_manual_reply_post_acceptance_persistence_failed" : "whatsapp_manual_reply_failed",
       entityType: "lead",
       entityId: leadId,
-      summary: "Manual WhatsApp reply failed. Error was shown in Command Centre without exposing secrets.",
+      summary: externalSendCompleted
+        ? "Meta accepted the manual WhatsApp reply, but later local persistence failed; completion remains pending."
+        : "Manual WhatsApp reply failed. Error was shown in Command Centre without exposing secrets.",
       metadata: {
         error: reason,
         toDigitsLength: payloadSummary.toDigitsLength,

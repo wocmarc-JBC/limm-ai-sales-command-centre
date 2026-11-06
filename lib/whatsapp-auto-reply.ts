@@ -7,6 +7,7 @@ import {
   type WhatsAppAdapter
 } from "@/lib/adapters/whatsapp-adapter";
 import { createAuditLog } from "@/lib/data/audit-repository";
+import { beginVerifiedCompletion, observeVerifiedCompletion } from "@/lib/data/verified-completion-repository";
 import {
   countRecentWhatsAppAutoReplies,
   findLeadMessageByProviderId,
@@ -1239,8 +1240,19 @@ export async function handleWhatsAppInboundMessage(
   }
 
   const finalReplySignature = replySemanticSignature(reply);
-  const liveQuality = evaluateWhatsAppReplyQuality(reply);
-  const shadowQuality = evaluateWhatsAppReplyQuality(reply, { strict: true });
+  const qualityContext = {
+    inboundMessageText: replyInboundBody,
+    intent: decision.intent,
+    directQuestion: isDirectClientQuestion(replyInboundBody),
+    answeredDirectQuestion: decision.answeredClientQuestion,
+    knownFactsAvailable: Boolean(decision.blackBoxTrace.knownFactsSummary),
+    knownFactsUsed: Boolean(decision.blackBoxTrace.knownFactsUsed),
+    handoffRequired: decision.handoffRequired,
+    salesReady: Boolean(decision.blackBoxTrace.salesReadyIntent),
+    semanticDuplicate: decision.semanticDuplicateBlocked
+  };
+  const liveQuality = evaluateWhatsAppReplyQuality(reply, { context: qualityContext });
+  const shadowQuality = evaluateWhatsAppReplyQuality(reply, { strict: true, context: qualityContext });
   const [liveQualityEventId, shadowQualityEventId] = await Promise.all([
     recordAiQualityObservation({
       leadId: lead.id,
@@ -1252,6 +1264,9 @@ export async function handleWhatsAppInboundMessage(
         safety: liveQuality.safety,
         focus: liveQuality.focus,
         humanTone: liveQuality.humanTone,
+        directness: liveQuality.directness,
+        contextUse: liveQuality.contextUse,
+        salesProgression: liveQuality.salesProgression,
         questionCount: liveQuality.questionCount,
         releaseEligible: liveQuality.releaseEligible
       },
@@ -1272,6 +1287,9 @@ export async function handleWhatsAppInboundMessage(
         safety: shadowQuality.safety,
         focus: shadowQuality.focus,
         humanTone: shadowQuality.humanTone,
+        directness: shadowQuality.directness,
+        contextUse: shadowQuality.contextUse,
+        salesProgression: shadowQuality.salesProgression,
         questionCount: shadowQuality.questionCount,
         releaseEligible: shadowQuality.releaseEligible
       },
@@ -1358,14 +1376,40 @@ export async function handleWhatsAppInboundMessage(
     };
   }
 
+  const completionReceipt = await beginVerifiedCompletion({
+    actionType: "whatsapp_message",
+    entityType: "lead",
+    entityId: lead.id,
+    leadId: lead.id,
+    intent: "Deliver the approved AI WhatsApp reply to the current conversation.",
+    expectedPostcondition: {
+      providerMessageId: "matching delivery webhook",
+      whatsappStatus: ["sent", "delivered", "read"]
+    },
+    actorType: "system",
+    actorName: "WhatsApp Auto Reply",
+    metadata: {
+      sourceAction: "whatsapp_auto_reply",
+      inboundProviderMessageId: replyTriggerProviderMessageId
+    }
+  });
   let externalSendCompleted = false;
   try {
     logWhatsApp("whatsapp_auto_reply_send_payload_summary", getWhatsAppSendPayloadSummary(senderPhone, reply));
     logWhatsApp("whatsapp_auto_reply_send_started", { providerMessageId, leadId: lead.id });
     const sent = await adapter.sendReply(senderPhone, reply);
     externalSendCompleted = true;
+    await observeVerifiedCompletion(completionReceipt, {
+      independentlyObserved: false,
+      postconditionMatched: false,
+      observedEvidence: {
+        providerAccepted: true,
+        providerMessageId: sent.providerMessageId || "",
+        deliveryWebhookObserved: false
+      }
+    }).catch(() => null);
     replyLeaseCooldownSeconds = WHATSAPP_REPLY_COOLDOWN_SECONDS;
-    logWhatsApp("whatsapp_auto_reply_sent", { providerMessageId, leadId: lead.id, outboundProviderMessageId: sent.providerMessageId || "" });
+    logWhatsApp("whatsapp_auto_reply_provider_accepted", { providerMessageId, leadId: lead.id, outboundProviderMessageId: sent.providerMessageId || "" });
     try {
       await completeWhatsAppConversationReplyReservation({
         reservationId: replyReservationId,
@@ -1387,7 +1431,7 @@ export async function handleWhatsAppInboundMessage(
       body: reply,
       safeToSend: true,
       providerMessageId: sent.providerMessageId || undefined,
-      whatsappStatus: "sent",
+      whatsappStatus: "accepted",
       metadata: {
         inboundProviderMessageId: replyTriggerProviderMessageId,
         leaseOwnerInboundProviderMessageId: providerMessageId,
@@ -1396,8 +1440,11 @@ export async function handleWhatsAppInboundMessage(
         aiGeneratedReply: true,
         aiQualityEventId: liveQualityEventId,
         aiShadowQualityEventId: shadowQualityEventId,
+        completionReceiptId: completionReceipt.receiptId,
+        completionStatus: "pending",
+        expectedPostcondition: completionReceipt.expectedPostcondition,
         ...decision.blackBoxTrace,
-        final_send_result: "sent"
+        final_send_result: "provider_accepted_pending_delivery"
       }
     });
     await linkAiQualityObservationsToMessage({
@@ -1405,10 +1452,10 @@ export async function handleWhatsAppInboundMessage(
       messageId: savedOutboundMessage.id
     }).catch(() => false);
     await auditWhatsApp({
-      action: "whatsapp_auto_reply_sent",
+      action: "whatsapp_auto_reply_provider_accepted",
       leadId: lead.id,
-      summary: "WhatsApp auto-reply sent after safety validation.",
-      metadata: { ...brainMetadata, outboundProviderMessageId: sent.providerMessageId, final_send_result: "sent" }
+      summary: "Meta accepted the WhatsApp auto-reply; verified completion remains pending until a delivery webhook arrives.",
+      metadata: { ...brainMetadata, outboundProviderMessageId: sent.providerMessageId, final_send_result: "provider_accepted_pending_delivery" }
     });
     await recordConversationSafetyOutcomeSafely({
       lead,
@@ -1516,6 +1563,18 @@ export async function handleWhatsAppInboundMessage(
         externalSendAttempted: true
       };
     }
+    await observeVerifiedCompletion(completionReceipt, {
+      independentlyObserved: true,
+      postconditionMatched: false,
+      terminalFailure: true,
+      failureReason: safeError(error),
+      observedEvidence: {
+        providerAccepted: false,
+        providerMessageId: "",
+        status: sendError.status,
+        metaCode: sendError.metaCode
+      }
+    }).catch(() => null);
     try {
       await completeWhatsAppConversationReplyReservation({
         reservationId: replyReservationId,
@@ -1562,6 +1621,9 @@ export async function handleWhatsAppInboundMessage(
         metaCode: sendError.metaCode,
         metaMessage: sendError.metaMessage,
         metaType: sendError.metaType,
+        completionReceiptId: completionReceipt.receiptId,
+        completionStatus: "failed",
+        expectedPostcondition: completionReceipt.expectedPostcondition,
         ...decision.blackBoxTrace,
         final_send_result: "failed"
       }

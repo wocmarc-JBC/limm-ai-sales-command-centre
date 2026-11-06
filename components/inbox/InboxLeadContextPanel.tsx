@@ -54,10 +54,11 @@ function messageStatus(message: LeadMessage) {
   const metadataMetaMessageId = metadataString(message, "metaMessageId") || metadataString(message, "providerMessageId");
   if (metadataBoolean(message, "sending")) return "Sending";
   if (metadataBoolean(message, "clientSendFailed")) return "Failed";
-  if (message.providerMessageId && message.whatsappStatus === "failed" && isNextRedirectOnly(message.metadata?.error)) return "Sent";
-  if (message.providerMessageId || metadataMetaMessageId || message.whatsappStatus === "sent") return "Sent";
-  if (message.whatsappStatus === "failed" && !message.providerMessageId) return "Failed";
-  if (message.direction === "outbound") return "Sent";
+  if (message.providerMessageId && message.whatsappStatus === "failed" && isNextRedirectOnly(message.metadata?.error)) return "Provider Accepted";
+  if (message.whatsappStatus === "failed") return "Failed";
+  if (["sent", "delivered", "read"].includes(message.whatsappStatus || "")) return humanize(message.whatsappStatus || "");
+  if (message.whatsappStatus === "accepted" || message.providerMessageId || metadataMetaMessageId) return "Provider Accepted";
+  if (message.direction === "outbound") return "Pending";
   return humanize(message.whatsappStatus || "Received");
 }
 

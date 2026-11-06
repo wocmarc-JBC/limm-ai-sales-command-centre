@@ -41,7 +41,7 @@ function isDeliveredAiReply(message: LeadMessage) {
   if (message.direction !== "outbound" || message.metadata?.manualReply === true || !normalizedBody(message)) return false;
   const status = String(message.whatsappStatus ?? "").toLowerCase();
   if (["failed", "blocked", "disabled"].includes(status)) return false;
-  return ["sent", "delivered", "read"].includes(status) || Boolean(message.providerMessageId) || message.safeToSend;
+  return ["sent", "delivered", "read"].includes(status);
 }
 
 function metadataNumber(message: LeadMessage, key: string, fallback: number) {

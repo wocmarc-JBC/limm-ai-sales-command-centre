@@ -1,826 +1,7 @@
-import type { Lead, LeadMessage } from "@/lib/types";
-import {
-  findCarpentryDemoQaItem,
-  isCarpentryDemoKnowledgeTrigger,
-  matchCarpentryDemoQaItem,
-  type CarpentryDemoQaMatch
-} from "@/lib/knowledge/limm-carpentry-demo-qa";
-import { validateWhatsAppAutoReply } from "@/lib/whatsapp-safety";
-
-export const V9_CLEAN_WHATSAPP_SALES_BRAIN_VERSION = "v9_0_clean_whatsapp_sales_brain";
-export const V9_SALES_BRAIN_VERSION = "v9_clean_core";
-
-type V9Status = "unknown" | "missing" | "received" | "client_claimed_sent" | "provided";
-type V9Patience = "normal" | "impatient" | "annoyed";
-
-export type V9SalesMove =
-  | "answer_direct_question"
-  | "acknowledge_and_continue"
-  | "safe_price_review"
-  | "timeline_reality_check"
-  | "hypothetical_answer_without_context_overwrite"
-  | "appointment_preference_pending_confirmation"
-  | "office_visit_pending_confirmation"
-  | "design_direction_noted"
-  | "file_correction_acknowledgement"
-  | "portfolio_route"
-  | "promo_deflection"
-  | "free_work_deflection"
-  | "carpentry_demo_review"
-  | "human_identity_answer"
-  | "handoff_to_team"
-  | "voice_or_unsupported_fallback";
-
-export interface V9SalesMemory {
-  property_type: string;
-  storeys: string;
-  address: string;
-  postal_code: string;
-  project_type: string;
-  scope_summary: string;
-  flat_type: string;
-  budget_expectation: string;
-  timeline_expectation: string;
-  key_collection: string;
-  floor_plan_status: V9Status;
-  site_photo_status: V9Status;
-  design_direction: string;
-  design_reference_status: V9Status;
-  occupants: string;
-  children: string;
-  elderly: string;
-  helper: string;
-  pets: string;
-  storage_needs: string;
-  work_from_home: string;
-  appointment_preference: string;
-  office_visit_requested: boolean;
-  client_patience: V9Patience;
-  lead_stage: string;
-  lead_seriousness: "low" | "medium" | "high";
-  handoff_lock: boolean;
-  first_touch_reply_sent: boolean;
-  do_not_ask_again: Record<string, boolean>;
-  last_bot_replies: string[];
-  repeated_question_count: number;
-  correction_history: string[];
-}
-
-export interface V9WhatsAppSalesBrainInput {
-  inboundMessageText: string;
-  inboundMessageType: string;
-  lead: Lead;
-  previousMessages: LeadMessage[];
-  autoReplyEnabled: boolean;
-  calendarEventId?: string | null;
-  providerMessageId?: string;
-}
-
-export interface V9WhatsAppSalesBrainDecision {
-  shouldSendAutoReply: boolean;
-  replyText: string;
-  memoryPatch: Partial<V9SalesMemory> & Record<string, unknown>;
-  trace: Record<string, unknown>;
-  handoffRequired: boolean;
-  safetyPassed: boolean;
-  intent: string;
-  stage: string;
-  confidence: number;
-  replySource: "v9_clean_core" | "safe_fallback" | "handoff_holding" | "intentional_no_reply";
-  salesMove: V9SalesMove;
-  answeredClientQuestion: boolean;
-  askedNextBestQuestion: boolean;
-  riskFlags: string[];
-  missingInfo: string[];
-  nextAction: string;
-  appointmentStatus: "none" | "requested_pending_review" | "pending_calendar_confirmation" | "confirmed_with_calendar_event";
-  safetyResult: "pass" | "rewritten" | "fallback_used";
-  repetitionResult: "pass" | "rewritten" | "fallback_used";
-  qualityResult: "pass" | "rewritten" | "fallback_used";
-  noSilenceGuardResult: "not_needed" | "used" | "intentional_no_reply";
-}
-
-const TEAM_FOLLOW_UP =
-  "I'll get the team to review the messages and follow up directly so we don't keep repeating the same questions.";
-
-const HANDOFF_HOLDING_REPLY =
-  "Sorry about that. Let me check this properly so we don't repeat the same questions.";
-
-const DREAM_HOME_PHRASE = "We'd love to help create your dream home.";
-
-const FIRST_TOUCH_GREETING_REPLY =
-  "Hi, thanks for contacting LIMM Works. We'd love to help create your dream home. May I know what type of property this is and what renovation works you're planning?";
-
-const CHINESE_FIRST_TOUCH_REPLY =
-  "ä½ å¥½ï¼Œæ„Ÿè°¢è”ç³» LIMM Worksã€‚æˆ‘ä»¬å¾ˆæœŸå¾…å¸®æ‚¨æ‰“é€ ç†æƒ³çš„å®¶ã€‚è¯·é—®è¿™æ˜¯ HDBã€å…¬å¯“ã€landed è¿˜æ˜¯å•†ä¸šå•ä½ï¼Ÿä¸»è¦æƒ³è£…ä¿®å“ªäº›éƒ¨åˆ†ï¼Ÿ";
-
-const ULTRA_SAFE_V9_FALLBACK =
-  FIRST_TOUCH_GREETING_REPLY;
-
-const BURST_INTAKE_QUIET_WINDOW_SECONDS = 45;
-
-const LEGACY_REPLY_TEMPLATE_PATTERNS = [
-  /Giving a rough figure too early can be misleading/i,
-  /To avoid giving (?:you )?the wrong figure/i,
-  /Could you share the scope of work/i,
-  /Could you share main renovation scope/i,
-  /WhatsApp renovation enquiry pending review/i,
-  /This is a at/i,
-  /This is with/i
-];
-
-const BANNED_TONE_PATTERNS = [
-  /\bdear\b/i,
-  /\bkindly furnish\b/i,
-  /\brevert accordingly\b/i,
-  /\bcheap package\b/i,
-  /\bbest price\b/i,
-  /\bfrom\s*\$/i,
-  /\baround\s*\$/i,
-  /\bcontinue sending project details\b/i,
-  /\bteam will review the next step properly\b/i,
-  /\bno problem confirm can\b/i,
-  /\bguaranteed approval\b/i,
-  /\bwow exciting\b/i,
-  /\bhii dear\b/i
-];
-
-function normalize(text: string) {
-  return String(text ?? "")
-    .toLowerCase()
-    .replace(/[â€™]/g, "'")
-    .replace(/[^a-z0-9\u4e00-\u9fff\s?$]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function has(text: string, pattern: RegExp) {
-  return pattern.test(text);
-}
-
-function hashReply(text: string) {
-  let hash = 0;
-  for (const char of text) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0");
-}
-
-function textFromMetadata(metadata: Record<string, unknown> | undefined) {
-  if (!metadata) return "";
-  return [
-    metadata.messageType,
-    metadata.caption,
-    metadata.filename,
-    metadata.mimeType,
-    metadata.fileCategory,
-    metadata.category,
-    metadata.notes
-  ]
-    .filter(Boolean)
-    .map(String)
-    .join(" ");
-}
-
-function messageText(message: LeadMessage) {
-  return `${message.body ?? ""} ${textFromMetadata(message.metadata)}`.trim();
-}
-
-function previousInbound(messages: LeadMessage[]) {
-  return messages.filter((message) => message.direction === "inbound").map(messageText);
-}
-
-function previousInboundBeforeCurrent(input: V9WhatsAppSalesBrainInput) {
-  const current = normalize(input.inboundMessageText);
-  const currentType = normalize(input.inboundMessageType);
-  let currentRemoved = false;
-  return previousInbound(input.previousMessages)
-    .map((text) => normalize(text))
-    .filter((text) => {
-      if (!text) return false;
-      if (current && !currentRemoved && (text === current || text.startsWith(`${current} `))) {
-        currentRemoved = true;
-        return false;
-      }
-      if (!current && currentType && !currentRemoved && text.includes(currentType)) {
-        currentRemoved = true;
-        return false;
-      }
-      return true;
-    });
-}
-
-function isFirstTouch(input: V9WhatsAppSalesBrainInput) {
-  return previousInboundBeforeCurrent(input).length === 0;
-}
-
-function previousOutbound(messages: LeadMessage[]) {
-  return messages
-    .filter((message) => message.direction === "outbound" && message.channel === "whatsapp")
-    .map((message) => message.body)
-    .filter(Boolean)
-    .slice(0, 5);
-}
-
-function isFirstTouchReplyText(reply: string) {
-  const normalized = normalize(reply);
-  return [
-    FIRST_TOUCH_GREETING_REPLY,
-    CHINESE_FIRST_TOUCH_REPLY,
-    "Hi, yes we're here. Thanks for contacting LIMM Works. May I know what renovation works you're planning?"
-  ].map(normalize).some((template) => normalized === template || normalized.includes(template.slice(0, 55)));
-}
-
-function statusFromString(value: unknown): V9Status {
-  const text = normalize(String(value ?? ""));
-  if (!text) return "unknown";
-  if (text.includes("received") || text.includes("uploaded") || text.includes("attached")) return "received";
-  if (text.includes("sent") || text.includes("client_claimed_sent")) return "client_claimed_sent";
-  if (text.includes("provided")) return "provided";
-  if (text.includes("missing")) return "missing";
-  return "unknown";
-}
-
-function initialMemory(input: V9WhatsAppSalesBrainInput): V9SalesMemory {
-  const traceMemory = ((input.lead.intakeProfile?.trace ?? {}) as Record<string, unknown>).v9Memory as Partial<V9SalesMemory> | undefined;
-  return {
-    property_type: input.lead.intakeProfile?.propertyType || input.lead.propertyType || traceMemory?.property_type || "",
-    storeys: traceMemory?.storeys || "",
-    address: input.lead.projectAddress || input.lead.intakeProfile?.propertyAreaOrAddress || traceMemory?.address || "",
-    postal_code: input.lead.postalCode || traceMemory?.postal_code || "",
-    project_type: input.lead.serviceType || traceMemory?.project_type || "",
-    scope_summary: input.lead.intakeProfile?.scopeOfWork || input.lead.scopeSummary || traceMemory?.scope_summary || "",
-    flat_type: traceMemory?.flat_type || "",
-    budget_expectation: input.lead.intakeProfile?.budgetExpectation || traceMemory?.budget_expectation || "",
-    timeline_expectation: input.lead.intakeProfile?.timeline || traceMemory?.timeline_expectation || "",
-    key_collection: input.lead.intakeProfile?.keyCollectionDate || traceMemory?.key_collection || "",
-    floor_plan_status: statusFromString(input.lead.intakeProfile?.floorPlanStatus || traceMemory?.floor_plan_status),
-    site_photo_status: statusFromString(input.lead.intakeProfile?.sitePhotosStatus || traceMemory?.site_photo_status),
-    design_direction: traceMemory?.design_direction || "",
-    design_reference_status: statusFromString(traceMemory?.design_reference_status),
-    occupants: input.lead.intakeProfile?.occupants || traceMemory?.occupants || "",
-    children: traceMemory?.children || "",
-    elderly: traceMemory?.elderly || "",
-    helper: input.lead.intakeProfile?.helper || traceMemory?.helper || "",
-    pets: input.lead.intakeProfile?.pets || traceMemory?.pets || "",
-    storage_needs: traceMemory?.storage_needs || "",
-    work_from_home: traceMemory?.work_from_home || "",
-    appointment_preference: input.lead.preferredContactTime || input.lead.intakeProfile?.preferredMeetingTiming || traceMemory?.appointment_preference || "",
-    office_visit_requested: Boolean(traceMemory?.office_visit_requested),
-    client_patience: (traceMemory?.client_patience as V9Patience | undefined) || "normal",
-    lead_stage: traceMemory?.lead_stage || input.lead.status || "new_lead",
-    lead_seriousness: (traceMemory?.lead_seriousness as V9SalesMemory["lead_seriousness"] | undefined) || "low",
-    handoff_lock: Boolean(traceMemory?.handoff_lock || input.lead.bossApprovalNeeded),
-    first_touch_reply_sent: Boolean(traceMemory?.first_touch_reply_sent),
-    do_not_ask_again: { ...(traceMemory?.do_not_ask_again ?? {}) },
-    last_bot_replies: Array.isArray(traceMemory?.last_bot_replies) ? traceMemory.last_bot_replies.slice(0, 5) : [],
-    repeated_question_count: Number(traceMemory?.repeated_question_count ?? 0),
-    correction_history: Array.isArray(traceMemory?.correction_history) ? traceMemory.correction_history.slice(0, 10) : []
-  };
-}
-
-function markDoNotAsk(memory: V9SalesMemory, key: string) {
-  memory.do_not_ask_again[key] = true;
-}
-
-function applyTextFacts(memory: V9SalesMemory, text: string, source: "current" | "previous") {
-  const normalized = normalize(text);
-  if (!normalized) return;
-
-  if (has(normalized, /\blanded\b|\bterrace\b|\bsemi d\b|\bbungalow\b/)) memory.property_type = "landed";
-  if (has(normalized, /\bhdb\b|\bbto\b/)) memory.property_type ||= "HDB";
-  if (has(normalized, /\bpublic\b|\bpublic housing\b/) && !memory.property_type) memory.property_type = "HDB";
-  if (has(normalized, /\bcondo\b|\bapartment\b/)) memory.property_type ||= "condo";
-  if (has(normalized, /\bcommercial\b|\boffice\b|\bshop\b/) && !has(normalized, /\byour office\b|\bgo office\b/)) memory.property_type ||= "commercial";
-  const flatMatch = normalized.match(/\b([1-5])\s*(?:room|rm)?\s*(?:flat|hdb)?\b/);
-  if (flatMatch && (has(normalized, /\broom\b|\brm\b|\bflat\b|\bhdb\b/) || normalized.length <= 8)) {
-    memory.flat_type = `${flatMatch[1]}-room flat`;
-    memory.property_type ||= "HDB";
-  }
-  const chineseFlatMatch = normalized.match(/([1-5])\s*\u623f/);
-  if (chineseFlatMatch) {
-    memory.flat_type = `${chineseFlatMatch[1]}-room flat`;
-    memory.property_type ||= "HDB";
-  }
-  if (has(normalized, /\ba\s*&\s*a\b|\ba\s+a\b|\baa\b|\baddition\b|\balteration\b|\bextension\b|\bextend\b/)) memory.project_type = "landed A&A";
-  if (has(normalized, /\bfull work\b|\bfull works\b|\bfull reno\b|\bfull renovation\b|\bwhole house\b|\bwhole-house\b|\bwhole unit\b|\bentire house\b|\u5168\u5c4b|\u6574\u5c4b/)) {
-    memory.scope_summary = appendUnique(memory.scope_summary, "full renovation");
-  } else if (has(normalized, /\brenovate\b|\breno\b/)) {
-    memory.scope_summary ||= "renovation enquiry";
-  }
-  if (has(normalized, /\bkitchen\b/)) memory.scope_summary = appendUnique(memory.scope_summary, "kitchen");
-  if (has(normalized, /\bbathroom\b|\btoilet\b/)) memory.scope_summary = appendUnique(memory.scope_summary, "bathroom");
-  if (has(normalized, /\bcarpentry\b|\bcabinet\b|\bcabinets\b|\bwardrobe\b|\btv console\b|\bfeature wall\b|\blaminate\b|æœ¨å·¥|æ©±æŸœ|è¡£æŸœ|ç”µè§†æŸœ|ä¿®æ”¹æŸœ|åŠ å±‚æ¿/)) {
-    memory.scope_summary = appendUnique(memory.scope_summary, "carpentry/cabinet works");
-  }
-  if (has(normalized, /\bdemo\b|\bdemolition\b|\bdismantle\b|\bdismantling\b|\bremove cabinet\b|\bremove built in\b|\bremove tiles\b|\btile hacking\b|\bfloor hacking\b|æ‹†æŸœ|æ‹†é™¤|æ‹†åœ°ç –|æ‹†å¢™ç –/)) {
-    memory.scope_summary = appendUnique(memory.scope_summary, "demo/dismantling works");
-  }
-  if (has(normalized, /\bwall\b|\bhack\b|\bhacking\b|æ•²å¢™|æ‰“å¢™|æ‹†å¢™/)) memory.scope_summary = appendUnique(memory.scope_summary, "wall/hacking review");
-
-  const addressMatch = text.match(/\b(?:\d{1,4}\s+[A-Za-z][A-Za-z\s.'-]{2,}\s+(?:Road|Rd|Street|St|Avenue|Ave|Drive|Dr|Lane|Ln|Crescent|Close|Way|Place|Terrace|Walk))\b/i);
-  if (addressMatch) memory.address = addressMatch[0].trim();
-  const postalMatch = text.match(/\bSingapore\s*(\d{6})\b|\bpostal\s*(\d{6})\b|\b(\d{6})\b/i);
-  if (postalMatch) memory.postal_code = (postalMatch[1] || postalMatch[2] || postalMatch[3] || "").trim();
-
-  if (has(normalized, /\bfloor\s*plan\b|\bfloorplan\b|\blayout\b|\bdrawing\b|\bplan attached\b|\bfile already sent\b|\bfloorplan already sent\b|\bfloor plan already sent\b|\bfloor.{0,20}sent\b|\bi already sent floor\b/)) {
-    memory.floor_plan_status = source === "current" && has(normalized, /\balready\b|\bsent\b/) ? "client_claimed_sent" : "received";
-    markDoNotAsk(memory, "floor_plan");
-    memory.correction_history = appendArrayUnique(memory.correction_history, "floor_plan_received_or_claimed");
-  }
-  if (has(normalized, /\bsite photo\b|\bsite photos\b|\bphoto already\b|\bphotos already\b|\bphotos?.{0,25}(?:sent|been sent|attached)\b|\bi sent the photos\b|\bimage attached\b|\bsite picture\b|\bpicture\b|\bimage\b/)) {
-    memory.site_photo_status = source === "current" && has(normalized, /\balready\b|\bsent\b/) ? "client_claimed_sent" : "received";
-    markDoNotAsk(memory, "site_photos");
-    memory.correction_history = appendArrayUnique(memory.correction_history, "site_photos_received_or_claimed");
-  }
-  if (has(normalized, /\bdesign reference\b|\breference image\b|\bref image\b|\bmodern luxury\b|\bresort style\b|\bjapandi\b|\bminimalist\b|\bcontemporary\b/)) {
-    memory.design_reference_status = "provided";
-    markDoNotAsk(memory, "design_references");
-    const direction = normalized.match(/\b(resort style|modern luxury|japandi|minimalist|contemporary)\b/i)?.[1];
-    if (direction) memory.design_direction = direction;
-  }
-  if (has(normalized, /\bdesign resort style\b|\bresort style\b/)) {
-    memory.design_direction = "resort style";
-    memory.design_reference_status = "provided";
-    markDoNotAsk(memory, "design_references");
-  }
-
-  if (has(normalized, /\bbudget\b|\bmy budget\b|\bexpectation\b/)) memory.budget_expectation = "client_provided";
-  if (has(normalized, /\bkey collection\b|\bkey collect\b|\bmove in\b|\bmove-in\b/)) memory.key_collection = "client_provided";
-  if (has(normalized, /\bmonth\b|\bweek\b|\bcny\b|\bbefore christmas\b|\btimeline\b|\bfinish\b|\bcomplete\b/)) memory.timeline_expectation = appendUnique(memory.timeline_expectation, text.trim().slice(0, 80));
-
-  if (has(normalized, /\b1 kid\b|\bkid\b|\bchild\b|\bchildren\b/)) memory.children = "yes";
-  if (has(normalized, /\bno elder\b|\bno elders\b|\bno elderly\b/)) memory.elderly = "no";
-  if (has(normalized, /\belderly\b|\belder\b/)) memory.elderly ||= "yes";
-  if (has(normalized, /\bhelper\b|\bmaid\b/)) memory.helper = "yes";
-  const pets = [];
-  if (has(normalized, /\bdog\b/)) pets.push("dog");
-  if (has(normalized, /\bcat\b/)) pets.push("cat");
-  if (has(normalized, /\bgiraffe\b/)) pets.push("giraffe");
-  if (pets.length) memory.pets = appendUnique(memory.pets, pets.join(", "));
-
-  const timing = extractAppointmentPreference(text);
-  if (timing) memory.appointment_preference = timing;
-  if (has(normalized, /\bgo (?:your )?office\b|\byour office\b|\boffice for meeting\b/)) memory.office_visit_requested = true;
-
-  if (detectFrustration(normalized)) {
-    memory.client_patience = "annoyed";
-    memory.handoff_lock = true;
-    memory.correction_history = appendArrayUnique(memory.correction_history, "client_frustration_detected");
-  }
-}
-
-function appendUnique(existing: string, value: string) {
-  const clean = value.trim();
-  if (!clean) return existing;
-  const normalizedExisting = normalize(existing);
-  if (normalizedExisting.includes(normalize(clean))) return existing;
-  return existing ? `${existing}; ${clean}` : clean;
-}
-
-function appendArrayUnique(existing: string[], value: string) {
-  return existing.includes(value) ? existing : [...existing, value];
-}
-
-function extractAppointmentPreference(text: string) {
-  const normalized = normalize(text);
-  const match = text.match(/\b(?:mon|monday|tue|tues|tuesday|wed|wednesday|thu|thurs|thursday|fri|friday|sat|saturday|sun|sunday|tmr|tomorrow|tonight)\b[^.?\n]{0,35}?\b(?:\d{1,2})(?::\d{2})?\s*(?:am|pm)?\b/i);
-  if (match) return titleCaseTiming(match[0].trim());
-  if (has(normalized, /\bnext available\b|\bavailable slot\b/)) return "next available slot requested";
-  return "";
-}
-
-function titleCaseTiming(text: string) {
-  return text
-    .replace(/\btmr\b/i, "tomorrow")
-    .replace(/\bwed\b/i, "Wednesday")
-    .replace(/\bmon\b/i, "Monday")
-    .replace(/\btue\b/i, "Tuesday")
-    .replace(/\bthu\b/i, "Thursday")
-    .replace(/\bfri\b/i, "Friday")
-    .replace(/\bsat\b/i, "Saturday")
-    .replace(/\bsun\b/i, "Sunday")
-    .replace(/\b(\d{1,2})\s*pm\b/i, "$1PM")
-    .replace(/\b(\d{1,2})\s*am\b/i, "$1AM");
-}
-
-function detectFrustration(normalized: string) {
-  return has(normalized, /\bwtf\b|\bstupid\b|\bwhy you keep repeating\b|\bwhy ask again\b|\bare you blind\b|\bnonsense\b|\byou asked already\b|\balready told you\b|\bshit\b|\?\?\?/);
-}
-
-function deriveMemory(input: V9WhatsAppSalesBrainInput) {
-  const memory = initialMemory(input);
-  const currentText = `${input.inboundMessageText} ${input.inboundMessageType}`.trim();
-  for (const text of previousInbound(input.previousMessages)) applyTextFacts(memory, text, "previous");
-  applyTextFacts(memory, currentText, "current");
-  const currentType = input.inboundMessageType.toLowerCase();
-  if (currentType === "image") {
-    memory.site_photo_status = "received";
-    markDoNotAsk(memory, "site_photos");
-  }
-  if (currentType === "document" && has(normalize(input.inboundMessageText), /\bfloor\s*plan\b|\bfloorplan\b|\blayout\b|\bdrawing\b|\bplan\b|\battached\b/)) {
-    memory.floor_plan_status = "received";
-    markDoNotAsk(memory, "floor_plan");
-  }
-  if (["image", "document"].includes(currentType) && has(normalize(input.inboundMessageText), /\bdesign\b|\blayout\b|\bfloor\s*plan\b|\bfloorplan\b|\bdrawing\b|\bplan\b|\battached\b/)) {
-    memory.floor_plan_status = "received";
-    memory.design_reference_status = "provided";
-    markDoNotAsk(memory, "floor_plan");
-  }
-  memory.last_bot_replies = [...previousOutbound(input.previousMessages), ...memory.last_bot_replies].slice(0, 5);
-  memory.first_touch_reply_sent = memory.first_touch_reply_sent || memory.last_bot_replies.some(isFirstTouchReplyText);
-  const seriousSignals = [
-    memory.property_type === "landed",
-    /a&a|landed/i.test(memory.project_type),
-    Boolean(memory.address),
-    memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent",
-    Boolean(memory.budget_expectation || memory.timeline_expectation || memory.appointment_preference)
-  ].filter(Boolean).length;
-  memory.lead_seriousness = seriousSignals >= 2 ? "high" : seriousSignals === 1 ? "medium" : "low";
-  memory.lead_stage = memory.handoff_lock ? "handoff_required" : memory.lead_seriousness === "high" ? "serious_lead_review" : "discovery";
-  return memory;
-}
-
-function detectIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
-  const text = normalize(input.inboundMessageText);
-  const type = input.inboundMessageType.toLowerCase();
-  if (type === "audio" || type === "voice") return "voice_message";
-  if (!text && !["image", "document"].includes(type)) return "unsupported";
-  if (detectFrustration(text)) return "frustration_or_correction";
-  if (has(text, /\bfloor\s*plan already\b|\bfloorplan already\b|\bfloor.{0,20}sent\b|\bphotos? already\b|\bphotos?.{0,25}(?:sent|been sent)\b|\balready sent\b|\bi sent\b/)) return "file_correction";
-  if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) return "carpentry_demo_qa";
-  if (carpentryDemoMatch(input, memory)) return "carpentry_demo_qa";
-  if (has(text, /\bhow much\b|\bprice\b|\bbudget how\b|\bquotation\b|\bquote\b|\bestimate\b|\brough cost\b|\broughly\b|\bpackage\b|å¤šå°‘é’±/)) return "price_question";
-  if (has(text, /\bso .*cannot finish\b|\bcannot finish\b/)) return "timeline_followup";
-  if (has(text, /\bstart\s+(?:tomorrow|tmr|tonight|this week|next week)\b|\bfinish\b|\bcomplete\b|\btimeline\b|\bhow long\b|\b\d+\s*months?\b|\b\d+\s*weeks?\b/)) {
-    if (has(text, /\bcondo\b/) && memory.property_type && memory.property_type !== "condo") return "hypothetical_timeline";
-    return "timeline_question";
-  }
-  if (has(text, /\bgo (?:your )?office\b|\byour office\b|\boffice for meeting\b/)) return "office_visit_request";
-  if (has(text, /\bappt\b|\bappointment\b|\bmeeting\b|\bmeet\b|\bsite visit\b|\bcome down\b|\bavailable slot\b|\bnext available\b|\bbook\b|\bconfirm .*(?:am|pm|slot)\b|é¢„çº¦/)) return "appointment_request";
-  if (has(text, /\bpast work\b|\bproject photos?\b|\bportfolio\b|\bbefore after\b|\bbefore-and-after\b|\bshow me your work\b|\brenovation photos?\b|\bcompleted project\b|ä½œå“/)) return "portfolio_request";
-  if (has(text, /\bpromo\b|\bdiscount\b|\boffer\b/)) return "promotion_question";
-  if (has(text, /\bfree\b|\bdo for free\b/)) return "free_work_request";
-  if (has(text, /\bare you ai\b|\bare you human\b|\bchatbot\b|\bbot\b/)) return "identity_question";
-  if (has(text, /\bresort style\b|\bmodern luxury\b|\bjapandi\b|\bminimalist\b|\bcontemporary\b/)) return "design_direction_statement";
-  if (has(text, /\bdesign\b|\btheme\b|\bconcept\b|\bstyle\b|\binterior design\b|\bdesign direction\b|\bdesign ideas?\b|\blayout ideas?\b|\bpropose concept\b/)) return "design_question";
-  if (has(text, /\bhack\b|\bhacking\b|\bwall\b|\bstructural\b/)) return "hacking_wall";
-  if (has(text, /\bapproval\b|\bapprove\b|\bpermit\b|\bsubmission\b|\bura\b|\bbca\b|ç”³è¯·/)) return "approval_submission";
-  if (has(text, /\ba&a\b|\baa\b|\blanded\b|\brenovate\b|\breno\b|\bextension\b|\bextend\b/)) return "serious_project_enquiry";
-  if (has(text, /\bhello\b|\bhi\b|\bare you there\b|\bcan reply\b|\bany update\b|ä½ å¥½/)) return "follow_up_ping";
-  if (["image", "document"].includes(type)) return "media_received";
-  return "general_enquiry";
-}
-
-function riskFlags(intent: string, memory: V9SalesMemory) {
-  return [
-    intent === "price_question" ? "pricing_request" : "",
-    intent === "timeline_question" || intent === "timeline_followup" || intent === "hypothetical_timeline" ? "timeline_expectation" : "",
-    intent === "appointment_request" || intent === "office_visit_request" ? "appointment_request" : "",
-    intent === "carpentry_demo_qa" ? "carpentry_demo_knowledge_review" : "",
-    intent === "hacking_wall" ? "hacking_or_structural_review" : "",
-    intent === "approval_submission" ? "approval_or_submission_review" : "",
-    memory.handoff_lock ? "client_frustration_handoff_lock" : "",
-    memory.lead_seriousness === "high" ? "serious_landed_or_aa_lead" : ""
-  ].filter(Boolean);
-}
-
-function missingInfo(memory: V9SalesMemory) {
-  const missing: string[] = [];
-  if (!memory.property_type) missing.push("property_type");
-  if (!memory.scope_summary && !memory.project_type) missing.push("scope_summary");
-  if (!memory.address && !memory.postal_code) missing.push("address_or_area");
-  if (!["received", "client_claimed_sent"].includes(memory.floor_plan_status) && !memory.do_not_ask_again.floor_plan) missing.push("floor_plan");
-  if (!["received", "client_claimed_sent"].includes(memory.site_photo_status) && !memory.do_not_ask_again.site_photos) missing.push("site_photos");
-  if (!["provided", "received", "client_claimed_sent"].includes(memory.design_reference_status) && !memory.do_not_ask_again.design_references) missing.push("design_references");
-  return missing;
-}
-
-function conciseKnownFacts(memory: V9SalesMemory) {
-  return [
-    memory.property_type ? `property: ${memory.property_type}` : "",
-    memory.flat_type ? `flat: ${memory.flat_type}` : "",
-    memory.project_type ? `project: ${memory.project_type}` : "",
-    memory.address ? `address: ${memory.address}` : "",
-    memory.floor_plan_status !== "unknown" ? `floor plan: ${memory.floor_plan_status}` : "",
-    memory.site_photo_status !== "unknown" ? `site photos: ${memory.site_photo_status}` : "",
-    memory.design_direction ? `design: ${memory.design_direction}` : "",
-    memory.appointment_preference ? `appointment preference: ${memory.appointment_preference}` : "",
-    memory.client_patience !== "normal" ? `patience: ${memory.client_patience}` : ""
-  ].filter(Boolean).join("; ");
-}
-
-function nextUsefulInfoSentence(memory: V9SalesMemory, options: { allowQuestion?: boolean } = {}) {
-  if (memory.handoff_lock) return "";
-  const missing: string[] = [];
-  if (!["received", "client_claimed_sent"].includes(memory.site_photo_status) && !memory.do_not_ask_again.site_photos) missing.push("site photos");
-  if (!["provided", "received", "client_claimed_sent"].includes(memory.design_reference_status) && !memory.do_not_ask_again.design_references) missing.push("design references");
-  if (!memory.address && !memory.postal_code && !memory.do_not_ask_again.address) missing.push("property area/address");
-  if (!missing.length) return "The team can review the details already shared and advise the next step.";
-  const prefix = memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent"
-    ? "We've received the floor plan, so"
-    : "To help the team review properly,";
-  const ask = `${prefix} ${joinList(missing)} would be useful next.`;
-  return options.allowQuestion ? ask.replace(/\.$/, "?") : ask;
-}
-
-function hasSpecificScope(memory: V9SalesMemory) {
-  const normalizedScope = normalize(`${memory.scope_summary} ${memory.project_type}`);
-  if (!normalizedScope) return false;
-  return !["renovation enquiry", "reno", "renovation"].includes(normalizedScope);
-}
-
-function scopePhrase(memory: V9SalesMemory) {
-  const normalizedScope = normalize(`${memory.scope_summary} ${memory.project_type}`);
-  if (normalizedScope.includes("full") || normalizedScope.includes("whole")) return "full renovation";
-  if (normalizedScope.includes("kitchen")) return "kitchen works";
-  if (normalizedScope.includes("toilet") || normalizedScope.includes("bathroom")) return "toilet works";
-  if (normalizedScope.includes("wall") || normalizedScope.includes("hacking")) return "wall/hacking works";
-  if (normalizedScope.includes("a a") || normalizedScope.includes("landed")) return "landed/A&A works";
-  return "renovation works";
-}
-
-function hasAreaScope(memory: V9SalesMemory) {
-  return has(normalize(memory.scope_summary), /\bkitchen\b|\btoilet\b|\bbathroom\b|\bwall\b|\bhacking\b|\bcarpentry\b|\bwhole\b|\bfull\b|\bextension\b|\bextend\b/);
-}
-
-function combinedCarpentryDemoContext(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
-  return [
-    input.inboundMessageText,
-    ...previousInbound(input.previousMessages),
-    memory.scope_summary,
-    memory.project_type
-  ].join(" ");
-}
-
-function carpentryDemoMatch(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory): CarpentryDemoQaMatch | null {
-  const shortCarpentryPrice = isShortCarpentryPriceEnquiry(input.inboundMessageText);
-  const match = matchCarpentryDemoQaItem(input.inboundMessageText) ?? (shortCarpentryPrice
-    ? {
-        item: findCarpentryDemoQaItem("CDQ01_PRICE_FIRST"),
-        score: 9,
-        matchedKeywords: ["short_carpentry_price"],
-        matchedPatterns: ["carpentry_term + price_term"]
-      }
-    : null);
-  if (!match) return null;
-  const context = combinedCarpentryDemoContext(input, memory);
-  if (shortCarpentryPrice || isCarpentryDemoKnowledgeTrigger(input.inboundMessageText) || isCarpentryDemoKnowledgeTrigger(context)) {
-    return match;
-  }
-  return null;
-}
-
-function hasReceivedSitePhotos(memory: V9SalesMemory) {
-  return memory.site_photo_status === "received" || memory.site_photo_status === "client_claimed_sent";
-}
-
-function hasReceivedFloorPlan(memory: V9SalesMemory) {
-  return memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent";
-}
-
-function hasMeasurements(input: V9WhatsAppSalesBrainInput) {
-  const context = normalize([input.inboundMessageText, ...previousInbound(input.previousMessages)].join(" "));
-  return /\bmeasurement\b|\bmeasurements\b|\bdimension\b|\bdimensions\b|\b\d+\s*(?:mm|cm|m|metre|meter|ft|feet)\b|\b\d+\s*[xÃ—]\s*\d+\b/.test(context);
-}
-
-function hasPreferredStartDate(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
-  const context = normalize([input.inboundMessageText, ...previousInbound(input.previousMessages), memory.timeline_expectation].join(" "));
-  return Boolean(memory.timeline_expectation || /\btomorrow\b|\btmr\b|\btonight\b|\bnext week\b|\bthis week\b|\bpreferred start\b|\bstart date\b|\bcan start\b/.test(context));
-}
-
-function carpentryDemoContextText(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
-  return normalize([input.inboundMessageText, ...previousInbound(input.previousMessages), memory.scope_summary, memory.project_type].join(" "));
-}
-
-function hasCarpentryTerms(text: string) {
-  return /carpentry|cabinet|kitchen cabinet|wardrobe|tv console|shoe cabinet|built[- ]?in cabinet|shel(?:f|ves)|laminate|hinge|drawer|drawer track|soft closing|fridge|æœ¨å·¥|æ©±æŸœ|è¡£æŸœ|ç”µè§†æŸœ|ä¿®æ”¹æŸœ|åŠ å±‚æ¿/.test(text);
-}
-
-function hasCurrentCarpentryItemTerms(text: string) {
-  return hasCarpentryTerms(text) ||
-    /\bbuilt[- ]?in\b|\bshelf\b|\bshelves\b|\u6728\u5de5|\u6a71\u67dc|\u8863\u67dc|\u7535\u89c6\u67dc/.test(text);
-}
-
-function hasDemoHackingTerms(text: string) {
-  return /hack|hacking|dismantle|demolition|remove|remove wall|wall removal|tile hacking|floor hacking|debris|disposal|haulage|rubbish|noisy|noise|æ‹†|æ‹†é™¤|æ•²å¢™|æ‰“å¢™|æ‹†å¢™|æ‹†æŸœ|åžƒåœ¾æ¸…ç†|æ¸…èµ°/.test(text);
-}
-
-function hasDemoActionVerb(text: string) {
-  return /\b(?:remove|dismantle|demolish|hack|hacking)\b|æ‹†æŸœ|æ‹†é™¤|æ‹†å¢™|æ•²å¢™|æ‰“å¢™|åžƒåœ¾æ¸…ç†|æ¸…èµ°/.test(text);
-}
-
-function hasCurrentDemoActionVerb(text: string) {
-  return hasDemoActionVerb(text) || /\bdispose\b|\u62c6|\u62c6\u9664|\u6572|\u6572\u5899/.test(text);
-}
-
-function hasCarpentryActionVerb(text: string) {
-  return /\b(?:make|build|custom|modify|fit|install|add|replace|repair)\b|ä¿®æ”¹æŸœ|åŠ å±‚æ¿/.test(text);
-}
-
-function hasCarpentryPriceTerms(text: string) {
-  return /\b(?:how much|quote|quotation|price|cost|roughly|estimate)\b|Ã¥Â¤Å¡Ã¥Â°â€˜Ã©â€™Â±|Ã¦Å Â¥Ã¤Â»Â·|Ã¤Â¼Â°Ã¤Â»Â·/.test(text);
-}
-
-function isShortCarpentryPriceEnquiry(text: string) {
-  const normalized = normalize(text);
-  if (!hasCurrentCarpentryItemTerms(normalized) || !hasCarpentryPriceTerms(normalized)) return false;
-  return !hasCurrentDemoActionVerb(normalized);
-}
-
-function isCarpentryIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
-  return hasCarpentryTerms(carpentryDemoContextText(input, memory));
-}
-
-function isDemoHackingIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
-  return hasDemoHackingTerms(carpentryDemoContextText(input, memory));
-}
-
-function carpentryDemoServiceIntent(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
-  const current = normalize(input.inboundMessageText);
-  const currentHasCarpentry = hasCarpentryTerms(current);
-  const currentHasDemo = hasDemoHackingTerms(current);
-
-  if (currentHasDemo && (hasDemoActionVerb(current) || !currentHasCarpentry)) return "demo_hacking";
-  if (currentHasCarpentry && (hasCarpentryActionVerb(current) || !currentHasDemo)) return "carpentry";
-
-  const context = carpentryDemoContextText(input, memory);
-  const contextHasCarpentry = hasCarpentryTerms(context);
-  const contextHasDemo = hasDemoHackingTerms(context);
-  if (contextHasDemo && !contextHasCarpentry) return "demo_hacking";
-  if (contextHasCarpentry) return "carpentry";
-  if (contextHasDemo) return "demo_hacking";
-  return "carpentry";
-}
-
-function hasTimingQuestion(input: V9WhatsAppSalesBrainInput) {
-  return /\btomorrow\b|\btmr\b|\btonight\b|\bnext week\b|\bthis week\b|\bcan start\b|\bstart\b|\btimeline\b|\bhow long\b|æ˜Žå¤©|å‡ æ—¶|å¤šä¹…|ä»€ä¹ˆæ—¶å€™/.test(normalize(input.inboundMessageText));
-}
-
-function composeCarpentryPriceReply(memory: V9SalesMemory) {
-  const acknowledgement = receivedCarpentryDemoAcknowledgement(memory);
-  const askParts: string[] = [];
-  if (!hasReceivedSitePhotos(memory) && !memory.do_not_ask_again.site_photos) askParts.push("a photo of the area");
-  askParts.push("rough dimensions");
-  const ask = askParts.length ? `Could you send ${joinList(askParts)}? ` : "";
-  return `${acknowledgement}Sure, we can help review this. For custom carpentry, pricing mainly depends on the cabinet size, internal layout, material, laminate and hardware.\n\n${ask}Once we see the scope, we can advise the next step more accurately.`;
-}
-
-function composeDemoHackingPriceReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
-  if (isMandarinMessage(input.inboundMessageText)) {
-    return "å¯ä»¥ï¼Œæˆ‘ä»¬å¯ä»¥å…ˆå¸®æ‚¨çœ‹ã€‚è¯·å…ˆå‘æˆ¿å±‹ç±»åž‹ï¼ˆHDB / Condo / Landedï¼‰ã€çŽ°åœºç…§ç‰‡æˆ–è§†é¢‘ï¼Œä»¥åŠå¤§æ¦‚å°ºå¯¸ï¼ˆå¦‚æžœæ–¹ä¾¿ï¼‰ã€‚\n\næ˜Žå¤©èƒ½ä¸èƒ½å®‰æŽ’ï¼Œè¦çœ‹çŽ°åœºæƒ…å†µã€å·¥ç¨‹èŒƒå›´å’Œæ˜¯å¦éœ€è¦ç®¡ç†å¤„/HDBæ‰¹å‡†ã€‚æˆ‘ä»¬å…ˆçœ‹èµ„æ–™ï¼Œå†å¸®æ‚¨ç¡®è®¤ä¸‹ä¸€æ­¥ã€‚";
-  }
-  const needsFloorPlan = /wall|hack|hacking|æ•²å¢™|æ‰“å¢™|æ‹†å¢™/.test(carpentryDemoContextText(input, memory)) && !hasReceivedFloorPlan(memory);
-  const missing: string[] = [];
-  if (!memory.property_type) missing.push("property type");
-  if (needsFloorPlan) missing.push("floor plan");
-  if (!hasReceivedSitePhotos(memory) && !memory.do_not_ask_again.site_photos) missing.push("photo of the area");
-  const ask = missing.length ? ` Could you send the ${joinList(missing)} so we can review the scope?` : " We can review the details already shared and advise the next step.";
-  const timingNote = hasTimingQuestion(input) ? " Timing also depends on the site condition, approval requirements and team availability." : "";
-  return `Sure, we can help review this. For demo or hacking works, we need to check the scope, site condition, access, protection and any approval requirements before advising.${timingNote}${ask}`;
-}
-
-function missingCarpentryDemoDetails(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput, options: { includeFloorPlan?: boolean } = {}) {
-  const missing: string[] = [];
-  if (!memory.property_type) missing.push("property type");
-  if (!hasReceivedSitePhotos(memory) && !memory.do_not_ask_again.site_photos) missing.push("photos/video of the area");
-  if (options.includeFloorPlan && !hasReceivedFloorPlan(memory) && !memory.do_not_ask_again.floor_plan) missing.push("floor plan");
-  if (!hasMeasurements(input)) missing.push("rough measurements");
-  if (!hasSpecificScope(memory)) missing.push("what you want to build, remove, modify or hack");
-  if (!hasPreferredStartDate(memory, input)) missing.push("preferred start date");
-  return missing;
-}
-
-function receivedCarpentryDemoAcknowledgement(memory: V9SalesMemory) {
-  const received = [
-    hasReceivedSitePhotos(memory) ? "photos" : "",
-    memory.property_type ? "property type" : "",
-    hasReceivedFloorPlan(memory) ? "floor plan" : ""
-  ].filter(Boolean);
-  if (!received.length) return "";
-  return `Thanks, I've received the ${joinList(received)}. `;
-}
-
-function askMissingCarpentryDemoDetails(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput, options: { includeFloorPlan?: boolean } = {}) {
-  const missing = missingCarpentryDemoDetails(memory, input, options);
-  if (!missing.length) return "The team can review the details already shared and advise the next step for an initial review.";
-  return `May I check ${joinList(missing)}?`;
-}
-
-function isMandarinMessage(text: string) {
-  return /[\u4e00-\u9fff]/.test(text);
-}
-
-function hasCarpentryDemoPriceQuestion(text: string) {
-  const normalized = normalize(text);
-  return /\bhow much\b|\bprice\b|\bquote\b|\bquotation\b|\broughly\b|\bcost\b|å¤šå°‘é’±/.test(normalized);
-}
-
-function composeCarpentryDemoPriceReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
-  if (isMandarinMessage(input.inboundMessageText)) {
-    return composeDemoHackingPriceReply(memory, input);
-  }
-  return carpentryDemoServiceIntent(input, memory) === "demo_hacking"
-    ? composeDemoHackingPriceReply(memory, input)
-    : composeCarpentryPriceReply(memory);
-}
-
-function composeCondoWeekendHackingReply() {
-  return "For condo works, hacking must follow MCST or building management rules and approved working hours. Please share the management renovation rules or form if available, together with the wall location, photos and floor plan. We should not promise Saturday works before the scope, approval and allowed hours are checked.";
-}
-
-function composeCarpentryDemoMultiIntentReply(memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
-  const missingAsk = askMissingCarpentryDemoDetails(memory, input, { includeFloorPlan: true });
-  return `We can help review the kitchen wall request, disposal scope and target start timing together. For wall hacking, we'll need to check the property type, floor plan, wall location, whether the wall is structural/restricted, hidden services, and any approval requirements first. Disposal should also be reviewed and itemised clearly after we understand the dismantling or hacking scope. Start timing depends on scope, access, disposal/protection, approval and team availability. ${missingAsk}`;
-}
-
-function composeCarpentryDemoKnowledgeReply(match: CarpentryDemoQaMatch, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
-  const text = normalize(input.inboundMessageText);
-  if (/bomb shelter|household shelter|é˜²ç©º|é¿éš¾æ‰€/.test(text)) return findCarpentryDemoQaItem("CDQ06_HOUSEHOLD_SHELTER").templateEn;
-  if (/condo|mcst|management|saturday|weekend/.test(text) && /hack|hacking|wall|æ•²å¢™|æ‰“å¢™|æ‹†å¢™/.test(text)) return composeCondoWeekendHackingReply();
-  if (/hack|hacking|wall|æ•²å¢™|æ‰“å¢™|æ‹†å¢™/.test(text) && /disposal|debris|haulage|rubbish|åžƒåœ¾|æ¸…èµ°/.test(text) && /start|next week|tomorrow|timeline/.test(text)) {
-    return composeCarpentryDemoMultiIntentReply(memory, input);
-  }
-  if (/disposal|debris|haulage|rubbish|åžƒåœ¾|æ¸…èµ°/.test(text)) return findCarpentryDemoQaItem("CDQ07_DISPOSAL").templateEn;
-  if (hasCarpentryDemoPriceQuestion(input.inboundMessageText)) return composeCarpentryDemoPriceReply(memory, input);
-  if (/dust|noisy|noise|protection|lift protection|corridor protection|ç°å°˜|å™ªéŸ³|ä¿æŠ¤/.test(text)) return findCarpentryDemoQaItem("CDQ08_DUST_PROTECTION").templateEn;
-  if (/approval|permit|mcst|management|æ‰¹å‡†|ç®¡ç†å¤„/.test(text)) return findCarpentryDemoQaItem("CDQ05_APPROVAL").templateEn;
-  if (/hack|hacking|remove wall|wall removal|wall|æ•²å¢™|æ‰“å¢™|æ‹†å¢™/.test(text)) return findCarpentryDemoQaItem("CDQ04_WALL_HACKING").templateEn;
-  if (/modify|cabinet|fridge|shelf|replace door|ä¿®æ”¹æŸœ|åŠ å±‚æ¿/.test(text)) {
-    const sizeLabel = /fridge/i.test(input.inboundMessageText) ? "fridge size" : "item size";
-    const ask = hasMeasurements(input) ? "" : ` Could you send photos, rough dimensions and the ${sizeLabel}?`;
-    return `${findCarpentryDemoQaItem("CDQ10_CABINET_MODIFICATION").templateEn}${ask}`;
-  }
-  if (/match|same colour|laminate colour/.test(text)) return findCarpentryDemoQaItem("CDQ11_LAMINATE_MATCH").templateEn;
-  if (/material|plywood|mdf|hinge|drawer track|soft closing|laminate/.test(text)) return findCarpentryDemoQaItem("CDQ12_MATERIALS").templateEn;
-  if (/hidden pipe|hidden wire|wires inside|damage pipes|conduit/.test(text)) return findCarpentryDemoQaItem("CDQ13_HIDDEN_SERVICES").templateEn;
-  if (/how long|start tomorrow|can start|timeline/.test(text)) return findCarpentryDemoQaItem("CDQ09_TIMELINE").templateEn;
-  if (match.item.id === "CDQ02_SMALL_JOBS" || /small job|small hacking|only remove/.test(text)) return findCarpentryDemoQaItem("CDQ02_SMALL_JOBS").templateEn;
-  if (match.item.id === "CDQ03_SITE_VISIT") return match.item.templateEn;
-
-  const acknowledgement = receivedCarpentryDemoAcknowledgement(memory);
-  if (acknowledgement) {
-    return `${acknowledgement}We can help review this. ${askMissingCarpentryDemoDetails(memory, input)}`;
-  }
-  return findCarpentryDemoQaItem("CDQ02_SMALL_JOBS").templateEn;
-}
-
-function firstTouchGreetingKind(text: string) {
-  if (has(text, /^ä½ å¥½$/)) return "chinese_greeting";
-  if (has(text, /^(hi|hello|hi there|hey)$/)) return "english_greeting";
-  if (has(text, /\bare you there\b|\banyone there\b|\bcan reply\b/)) return "are_you_there";
-  return "";
-}
-
-function currentMessageIsShortIntakeAnswer(input: V9WhatsAppSalesBrainInput, memory: V9SalesMemory) {
-  const text = normalize(input.inboundMessageText);
-  if (!text || input.inboundMessageType.toLowerCase() !== "text") return false;
-  const wordCount = text.split(/\s+/).filter(Boolean).length;
-  if (wordCount > 5) return false;
-  return Boolean(
-    memory.property_type ||
-      memory.flat_type ||
-      has(text, /\bpublic\b|\bfull work\b|\bfull works\b|\bfull reno\b|\bfull renovation\b|\bwhole house\b|\bkitchen\b|\btoilet\b|\bbathroom\b|\ba&a\b|\baa\b/)
-  );
-}
-
-function messageTimestampMs(message: LeadMessage) {
-  const raw = message.createdAt || message.providerTimestamp;
-  const parsed = raw ? Date.parse(String(raw)) : NaN;
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function currentMessageTimestampMs(input: V9WhatsAppSalesBrainInput) {
-  const byProviderId = input.providerMessageId
-    ? input.previousMessages.find((message) => message.providerMessageId === input.providerMessageId)
-    : undefined;
-  if (byProviderId) return messageTimestampMs(byProviderId);
-
-  const current = normalize(input.inboundMessageText);
-  const currentType = normalize(input.inboundMessageType);
-  const matchingInbound = input.previousMessages
-    .filter((message) => message.direction === "inbound")
-    .filter((message) => {
-      const text = normalize(messageText(message));
-      if (current) return text === current || text.startsWith(`${current} `);
-      return currentType ? text.includes(currentType) : false;
-    })
-    .map(messageTimestampMs)
-    .filter((value): value is number => value !== null)
-    .sort((a, b) => b - a)[0];
-
-  return matchingInbound ?? null;
-}
-
-function latestMessageBeforeCurrent(input: V9WhatsAppSalesBrainInput, direction: "inbound" | "outbound") {
-  const currentTime = currentMessageTimestampMs(input);
-  const currentProviderId = input.providerMessageId ?? "";
-  const currentText = normalize(input.inboundMessageText);
-  return input.previousMessages
-    .filter((message) => message.direction === direction)
-    .filter((message) => message.providerMessageId !== currentProviderId)
-    .filter((message) => {
-      if (direction !== "inbound" || !currentText) return true;
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíßN7Ù:-jZ.¶›­–)Þ³V–×÷'BG—R²ÆVBÂÆVDÖW76vRÒg&öÒ$öÆ–"÷G—W2#°¦–×÷'B°¢f–æD6'VçG'”FVÖõ—FVÒÀ¢—46'VçG'”FVÖô¶æ÷vÆVFvUG&–vvW"À¢ÖF6„6'VçG'”FVÖõ—FVÒÀ¢G—R6'VçG'”FVÖõÖF6€§Òg&öÒ$öÆ–"ö¶æ÷vÆVFvRöÆ–ÖÒÖ6'VçG'’ÖFVÖò×#°¦–×÷'B²fÆ–FFUv†G4WFõ&WÇ’Òg&öÒ$öÆ–"÷v†G6×6fWG’#° ¦W‡÷'B6öç7Bc•ô4ÄTåõt„E4õ4ÄU5ô%$”åõdU%4”ôâÒ'c•óö6ÆVå÷v†G6÷6ÆW5ö'&–â#°¦W‡÷'B6öç7Bc•õ4ÄU5ô%$”åõdU%4”ôâÒ'c•ö6ÆVåö6÷&R#° §G—Rc•7FGW2Ò'Væ¶æ÷vâ"Â&Ö—76–ær"Â'&V6V—fVB"Â&6Æ–VçEö6Æ–ÖVE÷6VçB"Â'&÷f–FVB#°§G—Rc•F–Væ6RÒ&æ÷&ÖÂ"Â&–×F–VçB"Â&ææ÷–VB#° ¦W‡÷'BG—Rc•6ÆW4Ö÷fRÐ¢Â&ç7vW%öF—&V7E÷VW7F–öâ ¢Â&6¶æ÷vÆVFvUöæEö6öçF–çVR ¢Â'6fU÷&–6U÷&Wf–Wr ¢Â'V÷FF–öå÷&Wf–Wuö†æFöfb ¢Â&6ÆÅö÷%ö6†Eö†æFöfb ¢Â'6—FU÷f—6—Eö†æFöfb ¢Â'F–ÖVÆ–æU÷&VÆ—G•ö6†V6² ¢Â&‡—÷F†WF–6Åöç7vW%÷v—F†÷WEö6öçFW‡Eö÷fW'w&—FR ¢Â&ö–çFÖVçE÷&VfW&Væ6U÷VæF–æuö6öæf—&ÖF–öâ ¢Â&öff–6U÷f—6—E÷VæF–æuö6öæf—&ÖF–öâ ¢Â&FW6–våöF—&V7F–öåöæ÷FVB ¢Â&f–ÆUö6÷'&V7F–öåö6¶æ÷vÆVFvVÖVçB ¢Â'÷'FföÆ–õ÷&÷WFR ¢Â'&öÖõöFVfÆV7F–öâ ¢Â&g&VU÷v÷&µöFVfÆV7F–öâ ¢Â&6'VçG'•öFVÖõ÷&Wf–Wr ¢Â&‡VÖåö–FVçF—G•öç7vW" ¢Â&†æFöfe÷Fõ÷FVÒ ¢Â'fö–6Uö÷%÷Vç7W÷'FVEöfÆÆ&6²#° ¦W‡÷'BG—Rc•6ÆW5&VG”–çFVçBÐ¢Â&6ÆÅ÷&WVW7B ¢Â'V÷FF–öå÷&WVW7B ¢Â'6—FU÷f—6—E÷&WVW7B ¢Â&ö–çFÖVçE÷&WVW7B ¢Â&öff–6U÷f—6—E÷&WVW7B#° ¦W‡÷'B–çFW&f6Rc•6ÆW4ÖVÖ÷'’°¢&÷W'G•÷G—S¢7G&–æs°¢7F÷&W—3¢7G&–æs°¢FG&W73¢7G&–æs°¢÷7FÅö6öFS¢7G&–æs°¢&ö¦V7E÷G—S¢7G&–æs°¢66÷U÷7VÖÖ'“¢7G&–æs°¢fÆE÷G—S¢7G&–æs°¢'VFvWEöW‡V7FF–öã¢7G&–æs°¢F–ÖVÆ–æUöW‡V7FF–öã¢7G&–æs°¢¶W•ö6öÆÆV7F–öã¢7G&–æs°¢fÆö÷%÷Æå÷7FGW3¢c•7FGW3°¢6—FU÷†÷Fõ÷7FGW3¢c•7FGW3°¢FW6–våöF—&V7F–öã¢7G&–æs°¢FW6–vå÷&VfW&Væ6U÷7FGW3¢c•7FGW3°¢ö67WçG3¢7G&–æs°¢6†–ÆG&Vã¢7G&–æs°¢VÆFW&Ç“¢7G&–æs°¢†VÇW#¢7G&–æs°¢WG3¢7G&–æs°¢7F÷&vUöæVVG3¢7G&–æs°¢v÷&µög&öÕö†öÖS¢7G&–æs°¢ö–çFÖVçE÷&VfW&Væ6S¢7G&–æs°¢öff–6U÷f—6—E÷&WVW7FVC¢&ööÆVã°¢6Æ–VçE÷F–Væ6S¢c•F–Væ6S°¢ÆVE÷7FvS¢7G&–æs°¢ÆVE÷6W&–÷W6æW73¢&Æ÷r"Â&ÖVF—VÒ"Â&†–v‚#°¢†æFöfeöÆö6³¢&ööÆVã°¢f—'7E÷F÷V6…÷&WÇ•÷6VçC¢&ööÆVã°¢Fõöæ÷Eö6µöv–ã¢&V6÷&CÇ7G&–ærÂ&ööÆVãã°¢Æ7Eö&÷E÷&WÆ–W3¢7G&–æuµÓ°¢&WVFVE÷VW7F–öåö6÷VçC¢çVÖ&W#°¢6÷'&V7F–öåö†—7F÷'“¢7G&–æuµÓ°§Ð ¦W‡÷'B–çFW&f6Rc•v†G46ÆW4'&–ä–çWB°¢–æ&÷VæDÖW76vUFW‡C¢7G&–æs°¢–æ&÷VæDÖW76vUG—S¢7G&–æs°¢ÆVC¢ÆVC°¢&Wf–÷W4ÖW76vW3¢ÆVDÖW76vUµÓ°¢WFõ&WÇ”Væ&ÆVC¢&ööÆVã°¢6ÆVæF$WfVçD–Có¢7G&–ærÂçVÆÃ°¢&÷f–FW$ÖW76vT–Có¢7G&–æs°§Ð ¦W‡÷'B–çFW&f6Rc•v†G46ÆW4'&–äFV6—6–öâ°¢6†÷VÆE6VæDWFõ&WÇ“¢&ööÆVã°¢&WÇ•FW‡C¢7G&–æs°¢ÖVÖ÷'•F6ƒ¢'F–ÃÅc•6ÆW4ÖVÖ÷'“âb&V6÷&CÇ7G&–ærÂVæ¶æ÷vãã°¢G&6S¢&V6÷&CÇ7G&–ærÂVæ¶æ÷vãã°¢†æFöfe&WV—&VC¢&ööÆVã°¢6fWG•76VC¢&ööÆVã°¢–çFVçC¢7G&–æs°¢7FvS¢7G&–æs°¢6öæf–FVæ6S¢çVÖ&W#°¢&WÇ•6÷W&6S¢'c•ö6ÆVåö6÷&R"Â'6fUöfÆÆ&6²"Â&†æFöfeö†öÆF–ær"Â&–çFVçF–öæÅöæõ÷&WÇ’#°¢6ÆW4Ö÷fS¢c•6ÆW4Ö÷fS°¢ç7vW&VD6Æ–VçEVW7F–öã¢&ööÆVã°¢6¶VDæW‡D&W7EVW7F–öã¢&ööÆVã°¢&—6´fÆw3¢7G&–æuµÓ°¢Ö—76–æt–æfó¢7G&–æuµÓ°¢æW‡D7F–öã¢7G&–æs°¢ö–çFÖVçE7FGW3¢&æöæR"Â'&WVW7FVE÷VæF–æu÷&Wf–Wr"Â'VæF–æuö6ÆVæF%ö6öæf—&ÖF–öâ"Â&6öæf—&ÖVE÷v—F…ö6ÆVæF%öWfVçB#°¢6fWG•&W7VÇC¢'72"Â'&Ww&—GFVâ"Â&fÆÆ&6µ÷W6VB#°¢&WWF—F–öå&W7VÇC¢'72"Â'&Ww&—GFVâ"Â&fÆÆ&6µ÷W6VB#°¢VÆ—G•&W7VÇC¢'72"Â'&Ww&—GFVâ"Â&fÆÆ&6µ÷W6VB#°¢æõ6–ÆVæ6TwV&E&W7VÇC¢&æ÷EöæVVFVB"Â'W6VB"Â&–çFVçF–öæÅöæõ÷&WÇ’#°§Ð ¦6öç7BDTÕôdôÄÄõuõUÐ¢$’vÆÂvWBF†RFVÒFò&Wf–WrF†RÖW76vW2æBföÆÆ÷rWF—&V7FÇ’6òvRFöâwB¶VW&WVF–ærF†R6ÖRVW7F–öç2â#° ¦6öç7B„äDôdeô„ôÄD”äuõ$UÅ’Ð¢%6÷''’&÷WBF†BâÆWBÖR6†V6²F†—2&÷W&Ç’6òvRFöâwB&WVBF†R6ÖRVW7F–öç2â#° ¦6öç7BE$TÕô„ôÔUõ…$4RÒ%vRvBÆ÷fRFò†VÇ7&VFR–÷W"G&VÒ†öÖRâ#° ¦6öç7Bd•%5EõDõT4…ôu$TUD”äuõ$UÅ’Ð¢$†’ÂF†æ·2f÷"6öçF7F–ærÄ”ÔÒv÷&·2âvRvBÆ÷fRFò†VÇ7&VFR–÷W"G&VÒ†öÖRâÖ’’¶æ÷rv†BG—Röb&÷W'G’F†—2—2æBv†B&Væ÷fF–öâv÷&·2–÷Rw&RÆææ–æsò#° ¦6öç7B4„”äU4Uôd•%5EõDõT4…õ$UÅ’Ð¢.KÚZ[ÞûÈÎhIþ‹
+.ˆN{;²Ä”ÔÒv÷&·>8.h‰KºÎ[èŽiÉþ[è^[Šîh*Žh™>˜
+ynh;>y¨NZën8.Šû~™zî‹ùžiŠò„D.8XZÎZù>8ÆæFVB‹ùŽiŠþYXnK‰®XÙ^KØÞûÉþK‹¾Šhh;>Š8^KúîY:®K©¾˜:ŽXˆnûÉò#° ¦6öç7BTÅE$õ4dUõc•ôdÄÄ$4²Ð¢d•%5EõDõT4…ôu$TUD”äuõ$UÅ“° ¦6öç7B%U%5Eô”åD´UõT”UEõt”äDõuõ4T4ôäE2ÒCS° ¦6öç7BÄTt5•õ$UÅ•õDTÕÄDUõEDU$å2Ò°¢ôv—f–ær&÷Vv‚f–wW&RFöòV&Ç’6â&RÖ—6ÆVF–ærö’À¢õFòfö–Bv—f–ærƒó§–÷R“÷F†Rw&öærf–wW&Rö’À¢ô6÷VÆB–÷R6†&RF†R66÷Röbv÷&²ö’À¢ô6÷VÆB–÷R6†&RÖ–â&Væ÷fF–öâ66÷Rö’À¢õv†G4&Væ÷fF–öâVçV—'’VæF–ær&Wf–Wrö’À¢õF†—2—2Bö’À¢õF†—2—2v—F‚ö¥Ó° ¦6öç7B$ääTEõDôäUõEDU$å2Ò°¢õÆ&FV%Æ"ö’À¢õÆ&¶–æFÇ’gW&æ—6…Æ"ö’À¢õÆ'&WfW'B66÷&F–ævÇ•Æ"ö’À¢õÆ&6†V6¶vUÆ"ö’À¢õÆ&&W7B&–6UÆ"ö’À¢õÆ&g&öÕÇ2¥ÂBö’À¢õÆ&&÷VæEÇ2¥ÂBö’À¢õÆ&6öçF–çVR6VæF–ær&ö¦V7BFWF–Ç5Æ"ö’À¢õÆ'FVÒv–ÆÂ&Wf–WrF†RæW‡B7FW&÷W&Ç•Æ"ö’À¢õÆ&æò&ö&ÆVÒ6öæf—&Ò6åÆ"ö’À¢õÆ&wV&çFVVB&÷fÅÆ"ö’À¢õÆ'v÷rW†6—F–æuÆ"ö’À¢õÆ&†–’FV%Æ"ö¥Ó° ¦gVæ7F–öâæ÷&ÖÆ—¦R‡FW‡C¢7G&–ær’°¢&WGW&â7G&–ær‡FW‡Bóò""¢çFôÆ÷vW$66R‚¢ç&WÆ6R‚õ¾(	•ÒörÂ"r"¢ç&WÆ6R‚õµæ×£Ó•ÇSFSÕÇS–ffeÇ3òEÒörÂ""¢ç&WÆ6R‚õÇ2²örÂ""¢çG&–Ò‚“°§Ð ¦gVæ7F–öâ†2‡FW‡C¢7G&–ærÂGFW&ã¢&VtW‡’°¢&WGW&âGFW&âçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ†6…&WÇ’‡FW‡C¢7G&–ær’°¢ÆWB†6‚Ò°¢f÷"†6öç7B6†"öbFW‡B’°¢†6‚Ò††6‚¢3²6†"æ6†$6öFTBƒ’’ããâ°¢Ð¢&WGW&â†6‚çFõ7G&–ærƒb’çE7F'Bƒ‚Â#"“°§Ð ¦gVæ7F–öâFW‡Dg&öÔÖWFFF†ÖWFFF¢&V6÷&CÇ7G&–ærÂVæ¶æ÷vãâÂVæFVf–æVB’°¢–b‚ÖWFFF’&WGW&â"#°¢&WGW&â°¢ÖWFFFæÖW76vUG—RÀ¢ÖWFFFæ6F–öâÀ¢ÖWFFFæf–ÆVæÖRÀ¢ÖWFFFæÖ–ÖUG—RÀ¢ÖWFFFæf–ÆT6FVv÷'’À¢ÖWFFFæ6FVv÷'’À¢ÖWFFFææ÷FW0¢Ð¢æf–ÇFW"„&ööÆVâ¢æÖ…7G&–ær¢æ¦ö–â‚""“°§Ð ¦gVæ7F–öâÖW76vUFW‡B†ÖW76vS¢ÆVDÖW76vR’°¢&WGW&âG¶ÖW76vRæ&öG’óò"'ÒG·FW‡Dg&öÔÖWFFF†ÖW76vRæÖWFFF—ÖçG&–Ò‚“°§Ð ¦gVæ7F–öâ&Wf–÷W4–æ&÷VæB†ÖW76vW3¢ÆVDÖW76vUµÒ’°¢&WGW&âÖW76vW2æf–ÇFW"‚†ÖW76vR’ÓâÖW76vRæF—&V7F–öâÓÓÒ&–æ&÷VæB"’æÖ†ÖW76vUFW‡B“°§Ð ¦gVæ7F–öâ&Wf–÷W4–æ&÷VæD&Vf÷&T7W'&VçB†–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢6öç7B7W'&VçBÒæ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUFW‡B“°¢6öç7B7W'&VçEG—RÒæ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUG—R“°¢ÆWB7W'&VçE&VÖ÷fVBÒfÇ6S°¢&WGW&â&Wf–÷W4–æ&÷VæB†–çWBç&Wf–÷W4ÖW76vW2¢æÖ‚‡FW‡B’Óâæ÷&ÖÆ—¦R‡FW‡B’¢æf–ÇFW"‚‡FW‡B’Óâ°¢–b‚FW‡B’&WGW&âfÇ6S°¢–b†7W'&VçBbb7W'&VçE&VÖ÷fVBbb‡FW‡BÓÓÒ7W'&VçBÇÂFW‡Bç7F'G5v—F‚†G¶7W'&VçGÒ’’’°¢7W'&VçE&VÖ÷fVBÒG'VS°¢&WGW&âfÇ6S°¢Ð¢–b‚7W'&VçBbb7W'&VçEG—Rbb7W'&VçE&VÖ÷fVBbbFW‡Bæ–æ6ÇVFW2†7W'&VçEG—R’’°¢7W'&VçE&VÖ÷fVBÒG'VS°¢&WGW&âfÇ6S°¢Ð¢&WGW&âG'VS°¢Ò“°§Ð ¦gVæ7F–öâ—4f—'7EF÷V6‚†–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢&WGW&â&Wf–÷W4–æ&÷VæD&Vf÷&T7W'&VçB†–çWB’æÆVæwF‚ÓÓÒ°§Ð ¦gVæ7F–öâ&Wf–÷W4÷WF&÷VæB†ÖW76vW3¢ÆVDÖW76vUµÒ’°¢&WGW&âÖW76vW0¢æf–ÇFW"‚†ÖW76vR’ÓâÖW76vRæF—&V7F–öâÓÓÒ&÷WF&÷VæB"bbÖW76vRæ6†ææVÂÓÓÒ'v†G6"¢æÖ‚†ÖW76vR’ÓâÖW76vRæ&öG’¢æf–ÇFW"„&ööÆVâ¢ç6Æ–6RƒÂR“°§Ð ¦gVæ7F–öâ—4f—'7EF÷V6…&WÇ•FW‡B‡&WÇ“¢7G&–ær’°¢6öç7Bæ÷&ÖÆ—¦VBÒæ÷&ÖÆ—¦R‡&WÇ’“°¢&WGW&â°¢d•%5EõDõT4…ôu$TUD”äuõ$UÅ’À¢4„”äU4Uôd•%5EõDõT4…õ$UÅ’À¢$†’Â–W2vRw&R†W&RâF†æ·2f÷"6öçF7F–ærÄ”ÔÒv÷&·2âÖ’’¶æ÷rv†B&Væ÷fF–öâv÷&·2–÷Rw&RÆææ–æsò ¢ÒæÖ†æ÷&ÖÆ—¦R’ç6öÖR‚‡FV×ÆFR’Óâæ÷&ÖÆ—¦VBÓÓÒFV×ÆFRÇÂæ÷&ÖÆ—¦VBæ–æ6ÇVFW2‡FV×ÆFRç6Æ–6RƒÂSR’’“°§Ð ¦gVæ7F–öâ7FGW4g&öÕ7G&–ær‡fÇVS¢Væ¶æ÷vâ“¢c•7FGW2°¢6öç7BFW‡BÒæ÷&ÖÆ—¦R…7G&–ær‡fÇVRóò""’“°¢–b‚FW‡B’&WGW&â'Væ¶æ÷vâ#°¢–b‡FW‡Bæ–æ6ÇVFW2‚'&V6V—fVB"’ÇÂFW‡Bæ–æ6ÇVFW2‚'WÆöFVB"’ÇÂFW‡Bæ–æ6ÇVFW2‚&GF6†VB"’’&WGW&â'&V6V—fVB#°¢–b‡FW‡Bæ–æ6ÇVFW2‚'6VçB"’ÇÂFW‡Bæ–æ6ÇVFW2‚&6Æ–VçEö6Æ–ÖVE÷6VçB"’’&WGW&â&6Æ–VçEö6Æ–ÖVE÷6VçB#°¢–b‡FW‡Bæ–æ6ÇVFW2‚'&÷f–FVB"’’&WGW&â'&÷f–FVB#°¢–b‡FW‡Bæ–æ6ÇVFW2‚&Ö—76–ær"’’&WGW&â&Ö—76–ær#°¢&WGW&â'Væ¶æ÷vâ#°§Ð ¦gVæ7F–öâ–æ—F–ÄÖVÖ÷'’†–çWC¢c•v†G46ÆW4'&–ä–çWB“¢c•6ÆW4ÖVÖ÷'’°¢6öç7BG&6TÖVÖ÷'’Ò‚†–çWBæÆVBæ–çF¶U&öf–ÆSòçG&6Róò·Ò’2&V6÷&CÇ7G&–ærÂVæ¶æ÷vãâ’çc”ÖVÖ÷'’2'F–ÃÅc•6ÆW4ÖVÖ÷'“âÂVæFVf–æVC°¢&WGW&â°¢&÷W'G•÷G—S¢–çWBæÆVBæ–çF¶U&öf–ÆSòç&÷W'G•G—RÇÂ–çWBæÆVBç&÷W'G•G—RÇÂG&6TÖVÖ÷'“òç&÷W'G•÷G—RÇÂ""À¢7F÷&W—3¢G&6TÖVÖ÷'“òç7F÷&W—2ÇÂ""À¢FG&W73¢–çWBæÆVBç&ö¦V7DFG&W72ÇÂ–çWBæÆVBæ–çF¶U&öf–ÆSòç&÷W'G”&V÷$FG&W72ÇÂG&6TÖVÖ÷'“òæFG&W72ÇÂ""À¢÷7FÅö6öFS¢–çWBæÆVBç÷7FÄ6öFRÇÂG&6TÖVÖ÷'“òç÷7FÅö6öFRÇÂ""À¢&ö¦V7E÷G—S¢–çWBæÆVBç6W'f–6UG—RÇÂG&6TÖVÖ÷'“òç&ö¦V7E÷G—RÇÂ""À¢66÷U÷7VÖÖ'“¢–çWBæÆVBæ–çF¶U&öf–ÆSòç66÷Töev÷&²ÇÂ–çWBæÆVBç66÷U7VÖÖ'’ÇÂG&6TÖVÖ÷'“òç66÷U÷7VÖÖ'’ÇÂ""À¢fÆE÷G—S¢G&6TÖVÖ÷'“òæfÆE÷G—RÇÂ""À¢'VFvWEöW‡V7FF–öã¢–çWBæÆVBæ–çF¶U&öf–ÆSòæ'VFvWDW‡V7FF–öâÇÂG&6TÖVÖ÷'“òæ'VFvWEöW‡V7FF–öâÇÂ""À¢F–ÖVÆ–æUöW‡V7FF–öã¢–çWBæÆVBæ–çF¶U&öf–ÆSòçF–ÖVÆ–æRÇÂG&6TÖVÖ÷'“òçF–ÖVÆ–æUöW‡V7FF–öâÇÂ""À¢¶W•ö6öÆÆV7F–öã¢–çWBæÆVBæ–çF¶U&öf–ÆSòæ¶W”6öÆÆV7F–öäFFRÇÂG&6TÖVÖ÷'“òæ¶W•ö6öÆÆV7F–öâÇÂ""À¢fÆö÷%÷Æå÷7FGW3¢7FGW4g&öÕ7G&–ær†–çWBæÆVBæ–çF¶U&öf–ÆSòæfÆö÷%Æå7FGW2ÇÂG&6TÖVÖ÷'“òæfÆö÷%÷Æå÷7FGW2’À¢6—FU÷†÷Fõ÷7FGW3¢7FGW4g&öÕ7G&–ær†–çWBæÆVBæ–çF¶U&öf–ÆSòç6—FU†÷F÷57FGW2ÇÂG&6TÖVÖ÷'“òç6—FU÷†÷Fõ÷7FGW2’À¢FW6–våöF—&V7F–öã¢G&6TÖVÖ÷'“òæFW6–våöF—&V7F–öâÇÂ""À¢FW6–vå÷&VfW&Væ6U÷7FGW3¢7FGW4g&öÕ7G&–ær‡G&6TÖVÖ÷'“òæFW6–vå÷&VfW&Væ6U÷7FGW2’À¢ö67WçG3¢–çWBæÆVBæ–çF¶U&öf–ÆSòæö67WçG2ÇÂG&6TÖVÖ÷'“òæö67WçG2ÇÂ""À¢6†–ÆG&Vã¢G&6TÖVÖ÷'“òæ6†–ÆG&VâÇÂ""À¢VÆFW&Ç“¢G&6TÖVÖ÷'“òæVÆFW&Ç’ÇÂ""À¢†VÇW#¢–çWBæÆVBæ–çF¶U&öf–ÆSòæ†VÇW"ÇÂG&6TÖVÖ÷'“òæ†VÇW"ÇÂ""À¢WG3¢–çWBæÆVBæ–çF¶U&öf–ÆSòçWG2ÇÂG&6TÖVÖ÷'“òçWG2ÇÂ""À¢7F÷&vUöæVVG3¢G&6TÖVÖ÷'“òç7F÷&vUöæVVG2ÇÂ""À¢v÷&µög&öÕö†öÖS¢G&6TÖVÖ÷'“òçv÷&µög&öÕö†öÖRÇÂ""À¢ö–çFÖVçE÷&VfW&Væ6S¢–çWBæÆVBç&VfW'&VD6öçF7EF–ÖRÇÂ–çWBæÆVBæ–çF¶U&öf–ÆSòç&VfW'&VDÖVWF–æuF–Ö–ærÇÂG&6TÖVÖ÷'“òæö–çFÖVçE÷&VfW&Væ6RÇÂ""À¢öff–6U÷f—6—E÷&WVW7FVC¢&ööÆVâ‡G&6TÖVÖ÷'“òæöff–6U÷f—6—E÷&WVW7FVB’À¢6Æ–VçE÷F–Væ6S¢‡G&6TÖVÖ÷'“òæ6Æ–VçE÷F–Væ6R2c•F–Væ6RÂVæFVf–æVB’ÇÂ&æ÷&ÖÂ"À¢ÆVE÷7FvS¢G&6TÖVÖ÷'“òæÆVE÷7FvRÇÂ–çWBæÆVBç7FGW2ÇÂ&æWuöÆVB"À¢ÆVE÷6W&–÷W6æW73¢‡G&6TÖVÖ÷'“òæÆVE÷6W&–÷W6æW722c•6ÆW4ÖVÖ÷'•²&ÆVE÷6W&–÷W6æW72%ÒÂVæFVf–æVB’ÇÂ&Æ÷r"À¢†æFöfeöÆö6³¢&ööÆVâ‡G&6TÖVÖ÷'“òæ†æFöfeöÆö6²ÇÂ–çWBæÆVBæ&÷74&÷fÄæVVFVB’À¢f—'7E÷F÷V6…÷&WÇ•÷6VçC¢&ööÆVâ‡G&6TÖVÖ÷'“òæf—'7E÷F÷V6…÷&WÇ•÷6VçB’À¢Fõöæ÷Eö6µöv–ã¢²âââ‡G&6TÖVÖ÷'“òæFõöæ÷Eö6µöv–âóò·Ò’ÒÀ¢Æ7Eö&÷E÷&WÆ–W3¢'&’æ—4'&’‡G&6TÖVÖ÷'“òæÆ7Eö&÷E÷&WÆ–W2’òG&6TÖVÖ÷'’æÆ7Eö&÷E÷&WÆ–W2ç6Æ–6RƒÂR’¢µÒÀ¢&WVFVE÷VW7F–öåö6÷VçC¢çVÖ&W"‡G&6TÖVÖ÷'“òç&WVFVE÷VW7F–öåö6÷VçBóò’À¢6÷'&V7F–öåö†—7F÷'“¢'&’æ—4'&’‡G&6TÖVÖ÷'“òæ6÷'&V7F–öåö†—7F÷'’’òG&6TÖVÖ÷'’æ6÷'&V7F–öåö†—7F÷'’ç6Æ–6RƒÂ’¢µÐ¢Ó°§Ð ¦gVæ7F–öâÖ&´Fôæ÷D6²†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â¶W“¢7G&–ær’°¢ÖVÖ÷'’æFõöæ÷Eö6µöv–å¶¶W•ÒÒG'VS°§Ð ¦gVæ7F–öâÇ•FW‡Df7G2†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’ÂFW‡C¢7G&–ærÂ6÷W&6S¢&7W'&VçB"Â'&Wf–÷W2"’°¢6öç7Bæ÷&ÖÆ—¦VBÒæ÷&ÖÆ—¦R‡FW‡B“°¢–b‚æ÷&ÖÆ—¦VB’&WGW&ã° ¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&ÆæFVEÆ'ÅÆ'FW'&6UÆ'ÅÆ'6VÖ’EÆ'ÅÆ&'VævÆ÷uÆ"ò’’ÖVÖ÷'’ç&÷W'G•÷G—RÒ&ÆæFVB#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&†F%Æ'ÅÆ&'FõÆ"ò’’ÖVÖ÷'’ç&÷W'G•÷G—RÇÃÒ$„D"#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ'V&Æ–5Æ'ÅÆ'V&Æ–2†÷W6–æuÆ"ò’bbÖVÖ÷'’ç&÷W'G•÷G—R’ÖVÖ÷'’ç&÷W'G•÷G—RÒ$„D"#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&6öæFõÆ'ÅÆ&6öæFöÖ–æ—VÕÆ"ò’’ÖVÖ÷'’ç&÷W'G•÷G—RÇÃÒ&6öæFò#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ'vÆµ²ÕÓ÷W'FÖVçEÆ"ò’’ÖVÖ÷'’ç&÷W'G•÷G—RÒ'vÆ²×W'FÖVçB#°¢VÇ6R–b††2†æ÷&ÖÆ—¦VBÂõÆ&'FÖVçEÆ"ò’’ÖVÖ÷'’ç&÷W'G•÷G—RÇÃÒ&'FÖVçB#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&6öÖÖW&6–ÅÆ'ÅÆ&öff–6UÆ'ÅÆ'6†÷Æ"ò’bb†2†æ÷&ÖÆ—¦VBÂõÆ'–÷W"öff–6UÆ'ÅÆ&vòöff–6UÆ"ò’’ÖVÖ÷'’ç&÷W'G•÷G—RÇÃÒ&6öÖÖW&6–Â#°¢6öç7BfÆDÖF6‚Òæ÷&ÖÆ—¦VBæÖF6‚‚õÆ"…³ÓUÒ•Ç2¢ƒó§&öö×Ç&Ò“õÇ2¢ƒó¦fÆGÆ†F"“õÆ"ò“°¢–b†fÆDÖF6‚bb††2†æ÷&ÖÆ—¦VBÂõÆ'&ööÕÆ'ÅÆ'&ÕÆ'ÅÆ&fÆEÆ'ÅÆ&†F%Æ"ò’ÇÂæ÷&ÖÆ—¦VBæÆVæwF‚ÃÒ‚’’°¢ÖVÖ÷'’æfÆE÷G—RÒG¶fÆDÖF6…³×Ò×&ööÒfÆF°¢ÖVÖ÷'’ç&÷W'G•÷G—RÇÃÒ$„D"#°¢Ð¢6öç7B6†–æW6TfÆDÖF6‚Òæ÷&ÖÆ—¦VBæÖF6‚‚ò…³ÓUÒ•Ç2¥ÇSc#6bò“°¢–b†6†–æW6TfÆDÖF6‚’°¢ÖVÖ÷'’æfÆE÷G—RÒG¶6†–æW6TfÆDÖF6…³×Ò×&ööÒfÆF°¢ÖVÖ÷'’ç&÷W'G•÷G—RÇÃÒ$„D"#°¢Ð¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&Ç2¢eÇ2¦Æ'ÅÆ&Ç2¶Æ'ÅÆ&Æ'ÅÆ&FF—F–öåÆ'ÅÆ&ÇFW&F–öåÆ'ÅÆ&W‡FVç6–öåÆ'ÅÆ&W‡FVæEÆ"ò’’ÖVÖ÷'’ç&ö¦V7E÷G—RÒ&ÆæFVBd#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&gVÆÂv÷&µÆ'ÅÆ&gVÆÂv÷&·5Æ'ÅÆ&gVÆÂ&VæõÆ'ÅÆ&gVÆÂ&Væ÷fF–öåÆ'ÅÆ'v†öÆR†÷W6UÆ'ÅÆ'v†öÆRÖ†÷W6UÆ'ÅÆ'v†öÆRVæ—EÆ'ÅÆ&VçF—&R†÷W6UÆ'ÅÇSSc…ÇSV3F'ÅÇScSsEÇSV3F"ò’’°¢ÖVÖ÷'’ç66÷U÷7VÖÖ'’ÒVæEVæ—VR†ÖVÖ÷'’ç66÷U÷7VÖÖ'’Â&gVÆÂ&Væ÷fF–öâ"“°¢ÒVÇ6R–b††2†æ÷&ÖÆ—¦VBÂõÆ'&Væ÷fFUÆ'ÅÆ'&VæõÆ"ò’’°¢ÖVÖ÷'’ç66÷U÷7VÖÖ'’ÇÃÒ'&Væ÷fF–öâVçV—'’#°¢Ð¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&¶—F6†VåÆ"ò’’ÖVÖ÷'’ç66÷U÷7VÖÖ'’ÒVæEVæ—VR†ÖVÖ÷'’ç66÷U÷7VÖÖ'’Â&¶—F6†Vâ"“°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&&F‡&ööÕÆ'ÅÆ'Fö–ÆWEÆ"ò’’ÖVÖ÷'’ç66÷U÷7VÖÖ'’ÒVæEVæ—VR†ÖVÖ÷'’ç66÷U÷7VÖÖ'’Â&&F‡&ööÒ"“°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&6'VçG'•Æ'ÅÆ&6&–æWEÆ'ÅÆ&6&–æWG5Æ'ÅÆ'v&G&ö&UÆ'ÅÆ'Gb6öç6öÆUÆ'ÅÆ&fVGW&RvÆÅÆ'ÅÆ&ÆÖ–æFUÆ'ÎiÊŽ[zWÎj›iùÇÎŠ>iùÇÎyK^ŠxniùÇÎKúîiKžiùÇÎXª[.iÛòò’’°¢ÖVÖ÷'’ç66÷U÷7VÖÖ'’ÒVæEVæ—VR†ÖVÖ÷'’ç66÷U÷7VÖÖ'’Â&6'VçG'’ö6&–æWBv÷&·2"“°¢Ð¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&FVÖõÆ'ÅÆ&FVÖöÆ—F–öåÆ'ÅÆ&F—6ÖçFÆUÆ'ÅÆ&F—6ÖçFÆ–æuÆ'ÅÆ'&VÖ÷fR6&–æWEÆ'ÅÆ'&VÖ÷fR'V–ÇB–åÆ'ÅÆ'&VÖ÷fRF–ÆW5Æ'ÅÆ'F–ÆR†6¶–æuÆ'ÅÆ&fÆö÷"†6¶–æuÆ'Îh¸niùÇÎh¸n™šGÎh¸nYËz	gÎh¸nZ)žz	bò’’°¢ÖVÖ÷'’ç66÷U÷7VÖÖ'’ÒVæEVæ—VR†ÖVÖ÷'’ç66÷U÷7VÖÖ'’Â&FVÖòöF—6ÖçFÆ–ærv÷&·2"“°¢Ð¢–b††2†æ÷&ÖÆ—¦VBÂõÆ'vÆÅÆ'ÅÆ&†6µÆ'ÅÆ&†6¶–æuÆ'Îi[.Z)—Îh™>Z)—Îh¸nZ)’ò’’ÖVÖ÷'’ç66÷U÷7VÖÖ'’ÒVæEVæ—VR†ÖVÖ÷'’ç66÷U÷7VÖÖ'’Â'vÆÂö†6¶–ær&Wf–Wr"“° ¢6öç7BFG&W74ÖF6‚ÒFW‡BæÖF6‚‚õÆ"ƒó¥ÆG³ÃGÕÇ2µ´Õ¦×¥Õ´Õ¦×¥Ç2ârÕ×³"ÇÕÇ2²ƒó¥&öGÅ&GÅ7G&VWGÅ7GÄfVçVWÄfWÄG&—fWÄG'ÄÆæWÄÆçÄ7&W66VçGÄ6Æ÷6WÅv—ÅÆ6WÅFW'&6WÅvÆ²’•Æ"ö’“°¢–b†FG&W74ÖF6‚’ÖVÖ÷'’æFG&W72ÒFG&W74ÖF6…³ÒçG&–Ò‚“°¢6öç7B÷7FÄÖF6‚ÒFW‡BæÖF6‚‚õÆ%6–æv÷&UÇ2¢…ÆG³gÒ•Æ'ÅÆ'÷7FÅÇ2¢…ÆG³gÒ•Æ'ÅÆ"…ÆG³gÒ•Æ"ö’“°¢–b‡÷7FÄÖF6‚’ÖVÖ÷'’ç÷7FÅö6öFRÒ‡÷7FÄÖF6…³ÒÇÂ÷7FÄÖF6…³%ÒÇÂ÷7FÄÖF6…³5ÒÇÂ""’çG&–Ò‚“° ¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&fÆö÷%Ç2§ÆåÆ'ÅÆ&fÆö÷'ÆåÆ'ÅÆ&Æ–÷WEÆ'ÅÆ&G&v–æuÆ'ÅÆ'ÆâGF6†VEÆ'ÅÆ&f–ÆRÇ&VG’6VçEÆ'ÅÆ&fÆö÷'ÆâÇ&VG’6VçEÆ'ÅÆ&fÆö÷"ÆâÇ&VG’6VçEÆ'ÅÆ&fÆö÷"ç³Ã#×6VçEÆ'ÅÆ&’Ç&VG’6VçBfÆö÷%Æ"ò’’°¢ÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2Ò6÷W&6RÓÓÒ&7W'&VçB"bb†2†æ÷&ÖÆ—¦VBÂõÆ&Ç&VG•Æ'ÅÆ'6VçEÆ"ò’ò&6Æ–VçEö6Æ–ÖVE÷6VçB"¢'&V6V—fVB#°¢Ö&´Fôæ÷D6²†ÖVÖ÷'’Â&fÆö÷%÷Æâ"“°¢ÖVÖ÷'’æ6÷'&V7F–öåö†—7F÷'’ÒVæD'&•Væ—VR†ÖVÖ÷'’æ6÷'&V7F–öåö†—7F÷'’Â&fÆö÷%÷Æå÷&V6V—fVEö÷%ö6Æ–ÖVB"“°¢Ð¢–b††2†æ÷&ÖÆ—¦VBÂõÆ'6—FR†÷FõÆ'ÅÆ'6—FR†÷F÷5Æ'ÅÆ'†÷FòÇ&VG•Æ'ÅÆ'†÷F÷2Ç&VG•Æ'ÅÆ'†÷F÷3òç³Ã#WÒƒó§6VçGÆ&VVâ6VçGÆGF6†VB•Æ'ÅÆ&’6VçBF†R†÷F÷5Æ'ÅÆ&–ÖvRGF6†VEÆ'ÅÆ'6—FR–7GW&UÆ'ÅÆ'–7GW&UÆ'ÅÆ&–ÖvUÆ"ò’’°¢ÖVÖ÷'’ç6—FU÷†÷Fõ÷7FGW2Ò6÷W&6RÓÓÒ&7W'&VçB"bb†2†æ÷&ÖÆ—¦VBÂõÆ&Ç&VG•Æ'ÅÆ'6VçEÆ"ò’ò&6Æ–VçEö6Æ–ÖVE÷6VçB"¢'&V6V—fVB#°¢Ö&´Fôæ÷D6²†ÖVÖ÷'’Â'6—FU÷†÷F÷2"“°¢ÖVÖ÷'’æ6÷'&V7F–öåö†—7F÷'’ÒVæD'&•Væ—VR†ÖVÖ÷'’æ6÷'&V7F–öåö†—7F÷'’Â'6—FU÷†÷F÷5÷&V6V—fVEö÷%ö6Æ–ÖVB"“°¢Ð¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&FW6–vâ&VfW&Væ6UÆ'ÅÆ'&VfW&Væ6R–ÖvUÆ'ÅÆ'&Vb–ÖvUÆ'ÅÆ&ÖöFW&âÇW‡W'•Æ'ÅÆ'&W6÷'B7G–ÆUÆ'ÅÆ&¦æF•Æ'ÅÆ&Ö–æ–ÖÆ—7EÆ'ÅÆ&6öçFV×÷&'•Æ"ò’’°¢ÖVÖ÷'’æFW6–vå÷&VfW&Væ6U÷7FGW2Ò'&÷f–FVB#°¢Ö&´Fôæ÷D6²†ÖVÖ÷'’Â&FW6–vå÷&VfW&Væ6W2"“°¢6öç7BF—&V7F–öâÒæ÷&ÖÆ—¦VBæÖF6‚‚õÆ"‡&W6÷'B7G–ÆWÆÖöFW&âÇW‡W'—Æ¦æF—ÆÖ–æ–ÖÆ—7GÆ6öçFV×÷&'’•Æ"ö’“òå³Ó°¢–b†F—&V7F–öâ’ÖVÖ÷'’æFW6–våöF—&V7F–öâÒF—&V7F–öã°¢Ð¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&FW6–vâ&W6÷'B7G–ÆUÆ'ÅÆ'&W6÷'B7G–ÆUÆ"ò’’°¢ÖVÖ÷'’æFW6–våöF—&V7F–öâÒ'&W6÷'B7G–ÆR#°¢ÖVÖ÷'’æFW6–vå÷&VfW&Væ6U÷7FGW2Ò'&÷f–FVB#°¢Ö&´Fôæ÷D6²†ÖVÖ÷'’Â&FW6–vå÷&VfW&Væ6W2"“°¢Ð ¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&'VFvWEÆ'ÅÆ&×’'VFvWEÆ'ÅÆ&W‡V7FF–öåÆ"ò’’ÖVÖ÷'’æ'VFvWEöW‡V7FF–öâÒ&6Æ–VçE÷&÷f–FVB#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&¶W’6öÆÆV7F–öåÆ'ÅÆ&¶W’6öÆÆV7EÆ'ÅÆ&Ö÷fR–åÆ'ÅÆ&Ö÷fRÖ–åÆ"ò’’ÖVÖ÷'’æ¶W•ö6öÆÆV7F–öâÒ&6Æ–VçE÷&÷f–FVB#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&6Æ'ÅÆ&26ööâ2÷76–&ÆUÆ'ÅÆ'W&vVçBƒó¦Ç’“õÆ"ò’’ÖVÖ÷'’çF–ÖVÆ–æUöW‡V7FF–öâÒ$4#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&ÖöçF…Æ'ÅÆ'vVVµÆ'ÅÆ&6ç•Æ'ÅÆ&&Vf÷&R6‡&—7FÖ5Æ'ÅÆ'F–ÖVÆ–æUÆ'ÅÆ&f–æ—6…Æ'ÅÆ&6ö×ÆWFUÆ"ò’’ÖVÖ÷'’çF–ÖVÆ–æUöW‡V7FF–öâÒVæEVæ—VR†ÖVÖ÷'’çF–ÖVÆ–æUöW‡V7FF–öâÂFW‡BçG&–Ò‚’ç6Æ–6RƒÂƒ’“° ¢–b††2†æ÷&ÖÆ—¦VBÂõÆ#¶–EÆ'ÅÆ&¶–EÆ'ÅÆ&6†–ÆEÆ'ÅÆ&6†–ÆG&VåÆ"ò’’ÖVÖ÷'’æ6†–ÆG&VâÒ'–W2#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&æòVÆFW%Æ'ÅÆ&æòVÆFW'5Æ'ÅÆ&æòVÆFW&Ç•Æ"ò’’ÖVÖ÷'’æVÆFW&Ç’Ò&æò#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&VÆFW&Ç•Æ'ÅÆ&VÆFW%Æ"ò’’ÖVÖ÷'’æVÆFW&Ç’ÇÃÒ'–W2#°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&†VÇW%Æ'ÅÆ&Ö–EÆ"ò’’ÖVÖ÷'’æ†VÇW"Ò'–W2#°¢6öç7BWG2ÒµÓ°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&FöuÆ"ò’’WG2çW6‚‚&För"“°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&6EÆ"ò’’WG2çW6‚‚&6B"“°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&v—&ffUÆ"ò’’WG2çW6‚‚&v—&ffR"“°¢–b‡WG2æÆVæwF‚’ÖVÖ÷'’çWG2ÒVæEVæ—VR†ÖVÖ÷'’çWG2ÂWG2æ¦ö–â‚"Â"’“° ¢6öç7BF–Ö–ærÒW‡G&7Dö–çFÖVçE&VfW&Væ6R‡FW‡B“°¢–b‡F–Ö–ær’ÖVÖ÷'’æö–çFÖVçE÷&VfW&Væ6RÒF–Ö–æs°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&vòƒó§–÷W"“ööff–6UÆ'ÅÆ'–÷W"öff–6UÆ'ÅÆ&öff–6Rf÷"ÖVWF–æuÆ"ò’’ÖVÖ÷'’æöff–6U÷f—6—E÷&WVW7FVBÒG'VS° ¢–b†FWFV7Dg'W7G&F–öâ†æ÷&ÖÆ—¦VB’’°¢ÖVÖ÷'’æ6Æ–VçE÷F–Væ6RÒ&ææ÷–VB#°¢ÖVÖ÷'’æ†æFöfeöÆö6²ÒG'VS°¢ÖVÖ÷'’æ6÷'&V7F–öåö†—7F÷'’ÒVæD'&•Væ—VR†ÖVÖ÷'’æ6÷'&V7F–öåö†—7F÷'’Â&6Æ–VçEög'W7G&F–öåöFWFV7FVB"“°¢Ð§Ð ¦gVæ7F–öâVæEVæ—VR†W†—7F–æs¢7G&–ærÂfÇVS¢7G&–ær’°¢6öç7B6ÆVâÒfÇVRçG&–Ò‚“°¢–b‚6ÆVâ’&WGW&âW†—7F–æs°¢6öç7Bæ÷&ÖÆ—¦VDW†—7F–ærÒæ÷&ÖÆ—¦R†W†—7F–ær“°¢–b†æ÷&ÖÆ—¦VDW†—7F–æræ–æ6ÇVFW2†æ÷&ÖÆ—¦R†6ÆVâ’’’&WGW&âW†—7F–æs°¢&WGW&âW†—7F–æròG¶W†—7F–æwÓ²G¶6ÆVçÖ¢6ÆVã°§Ð ¦gVæ7F–öâVæD'&•Væ—VR†W†—7F–æs¢7G&–æuµÒÂfÇVS¢7G&–ær’°¢&WGW&âW†—7F–æræ–æ6ÇVFW2‡fÇVR’òW†—7F–ær¢²ââæW†—7F–ærÂfÇVUÓ°§Ð ¦gVæ7F–öâW‡G&7Dö–çFÖVçE&VfW&Væ6R‡FW‡C¢7G&–ær’°¢6öç7Bæ÷&ÖÆ—¦VBÒæ÷&ÖÆ—¦R‡FW‡B“°¢6öç7BÖF6‚ÒFW‡BæÖF6‚‚õÆ"ƒó¦ÖöçÆÖöæF—ÇGVWÇGVW7ÇGVW6F—ÇvVGÇvVFæW6F—ÇF‡WÇF‡W'7ÇF‡W'6F—Æg&—Æg&–F—Ç6GÇ6GW&F—Ç7VçÇ7VæF—ÇF×'ÇFöÖ÷'&÷wÇFöæ–v‡B•Æ%µâãõÆå×³Ã3WÓõÆ"ƒó¥ÆG³Ã'Ò’ƒó£¥ÆG³'Ò“õÇ2¢ƒó¦×ÇÒ“õÆ"ö’“°¢–b†ÖF6‚’&WGW&âF—FÆT66UF–Ö–ær†ÖF6…³ÒçG&–Ò‚’“°¢–b††2†æ÷&ÖÆ—¦VBÂõÆ&æW‡Bf–Æ&ÆUÆ'ÅÆ&f–Æ&ÆR6Æ÷EÆ"ò’’&WGW&â&æW‡Bf–Æ&ÆR6Æ÷B&WVW7FVB#°¢&WGW&â"#°§Ð ¦gVæ7F–öâF—FÆT66UF–Ö–ær‡FW‡C¢7G&–ær’°¢&WGW&âFW‡@¢ç&WÆ6R‚õÆ'F×%Æ"ö’Â'FöÖ÷'&÷r"¢ç&WÆ6R‚õÆ'vVEÆ"ö’Â%vVFæW6F’"¢ç&WÆ6R‚õÆ&ÖöåÆ"ö’Â$ÖöæF’"¢ç&WÆ6R‚õÆ'GVUÆ"ö’Â%GVW6F’"¢ç&WÆ6R‚õÆ'F‡UÆ"ö’Â%F‡W'6F’"¢ç&WÆ6R‚õÆ&g&•Æ"ö’Â$g&–F’"¢ç&WÆ6R‚õÆ'6EÆ"ö’Â%6GW&F’"¢ç&WÆ6R‚õÆ'7VåÆ"ö’Â%7VæF’"¢ç&WÆ6R‚õÆ"…ÆG³Ã'Ò•Ç2§ÕÆ"ö’Â"CÒ"¢ç&WÆ6R‚õÆ"…ÆG³Ã'Ò•Ç2¦ÕÆ"ö’Â"CÒ"“°§Ð ¦gVæ7F–öâFWFV7Dg'W7G&F–öâ†æ÷&ÖÆ—¦VC¢7G&–ær’°¢&WGW&â†2†æ÷&ÖÆ—¦VBÂõÆ'wFeÆ'ÅÆ'7GW–EÆ'ÅÆ'v‡’–÷R¶VW&WVF–æuÆ'ÅÆ'v‡’6²v–åÆ'ÅÆ&&R–÷R&Æ–æEÆ'ÅÆ&æöç6Vç6UÆ'ÅÆ'–÷R6¶VBÇ&VG•Æ'ÅÆ&Ç&VG’FöÆB–÷UÆ'ÅÆ'6†—EÆ'ÅÃõÃõÃòò“°§Ð ¦gVæ7F–öâFW&—fTÖVÖ÷'’†–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢6öç7BÖVÖ÷'’Ò–æ—F–ÄÖVÖ÷'’†–çWB“°¢6öç7B7W'&VçEFW‡BÒG¶–çWBæ–æ&÷VæDÖW76vUFW‡GÒG¶–çWBæ–æ&÷VæDÖW76vUG—WÖçG&–Ò‚“°¢f÷"†6öç7BFW‡Böb&Wf–÷W4–æ&÷VæB†–çWBç&Wf–÷W4ÖW76vW2’’Ç•FW‡Df7G2†ÖVÖ÷'’ÂFW‡BÂ'&Wf–÷W2"“°¢Ç•FW‡Df7G2†ÖVÖ÷'’Â7W'&VçEFW‡BÂ&7W'&VçB"“°¢6öç7B7W'&VçEG—RÒ–çWBæ–æ&÷VæDÖW76vUG—RçFôÆ÷vW$66R‚“°¢–b†7W'&VçEG—RÓÓÒ&–ÖvR"’°¢ÖVÖ÷'’ç6—FU÷†÷Fõ÷7FGW2Ò'&V6V—fVB#°¢Ö&´Fôæ÷D6²†ÖVÖ÷'’Â'6—FU÷†÷F÷2"“°¢Ð¢–b†7W'&VçEG—RÓÓÒ&Fö7VÖVçB"bb†2†æ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUFW‡B’ÂõÆ&fÆö÷%Ç2§ÆåÆ'ÅÆ&fÆö÷'ÆåÆ'ÅÆ&Æ–÷WEÆ'ÅÆ&G&v–æuÆ'ÅÆ'ÆåÆ'ÅÆ&GF6†VEÆ"ò’’°¢ÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2Ò'&V6V—fVB#°¢Ö&´Fôæ÷D6²†ÖVÖ÷'’Â&fÆö÷%÷Æâ"“°¢Ð¢–b…²&–ÖvR"Â&Fö7VÖVçB%Òæ–æ6ÇVFW2†7W'&VçEG—R’bb†2†æ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUFW‡B’ÂõÆ&FW6–våÆ'ÅÆ&Æ–÷WEÆ'ÅÆ&fÆö÷%Ç2§ÆåÆ'ÅÆ&fÆö÷'ÆåÆ'ÅÆ&G&v–æuÆ'ÅÆ'ÆåÆ'ÅÆ&GF6†VEÆ"ò’’°¢ÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2Ò'&V6V—fVB#°¢ÖVÖ÷'’æFW6–vå÷&VfW&Væ6U÷7FGW2Ò'&÷f–FVB#°¢Ö&´Fôæ÷D6²†ÖVÖ÷'’Â&fÆö÷%÷Æâ"“°¢Ð¢ÖVÖ÷'’æÆ7Eö&÷E÷&WÆ–W2Ò²ââç&Wf–÷W4÷WF&÷VæB†–çWBç&Wf–÷W4ÖW76vW2’ÂââæÖVÖ÷'’æÆ7Eö&÷E÷&WÆ–W5Òç6Æ–6RƒÂR“°¢ÖVÖ÷'’æf—'7E÷F÷V6…÷&WÇ•÷6VçBÒÖVÖ÷'’æf—'7E÷F÷V6…÷&WÇ•÷6VçBÇÂÖVÖ÷'’æÆ7Eö&÷E÷&WÆ–W2ç6öÖR†—4f—'7EF÷V6…&WÇ•FW‡B“°¢6öç7B6W&–÷W56–væÇ2Ò°¢ÖVÖ÷'’ç&÷W'G•÷G—RÓÓÒ&ÆæFVB"À¢öfÆÆæFVBö’çFW7B†ÖVÖ÷'’ç&ö¦V7E÷G—R’À¢&ööÆVâ†ÖVÖ÷'’æFG&W72’À¢ÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2ÓÓÒ'&V6V—fVB"ÇÂÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2ÓÓÒ&6Æ–VçEö6Æ–ÖVE÷6VçB"À¢&ööÆVâ†ÖVÖ÷'’æ'VFvWEöW‡V7FF–öâÇÂÖVÖ÷'’çF–ÖVÆ–æUöW‡V7FF–öâÇÂÖVÖ÷'’æö–çFÖVçE÷&VfW&Væ6R¢Òæf–ÇFW"„&ööÆVâ’æÆVæwFƒ°¢ÖVÖ÷'’æÆVE÷6W&–÷W6æW72Ò6W&–÷W56–væÇ2ãÒ"ò&†–v‚"¢6W&–÷W56–væÇ2ÓÓÒò&ÖVF—VÒ"¢&Æ÷r#°¢ÖVÖ÷'’æÆVE÷7FvRÒÖVÖ÷'’æ†æFöfeöÆö6²ò&†æFöfe÷&WV—&VB"¢ÖVÖ÷'’æÆVE÷6W&–÷W6æW72ÓÓÒ&†–v‚"ò'6W&–÷W5öÆVE÷&Wf–Wr"¢&F—66÷fW'’#°¢&WGW&âÖVÖ÷'“°§Ð ¦gVæ7F–öâFWFV7D–çFVçB†–çWC¢c•v†G46ÆW4'&–ä–çWBÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢6öç7BFW‡BÒæ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUFW‡B“°¢6öç7BG—RÒ–çWBæ–æ&÷VæDÖW76vUG—RçFôÆ÷vW$66R‚“°¢–b‡G—RÓÓÒ&VF–ò"ÇÂG—RÓÓÒ'fö–6R"’&WGW&â'fö–6UöÖW76vR#°¢–b‚FW‡Bbb²&–ÖvR"Â&Fö7VÖVçB%Òæ–æ6ÇVFW2‡G—R’’&WGW&â'Vç7W÷'FVB#°¢–b†FWFV7Dg'W7G&F–öâ‡FW‡B’’&WGW&â&g'W7G&F–öåö÷%ö6÷'&V7F–öâ#°¢–b††2‡FW‡BÂõÆ&fÆö÷%Ç2§ÆâÇ&VG•Æ'ÅÆ&fÆö÷'ÆâÇ&VG•Æ'ÅÆ&fÆö÷"ç³Ã#×6VçEÆ'ÅÆ'†÷F÷3òÇ&VG•Æ'ÅÆ'†÷F÷3òç³Ã#WÒƒó§6VçGÆ&VVâ6VçB•Æ'ÅÆ&Ç&VG’6VçEÆ'ÅÆ&’6VçEÆ"ò’’&WGW&â&f–ÆUö6÷'&V7F–öâ#°¢–b†—56†÷'D6'VçG'•&–6TVçV—'’†–çWBæ–æ&÷VæDÖW76vUFW‡B’’&WGW&â&6'VçG'•öFVÖõ÷#°¢–b†6'VçG'”FVÖôÖF6‚†–çWBÂÖVÖ÷'’’’&WGW&â&6'VçG'•öFVÖõ÷#°¢–b††2‡FW‡BÂõÆ&FVfV7G3ò–ç7V7F–öåÆ'ÅÆ&FVfV7B6†V6¶–æuÆ'ÅÆ'&U²ÕÓö†æF÷fW"–ç7V7F–öåÆ'ÅÆ'6ævv–ær–ç7V7F–öåÆ'ÅÆ'7FæFÆöæR–ç7V7F–öâ&W÷'EÆ"ò’’&WGW&â'Vç7W÷'FVE÷6W'f–6U÷VW7F–öâ#°¢–b††2‡FW‡BÂõÆ&6ÆÂÖUÆ'ÅÆ'ÆV6R6ÆÅÆ'ÅÆ&v—fRÖRƒó¦“ö6ÆÅÆ'ÅÆ&6â6ÆÂÖUÆ'ÅÆ&6âƒó§–÷WÆÖ&7W7Ç6öÖVöæWÇ–÷W"FVÒ’6ÆÅÆ'ÅÆ&6âvRƒó¦6†GÇFÆ·Ç7V²•Æ'ÅÆ"ƒó¦6†GÇFÆ·Ç7V²’ƒó§F÷Çv—F‚’ƒó¦Ö&7W7Ç6öÖVöæWÆW'6öçÇ–÷W"FVÒ•Æ'ÅÆ&6öçF7BÖUÆ"ò’’&WGW&â&6ÆÅ÷&WVW7B#°¢–b††2‡FW‡BÂõâƒó§V÷FWÇV÷FF–öçÇ&÷÷6Â•ÃóòGÅÆ&6âƒó§–÷WÇ–÷W"FVÒ’ƒó§&W&WÇ6VæGÇ&÷f–FWÆFò“õÇ2¢ƒó¦ÖUÇ2²“òƒó¦Ç2²“òƒó§V÷FWÇV÷FF–öçÇ&÷÷6ÇÆW7F–ÖFR•Æ'ÅÆ"ƒó§&W&WÇ6VæGÆæVVGÇvçGÇ&WVW7GÇ&÷f–FWÆvWGÆFò•Ç2²ƒó¦ÖUÇ2²“òƒó¦Ç2²“òƒó§V÷FWÇV÷FF–öçÇ&÷÷6ÇÆW7F–ÖFR•Æ'ÅÆ"ƒó§V÷FWÇV÷FF–öçÇ&÷÷6Â•Ç2²ƒó§ÆV6WÇ&WV—&VGÆæVVFVGÇ&WVW7B•Æ'ÅÆ'&VG’ƒó¦f÷'ÇFò’ƒó§V÷FWÇV÷FF–öâ•Æ"ò’’&WGW&â'V÷FF–öå÷&WVW7B#°¢–b††2‡FW‡BÂõÆ'6—FRf—6—EÆ'ÅÆ'6—FR&Wf–WuÆ'ÅÆ&6â–÷R6öÖRF÷våÆ'ÅÆ"ƒó§6öÖVöæWÆW'6öçÇ–÷W"FVÒ’ƒó¦6â“òƒó¦6öÖRF÷vçÇf—6—B•Æ'ÅÆ&6öÖRƒó¦F÷vçÆ÷fW"’ƒó¢Fò“òƒó§F†RÆ×’“òƒó§6—FWÆ†÷W6WÆ†öÖWÇVæ—GÇÆ6R•Æ'ÅÆ'f—6—Bƒó§F†RÆ×’“òƒó§6—FWÆ†÷W6WÆ†öÖWÇVæ—GÇÆ6R•Æ'ÅÆ&–ç7V7Bƒó§F†RÆ×’“òƒó§6—FWÆ†÷W6WÆ†öÖWÇVæ—GÇÆ6R•Æ"ò’’&WGW&â'6—FU÷f—6—E÷&WVW7B#°¢–b††2‡FW‡BÂõÆ&†÷r×V6…Æ'ÅÆ'&–6UÆ'ÅÆ&'VFvWB†÷uÆ'ÅÆ&W7F–ÖFUÆ'ÅÆ'&÷Vv‚6÷7EÆ'ÅÆ'&÷Vv†Ç•Æ'ÅÆ'6¶vUÆ'ÎZI®[	™+ò’’&WGW&â'&–6U÷VW7F–öâ#°¢–b††2‡FW‡BÂõÆ'6òâ¦6ææ÷Bf–æ—6…Æ'ÅÆ&6ææ÷Bf–æ—6…Æ"ò’’&WGW&â'F–ÖVÆ–æUöföÆÆ÷wW#°¢–b††2‡FW‡BÂõÆ'7F'EÇ2²ƒó§FöÖ÷'&÷wÇF×'ÇFöæ–v‡GÇF†—2vVV·ÆæW‡BvVV²•Æ'ÅÆ&f–æ—6…Æ'ÅÆ&6ö×ÆWFUÆ'ÅÆ'F–ÖVÆ–æUÆ'ÅÆ&†÷rÆöæuÆ'ÅÆ%ÆBµÇ2¦ÖöçF‡3õÆ'ÅÆ%ÆBµÇ2§vVV·3õÆ"ò’’°¢–b††2‡FW‡BÂõÆ&6öæFõÆ"ò’bbÖVÖ÷'’ç&÷W'G•÷G—RbbÖVÖ÷'’ç&÷W'G•÷G—RÓÒ&6öæFò"’&WGW&â&‡—÷F†WF–6Å÷F–ÖVÆ–æR#°¢&WGW&â'F–ÖVÆ–æU÷VW7F–öâ#°¢Ð¢–b††2‡FW‡BÂõÆ&vòƒó§–÷W"“ööff–6UÆ'ÅÆ'–÷W"öff–6UÆ'ÅÆ&öff–6Rf÷"ÖVWF–æuÆ"ò’’&WGW&â&öff–6U÷f—6—E÷&WVW7B#°¢–b††2‡FW‡BÂõÆ&EÆ'ÅÆ&ö–çFÖVçEÆ'ÅÆ&ÖVWF–æuÆ'ÅÆ&ÖVWEÆ'ÅÆ'6—FRf—6—EÆ'ÅÆ&6öÖRF÷våÆ'ÅÆ&f–Æ&ÆR6Æ÷EÆ'ÅÆ&æW‡Bf–Æ&ÆUÆ'ÅÆ&&ööµÆ'ÅÆ&6öæf—&Òâ¢ƒó¦×Ç×Ç6Æ÷B•Æ'Îš(N{ªbò’’&WGW&â&ö–çFÖVçE÷&WVW7B#°¢–b††2‡FW‡BÂõÆ'7Bv÷&µÆ'ÅÆ'&ö¦V7B†÷F÷3õÆ'ÅÆ'÷'FföÆ–õÆ'ÅÆ&&Vf÷&RgFW%Æ'ÅÆ&&Vf÷&RÖæBÖgFW%Æ'ÅÆ'6†÷rÖR–÷W"v÷&µÆ'ÅÆ'&Væ÷fF–öâ†÷F÷3õÆ'ÅÆ&6ö×ÆWFVB&ö¦V7EÆ'ÎKÙÎY8ò’’&WGW&â'÷'FföÆ–õ÷&WVW7B#°¢–b††2‡FW‡BÂõÆ'&öÖõÆ'ÅÆ&F—66÷VçEÆ'ÅÆ&öffW%Æ"ò’’&WGW&â'&öÖ÷F–öå÷VW7F–öâ#°¢–b††2‡FW‡BÂõÆ&g&VUÆ'ÅÆ&Fòf÷"g&VUÆ"ò’’&WGW&â&g&VU÷v÷&µ÷&WVW7B#°¢–b††2‡FW‡BÂõÆ&&R–÷R•Æ'ÅÆ&&R–÷R‡VÖåÆ'ÅÆ&6†F&÷EÆ'ÅÆ&&÷EÆ"ò’’&WGW&â&–FVçF—G•÷VW7F–öâ#°¢–b††2‡FW‡BÂõÆ'&W6÷'B7G–ÆUÆ'ÅÆ&ÖöFW&âÇW‡W'•Æ'ÅÆ&¦æF•Æ'ÅÆ&Ö–æ–ÖÆ—7EÆ'ÅÆ&6öçFV×÷&'•Æ"ò’’&WGW&â&FW6–våöF—&V7F–öå÷7FFVÖVçB#°¢–b††2‡FW‡BÂõÆ&FW6–våÆ'ÅÆ'F†VÖUÆ'ÅÆ&6öæ6WEÆ'ÅÆ'7G–ÆUÆ'ÅÆ&–çFW&–÷"FW6–våÆ'ÅÆ&FW6–vâF—&V7F–öåÆ'ÅÆ&FW6–vâ–FV3õÆ'ÅÆ&Æ–÷WB–FV3õÆ'ÅÆ'&÷÷6R6öæ6WEÆ"ò’’&WGW&â&FW6–vå÷VW7F–öâ#°¢–b††2‡FW‡BÂõÆ&†6µÆ'ÅÆ&†6¶–æuÆ'ÅÆ'vÆÅÆ'ÅÆ'7G'V7GW&ÅÆ"ò’’&WGW&â&†6¶–æu÷vÆÂ#°¢–b††2‡FW‡BÂõÆ&&÷fÅÆ'ÅÆ&&÷fUÆ'ÅÆ'W&Ö—EÆ'ÅÆ'7V&Ö—76–öåÆ'ÅÆ'W&Æ'ÅÆ&&6Æ'ÎyK>Šûrò’’&WGW&â&&÷fÅ÷7V&Ö—76–öâ#°¢–b††2‡FW‡BÂõÆ&fÆ'ÅÆ&Æ'ÅÆ&ÆæFVEÆ'ÅÆ'&Væ÷fFUÆ'ÅÆ'&VæõÆ'ÅÆ&W‡FVç6–öåÆ'ÅÆ&W‡FVæEÆ"ò’’&WGW&â'6W&–÷W5÷&ö¦V7EöVçV—'’#°¢–b††2‡FW‡BÂõâƒó¦ö·Æö¶—Ææ÷FVGÇF†æ·7ÇF†æ²–÷WÆÇ&–v‡GÇ7W&R’Bò’’&WGW&â'6–×ÆUö6¶æ÷vÆVFvVÖVçB#°¢–b††2‡FW‡BÂõÆ&†VÆÆõÆ'ÅÆ&†•Æ'ÅÆ&&R–÷RF†W&UÆ'ÅÆ&6â&WÇ•Æ'ÅÆ&ç’WFFUÆ'ÎKÚZ[Òò’’&WGW&â&föÆÆ÷u÷W÷–ær#°¢–b…²&–ÖvR"Â&Fö7VÖVçB%Òæ–æ6ÇVFW2‡G—R’’&WGW&â&ÖVF–÷&V6V—fVB#°¢&WGW&â&vVæW&ÅöVçV—'’#°§Ð ¦gVæ7F–öâ&—6´fÆw2†–çFVçC¢7G&–ærÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&â°¢–çFVçBÓÓÒ'&–6U÷VW7F–öâ"ò'&–6–æu÷&WVW7B"¢""À¢–çFVçBÓÓÒ'V÷FF–öå÷&WVW7B"ò'V÷FF–öå÷&Wf–Wu÷&WVW7B"¢""À¢–çFVçBÓÓÒ&6ÆÅ÷&WVW7B"ò&F—&V7Eö6öçF7E÷&WVW7B"¢""À¢–çFVçBÓÓÒ'6—FU÷f—6—E÷&WVW7B"ò'6—FU÷f—6—E÷&WVW7B"¢""À¢–çFVçBÓÓÒ'F–ÖVÆ–æU÷VW7F–öâ"ÇÂ–çFVçBÓÓÒ'F–ÖVÆ–æUöföÆÆ÷wW"ÇÂ–çFVçBÓÓÒ&‡—÷F†WF–6Å÷F–ÖVÆ–æR"ò'F–ÖVÆ–æUöW‡V7FF–öâ"¢""À¢–çFVçBÓÓÒ&ö–çFÖVçE÷&WVW7B"ÇÂ–çFVçBÓÓÒ&öff–6U÷f—6—E÷&WVW7B"ò&ö–çFÖVçE÷&WVW7B"¢""À¢–çFVçBÓÓÒ&6'VçG'•öFVÖõ÷"ò&6'VçG'•öFVÖõö¶æ÷vÆVFvU÷&Wf–Wr"¢""À¢–çFVçBÓÓÒ&†6¶–æu÷vÆÂ"ò&†6¶–æuö÷%÷7G'V7GW&Å÷&Wf–Wr"¢""À¢–çFVçBÓÓÒ&&÷fÅ÷7V&Ö—76–öâ"ò&&÷fÅö÷%÷7V&Ö—76–öå÷&Wf–Wr"¢""À¢ÖVÖ÷'’æ†æFöfeöÆö6²ò&6Æ–VçEög'W7G&F–öåö†æFöfeöÆö6²"¢""À¢ÖVÖ÷'’æÆVE÷6W&–÷W6æW72ÓÓÒ&†–v‚"ò'6W&–÷W5öÆæFVEö÷%ööÆVB"¢" ¢Òæf–ÇFW"„&ööÆVâ“°§Ð ¦gVæ7F–öâÖ—76–æt–æfò†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢6öç7BÖ—76–æs¢7G&–æuµÒÒµÓ°¢–b‚ÖVÖ÷'’ç&÷W'G•÷G—R’Ö—76–ærçW6‚‚'&÷W'G•÷G—R"“°¢–b‚ÖVÖ÷'’ç66÷U÷7VÖÖ'’bbÖVÖ÷'’ç&ö¦V7E÷G—R’Ö—76–ærçW6‚‚'66÷U÷7VÖÖ'’"“°¢–b‚ÖVÖ÷'’æFG&W72bbÖVÖ÷'’ç÷7FÅö6öFR’Ö—76–ærçW6‚‚&FG&W75ö÷%ö&V"“°¢–b‚²'&V6V—fVB"Â&6Æ–VçEö6Æ–ÖVE÷6VçB%Òæ–æ6ÇVFW2†ÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âæfÆö÷%÷Æâ’Ö—76–ærçW6‚‚&fÆö÷%÷Æâ"“°¢–b‚²'&V6V—fVB"Â&6Æ–VçEö6Æ–ÖVE÷6VçB%Òæ–æ6ÇVFW2†ÖVÖ÷'’ç6—FU÷†÷Fõ÷7FGW2’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âç6—FU÷†÷F÷2’Ö—76–ærçW6‚‚'6—FU÷†÷F÷2"“°¢–b‚²'&÷f–FVB"Â'&V6V—fVB"Â&6Æ–VçEö6Æ–ÖVE÷6VçB%Òæ–æ6ÇVFW2†ÖVÖ÷'’æFW6–vå÷&VfW&Væ6U÷7FGW2’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âæFW6–vå÷&VfW&Væ6W2’Ö—76–ærçW6‚‚&FW6–vå÷&VfW&Væ6W2"“°¢&WGW&âÖ—76–æs°§Ð ¦gVæ7F–öâ6öæ6—6T¶æ÷väf7G2†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&â°¢ÖVÖ÷'’ç&÷W'G•÷G—Rò&÷W'G“¢G¶ÖVÖ÷'’ç&÷W'G•÷G—WÖ¢""À¢ÖVÖ÷'’æfÆE÷G—RòfÆC¢G¶ÖVÖ÷'’æfÆE÷G—WÖ¢""À¢ÖVÖ÷'’ç&ö¦V7E÷G—Rò&ö¦V7C¢G¶ÖVÖ÷'’ç&ö¦V7E÷G—WÖ¢""À¢ÖVÖ÷'’æFG&W72òFG&W73¢G¶ÖVÖ÷'’æFG&W77Ö¢""À¢ÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2ÓÒ'Væ¶æ÷vâ"òfÆö÷"Æã¢G¶ÖVÖ÷'’æfÆö÷%÷Æå÷7FGW7Ö¢""À¢ÖVÖ÷'’ç6—FU÷†÷Fõ÷7FGW2ÓÒ'Væ¶æ÷vâ"ò6—FR†÷F÷3¢G¶ÖVÖ÷'’ç6—FU÷†÷Fõ÷7FGW7Ö¢""À¢ÖVÖ÷'’æFW6–våöF—&V7F–öâòFW6–vã¢G¶ÖVÖ÷'’æFW6–våöF—&V7F–öçÖ¢""À¢ÖVÖ÷'’æö–çFÖVçE÷&VfW&Væ6Ròö–çFÖVçB&VfW&Væ6S¢G¶ÖVÖ÷'’æö–çFÖVçE÷&VfW&Væ6WÖ¢""À¢ÖVÖ÷'’æ6Æ–VçE÷F–Væ6RÓÒ&æ÷&ÖÂ"òF–Væ6S¢G¶ÖVÖ÷'’æ6Æ–VçE÷F–Væ6WÖ¢" ¢Òæf–ÇFW"„&ööÆVâ’æ¦ö–â‚#²"“°§Ð ¦gVæ7F–öâæW‡EW6VgVÄ–æfõ6VçFVæ6R†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â÷F–öç3¢²ÆÆ÷uVW7F–öãó¢&ööÆVâÒÒ·Ò’°¢–b†ÖVÖ÷'’æ†æFöfeöÆö6²’&WGW&â"#°¢6öç7BÖ—76–æs¢7G&–æuµÒÒµÓ°¢–b‚²'&V6V—fVB"Â&6Æ–VçEö6Æ–ÖVE÷6VçB%Òæ–æ6ÇVFW2†ÖVÖ÷'’ç6—FU÷†÷Fõ÷7FGW2’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âç6—FU÷†÷F÷2’Ö—76–ærçW6‚‚'6—FR†÷F÷2"“°¢–b‚²'&÷f–FVB"Â'&V6V—fVB"Â&6Æ–VçEö6Æ–ÖVE÷6VçB%Òæ–æ6ÇVFW2†ÖVÖ÷'’æFW6–vå÷&VfW&Væ6U÷7FGW2’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âæFW6–vå÷&VfW&Væ6W2’Ö—76–ærçW6‚‚&FW6–vâ&VfW&Væ6W2"“°¢–b‚ÖVÖ÷'’æFG&W72bbÖVÖ÷'’ç÷7FÅö6öFRbbÖVÖ÷'’æFõöæ÷Eö6µöv–âæFG&W72’Ö—76–ærçW6‚‚'&÷W'G’&VöFG&W72"“°¢–b‚Ö—76–æræÆVæwF‚’&WGW&â%F†RFVÒ6â&Wf–WrF†RFWF–Ç2Ç&VG’6†&VBæBGf—6RF†RæW‡B7FWâ#°¢6öç7B&Vf—‚ÒÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2ÓÓÒ'&V6V—fVB"ÇÂÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2ÓÓÒ&6Æ–VçEö6Æ–ÖVE÷6VçB ¢ò%vRwfR&V6V—fVBF†RfÆö÷"ÆâÂ6ò ¢¢%Fò†VÇF†RFVÒ&Wf–Wr&÷W&Ç’Â#°¢6öç7B6²ÒG·&Vf—‡ÒG¶¦ö–äÆ—7B†Ö—76–ær—Òv÷VÆB&RW6VgVÂæW‡Bæ°¢&WGW&â÷F–öç2æÆÆ÷uVW7F–öâò6²ç&WÆ6R‚õÂâBòÂ#ò"’¢6³°§Ð ¦gVæ7F–öâ†57V6–f–566÷R†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢6öç7Bæ÷&ÖÆ—¦VE66÷RÒæ÷&ÖÆ—¦R†G¶ÖVÖ÷'’ç66÷U÷7VÖÖ'—ÒG¶ÖVÖ÷'’ç&ö¦V7E÷G—WÖ“°¢–b‚æ÷&ÖÆ—¦VE66÷R’&WGW&âfÇ6S°¢&WGW&â²'&Væ÷fF–öâVçV—'’"Â'&Væò"Â'&Væ÷fF–öâ%Òæ–æ6ÇVFW2†æ÷&ÖÆ—¦VE66÷R“°§Ð ¦gVæ7F–öâ66÷U‡&6R†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢6öç7Bæ÷&ÖÆ—¦VE66÷RÒæ÷&ÖÆ—¦R†G¶ÖVÖ÷'’ç66÷U÷7VÖÖ'—ÒG¶ÖVÖ÷'’ç&ö¦V7E÷G—WÖ“°¢–b†æ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚&gVÆÂ"’ÇÂæ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚'v†öÆR"’’&WGW&â&gVÆÂ&Væ÷fF–öâ#°¢–b†æ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚&¶—F6†Vâ"’’&WGW&â&¶—F6†Vâv÷&·2#°¢–b†æ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚'Fö–ÆWB"’ÇÂæ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚&&F‡&ööÒ"’’&WGW&â'Fö–ÆWBv÷&·2#°¢–b†æ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚'vÆÂ"’ÇÂæ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚&†6¶–ær"’’&WGW&â'vÆÂö†6¶–ærv÷&·2#°¢–b†æ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚&"’ÇÂæ÷&ÖÆ—¦VE66÷Ræ–æ6ÇVFW2‚&ÆæFVB"’’&WGW&â&ÆæFVBôdv÷&·2#°¢&WGW&â'&Væ÷fF–öâv÷&·2#°§Ð ¦gVæ7F–öâ†4&V66÷R†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&â†2†æ÷&ÖÆ—¦R†ÖVÖ÷'’ç66÷U÷7VÖÖ'’’ÂõÆ&¶—F6†VåÆ'ÅÆ'Fö–ÆWEÆ'ÅÆ&&F‡&ööÕÆ'ÅÆ'vÆÅÆ'ÅÆ&†6¶–æuÆ'ÅÆ&6'VçG'•Æ'ÅÆ'v†öÆUÆ'ÅÆ&gVÆÅÆ'ÅÆ&W‡FVç6–öåÆ'ÅÆ&W‡FVæEÆ"ò“°§Ð ¦gVæ7F–öâ6öÖ&–æVD6'VçG'”FVÖô6öçFW‡B†–çWC¢c•v†G46ÆW4'&–ä–çWBÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&â°¢–çWBæ–æ&÷VæDÖW76vUFW‡BÀ¢ââç&Wf–÷W4–æ&÷VæB†–çWBç&Wf–÷W4ÖW76vW2’À¢ÖVÖ÷'’ç66÷U÷7VÖÖ'’À¢ÖVÖ÷'’ç&ö¦V7E÷G—P¢Òæ¦ö–â‚""“°§Ð ¦gVæ7F–öâ6'VçG'”FVÖôÖF6‚†–çWC¢c•v†G46ÆW4'&–ä–çWBÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’“¢6'VçG'”FVÖõÖF6‚ÂçVÆÂ°¢6öç7B6†÷'D6'VçG'•&–6RÒ—56†÷'D6'VçG'•&–6TVçV—'’†–çWBæ–æ&÷VæDÖW76vUFW‡B“°¢6öç7BÖF6‚ÒÖF6„6'VçG'”FVÖõ—FVÒ†–çWBæ–æ&÷VæDÖW76vUFW‡B’óò‡6†÷'D6'VçG'•&–6P¢ò°¢—FVÓ¢f–æD6'VçG'”FVÖõ—FVÒ‚$4Eõ$”4Uôd•%5B"’À¢66÷&S¢’À¢ÖF6†VD¶W—v÷&G3¢²'6†÷'Eö6'VçG'•÷&–6R%ÒÀ¢ÖF6†VEGFW&ç3¢²&6'VçG'•÷FW&Ò²&–6U÷FW&Ò%Ð¢Ð¢¢çVÆÂ“°¢–b‚ÖF6‚’&WGW&âçVÆÃ°¢6öç7B6öçFW‡BÒ6öÖ&–æVD6'VçG'”FVÖô6öçFW‡B†–çWBÂÖVÖ÷'’“°¢–b‡6†÷'D6'VçG'•&–6RÇÂ—46'VçG'”FVÖô¶æ÷vÆVFvUG&–vvW"†–çWBæ–æ&÷VæDÖW76vUFW‡B’ÇÂ—46'VçG'”FVÖô¶æ÷vÆVFvUG&–vvW"†6öçFW‡B’’°¢&WGW&âÖF6ƒ°¢Ð¢&WGW&âçVÆÃ°§Ð ¦gVæ7F–öâ†5&V6V—fVE6—FU†÷F÷2†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&âÖVÖ÷'’ç6—FU÷†÷Fõ÷7FGW2ÓÓÒ'&V6V—fVB"ÇÂÖVÖ÷'’ç6—FU÷†÷Fõ÷7FGW2ÓÓÒ&6Æ–VçEö6Æ–ÖVE÷6VçB#°§Ð ¦gVæ7F–öâ†5&V6V—fVDfÆö÷%Æâ†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&âÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2ÓÓÒ'&V6V—fVB"ÇÂÖVÖ÷'’æfÆö÷%÷Æå÷7FGW2ÓÓÒ&6Æ–VçEö6Æ–ÖVE÷6VçB#°§Ð ¦gVæ7F–öâ†4ÖV7W&VÖVçG2†–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢6öç7B6öçFW‡BÒæ÷&ÖÆ—¦R…¶–çWBæ–æ&÷VæDÖW76vUFW‡BÂââç&Wf–÷W4–æ&÷VæB†–çWBç&Wf–÷W4ÖW76vW2•Òæ¦ö–â‚""’“°¢&WGW&âõÆ&ÖV7W&VÖVçEÆ'ÅÆ&ÖV7W&VÖVçG5Æ'ÅÆ&F–ÖVç6–öåÆ'ÅÆ&F–ÖVç6–öç5Æ'ÅÆ%ÆBµÇ2¢ƒó¦Ö×Æ6×Æ×ÆÖWG&WÆÖWFW'ÆgGÆfVWB•Æ'ÅÆ%ÆBµÇ2¥·Œ9uÕÇ2¥ÆBµÆ"òçFW7B†6öçFW‡B“°§Ð ¦gVæ7F–öâ†5&VfW'&VE7F'DFFR†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢6öç7B6öçFW‡BÒæ÷&ÖÆ—¦R…¶–çWBæ–æ&÷VæDÖW76vUFW‡BÂââç&Wf–÷W4–æ&÷VæB†–çWBç&Wf–÷W4ÖW76vW2’ÂÖVÖ÷'’çF–ÖVÆ–æUöW‡V7FF–öåÒæ¦ö–â‚""’“°¢&WGW&â&ööÆVâ†ÖVÖ÷'’çF–ÖVÆ–æUöW‡V7FF–öâÇÂõÆ'FöÖ÷'&÷uÆ'ÅÆ'F×%Æ'ÅÆ'Föæ–v‡EÆ'ÅÆ&æW‡BvVVµÆ'ÅÆ'F†—2vVVµÆ'ÅÆ'&VfW'&VB7F'EÆ'ÅÆ'7F'BFFUÆ'ÅÆ&6â7F'EÆ"òçFW7B†6öçFW‡B’“°§Ð ¦gVæ7F–öâ6'VçG'”FVÖô6öçFW‡EFW‡B†–çWC¢c•v†G46ÆW4'&–ä–çWBÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&âæ÷&ÖÆ—¦R…¶–çWBæ–æ&÷VæDÖW76vUFW‡BÂââç&Wf–÷W4–æ&÷VæB†–çWBç&Wf–÷W4ÖW76vW2’ÂÖVÖ÷'’ç66÷U÷7VÖÖ'’ÂÖVÖ÷'’ç&ö¦V7E÷G—UÒæ¦ö–â‚""’“°§Ð ¦gVæ7F–öâ†46'VçG'•FW&×2‡FW‡C¢7G&–ær’°¢&WGW&âö6'VçG'—Æ6&–æWGÆ¶—F6†Vâ6&–æWGÇv&G&ö&WÇGb6öç6öÆWÇ6†öR6&–æWGÆ'V–ÇE²ÒÓö–â6&–æWGÇ6†VÂƒó¦gÇfW2—ÆÆÖ–æFWÆ†–ævWÆG&vW'ÆG&vW"G&6·Ç6ögB6Æ÷6–æwÆg&–FvWÎiÊŽ[zWÎj›iùÇÎŠ>iùÇÎyK^ŠxniùÇÎKúîiKžiùÇÎXª[.iÛòòçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ†47W'&VçD6'VçG'”—FVÕFW&×2‡FW‡C¢7G&–ær’°¢&WGW&â†46'VçG'•FW&×2‡FW‡B’ÇÀ¢õÆ&'V–ÇE²ÒÓö–åÆ'ÅÆ'6†VÆeÆ'ÅÆ'6†VÇfW5Æ'ÅÇScs#…ÇSVFSWÅÇSfsÇScvF7ÅÇSƒƒc5ÇScvF7ÅÇSsS3UÇSƒ–3eÇScvF2òçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ†4FVÖô†6¶–æuFW&×2‡FW‡C¢7G&–ær’°¢&WGW&âö†6·Æ†6¶–æwÆF—6ÖçFÆWÆFVÖöÆ—F–öçÇ&VÖ÷fWÇ&VÖ÷fRvÆÇÇvÆÂ&VÖ÷fÇÇF–ÆR†6¶–æwÆfÆö÷"†6¶–æwÆFV'&—7ÆF—7÷6ÇÆ†VÆvWÇ'V&&—6‡Ææö—7—Ææö—6WÎh¸gÎh¸n™šGÎi[.Z)—Îh™>Z)—Îh¸nZ)—Îh¸niùÇÎYè>YËîkˆ^ygÎkˆ^‹[òçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ†4FVÖô7F–öåfW&"‡FW‡C¢7G&–ær’°¢&WGW&âõÆ"ƒó§&VÖ÷fWÆF—6ÖçFÆWÆFVÖöÆ—6‡Æ†6·Æ†6¶–ær•Æ'Îh¸niùÇÎh¸n™šGÎh¸nZ)—Îi[.Z)—Îh™>Z)—ÎYè>YËîkˆ^ygÎkˆ^‹[òçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ†47W'&VçDFVÖô7F–öåfW&"‡FW‡C¢7G&–ær’°¢&WGW&â†4FVÖô7F–öåfW&"‡FW‡B’ÇÂõÆ&F—7÷6UÆ'ÅÇSc&3gÅÇSc&3eÇS“ccGÅÇScSs'ÅÇScSs%ÇSSƒ“’òçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ†46'VçG'”7F–öåfW&"‡FW‡C¢7G&–ær’°¢&WGW&âõÆ"ƒó¦Ö¶WÆ'V–ÆGÆ7W7Fö×ÆÖöF–g—Æf—GÆ–ç7FÆÇÆFGÇ&WÆ6WÇ&W—"•Æ'ÎKúîiKžiùÇÎXª[.iÛòòçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ†46'VçG'•&–6UFW&×2‡FW‡C¢7G&–ær’°¢&WGW&âõÆ"ƒó¦†÷r×V6‡ÇV÷FWÇV÷FF–öçÇ&–6WÆ6÷7GÇ&÷Vv†Ç—ÆW7F–ÖFR•Æ'Ì:\*LZ:\+(	Œ:ž(	œ+Ì:lZ*\:L+¼+wÌ:L+Ì+:L+¼+ròçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ—56†÷'D6'VçG'•&–6TVçV—'’‡FW‡C¢7G&–ær’°¢6öç7Bæ÷&ÖÆ—¦VBÒæ÷&ÖÆ—¦R‡FW‡B“°¢–b‚†47W'&VçD6'VçG'”—FVÕFW&×2†æ÷&ÖÆ—¦VB’ÇÂ†46'VçG'•&–6UFW&×2†æ÷&ÖÆ—¦VB’’&WGW&âfÇ6S°¢&WGW&â†47W'&VçDFVÖô7F–öåfW&"†æ÷&ÖÆ—¦VB“°§Ð ¦gVæ7F–öâ—46'VçG'”–çFVçB†–çWC¢c•v†G46ÆW4'&–ä–çWBÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&â†46'VçG'•FW&×2†6'VçG'”FVÖô6öçFW‡EFW‡B†–çWBÂÖVÖ÷'’’“°§Ð ¦gVæ7F–öâ—4FVÖô†6¶–æt–çFVçB†–çWC¢c•v†G46ÆW4'&–ä–çWBÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢&WGW&â†4FVÖô†6¶–æuFW&×2†6'VçG'”FVÖô6öçFW‡EFW‡B†–çWBÂÖVÖ÷'’’“°§Ð ¦gVæ7F–öâ6'VçG'”FVÖõ6W'f–6T–çFVçB†–çWC¢c•v†G46ÆW4'&–ä–çWBÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢6öç7B7W'&VçBÒæ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUFW‡B“°¢6öç7B7W'&VçD†46'VçG'’Ò†46'VçG'•FW&×2†7W'&VçB“°¢6öç7B7W'&VçD†4FVÖòÒ†4FVÖô†6¶–æuFW&×2†7W'&VçB“° ¢–b†7W'&VçD†4FVÖòbb††4FVÖô7F–öåfW&"†7W'&VçB’ÇÂ7W'&VçD†46'VçG'’’’&WGW&â&FVÖõö†6¶–ær#°¢–b†7W'&VçD†46'VçG'’bb††46'VçG'”7F–öåfW&"†7W'&VçB’ÇÂ7W'&VçD†4FVÖò’’&WGW&â&6'VçG'’#° ¢6öç7B6öçFW‡BÒ6'VçG'”FVÖô6öçFW‡EFW‡B†–çWBÂÖVÖ÷'’“°¢6öç7B6öçFW‡D†46'VçG'’Ò†46'VçG'•FW&×2†6öçFW‡B“°¢6öç7B6öçFW‡D†4FVÖòÒ†4FVÖô†6¶–æuFW&×2†6öçFW‡B“°¢–b†6öçFW‡D†4FVÖòbb6öçFW‡D†46'VçG'’’&WGW&â&FVÖõö†6¶–ær#°¢–b†6öçFW‡D†46'VçG'’’&WGW&â&6'VçG'’#°¢–b†6öçFW‡D†4FVÖò’&WGW&â&FVÖõö†6¶–ær#°¢&WGW&â&6'VçG'’#°§Ð ¦gVæ7F–öâ†5F–Ö–æuVW7F–öâ†–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢&WGW&âõÆ'FöÖ÷'&÷uÆ'ÅÆ'F×%Æ'ÅÆ'Föæ–v‡EÆ'ÅÆ&æW‡BvVVµÆ'ÅÆ'F†—2vVVµÆ'ÅÆ&6â7F'EÆ'ÅÆ'7F'EÆ'ÅÆ'F–ÖVÆ–æUÆ'ÅÆ&†÷rÆöæuÆ'ÎiˆîZJ—ÎXzi{gÎZI®K˜WÎK¸K˜Ži{nX	’òçFW7B†æ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUFW‡B’“°§Ð ¦gVæ7F–öâ6ö×÷6T6'VçG'•&–6U&WÇ’†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢6öç7B6¶æ÷vÆVFvVÖVçBÒ&V6V—fVD6'VçG'”FVÖô6¶æ÷vÆVFvVÖVçB†ÖVÖ÷'’“°¢6öç7B6µ'G3¢7G&–æuµÒÒµÓ°¢–b‚†5&V6V—fVE6—FU†÷F÷2†ÖVÖ÷'’’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âç6—FU÷†÷F÷2’6µ'G2çW6‚‚&†÷FòöbF†R&V"“°¢6µ'G2çW6‚‚'&÷Vv‚F–ÖVç6–öç2"“°¢6öç7B6²Ò6µ'G2æÆVæwF‚ò6÷VÆB–÷R6VæBG¶¦ö–äÆ—7B†6µ'G2—Óò¢"#°¢&WGW&âG¶6¶æ÷vÆVFvVÖVçGÕ7W&RÂvR6â†VÇ&Wf–WrF†—2âf÷"7W7FöÒ6'VçG'’Â&–6–ærÖ–æÇ’FWVæG2öâF†R6&–æWB6—¦RÂ–çFW&æÂÆ–÷WBÂÖFW&–ÂÂÆÖ–æFRæB†&Gv&RåÆåÆâG¶6·Ôöæ6RvR6VRF†R66÷RÂvR6âGf—6RF†RæW‡B7FWÖ÷&R67W&FVÇ’æ°§Ð ¦gVæ7F–öâ6ö×÷6TFVÖô†6¶–æu&–6U&WÇ’†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢–b†—4ÖæF&–äÖW76vR†–çWBæ–æ&÷VæDÖW76vUFW‡B’’°¢&WGW&â.XúþKº^ûÈÎh‰KºÎXúþKº^XXŽ[Šîh*ŽyÈ¾8.Šû~XXŽXùh‹þ[¾{¾Yè¾ûÈ„„D"ò6öæFòòÆæFVNûÈž8xëYË®xZ~x˜~h‰nŠxnš)ûÈÎKº^Xø®ZJ~jh.[®ZûŽûÈŽZh.iéÎikžKëþûÈž8%ÆåÆîiˆîZJžˆ;ÞKˆÞˆ;ÞZèžhé.ûÈÎŠhyÈ¾xëYË®h8^Xk^8[z^zˆ¾ˆÈ>Y»NY(ÎiŠþY
+n™ÈŠhzêynZHBô„D.h›žXxn8.h‰KºÎXXŽyÈ¾‹XNiižûÈÎXhÞ[Šîh*ŽzîŠêNKˆ¾KˆjÚ^8"#°¢Ð¢6öç7BæVVG4fÆö÷%ÆâÒ÷vÆÇÆ†6·Æ†6¶–æwÎi[.Z)—Îh™>Z)—Îh¸nZ)’òçFW7B†6'VçG'”FVÖô6öçFW‡EFW‡B†–çWBÂÖVÖ÷'’’’bb†5&V6V—fVDfÆö÷%Æâ†ÖVÖ÷'’“°¢6öç7BÖ—76–æs¢7G&–æuµÒÒµÓ°¢–b‚ÖVÖ÷'’ç&÷W'G•÷G—R’Ö—76–ærçW6‚‚'&÷W'G’G—R"“°¢–b†æVVG4fÆö÷%Æâ’Ö—76–ærçW6‚‚&fÆö÷"Æâ"“°¢–b‚†5&V6V—fVE6—FU†÷F÷2†ÖVÖ÷'’’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âç6—FU÷†÷F÷2’Ö—76–ærçW6‚‚'†÷FòöbF†R&V"“°¢6öç7B6²ÒÖ—76–æræÆVæwF‚ò6÷VÆB–÷R6VæBF†RG¶¦ö–äÆ—7B†Ö—76–ær—Ò6òvR6â&Wf–WrF†R66÷Sö¢"vR6â&Wf–WrF†RFWF–Ç2Ç&VG’6†&VBæBGf—6RF†RæW‡B7FWâ#°¢6öç7BF–Ö–ætæ÷FRÒ†5F–Ö–æuVW7F–öâ†–çWB’ò"F–Ö–ærÇ6òFWVæG2öâF†R6—FR6öæF—F–öâÂ&÷fÂ&WV—&VÖVçG2æBFVÒf–Æ&–Æ—G’â"¢"#°¢&WGW&â7W&RÂvR6â†VÇ&Wf–WrF†—2âf÷"FVÖò÷"†6¶–ærv÷&·2ÂvRæVVBFò6†V6²F†R66÷RÂ6—FR6öæF—F–öâÂ66W72Â&÷FV7F–öâæBç’&÷fÂ&WV—&VÖVçG2&Vf÷&RGf—6–ærâG·F–Ö–ætæ÷FWÒG¶6·Ö°§Ð ¦gVæ7F–öâÖ—76–æt6'VçG'”FVÖôFWF–Ç2†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â–çWC¢c•v†G46ÆW4'&–ä–çWBÂ÷F–öç3¢²–æ6ÇVFTfÆö÷%Æãó¢&ööÆVâÒÒ·Ò’°¢6öç7BÖ—76–æs¢7G&–æuµÒÒµÓ°¢–b‚ÖVÖ÷'’ç&÷W'G•÷G—R’Ö—76–ærçW6‚‚'&÷W'G’G—R"“°¢–b‚†5&V6V—fVE6—FU†÷F÷2†ÖVÖ÷'’’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âç6—FU÷†÷F÷2’Ö—76–ærçW6‚‚'†÷F÷2÷f–FVòöbF†R&V"“°¢–b†÷F–öç2æ–æ6ÇVFTfÆö÷%Æâbb†5&V6V—fVDfÆö÷%Æâ†ÖVÖ÷'’’bbÖVÖ÷'’æFõöæ÷Eö6µöv–âæfÆö÷%÷Æâ’Ö—76–ærçW6‚‚&fÆö÷"Æâ"“°¢–b‚†4ÖV7W&VÖVçG2†–çWB’’Ö—76–ærçW6‚‚'&÷Vv‚ÖV7W&VÖVçG2"“°¢–b‚†57V6–f–566÷R†ÖVÖ÷'’’’Ö—76–ærçW6‚‚'v†B–÷RvçBFò'V–ÆBÂ&VÖ÷fRÂÖöF–g’÷"†6²"“°¢–b‚†5&VfW'&VE7F'DFFR†ÖVÖ÷'’Â–çWB’’Ö—76–ærçW6‚‚'&VfW'&VB7F'BFFR"“°¢&WGW&âÖ—76–æs°§Ð ¦gVæ7F–öâ&V6V—fVD6'VçG'”FVÖô6¶æ÷vÆVFvVÖVçB†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢6öç7B&V6V—fVBÒ°¢†5&V6V—fVE6—FU†÷F÷2†ÖVÖ÷'’’ò'†÷F÷2"¢""À¢ÖVÖ÷'’ç&÷W'G•÷G—Rò'&÷W'G’G—R"¢""À¢†5&V6V—fVDfÆö÷%Æâ†ÖVÖ÷'’’ò&fÆö÷"Æâ"¢" ¢Òæf–ÇFW"„&ööÆVâ“°¢–b‚&V6V—fVBæÆVæwF‚’&WGW&â"#°¢&WGW&âF†æ·2Â’wfR&V6V—fVBF†RG¶¦ö–äÆ—7B‡&V6V—fVB—Òâ°§Ð ¦gVæ7F–öâ6´Ö—76–æt6'VçG'”FVÖôFWF–Ç2†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â–çWC¢c•v†G46ÆW4'&–ä–çWBÂ÷F–öç3¢²–æ6ÇVFTfÆö÷%Æãó¢&ööÆVâÒÒ·Ò’°¢6öç7BÖ—76–ærÒÖ—76–æt6'VçG'”FVÖôFWF–Ç2†ÖVÖ÷'’Â–çWBÂ÷F–öç2“°¢–b‚Ö—76–æræÆVæwF‚’&WGW&â%F†RFVÒ6â&Wf–WrF†RFWF–Ç2Ç&VG’6†&VBæBGf—6RF†RæW‡B7FWf÷"â–æ—F–Â&Wf–Wrâ#°¢&WGW&âÖ’’6†V6²G¶¦ö–äÆ—7B†Ö—76–ær—Óö°§Ð ¦gVæ7F–öâ—4ÖæF&–äÖW76vR‡FW‡C¢7G&–ær’°¢&WGW&âõµÇSFSÕÇS–ffeÒòçFW7B‡FW‡B“°§Ð ¦gVæ7F–öâ†46'VçG'”FVÖõ&–6UVW7F–öâ‡FW‡C¢7G&–ær’°¢6öç7Bæ÷&ÖÆ—¦VBÒæ÷&ÖÆ—¦R‡FW‡B“°¢&WGW&âõÆ&†÷r×V6…Æ'ÅÆ'&–6UÆ'ÅÆ'V÷FUÆ'ÅÆ'V÷FF–öåÆ'ÅÆ'&÷Vv†Ç•Æ'ÅÆ&6÷7EÆ'ÎZI®[	™+òçFW7B†æ÷&ÖÆ—¦VB“°§Ð ¦gVæ7F–öâ6ö×÷6T6'VçG'”FVÖõ&–6U&WÇ’†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢–b†—4ÖæF&–äÖW76vR†–çWBæ–æ&÷VæDÖW76vUFW‡B’’°¢&WGW&â6ö×÷6TFVÖô†6¶–æu&–6U&WÇ’†ÖVÖ÷'’Â–çWB“°¢Ð¢&WGW&â6'VçG'”FVÖõ6W'f–6T–çFVçB†–çWBÂÖVÖ÷'’’ÓÓÒ&FVÖõö†6¶–ær ¢ò6ö×÷6TFVÖô†6¶–æu&–6U&WÇ’†ÖVÖ÷'’Â–çWB¢¢6ö×÷6T6'VçG'•&–6U&WÇ’†ÖVÖ÷'’“°§Ð ¦gVæ7F–öâ6ö×÷6T6öæFõvVV¶VæD†6¶–æu&WÇ’‚’°¢&WGW&â$f÷"6öæFòv÷&·2Â†6¶–ær×W7BföÆÆ÷rÔ55B÷"'V–ÆF–ærÖævVÖVçB'VÆW2æB&÷fVBv÷&¶–ær†÷W'2âÆV6R6†&RF†RÖævVÖVçB&Væ÷fF–öâ'VÆW2÷"f÷&Ò–bf–Æ&ÆRÂFövWF†W"v—F‚F†RvÆÂÆö6F–öâÂ†÷F÷2æBfÆö÷"ÆââvR6†÷VÆBæ÷B&öÖ—6R6GW&F’v÷&·2&Vf÷&RF†R66÷RÂ&÷fÂæBÆÆ÷vVB†÷W'2&R6†V6¶VBâ#°§Ð ¦gVæ7F–öâ6ö×÷6T6'VçG'”FVÖô×VÇF”–çFVçE&WÇ’†ÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢6öç7BÖ—76–æt6²Ò6´Ö—76–æt6'VçG'”FVÖôFWF–Ç2†ÖVÖ÷'’Â–çWBÂ²–æ6ÇVFTfÆö÷%Æã¢G'VRÒ“°¢&WGW&âvR6â†VÇ&Wf–WrF†R¶—F6†VâvÆÂ&WVW7BÂF—7÷6Â66÷RæBF&vWB7F'BF–Ö–ærFövWF†W"âf÷"vÆÂ†6¶–ærÂvRvÆÂæVVBFò6†V6²F†R&÷W'G’G—RÂfÆö÷"ÆâÂvÆÂÆö6F–öâÂv†WF†W"F†RvÆÂ—27G'V7GW&Â÷&W7G&–7FVBÂ†–FFVâ6W'f–6W2ÂæBç’&÷fÂ&WV—&VÖVçG2f—'7BâF—7÷6Â6†÷VÆBÇ6ò&R&Wf–WvVBæB—FVÖ—6VB6ÆV&Ç’gFW"vRVæFW'7FæBF†RF—6ÖçFÆ–ær÷"†6¶–ær66÷Râ7F'BF–Ö–ærFWVæG2öâ66÷RÂ66W72ÂF—7÷6Â÷&÷FV7F–öâÂ&÷fÂæBFVÒf–Æ&–Æ—G’âG¶Ö—76–æt6·Ö°§Ð ¦gVæ7F–öâ6ö×÷6T6'VçG'”FVÖô¶æ÷vÆVFvU&WÇ’†ÖF6ƒ¢6'VçG'”FVÖõÖF6‚ÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’Â–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢6öç7BFW‡BÒæ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUFW‡B“°¢–b‚ö&öÖ"6†VÇFW'Æ†÷W6V†öÆB6†VÇFW'Î™‹.z›§Î˜þ™«îh˜òçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4Eeô„õU4T„ôÄEõ4„TÅDU""’çFV×ÆFTVã°¢–b‚ö6öæF÷ÆÖ77GÆÖævVÖVçGÇ6GW&F—ÇvVV¶VæBòçFW7B‡FW‡B’bbö†6·Æ†6¶–æwÇvÆÇÎi[.Z)—Îh™>Z)—Îh¸nZ)’òçFW7B‡FW‡B’’&WGW&â6ö×÷6T6öæFõvVV¶VæD†6¶–æu&WÇ’‚“°¢–b‚ö†6·Æ†6¶–æwÇvÆÇÎi[.Z)—Îh™>Z)—Îh¸nZ)’òçFW7B‡FW‡B’bböF—7÷6ÇÆFV'&—7Æ†VÆvWÇ'V&&—6‡ÎYè>YËçÎkˆ^‹[òçFW7B‡FW‡B’bb÷7F'GÆæW‡BvVV·ÇFöÖ÷'&÷wÇF–ÖVÆ–æRòçFW7B‡FW‡B’’°¢&WGW&â6ö×÷6T6'VçG'”FVÖô×VÇF”–çFVçE&WÇ’†ÖVÖ÷'’Â–çWB“°¢Ð¢–b‚öF—7÷6ÇÆFV'&—7Æ†VÆvWÇ'V&&—6‡ÎYè>YËçÎkˆ^‹[òçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4EuôD•5õ4Â"’çFV×ÆFTVã°¢–b††46'VçG'”FVÖõ&–6UVW7F–öâ†–çWBæ–æ&÷VæDÖW76vUFW‡B’’&WGW&â6ö×÷6T6'VçG'”FVÖõ&–6U&WÇ’†ÖVÖ÷'’Â–çWB“°¢–b‚öGW7GÆæö—7—Ææö—6WÇ&÷FV7F–öçÆÆ–gB&÷FV7F–öçÆ6÷'&–F÷"&÷FV7F–öçÎx[	‡ÎYš®™û7ÎKùÞhªBòçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4E…ôEU5Eõ$õDT5D”ôâ"’çFV×ÆFTVã°¢–b‚ö&÷fÇÇW&Ö—GÆÖ77GÆÖævVÖVçGÎh›žXxgÎzêynZHBòçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4EUô$õdÂ"’çFV×ÆFTVã°¢–b‚ö†6·Æ†6¶–æwÇ&VÖ÷fRvÆÇÇvÆÂ&VÖ÷fÇÇvÆÇÎi[.Z)—Îh™>Z)—Îh¸nZ)’òçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4EEõtÄÅô„4´”är"’çFV×ÆFTVã°¢–b‚öÖöF–g—Æ6&–æWGÆg&–FvWÇ6†VÆgÇ&WÆ6RFö÷'ÎKúîiKžiùÇÎXª[.iÛòòçFW7B‡FW‡B’’°¢6öç7B6—¦TÆ&VÂÒög&–FvRö’çFW7B†–çWBæ–æ&÷VæDÖW76vUFW‡B’ò&g&–FvR6—¦R"¢&—FVÒ6—¦R#°¢6öç7B6²Ò†4ÖV7W&VÖVçG2†–çWB’ò""¢6÷VÆB–÷R6VæB†÷F÷2Â&÷Vv‚F–ÖVç6–öç2æBF†RG·6—¦TÆ&VÇÓö°¢&WGW&âG¶f–æD6'VçG'”FVÖõ—FVÒ‚$4Eô4$”äUEôÔôD”d”4D”ôâ"’çFV×ÆFTVçÒG¶6·Ö°¢Ð¢–b‚öÖF6‡Ç6ÖR6öÆ÷W'ÆÆÖ–æFR6öÆ÷W"òçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4EôÄÔ”äDUôÔD4‚"’çFV×ÆFTVã°¢–b‚öÖFW&–ÇÇÇ—vööGÆÖFgÆ†–ævWÆG&vW"G&6·Ç6ögB6Æ÷6–æwÆÆÖ–æFRòçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4E%ôÔDU$”Å2"’çFV×ÆFTVã°¢–b‚ö†–FFVâ—WÆ†–FFVâv—&WÇv—&W2–ç6–FWÆFÖvR—W7Æ6öæGV—BòçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4E5ô„”DDTåõ4U%d”4U2"’çFV×ÆFTVã°¢–b‚ö†÷rÆöæwÇ7F'BFöÖ÷'&÷wÆ6â7F'GÇF–ÖVÆ–æRòçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4E•õD”ÔTÄ”äR"’çFV×ÆFTVã°¢–b†ÖF6‚æ—FVÒæ–BÓÓÒ$4E%õ4ÔÄÅô¤ô%2"ÇÂ÷6ÖÆÂ¦ö'Ç6ÖÆÂ†6¶–æwÆöæÇ’&VÖ÷fRòçFW7B‡FW‡B’’&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4E%õ4ÔÄÅô¤ô%2"’çFV×ÆFTVã°¢–b†ÖF6‚æ—FVÒæ–BÓÓÒ$4E5õ4•DUõd•4•B"’&WGW&âÖF6‚æ—FVÒçFV×ÆFTVã° ¢6öç7B6¶æ÷vÆVFvVÖVçBÒ&V6V—fVD6'VçG'”FVÖô6¶æ÷vÆVFvVÖVçB†ÖVÖ÷'’“°¢–b†6¶æ÷vÆVFvVÖVçB’°¢&WGW&âG¶6¶æ÷vÆVFvVÖVçGÕvR6â†VÇ&Wf–WrF†—2âG¶6´Ö—76–æt6'VçG'”FVÖôFWF–Ç2†ÖVÖ÷'’Â–çWB—Ö°¢Ð¢&WGW&âf–æD6'VçG'”FVÖõ—FVÒ‚$4E%õ4ÔÄÅô¤ô%2"’çFV×ÆFTVã°§Ð ¦gVæ7F–öâf—'7EF÷V6„w&VWF–æt¶–æB‡FW‡C¢7G&–ær’°¢–b††2‡FW‡BÂõîKÚZ[ÒBò’’&WGW&â&6†–æW6Uöw&VWF–ær#°¢–b††2‡FW‡BÂõâ††—Æ†VÆÆ÷Æ†’F†W&WÆ†W’’Bò’’&WGW&â&VævÆ—6…öw&VWF–ær#°¢–b††2‡FW‡BÂõÆ&&R–÷RF†W&UÆ'ÅÆ&ç–öæRF†W&UÆ'ÅÆ&6â&WÇ•Æ"ò’’&WGW&â&&U÷–÷U÷F†W&R#°¢&WGW&â"#°§Ð ¦gVæ7F–öâ7W'&VçDÖW76vT—56†÷'D–çF¶Tç7vW"†–çWC¢c•v†G46ÆW4'&–ä–çWBÂÖVÖ÷'“¢c•6ÆW4ÖVÖ÷'’’°¢6öç7BFW‡BÒæ÷&ÖÆ—¦R†–çWBæ–æ&÷VæDÖW76vUFW‡B“°¢–b‚FW‡BÇÂ–çWBæ–æ&÷VæDÖW76vUG—RçFôÆ÷vW$66R‚’ÓÒ'FW‡B"’&WGW&âfÇ6S°¢6öç7Bv÷&D6÷VçBÒFW‡Bç7Æ—B‚õÇ2²ò’æf–ÇFW"„&ööÆVâ’æÆVæwFƒ°¢–b‡v÷&D6÷VçBâR’&WGW&âfÇ6S°¢&WGW&â&ööÆVâ€¢ÖVÖ÷'’ç&÷W'G•÷G—RÇÀ¢ÖVÖ÷'’æfÆE÷G—RÇÀ¢†2‡FW‡BÂõÆ'V&Æ–5Æ'ÅÆ&gVÆÂv÷&µÆ'ÅÆ&gVÆÂv÷&·5Æ'ÅÆ&gVÆÂ&VæõÆ'ÅÆ&gVÆÂ&Væ÷fF–öåÆ'ÅÆ'v†öÆR†÷W6UÆ'ÅÆ&¶—F6†VåÆ'ÅÆ'Fö–ÆWEÆ'ÅÆ&&F‡&ööÕÆ'ÅÆ&fÆ'ÅÆ&Æ"ò¢“°§Ð ¦gVæ7F–öâÖW76vUF–ÖW7F××2†ÖW76vS¢ÆVDÖW76vR’°¢6öç7B&rÒÖW76vRæ7&VFVDBÇÂÖW76vRç&÷f–FW%F–ÖW7F×°¢6öç7B'6VBÒ&ròFFRç'6R…7G&–ær‡&r’’¢æã°¢&WGW&âçVÖ&W"æ—4f–æ—FR‡'6VB’ò'6VB¢çVÆÃ°§Ð ¦gVæ7F–öâ7W'&VçDÖW76vUF–ÖW7F××2†–çWC¢c•v†G46ÆW4'&–ä–çWB’°¢6öç7B'•&÷f–FW$–BÒ–çWBç&÷f–FW$ÖW76vT–@¢ò–çWBç.7ÚÚ$z{-®éÜj×rn true;
       return normalize(messageText(message)) !== currentText;
     })
     .map((message) => ({ message, time: messageTimestampMs(message) }))
@@ -1034,6 +215,66 @@ function composeAppointmentReply(memory: V9SalesMemory, input: V9WhatsAppSalesBr
   return `${timingPrefix}Sure, we can check a suitable timing. The appointment is not confirmed yet, and the team will review availability before confirming.`;
 }
 
+function cleanProjectReference(memory: V9SalesMemory) {
+  const property = knownPropertyLabel(memory);
+  const scope = scopePhrase(memory);
+  if (property && scope) return `your ${property} ${scope} enquiry`;
+  if (property) return `your ${property} renovation enquiry`;
+  if (scope) return `your ${scope} enquiry`;
+  return "your renovation enquiry";
+}
+
+function isMajorLandedAa(memory: V9SalesMemory) {
+  const landed = memory.property_type === "landed" || /landed/i.test(memory.project_type);
+  const aa = /a&a|addition|alteration|extension/i.test(`${memory.project_type} ${memory.scope_summary}`);
+  const qualified = Boolean(memory.address || memory.postal_code) &&
+    Boolean(memory.budget_expectation || memory.timeline_expectation || memory.key_collection);
+  return landed && aa && qualified;
+}
+
+function composeSalesReadyHandoffReply(intent: V9SalesReadyIntent, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
+  const project = cleanProjectReference(memory);
+  const timing = memory.appointment_preference || extractAppointmentPreference(input.inboundMessageText);
+  const hasLocation = Boolean(memory.address || memory.postal_code);
+  const floorReceived = ["received", "client_claimed_sent"].includes(memory.floor_plan_status);
+
+  if (intent === "call_request") {
+    return timing
+      ? `Yes, I'll get Marcus to contact you about ${project}. ${timing} is noted as your preferred timing.`
+      : `Yes, I'll get Marcus to contact you about ${project}. What time today or tomorrow suits you best?`;
+  }
+
+  if (intent === "quotation_request") {
+    if (!hasSpecificScope(memory)) {
+      return "Yes, we can move this to quotation review. I'll get Marcus to review it. What property type and renovation scope should the quotation cover?";
+    }
+    if (!floorReceived) {
+      return `Yes, we can move ${project} to quotation review. I'll get Marcus to review it; please send the floor plan if available.`;
+    }
+    return `Yes, we can move ${project} to quotation review. We have the project details and floor plan noted, and I'll get Marcus to take over from here.`;
+  }
+
+  if (intent === "site_visit_request") {
+    if (!hasLocation) {
+      return `Yes, we can arrange a site review for ${project}. I'll get Marcus to check the next available timing; what is the site address or postal code?`;
+    }
+    if (!timing) {
+      return `Yes, we can arrange a site review for ${project}. I'll get Marcus to check availability; which day and time would suit you?`;
+    }
+    return `Yes, we can arrange a site review for ${project}. ${timing} is noted, and Marcus will check availability before the appointment is confirmed.`;
+  }
+
+  if (intent === "office_visit_request") {
+    return timing
+      ? `Yes, you can meet the team at our office. ${timing} is noted, and Marcus will check availability before confirming.`
+      : "Yes, you can meet the team at our office. I'll get Marcus to check availability; which day and time would suit you?";
+  }
+
+  return timing
+    ? `Yes, we can arrange an initial project review for ${project}. ${timing} is noted, and Marcus will check availability before confirming.`
+    : `Yes, we can arrange an initial project review for ${project}. I'll get Marcus to check availability; which day and time would suit you?`;
+}
+
 function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSalesBrainInput) {
   if (memory.first_touch_reply_sent) return "";
   if (!isFirstTouch(input)) return "";
@@ -1050,7 +291,9 @@ function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9
   }
 
   if (intent === "price_question") return composePriceReply(memory, input);
-  if (intent === "appointment_request" || intent === "office_visit_request") return composeAppointmentReply(memory, input);
+  if (["call_request", "quotation_request", "site_visit_request", "appointment_request", "office_visit_request"].includes(intent)) {
+    return composeSalesReadyHandoffReply(intent as V9SalesReadyIntent, memory, input);
+  }
 
   if (["image", "document"].includes(type)) {
     if (memory.floor_plan_status === "received" || memory.floor_plan_status === "client_claimed_sent") {
@@ -1061,6 +304,13 @@ function composeFirstTouchReply(intent: string, memory: V9SalesMemory, input: V9
 
   if (has(text, /\bcan do renovation\b|\bdo renovation\b|\bhelp.*renovation\b/)) {
     return `Hi, yes we can help review renovation works. ${DREAM_HOME_PHRASE} May I know what type of property this is and what works you're planning?`;
+  }
+
+  if (isMajorLandedAa(memory)) {
+    const fileStatus = ["received", "client_claimed_sent"].includes(memory.floor_plan_status)
+      ? "We have the floor plan noted, and I'll get Marcus to take over the initial project review."
+      : "Please send the floor plan and site photos if available, and I'll get Marcus to take over the initial project review.";
+    return `Thanks, we have ${cleanProjectReference(memory)} noted. ${fileStatus}`;
   }
 
   if ((memory.property_type === "landed" || /a&a|landed/i.test(memory.project_type)) && !hasAreaScope(memory)) {
@@ -1134,6 +384,15 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
   if (intent === "voice_message") {
     return "Sorry, we're not able to listen to voice messages here. Could you type the key details instead, such as your property type, renovation scope, and preferred appointment timing?";
   }
+  if (intent === "unsupported_service_question") {
+    return "We handle renovation, A&A and rectification works, but we don't provide standalone defects-inspection reports. If you need rectification or renovation after an inspection, we can review that work scope.";
+  }
+  if (intent === "simple_acknowledgement") {
+    if (memory.floor_plan_status === "missing" || memory.floor_plan_status === "unknown") {
+      return "Sure, thank you. You can send the floor plan, site photos or references here when ready.";
+    }
+    return "Sure, thank you. We have the details shared so far, and Marcus will follow up if anything else is needed.";
+  }
   if (isShortCarpentryPriceEnquiry(input.inboundMessageText)) {
     return handoffAppend(composeCarpentryDemoPriceReply(memory, input), memory, "carpentry_demo_qa");
   }
@@ -1152,6 +411,9 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
   if (intent === "price_question") {
     return handoffAppend(composePriceReply(memory, input), memory, intent);
   }
+  if (["call_request", "quotation_request", "site_visit_request"].includes(intent)) {
+    return composeSalesReadyHandoffReply(intent as V9SalesReadyIntent, memory, input);
+  }
   if (intent === "timeline_question") {
     return handoffAppend("We can check the timeline, but it depends on the scope, site condition, and team availability. May I know what works you need done?", memory, intent);
   }
@@ -1162,11 +424,10 @@ function composeReply(intent: string, memory: V9SalesMemory, input: V9WhatsAppSa
     return handoffAppend("For many condo renovations, 6 months is usually a more comfortable planning window, but the team still needs to check the project details, condo management requirements, materials and site condition before confirming.", memory, intent);
   }
   if (intent === "office_visit_request") {
-    const timeText = timing || "your preferred office visit timing";
-    return handoffAppend(`${timeText} noted as your preferred office visit timing. The team will check availability before confirming.`, memory, intent);
+    return composeSalesReadyHandoffReply("office_visit_request", memory, input);
   }
   if (intent === "appointment_request") {
-    return handoffAppend(composeAppointmentReply(memory, input), memory, intent);
+    return composeSalesReadyHandoffReply("appointment_request", memory, input);
   }
   if (intent === "design_direction_statement") {
     const direction = memory.design_direction || "your preferred design direction";
@@ -1243,6 +504,9 @@ function capitalize(value: string) {
 
 function salesMoveFor(intent: string): V9SalesMove {
   if (intent === "price_question") return "safe_price_review";
+  if (intent === "quotation_request") return "quotation_review_handoff";
+  if (intent === "call_request") return "call_or_chat_handoff";
+  if (intent === "site_visit_request") return "site_visit_handoff";
   if (intent === "carpentry_demo_qa") return "carpentry_demo_review";
   if (intent === "timeline_question" || intent === "timeline_followup") return "timeline_reality_check";
   if (intent === "hypothetical_timeline") return "hypothetical_answer_without_context_overwrite";
@@ -1255,6 +519,7 @@ function salesMoveFor(intent: string): V9SalesMove {
   if (intent === "free_work_request") return "free_work_deflection";
   if (intent === "identity_question") return "human_identity_answer";
   if (intent === "voice_message" || intent === "unsupported") return "voice_or_unsupported_fallback";
+  if (intent === "simple_acknowledgement") return "acknowledge_and_continue";
   if (intent === "frustration_or_correction") return "handoff_to_team";
   if (intent === "follow_up_ping" || intent === "media_received") return "acknowledge_and_continue";
   return "answer_direct_question";
@@ -1265,7 +530,7 @@ function stageFor(intent: string, memory: V9SalesMemory) {
   if (memory.handoff_lock || intent === "frustration_or_correction") return "handoff_required";
   if (intent === "price_question") return "price_question";
   if (intent === "carpentry_demo_qa") return "technical_or_authority_risk";
-  if (intent === "appointment_request" || intent === "office_visit_request") return "appointment_pending";
+  if (["call_request", "quotation_request", "site_visit_request", "appointment_request", "office_visit_request"].includes(intent)) return "appointment_pending";
   if (intent === "timeline_question" || intent === "timeline_followup" || intent === "hypothetical_timeline") return "timeline_discussion";
   if (intent === "hacking_wall" || intent === "approval_submission") return "technical_or_authority_risk";
   if (memory.lead_seriousness === "high") return "serious_lead_review";
@@ -1273,7 +538,7 @@ function stageFor(intent: string, memory: V9SalesMemory) {
 }
 
 function appointmentStatus(intent: string) {
-  return intent === "appointment_request" || intent === "office_visit_request"
+  return intent === "appointment_request" || intent === "office_visit_request" || intent === "site_visit_request"
     ? "requested_pending_review"
     : "none";
 }
@@ -1437,9 +702,12 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     intent !== "unsupported" &&
     Boolean(final.reply.trim()) &&
     !burstThrottle.burstIntakeSuppressed;
+  const majorLandedAa = isMajorLandedAa(memory);
+  const salesReadyIntent = ["call_request", "quotation_request", "site_visit_request", "appointment_request", "office_visit_request"].includes(intent);
   const handoffRequired =
     (intent !== "design_question" && memory.handoff_lock) ||
-    ["frustration_or_correction", "file_correction", "price_question", "appointment_request", "office_visit_request", "hacking_wall", "approval_submission", "carpentry_demo_qa", "free_work_request", "promotion_question"].includes(intent);
+    majorLandedAa ||
+    ["frustration_or_correction", "file_correction", "price_question", "call_request", "quotation_request", "site_visit_request", "appointment_request", "office_visit_request", "hacking_wall", "approval_submission", "carpentry_demo_qa", "free_work_request", "promotion_question"].includes(intent);
   const confidence = memory.handoff_lock && intent !== "design_question" ? 95 : ["general_enquiry", "media_received"].includes(intent) ? 82 : 96;
   const patch = memoryPatch(before, memory);
   const silentCaptureKeys = silentCaptureChangedKeys(patch);
@@ -1507,6 +775,8 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     memoryAfter: memory,
     clientPatience: memory.client_patience,
     leadSeriousness: memory.lead_seriousness,
+    salesReadyIntent,
+    majorLandedAa,
     doNotAskAgain: memory.do_not_ask_again,
     repeatedQuestionCount: memory.repeated_question_count,
     safetyValidatorPassed: final.safety.ok,
@@ -1545,6 +815,10 @@ export function buildV9WhatsAppSalesBrainDecision(input: V9WhatsAppSalesBrainInp
     missingInfo: missing,
     nextAction: burstThrottle.burstIntakeSuppressed
       ? "Short intake fact captured; wait for more context before sending another auto-reply."
+      : salesReadyIntent
+        ? "Create a Marcus handoff task, advance the CRM stage, send one acknowledgement, then pause the bot."
+        : majorLandedAa
+          ? "Create a Marcus handoff task for the serious landed A&A enquiry and pause the bot after acknowledgement."
       : handoffRequired
         ? "Team follow-up required."
         : "Continue with v9 clean-core reply flow.",

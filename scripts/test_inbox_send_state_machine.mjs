@@ -22,7 +22,7 @@ const inboxClient = read("components/inbox/MultiChatInbox.tsx");
 const sendApi = read("app/api/inbox/send/route.ts");
 
 const replyComposerStart = inboxClient.indexOf("function ReplyComposer");
-const replyComposerEnd = inboxClient.indexOf("const LeadContextPanel");
+const replyComposerEnd = inboxClient.indexOf("export function MultiChatInbox");
 assert(replyComposerStart >= 0 && replyComposerEnd > replyComposerStart, "ReplyComposer block not found.");
 const replyComposer = inboxClient.slice(replyComposerStart, replyComposerEnd);
 
@@ -56,11 +56,11 @@ for (const phrase of [
 
 for (const phrase of [
   "event.preventDefault()",
-  "if (!body || isSending) return",
+  "if (!body || isSending || !serviceWindowOpen) return",
   "body: JSON.stringify({ leadId, body, clientTempId })",
   "ok: Boolean(data?.ok)",
   "providerMessageId: typeof data?.providerMessageId === \"string\"",
-  "whatsappStatus: data?.whatsappStatus === \"sent\" || data?.whatsappStatus === \"failed\"",
+  "[\"accepted\", \"sent\", \"failed\"].includes(data?.whatsappStatus)",
   "errorCode: timedOut ? \"send_timeout\" : \"network_error\"",
   "setReply(body)"
 ]) {
@@ -80,7 +80,8 @@ for (const phrase of [
   "clientTempId",
   "messageId: saved.id",
   "providerMessageId: sent.providerMessageId || \"\"",
-  "whatsappStatus: \"sent\"",
+  "whatsappStatus: \"accepted\"",
+  "completionStatus: \"pending\"",
   "createdAt: saved.createdAt",
   "ok: false",
   "errorCode:",
@@ -100,7 +101,7 @@ for (const phrase of [
   "isNextRedirectOnly",
   "messageClientTempId(message)",
   "providerMessageId: result.providerMessageId || message.providerMessageId",
-  "clientSendFailed: !result.ok"
+  "clientSendFailed: !result.ok && !providerAccepted"
 ]) {
   assertIncludes(inboxClient, phrase, "optimistic reconciliation and redirect failure guard");
 }

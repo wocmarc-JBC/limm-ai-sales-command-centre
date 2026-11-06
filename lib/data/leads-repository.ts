@@ -5,6 +5,7 @@ import { mapLeadRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { getSupabaseServerClient } from "./supabase-server";
+import { beginVerifiedCompletion, observeVerifiedCompletion } from "./verified-completion-repository";
 import { buildLeadFacts, leadFactsToLeadPatch } from "@/lib/lead-facts";
 import { buildQuoteApprovalGate, isQuoteSentPatch } from "@/lib/boss-ops";
 import { isProductionHiddenLead } from "@/lib/production-visibility";
@@ -221,6 +222,16 @@ export async function getLeadById(id: string) {
   return lead ? mockClone(lead) : null;
 }
 
+async function getLeadByIdForCompletionReadBack(id: string) {
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
+    const { data, error } = await supabase!.from("leads").select("*").eq("id", id).maybeSingle();
+    if (error) throw new Error(`Lead completion read-back failed: ${error.message}`);
+    return data ? mapLeadRow(data) : null;
+  }
+  return getLeadById(id);
+}
+
 function cleanList(values: string[] = []) {
   return values.map((value) => value.trim()).filter(Boolean);
 }
@@ -363,6 +374,52 @@ export async function createManualLead(input: ManualLeadCreateInput, actor = "Ma
 async function updateLead(id: string, patch: Partial<Lead>, action: string, summary: string, metadata: Record<string, unknown> = {}) {
   const before = await getLeadById(id);
   const now = new Date().toISOString();
+  const expectedStage = Object.fromEntries(
+    (["status", "salesStage"] as const)
+      .filter((field) => patch[field] !== undefined)
+      .map((field) => [field, patch[field]])
+  );
+  const completionReceipt = Object.keys(expectedStage).length
+    ? await beginVerifiedCompletion({
+        actionType: "lead_stage_change",
+        entityType: "lead",
+        entityId: id,
+        leadId: id,
+        intent: summary,
+        expectedPostcondition: expectedStage,
+        actorType: String(metadata.auditActorType ?? "boss"),
+        actorName: String(metadata.auditActorName ?? "Marcus"),
+        metadata: { sourceAction: action }
+      })
+    : null;
+
+  async function verifyStageReadBack() {
+    if (!completionReceipt) return;
+    const readBack = await getLeadByIdForCompletionReadBack(id);
+    const observedStage = readBack
+      ? Object.fromEntries(Object.keys(expectedStage).map((field) => [field, readBack[field as keyof Lead]]))
+      : {};
+    const matches = Boolean(readBack) && Object.entries(expectedStage)
+      .every(([field, value]) => readBack?.[field as keyof Lead] === value);
+    await observeVerifiedCompletion(completionReceipt, {
+      independentlyObserved: Boolean(readBack),
+      postconditionMatched: matches,
+      terminalFailure: !matches,
+      failureReason: matches ? "" : "Lead stage read-back did not match the requested postcondition.",
+      observedEvidence: { readBackFound: Boolean(readBack), ...observedStage }
+    });
+  }
+
+  async function failStageReceipt(reason: string) {
+    if (!completionReceipt) return;
+    await observeVerifiedCompletion(completionReceipt, {
+      independentlyObserved: false,
+      postconditionMatched: false,
+      terminalFailure: true,
+      failureReason: reason,
+      observedEvidence: { readBackFound: false, sourceAction: action }
+    }).catch(() => null);
+  }
 
   if (getDataMode() === "Supabase Mode") {
     const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
@@ -404,14 +461,22 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
         afterData: { status: after.status, bossApprovalNeeded: after.bossApprovalNeeded },
         metadata
       });
+      await verifyStageReadBack();
       return after;
     }
-    if (error) throw new Error(`Lead update failed: ${error.message}`);
+    if (error) {
+      const reason = `Lead update failed: ${error.message}`;
+      await failStageReceipt(reason);
+      throw new Error(reason);
+    }
   }
 
   const store = getMockStore();
   const index = store.leads.findIndex((item) => item.id === id);
-  if (index === -1) return null;
+  if (index === -1) {
+    await failStageReceipt("Lead was not found for stage update.");
+    return null;
+  }
   store.leads[index] = { ...store.leads[index], ...patch, updatedAt: now };
   const after = store.leads[index];
   await createAuditLog({
@@ -425,6 +490,7 @@ async function updateLead(id: string, patch: Partial<Lead>, action: string, summ
     afterData: { status: after.status, bossApprovalNeeded: after.bossApprovalNeeded },
     metadata
   });
+  await verifyStageReadBack();
   return mockClone(after);
 }
 
@@ -863,6 +929,21 @@ export async function requestAppointmentMissingInfo(id: string) {
 }
 
 export async function recordCalendarEventCreateRequested(id: string) {
+  const completionReceipt = await beginVerifiedCompletion({
+    actionType: "calendar_appointment",
+    entityType: "lead",
+    entityId: id,
+    leadId: id,
+    intent: "Create the approved appointment in the live calendar.",
+    expectedPostcondition: {
+      calendarEventId: "non-empty",
+      calendarEventReadable: true,
+      calendarEventStatus: "confirmed"
+    },
+    actorType: "system",
+    actorName: "Calendar Adapter",
+    metadata: { sourceAction: "calendar_event_create_requested" }
+  });
   const lead = await updateLead(
     id,
     {
@@ -886,6 +967,18 @@ export async function recordCalendarEventCreateRequested(id: string) {
       autoBookingEnabled: false,
       bossApprovalRequired: true,
       noFakeBooking: true
+    }
+  });
+  await observeVerifiedCompletion(completionReceipt, {
+    independentlyObserved: true,
+    postconditionMatched: false,
+    terminalFailure: true,
+    failureReason: "Live Calendar adapter is disabled; no event exists to read back.",
+    observedEvidence: {
+      adapterStatus: "disabled",
+      calendarEventId: "",
+      calendarEventReadable: false,
+      calendarEventStatus: "not_created"
     }
   });
   return lead;

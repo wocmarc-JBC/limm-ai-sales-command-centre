@@ -315,17 +315,18 @@ function messageStatus(message: LeadMessage) {
   const metadataMetaMessageId = metadataString(message, "metaMessageId") || metadataString(message, "providerMessageId");
   if (metadataBoolean(message, "sending")) return "Sending";
   if (metadataBoolean(message, "clientSendFailed")) return "Failed";
-  if (message.providerMessageId && message.whatsappStatus === "failed" && isNextRedirectOnly(message.metadata?.error)) return "Sent";
-  if (message.providerMessageId || metadataMetaMessageId || message.whatsappStatus === "sent") return "Sent";
-  if (message.whatsappStatus === "failed" && !message.providerMessageId) return "Failed";
-  if (message.direction === "outbound") return "Sent";
+  if (message.providerMessageId && message.whatsappStatus === "failed" && isNextRedirectOnly(message.metadata?.error)) return "Provider Accepted";
+  if (message.whatsappStatus === "failed") return "Failed";
+  if (["sent", "delivered", "read"].includes(message.whatsappStatus || "")) return humanize(message.whatsappStatus || "");
+  if (message.whatsappStatus === "accepted" || message.providerMessageId || metadataMetaMessageId) return "Provider Accepted";
+  if (message.direction === "outbound") return "Pending";
   return humanize(message.whatsappStatus || "Received");
 }
 
 function statusTone(message: LeadMessage) {
   const status = messageStatus(message);
   if (status === "Failed") return "border-command-red/45 bg-command-red/10 text-command-red";
-  if (status === "Sending") return "border-command-amber/45 bg-command-amber/10 text-command-amber";
+  if (["Sending", "Pending", "Provider Accepted"].includes(status)) return "border-command-amber/45 bg-command-amber/10 text-command-amber";
   if (message.direction === "internal") return "border-command-line bg-command-bg/60 text-command-muted";
   if (message.direction === "inbound") return "border-command-cyan/35 bg-command-cyan/10 text-command-cyan";
   return "border-command-green/45 bg-command-green/10 text-command-green";
@@ -938,7 +939,7 @@ function ReplyComposer({
         clientTempId,
         messageId: typeof data?.messageId === "string" ? data.messageId : undefined,
         providerMessageId: typeof data?.providerMessageId === "string" ? data.providerMessageId : undefined,
-        whatsappStatus: data?.whatsappStatus === "sent" || data?.whatsappStatus === "failed" ? data.whatsappStatus : undefined,
+        whatsappStatus: ["accepted", "sent", "failed"].includes(data?.whatsappStatus) ? data.whatsappStatus : undefined,
         createdAt: typeof data?.createdAt === "string" ? data.createdAt : undefined,
         body: typeof data?.body === "string" ? data.body : body,
         errorCode: typeof data?.errorCode === "string" ? data.errorCode : undefined,
@@ -1989,18 +1990,20 @@ export function MultiChatInbox({
       }
       const updated = (current[leadId] ?? []).map((message) => {
         if (messageClientTempId(message) !== clientTempId) return message;
+        const providerAccepted = result.whatsappStatus === "accepted" || Boolean(result.providerMessageId);
         return {
           ...message,
           id: result.messageId || message.id,
           providerMessageId: result.providerMessageId || message.providerMessageId,
-          whatsappStatus: result.ok ? "sent" as const : "failed" as const,
-          safeToSend: result.ok,
+          whatsappStatus: result.whatsappStatus || (result.ok ? "accepted" : "failed"),
+          safeToSend: result.ok || providerAccepted,
           createdAt: result.createdAt || message.createdAt,
           metadata: {
             ...message.metadata,
             sending: false,
             optimistic: false,
-            clientSendFailed: !result.ok,
+            clientSendFailed: !result.ok && !providerAccepted,
+            clientPersistenceWarning: !result.ok && providerAccepted,
             error: result.ok ? "" : result.errorMessage || "WhatsApp send failed.",
             serverMessageId: result.messageId || "",
             providerMessageId: result.providerMessageId || ""

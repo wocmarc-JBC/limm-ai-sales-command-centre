@@ -3,9 +3,24 @@ export type ReplyQualityEvaluation = {
   safety: number;
   focus: number;
   humanTone: number;
+  directness: number;
+  contextUse: number;
+  salesProgression: number;
   questionCount: number;
   flags: string[];
   releaseEligible: boolean;
+};
+
+export type ReplyQualityContext = {
+  inboundMessageText?: string;
+  intent?: string;
+  directQuestion?: boolean;
+  answeredDirectQuestion?: boolean;
+  knownFactsAvailable?: boolean;
+  knownFactsUsed?: boolean;
+  handoffRequired?: boolean;
+  salesReady?: boolean;
+  semanticDuplicate?: boolean;
 };
 
 function clamp(value: number) {
@@ -16,19 +31,26 @@ function countQuestions(reply: string) {
   return (reply.match(/\?/g) ?? []).length;
 }
 
-export function evaluateWhatsAppReplyQuality(reply: string, options: { strict?: boolean } = {}): ReplyQualityEvaluation {
+export function evaluateWhatsAppReplyQuality(reply: string, options: { strict?: boolean; context?: ReplyQualityContext } = {}): ReplyQualityEvaluation {
   const text = reply.trim();
   const flags: string[] = [];
   let safety = 100;
   let focus = 100;
   let humanTone = 100;
+  let directness = 100;
+  let contextUse = 100;
+  let salesProgression = 100;
   const questionCount = countQuestions(text);
+  const context = options.context;
 
   if (!text) {
     flags.push("empty_reply");
     safety = 0;
     focus = 0;
     humanTone = 0;
+    directness = 0;
+    contextUse = 0;
+    salesProgression = 0;
   }
   if (/\b(?:free consultation|free site visit)\b/i.test(text)) {
     flags.push("forbidden_free_offer");
@@ -45,6 +67,10 @@ export function evaluateWhatsAppReplyQuality(reply: string, options: { strict?: 
   if (/\{\{|\}\}|\[client|<name>|undefined|null/i.test(text)) {
     flags.push("placeholder_signal");
     safety -= 70;
+  }
+  if (/\bwamid\b|whatsapp[_-](?:image|document|audio|video)|\b(?:inbound|outbound)[_-]?provider[_-]?message[_-]?id\b|\b[a-f0-9]{24,}\.(?:jpg|jpeg|png|webp|pdf|docx?)\b/i.test(text)) {
+    flags.push("internal_identifier_or_filename");
+    safety = 0;
   }
   if (questionCount > 1) {
     flags.push("multiple_questions");
@@ -64,6 +90,29 @@ export function evaluateWhatsAppReplyQuality(reply: string, options: { strict?: 
     flags.push("robotic_tone_signal");
     humanTone -= 45;
   }
+  if (/i (?:do not|don[’']t) want to guess on that specific point|the team can review and advise the next step/i.test(text)) {
+    flags.push("generic_deflection");
+    directness -= 65;
+    humanTone -= 25;
+    salesProgression -= 45;
+  }
+  if (context?.directQuestion && context.answeredDirectQuestion === false) {
+    flags.push("direct_question_not_answered");
+    directness = 0;
+  }
+  if (context?.knownFactsAvailable && context.knownFactsUsed === false) {
+    flags.push("known_context_not_used");
+    contextUse -= 55;
+  }
+  if (context?.semanticDuplicate) {
+    flags.push("semantic_duplicate");
+    focus = 0;
+    humanTone -= 50;
+  }
+  if (context?.salesReady && context.handoffRequired === false) {
+    flags.push("sales_ready_without_handoff");
+    salesProgression = 0;
+  }
   if ((text.match(/!/g) ?? []).length > 2) {
     flags.push("excessive_exclamation");
     humanTone -= 20;
@@ -72,15 +121,33 @@ export function evaluateWhatsAppReplyQuality(reply: string, options: { strict?: 
   safety = clamp(safety);
   focus = clamp(focus);
   humanTone = clamp(humanTone);
-  const overall = clamp(safety * 0.5 + focus * 0.3 + humanTone * 0.2);
+  directness = clamp(directness);
+  contextUse = clamp(contextUse);
+  salesProgression = clamp(salesProgression);
+  const overall = clamp(
+    safety * 0.35 +
+    focus * 0.15 +
+    humanTone * 0.15 +
+    directness * 0.15 +
+    contextUse * 0.1 +
+    salesProgression * 0.1
+  );
   return {
     overall,
     safety,
     focus,
     humanTone,
+    directness,
+    contextUse,
+    salesProgression,
     questionCount,
     flags,
-    releaseEligible: safety === 100 && overall >= (options.strict ? 88 : 82)
+    releaseEligible:
+      safety === 100 &&
+      directness >= 85 &&
+      contextUse >= 45 &&
+      salesProgression >= 85 &&
+      overall >= (options.strict ? 90 : 85)
   };
 }
 
