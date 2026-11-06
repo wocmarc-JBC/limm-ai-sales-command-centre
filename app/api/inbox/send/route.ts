@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/data/audit-repository";
 import { getWhatsAppServiceWindowForLead, saveLeadMessage } from "@/lib/data/lead-messages-repository";
 import { getLeadById, markLeadAwaitingClientAfterManualReply, pauseBotForLead } from "@/lib/data/leads-repository";
+import { beginVerifiedCompletion, observeVerifiedCompletion } from "@/lib/data/verified-completion-repository";
 import { isQaE2EMode, qaE2eSafetyMetadata } from "@/lib/qa-e2e-mode";
 import { createTraceId, recordOperationalEvent } from "@/lib/operations/observability";
 import { consumeRateLimit, rateLimitHeaders } from "@/lib/operations/rate-limit";
@@ -169,6 +170,20 @@ export async function POST(request: Request) {
   }
 
   const adapter = new WhatsAppCloudApiAdapter();
+  const completionReceipt = await beginVerifiedCompletion({
+    actionType: "whatsapp_message",
+    entityType: "lead",
+    entityId: leadId,
+    leadId,
+    intent: "Deliver the operator-authored WhatsApp message to the intended lead.",
+    expectedPostcondition: {
+      providerMessageId: "matching delivery webhook",
+      whatsappStatus: ["sent", "delivered", "read"]
+    },
+    actorType: "boss",
+    actorName: actor,
+    metadata: { sourceAction: "inbox_manual_send", clientTempId }
+  });
 
   console.info("inbox_whatsapp_manual_reply_payload_summary", {
     leadId,
@@ -188,6 +203,13 @@ export async function POST(request: Request) {
     sent = await adapter.sendReply(lead.phone, body);
   } catch (error) {
     const reason = safeWhatsAppError(error);
+    await observeVerifiedCompletion(completionReceipt, {
+      independentlyObserved: true,
+      postconditionMatched: false,
+      terminalFailure: true,
+      failureReason: reason,
+      observedEvidence: { providerAccepted: false, providerMessageId: "" }
+    }).catch(() => null);
     console.error("inbox_whatsapp_manual_reply_send_failed", {
       leadId,
       reason,
@@ -211,6 +233,9 @@ export async function POST(request: Request) {
         error: reason,
         clientTempId,
         inboxJsonApiSend: true,
+        completionReceiptId: completionReceipt.receiptId,
+        completionStatus: "failed",
+        expectedPostcondition: completionReceipt.expectedPostcondition,
         noTokenLogged: true,
         noAutoPricing: true,
         noCalendarBooking: true,
@@ -247,10 +272,22 @@ export async function POST(request: Request) {
       leadId,
       messageId: failedMessageId,
       whatsappStatus: "failed",
+      completionStatus: "failed",
+      completionReceiptId: completionReceipt.receiptId,
       createdAt: failedCreatedAt,
       clientTempId
     }, { status: 502, headers: responseHeaders });
   }
+
+  await observeVerifiedCompletion(completionReceipt, {
+    independentlyObserved: false,
+    postconditionMatched: false,
+    observedEvidence: {
+      providerAccepted: true,
+      providerMessageId: sent.providerMessageId || "",
+      deliveryWebhookObserved: false
+    }
+  }).catch(() => null);
 
   try {
     const saved = await saveLeadMessage({
@@ -259,7 +296,7 @@ export async function POST(request: Request) {
       body,
       safeToSend: true,
       providerMessageId: sent.providerMessageId || undefined,
-      whatsappStatus: "sent",
+      whatsappStatus: "accepted",
       metadata: {
         manualReply: true,
         manualTakeover: true,
@@ -269,6 +306,9 @@ export async function POST(request: Request) {
         clientTempId,
         inboxJsonApiSend: true,
         replaySafeJsonPost: true,
+        completionReceiptId: completionReceipt.receiptId,
+        completionStatus: "pending",
+        expectedPostcondition: completionReceipt.expectedPostcondition,
         noAutoPricing: true,
         noCalendarBooking: true,
         noVoiceTranscription: true
@@ -279,10 +319,10 @@ export async function POST(request: Request) {
       actorName: actor,
       actorEmail,
       actorId,
-      action: "whatsapp_manual_reply_sent",
+      action: "whatsapp_manual_reply_provider_accepted",
       entityType: "lead",
       entityId: leadId,
-      summary: "Manual WhatsApp reply sent by Marcus/admin from the fast inbox send API and bot paused for human takeover.",
+      summary: "Meta accepted the manual WhatsApp reply; verified completion remains pending until a delivery webhook arrives.",
       metadata: {
         providerMessageIdPresent: Boolean(sent.providerMessageId),
         metaMessageId: sent.providerMessageId || "",
@@ -300,7 +340,9 @@ export async function POST(request: Request) {
       leadId,
       messageId: saved.id,
       providerMessageId: sent.providerMessageId || "",
-      whatsappStatus: "sent",
+      whatsappStatus: "accepted",
+      completionStatus: "pending",
+      completionReceiptId: completionReceipt.receiptId,
       createdAt: saved.createdAt,
       body: saved.body,
       clientTempId
@@ -320,7 +362,9 @@ export async function POST(request: Request) {
       errorMessage: reason.slice(0, 220),
       leadId,
       providerMessageId: sent.providerMessageId || "",
-      whatsappStatus: "failed",
+      whatsappStatus: "accepted",
+      completionStatus: "pending",
+      completionReceiptId: completionReceipt.receiptId,
       clientTempId
     }, { status: 500, headers: responseHeaders });
   }

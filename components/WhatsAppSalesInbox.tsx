@@ -90,9 +90,9 @@ function formatTimestamp(value: string) {
 }
 
 function statusTone(status?: LeadMessage["whatsappStatus"]) {
-  if (status === "sent") return "border-command-green/45 bg-command-green/10 text-command-green";
+  if (["sent", "delivered", "read"].includes(status || "")) return "border-command-green/45 bg-command-green/10 text-command-green";
   if (status === "failed" || status === "blocked") return "border-command-red/45 bg-command-red/10 text-command-red";
-  if (status === "disabled") return "border-command-amber/45 bg-command-amber/10 text-command-amber";
+  if (status === "disabled" || status === "accepted" || !status) return "border-command-amber/45 bg-command-amber/10 text-command-amber";
   return "border-command-cyan/35 bg-command-cyan/10 text-command-cyan";
 }
 
@@ -103,18 +103,17 @@ function isNextRedirectOnly(error: unknown) {
 function displayMessageStatus(message: LeadMessage) {
   if (message.direction === "inbound") return "Received";
   if (message.providerMessageId && (message.whatsappStatus === "failed" && isNextRedirectOnly(message.metadata?.error))) {
-    return message.metadata?.manualReply ? "Marcus sent" : "AI sent";
+    return "Provider Accepted";
   }
-  if (message.providerMessageId && !message.whatsappStatus) return message.metadata?.manualReply ? "Marcus sent" : "AI sent";
-  if (message.providerMessageId && message.whatsappStatus === "sent") return message.metadata?.manualReply ? "Marcus sent" : "AI sent";
   if (message.whatsappStatus === "failed") return "Failed";
-  if (message.whatsappStatus === "sent") return message.metadata?.manualReply ? "Marcus sent" : "AI sent";
-  return humanize(message.whatsappStatus || (message.direction === "outbound" ? "sent" : "received"));
+  if (["sent", "delivered", "read"].includes(message.whatsappStatus || "")) return humanize(message.whatsappStatus || "");
+  if (message.providerMessageId || message.whatsappStatus === "accepted") return "Provider Accepted";
+  return humanize(message.whatsappStatus || (message.direction === "outbound" ? "pending" : "received"));
 }
 
 function displayStatusTone(message: LeadMessage) {
   if (message.providerMessageId && message.whatsappStatus === "failed" && isNextRedirectOnly(message.metadata?.error)) {
-    return statusTone("sent");
+    return statusTone("accepted");
   }
   return statusTone(message.whatsappStatus);
 }

@@ -2,7 +2,9 @@ import { createAuditLog } from "./audit-repository";
 import { getDataMode } from "./data-source";
 import { mapFollowUpRow } from "./mappers";
 import { getMockStore, mockClone } from "./mock-store";
+import { getSupabaseAdminClient } from "./supabase-admin";
 import { getSupabaseServerClient } from "./supabase-server";
+import { beginVerifiedCompletion, observeVerifiedCompletion } from "./verified-completion-repository";
 import { isTestFollowUp } from "@/lib/test-lead-cleanup";
 import { isSalesEligibleLead } from "@/lib/whatsapp-intent-gate";
 import type { FollowUp, FollowUpStatus } from "@/lib/types";
@@ -111,6 +113,20 @@ async function getFollowUpById(id: string) {
   return followUp ? mockClone(followUp) : null;
 }
 
+async function getFollowUpByIdForCompletionReadBack(id: string) {
+  if (getDataMode() === "Supabase Mode") {
+    const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
+    const { data, error } = await supabase!
+      .from("followups")
+      .select("*, leads(*)")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw new Error(`Follow-up completion read-back failed: ${error.message}`);
+    return data ? mapFollowUpRow(data) : null;
+  }
+  return getFollowUpById(id);
+}
+
 export async function listFollowUpsPage(options: ListFollowUpsOptions = {}) {
   const page = Math.max(1, Number(options.page ?? 1) || 1);
   const maxPageSize = options.scanAll ? 500 : 20;
@@ -179,6 +195,41 @@ export async function updateFollowUpStatus(id: string, status: FollowUpStatus, n
   if (status === "Completed") {
     patch.notes = notes || "Completed from Follow-Up Queue.";
   }
+  const completionReceipt = await beginVerifiedCompletion({
+    actionType: "followup_job",
+    entityType: "followup",
+    entityId: id,
+    leadId: before?.leadId,
+    intent: `Set follow-up job status to ${status}.`,
+    expectedPostcondition: {
+      status,
+      ...(status === "Snoozed" ? { dueAt: patch.due_at } : {}),
+      ...((status === "Completed" || status === "No Reply") ? { completed: true } : {})
+    },
+    actorType: "boss",
+    actorName: "Marcus",
+    metadata: { sourceAction: "followup_status_updated" }
+  });
+
+  async function verifyPersistedFollowUp() {
+    const readBack = await getFollowUpByIdForCompletionReadBack(id);
+    const statusMatches = readBack?.status === status;
+    const dueAtMatches = status !== "Snoozed" || readBack?.dueAt === patch.due_at;
+    const completionMatches = !["Completed", "No Reply"].includes(status) || Boolean(readBack?.completedAt);
+    const matches = Boolean(readBack) && statusMatches && dueAtMatches && completionMatches;
+    await observeVerifiedCompletion(completionReceipt, {
+      independentlyObserved: Boolean(readBack),
+      postconditionMatched: matches,
+      terminalFailure: !matches,
+      failureReason: matches ? "" : "Persisted follow-up did not match the requested postcondition.",
+      observedEvidence: {
+        readBackFound: Boolean(readBack),
+        status: readBack?.status ?? "",
+        dueAt: readBack?.dueAt ?? "",
+        completedAt: readBack?.completedAt ?? null
+      }
+    });
+  }
 
   if (getDataMode() === "Supabase Mode") {
     const supabase = await getSupabaseServerClient();
@@ -200,13 +251,23 @@ export async function updateFollowUpStatus(id: string, status: FollowUpStatus, n
         beforeData: before ? { status: before.status } : null,
         afterData: { status: after.status, notes: after.notes }
       });
+      await verifyPersistedFollowUp();
       return after;
     }
   }
 
   const store = getMockStore();
   const index = store.followUps.findIndex((item) => item.id === id);
-  if (index === -1) return null;
+  if (index === -1) {
+    await observeVerifiedCompletion(completionReceipt, {
+      independentlyObserved: false,
+      postconditionMatched: false,
+      terminalFailure: true,
+      failureReason: "Follow-up job was not found after the update attempt.",
+      observedEvidence: { readBackFound: false }
+    });
+    return null;
+  }
   store.followUps[index] = {
     ...store.followUps[index],
     status,
@@ -225,6 +286,7 @@ export async function updateFollowUpStatus(id: string, status: FollowUpStatus, n
     beforeData: before ? { status: before.status } : null,
     afterData: { status: after.status, notes: after.notes }
   });
+  await verifyPersistedFollowUp();
   return mockClone(after);
 }
 

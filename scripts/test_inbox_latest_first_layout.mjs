@@ -89,7 +89,8 @@ for (const phrase of [
   "clientTempId",
   "messageId: saved.id",
   "providerMessageId: sent.providerMessageId || \"\"",
-  "whatsappStatus: \"sent\""
+  "whatsappStatus: \"accepted\"",
+  "completionStatus: \"pending\""
 ]) {
   assertIncludes(sendApi, phrase, "POST /api/inbox/send JSON contract");
 }

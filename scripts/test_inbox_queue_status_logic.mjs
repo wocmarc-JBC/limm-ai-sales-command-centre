@@ -112,7 +112,8 @@ for (const phrase of [
   "markLeadAwaitingClientAfterManualReply",
   "await markLeadAwaitingClientAfterManualReply(leadId, actor)",
   "NextResponse.json({",
-  "whatsappStatus: \"sent\""
+  "whatsappStatus: \"accepted\"",
+  "completionStatus: \"pending\""
 ]) {
   assertIncludes(sendApi, phrase, "JSON send API manual takeover state");
 }

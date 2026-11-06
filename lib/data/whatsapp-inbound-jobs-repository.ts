@@ -1,6 +1,11 @@
 import "server-only";
 
 import { getSupabaseAdminClient } from "./supabase-admin";
+import { findLeadMessageByProviderId } from "./lead-messages-repository";
+import {
+  observeVerifiedCompletion,
+  restoreVerifiedCompletionReceipt
+} from "./verified-completion-repository";
 import type { ParsedWhatsAppMessage, ParsedWhatsAppStatus } from "@/lib/whatsapp-parser";
 import {
   getWhatsAppJobRetryDelaySeconds,
@@ -258,6 +263,48 @@ export async function applyWhatsAppDeliveryStatuses(statuses: ParsedWhatsAppStat
       p_raw_metadata: status.metadata
     });
     if (error) throw new Error(`WhatsApp delivery receipt persistence failed: ${error.message}`);
+
+    const message = await findLeadMessageByProviderId(status.providerMessageId);
+    const receiptId = typeof message?.metadata?.completionReceiptId === "string"
+      ? message.metadata.completionReceiptId
+      : "";
+    if (message && receiptId) {
+      const storedExpected = message.metadata.expectedPostcondition;
+      const expectedPostcondition = storedExpected && typeof storedExpected === "object" && !Array.isArray(storedExpected)
+        ? storedExpected as Record<string, unknown>
+        : { providerMessageId: "matching delivery webhook", whatsappStatus: ["sent", "delivered", "read"] };
+      const failed = status.status === "failed" || status.status === "deleted";
+      const receipt = restoreVerifiedCompletionReceipt({
+        receiptId,
+        actionType: "whatsapp_message",
+        entityType: "lead",
+        entityId: message.leadId,
+        leadId: message.leadId,
+        intent: message.metadata.manualReply === true
+          ? "Deliver the operator-authored WhatsApp message to the intended lead."
+          : "Deliver the approved AI WhatsApp reply to the current conversation.",
+        expectedPostcondition,
+        requestedAt: message.createdAt,
+        actorType: "system",
+        actorName: "WhatsApp Delivery Webhook",
+        metadata: { sourceAction: "whatsapp_delivery_webhook", messageId: message.id }
+      });
+      await observeVerifiedCompletion(receipt, {
+        independentlyObserved: true,
+        postconditionMatched: !failed,
+        terminalFailure: failed,
+        failureReason: failed ? status.errorTitle || `Provider reported ${status.status}.` : "",
+        observedAt: status.timestamp ?? undefined,
+        observedEvidence: {
+          deliveryWebhookObserved: true,
+          providerMessageId: status.providerMessageId,
+          whatsappStatus: status.status,
+          recipientPhonePresent: Boolean(status.recipientPhone),
+          errorCode: status.errorCode,
+          errorTitle: status.errorTitle
+        }
+      });
+    }
   }
   return statuses.length;
 }

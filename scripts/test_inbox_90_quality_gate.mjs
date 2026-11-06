@@ -94,7 +94,7 @@ for (const phrase of [
   "isLegacyRedirectFailure(message)",
   "NEXT_REDIRECT",
   "metadataMetaMessageId",
-  "message.providerMessageId || metadataMetaMessageId || message.whatsappStatus === \"sent\"",
+  "message.whatsappStatus === \"accepted\" || message.providerMessageId || metadataMetaMessageId",
   "looksLikeSameOutboundAttempt",
   "Retry in composer"
 ]) {
