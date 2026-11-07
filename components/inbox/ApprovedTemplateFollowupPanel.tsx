@@ -153,7 +153,7 @@ export function ApprovedTemplateFollowupPanel({ leadId }: { leadId: string }) {
             <label className="block text-sm" htmlFor="followup-consent-date">Date customer gave permission</label>
             <input id="followup-consent-date" type="date" value={consentDate} onChange={(event) => setConsentDate(event.target.value)}
               className="w-full rounded-xl border border-command-line bg-command-bg px-3 py-2" />
-            <label className="block text-sm" htmlFor="followup-consent-evidence">Evidence reference / customer's exact opt-in</label>
+            <label className="block text-sm" htmlFor="followup-consent-evidence">Evidence reference / customer&apos;s exact opt-in</label>
             <textarea id="followup-consent-evidence" rows={3} value={evidence} onChange={(event) => setEvidence(event.target.value)}
               placeholder="Enter the customer's actual opt-in wording and where it is recorded (not an assumed consent)."
               className="w-full rounded-xl border border-command-line bg-command-bg px-3 py-2" />
