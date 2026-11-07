@@ -16,6 +16,7 @@ import {
 } from "@/lib/data/whatsapp-webhook-failures-repository";
 import { getOperationsSloSnapshot } from "@/lib/operations/observability";
 import { OPERATIONS_SLOS, WORLD_CLASS_RELEASE } from "@/lib/operations/contracts";
+import { safeSingaporeDateTimeLabel } from "@/lib/date-safety";
 
 function statusTone(ok: boolean) {
   return ok ? "border-command-green/35 bg-command-green/10 text-command-green" : "border-command-amber/35 bg-command-amber/10 text-command-amber";
@@ -84,7 +85,7 @@ export default async function OperationsPage() {
           <p className="mt-3 leading-6 text-command-muted">Runs the production intent gate, the single reply planner, reply safety, and quality scoring against a synthetic renovation enquiry. It never calls Meta and never sends a client message.</p>
           <div className="mt-5 rounded-xl border border-command-line bg-command-bg/55 p-4">
             <p className="text-sm text-command-muted">Last canary</p>
-            <p className="mt-1 font-semibold text-command-text">{snapshot.lastCanaryAt ? new Date(snapshot.lastCanaryAt).toLocaleString("en-SG") : "Not run since telemetry activation"}</p>
+            <p className="mt-1 font-semibold text-command-text">{snapshot.lastCanaryAt ? safeSingaporeDateTimeLabel(snapshot.lastCanaryAt) : "Not run since telemetry activation"}</p>
             <p className="mt-1 text-sm capitalize text-command-cyan">{snapshot.lastCanaryStatus.replace(/_/g, " ")}</p>
           </div>
         </article>

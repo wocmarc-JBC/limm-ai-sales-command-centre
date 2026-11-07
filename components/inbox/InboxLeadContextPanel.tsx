@@ -13,6 +13,7 @@ import {
 } from "@/lib/actions";
 import type { MultiChatConversation, MultiChatSummary } from "@/components/inbox/MultiChatInbox";
 import type { LeadMessage } from "@/lib/types";
+import { SINGAPORE_TIME_ZONE } from "@/lib/date-safety";
 import { isSilentCaptureMessage, latestSilentCapture, silentCaptureSummary } from "@/lib/whatsapp-silent-capture";
 
 function humanize(value?: string | null) {
@@ -28,6 +29,7 @@ function formatTimestamp(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString("en-SG", {
+    timeZone: SINGAPORE_TIME_ZONE,
     day: "2-digit",
     month: "short",
     hour: "2-digit",

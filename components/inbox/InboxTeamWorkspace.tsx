@@ -8,6 +8,7 @@ import type {
   InboxOperator,
   InboxPresenceMember
 } from "@/lib/operations/contracts";
+import { SINGAPORE_TIME_ZONE } from "@/lib/date-safety";
 
 type TeamState = { assignment: InboxAssignment | null; notes: InboxInternalNote[] };
 
@@ -17,7 +18,7 @@ function assignmentActive(assignment: InboxAssignment | null) {
 
 function noteTime(value: string) {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-SG", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-SG", { timeZone: SINGAPORE_TIME_ZONE, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function mentionsFrom(body: string) {
