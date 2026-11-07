@@ -173,6 +173,32 @@ export async function runAutomaticApprovedTemplateFollowups(): Promise<AutoFollo
           result.skipped++; continue;
         }
 
+        // Final pre-send read-back, after reserving the one-shot attempt.
+        // If the customer has replied, opted out, or a block appeared, cancel.
+        const [{ data: finalConsent, error: finalConsentError }, { data: finalInbounds, error: finalInboundError }] = await Promise.all([
+          admin.from("whatsapp_followup_consents").select("status,consented_at")
+            .eq("company_id", companyId).eq("lead_id", leadId)
+            .eq("category", FOLLOWUP_TEMPLATE_CATEGORY).maybeSingle(),
+          admin.from("lead_messages").select("id").eq("lead_id", leadId)
+            .eq("channel", "whatsapp").eq("direction", "inbound")
+            .not("provider_timestamp", "is", null)
+            .order("provider_timestamp", { ascending: false }).limit(1)
+        ]);
+        if (finalConsentError || finalInboundError) throw new Error("final_pre_send_evidence_failed");
+        const finalAllowed = finalConsent?.status === "OPTED_IN" &&
+          String(finalConsent.consented_at ?? "") === consentedAt &&
+          finalInbounds?.[0]?.id === inbound.id &&
+          !(await hasStopAfterConsent(admin, leadId, consentedAt)) &&
+          !(await isBlocked(admin, leadId, companyId, phone)) &&
+          !(await legacyPolicyBlocked(admin, leadId, companyId));
+        if (!finalAllowed) {
+          await admin.from("whatsapp_auto_template_attempts").update({
+            status: "blocked", reason_code: "final_pre_send_policy_gate",
+            completed_at: new Date().toISOString(), updated_at: new Date().toISOString()
+          }).eq("attempt_id", attemptId);
+          result.skipped++; continue;
+        }
+
         const receipt = await beginVerifiedCompletion({
           actionType: "whatsapp_message", entityType: "lead", entityId: leadId, leadId,
           intent: "Send one opted-in, Meta-approved renovation follow-up after the 24-hour reply window.",
