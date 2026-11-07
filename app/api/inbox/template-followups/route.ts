@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
     const sent = await sendMetaApprovedFollowup(context.lead.phone);
     providerMessageId = sent.providerMessageId;
     await context.admin.from("whatsapp_desk_send_requests").update({
-      status: "accepted", provider_message_id: providerMessageId, completed_at: new Date().toISOString(), updated_at: new Date().toISOString()
+      status: "unknown", provider_message_id: providerMessageId, completed_at: new Date().toISOString(), updated_at: new Date().toISOString()
     }).eq("idempotency_key", clientRequestId).eq("lead_id", leadId);
   } catch (error) {
     await context.admin.from("whatsapp_desk_send_requests").update({
