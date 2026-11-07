@@ -18,6 +18,7 @@ const checks = [
   ["documented opt-in required", api.includes('consent?.status !== "OPTED_IN"')],
   ["STOP / opt-out guard", api.includes("OPT_OUT_PATTERN") && api.includes("hasOptOutSinceConsent")],
   ["blocked/spam contacts rejected", api.includes("hasInternalBlock(context)") && api.includes("lead.isSpam")],
+  ["old Meta policy hard block preserved", api.includes("hasPriorMetaPolicyBlock(context)") && api.includes("whatsapp_v16_1_policy_block_state")],
   ["idempotency ledger reserved before Graph send", api.indexOf('from("whatsapp_desk_send_requests").insert') < api.indexOf("sendMetaApprovedFollowup(context.lead.phone)")],
   ["unique request ID required", api.includes("clientRequestId") && api.includes("UUID_PATTERN.test(clientRequestId)")],
   ["template submission boss/admin only", api.includes('["boss", "admin"].includes(operator.role)')],
