@@ -99,7 +99,7 @@ async function hasPriorMetaPolicyBlock(input: NonNullable<Awaited<ReturnType<typ
 function leadIneligible(lead: NonNullable<Awaited<ReturnType<typeof getLeadContext>>>["lead"]) {
   return Boolean(
     lead.isSpam || lead.isTest || lead.deletedAt || lead.archivedAt ||
-    lead.leadEligible === false || lead.conversationRoute === "non_sales" ||
+    lead.leadEligible === false || (Boolean(lead.conversationRoute) && lead.conversationRoute !== "sales_lead") ||
     ["lost", "won", "not suitable"].includes(String(lead.status ?? "").toLowerCase()) ||
     ["lost", "won"].includes(String(lead.salesStage ?? "").toLowerCase())
   );
