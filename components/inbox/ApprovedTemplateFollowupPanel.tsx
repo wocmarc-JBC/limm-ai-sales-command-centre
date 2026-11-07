@@ -29,7 +29,6 @@ export function ApprovedTemplateFollowupPanel({ leadId }: { leadId: string }) {
   const [consentSource, setConsentSource] = useState("whatsapp_explicit");
   const [consentDate, setConsentDate] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" }));
   const [clientRequestId, setClientRequestId] = useState("");
-  const backUrl = "/inbox?lead=" + encodeURIComponent(leadId);
 
   const refresh = useCallback(async () => {
     if (!leadId) return;
@@ -98,7 +97,7 @@ export function ApprovedTemplateFollowupPanel({ leadId }: { leadId: string }) {
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 text-command-text sm:p-8">
       <div className="space-y-2">
-        <Link href={leadId ? backUrl : "/inbox"} className="text-sm font-semibold text-command-gold underline">Back to WhatsApp inbox</Link>
+        <Link href={{ pathname: "/inbox", query: leadId ? { lead: leadId } : undefined }} className="text-sm font-semibold text-command-gold underline">Back to WhatsApp inbox</Link>
         <h1 className="text-2xl font-semibold">Approved-template follow-up</h1>
         <p className="text-sm text-command-muted">
           Outside Meta’s 24-hour window, only approved templates may be sent through the Cloud API.
