@@ -986,6 +986,12 @@ function ReplyComposer({
           {serviceWindow.status === "closed"
             ? "WhatsApp 24-hour reply window is closed. Wait for the client to message again; free-form sending is blocked."
             : "WhatsApp reply window cannot be verified from Meta’s message timestamp. Free-form sending is blocked."}
+          <Link
+            href={{ pathname: "/inbox/template-followups", query: { leadId } }}
+            className="ml-2 inline-block font-semibold text-command-gold underline underline-offset-2"
+          >
+            Use Meta-approved follow-up template
+          </Link>
         </div>
       ) : null}
       <div data-testid="inbox-sticky-composer" className="shrink-0 border-t border-command-line bg-command-panel2/95 px-2.5 py-2 shadow-[0_-12px_30px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4 sm:py-3">
