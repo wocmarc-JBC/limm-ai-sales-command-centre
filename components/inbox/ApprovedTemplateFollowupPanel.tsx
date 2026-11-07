@@ -14,6 +14,7 @@ type TemplateStatus = {
   consent: null | { status: string; source: string; consentedAt: string; updatedAt: string };
   eligible: boolean;
   metaError: string;
+  autoFollowupsEnabled: boolean;
 };
 
 function newRequestId() {
@@ -140,6 +141,11 @@ export function ApprovedTemplateFollowupPanel({ leadId }: { leadId: string }) {
             <p className="text-sm text-command-muted">
               Status: {status?.consent?.status || "Not recorded"}. Do not infer marketing consent just because a customer previously enquired.
               Obtain and record genuine opt-in evidence. Respect all STOP requests.
+            </p>
+            <p className="text-sm text-command-muted">
+              Automatic approved-template follow-ups: {status?.autoFollowupsEnabled ? "enabled" : "disabled"}.
+              When enabled, CC sends at most one approved follow-up to eligible opted-in renovation enquiries
+              25–71 hours after their latest verified WhatsApp message, with a 7-day cooldown.
             </p>
             <label className="block text-sm" htmlFor="followup-consent-source">Evidence source</label>
             <select id="followup-consent-source" value={consentSource} onChange={(event) => setConsentSource(event.target.value)}
