@@ -987,7 +987,7 @@ function ReplyComposer({
             ? "WhatsApp 24-hour reply window is closed. Wait for the client to message again; free-form sending is blocked."
             : "WhatsApp reply window cannot be verified from Meta’s message timestamp. Free-form sending is blocked."}
           <Link
-            href={"/inbox/template-followups?leadId=" + encodeURIComponent(leadId)}
+            href={{ pathname: "/inbox/template-followups", query: { leadId } }}
             className="ml-2 inline-block font-semibold text-command-gold underline underline-offset-2"
           >
             Use Meta-approved follow-up template
