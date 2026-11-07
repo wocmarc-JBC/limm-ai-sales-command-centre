@@ -81,6 +81,21 @@ async function hasInternalBlock(input: NonNullable<Awaited<ReturnType<typeof get
   return Boolean(data?.length);
 }
 
+/**
+ * Preserve the pre-existing 131047 hard stop. A previous Meta policy rejection
+ * must not be bypassed by the new manual/template workflow; only a verified
+ * new customer inbound can clear the old protection.
+ */
+async function hasPriorMetaPolicyBlock(input: NonNullable<Awaited<ReturnType<typeof getLeadContext>>>) {
+  const { data, error } = await input.admin.rpc("whatsapp_v16_1_policy_block_state", {
+    p_lead_id: input.lead.id,
+    p_company_id: input.companyId
+  });
+  if (error) throw new Error("legacy_whatsapp_policy_gate_unavailable");
+  if (!data || typeof data !== "object") throw new Error("legacy_whatsapp_policy_gate_invalid");
+  return data.blocked === true || data.blocked === "true";
+}
+
 function leadIneligible(lead: NonNullable<Awaited<ReturnType<typeof getLeadContext>>>["lead"]) {
   return Boolean(
     lead.isSpam || lead.isTest || lead.deletedAt || lead.archivedAt ||
@@ -129,7 +144,7 @@ export async function GET(request: NextRequest) {
         status: consent.status, source: consent.source,
         consentedAt: consent.consented_at, updatedAt: consent.updated_at
       } : null,
-      eligible: !leadIneligible(context.lead) && !(await hasInternalBlock(context)),
+      eligible: !leadIneligible(context.lead) && !(await hasInternalBlock(context)) && !(await hasPriorMetaPolicyBlock(context)),
       metaError
     }, { headers: { "Cache-Control": "no-store" } });
   } catch {
@@ -177,6 +192,7 @@ export async function POST(request: NextRequest) {
   if (leadIneligible(context.lead)) return errorResponse(403, "lead_not_eligible", "This contact is not eligible for follow-ups.");
   try {
     if (await hasInternalBlock(context)) return errorResponse(403, "contact_blocked", "This number is blocked internally.");
+    if (await hasPriorMetaPolicyBlock(context)) return errorResponse(403, "whatsapp_policy_blocked", "Previous Meta policy rejection remains blocked until the client messages again.");
   } catch {
     return errorResponse(503, "blocklist_unavailable", "Unable to verify the blocklist; no message was sent.");
   }
