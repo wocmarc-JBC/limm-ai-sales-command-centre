@@ -147,8 +147,6 @@ export function ApprovedTemplateFollowupPanel({ leadId }: { leadId: string }) {
               When enabled, CC sends at most one approved follow-up to eligible opted-in renovation enquiries
               25–71 hours after their latest verified WhatsApp message, with a 7-day cooldown.
             </p>
-            <p className="hidden">
-            </p>
             <label className="block text-sm" htmlFor="followup-consent-source">Evidence source</label>
             <select id="followup-consent-source" value={consentSource} onChange={(event) => setConsentSource(event.target.value)}
               className="w-full rounded-xl border border-command-line bg-command-bg px-3 py-2">
