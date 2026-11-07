@@ -145,7 +145,8 @@ export async function GET(request: NextRequest) {
         consentedAt: consent.consented_at, updatedAt: consent.updated_at
       } : null,
       eligible: !leadIneligible(context.lead) && !(await hasInternalBlock(context)) && !(await hasPriorMetaPolicyBlock(context)),
-      metaError
+      metaError,
+      autoFollowupsEnabled: process.env.WHATSAPP_TEMPLATE_FOLLOWUPS_AUTO_ENABLED === "true"
     }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return errorResponse(503, "template_status_unavailable", "WhatsApp follow-up setup could not be verified. No message was sent.");
