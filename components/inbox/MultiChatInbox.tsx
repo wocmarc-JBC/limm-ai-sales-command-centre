@@ -836,6 +836,7 @@ const MessageBubble = memo(function MessageBubble({
 
 function ReplyComposer({
   conversation,
+  clock,
   draftSeed,
   sendingState,
   sendError,
@@ -846,6 +847,7 @@ function ReplyComposer({
   onSendSettled
 }: {
   conversation: MultiChatConversation;
+  clock: number | null;
   draftSeed?: { id: string; text: string };
   sendingState?: SendState;
   sendError?: string;
@@ -863,8 +865,11 @@ function ReplyComposer({
   const leadId = conversation.lead.id;
   const reply = drafts[leadId] ?? "";
   const isSending = Boolean(sendingState);
-  const serviceWindow = conversation.serviceWindow.providerOpenedAt
-    ? computeWhatsAppServiceWindow(conversation.serviceWindow.providerOpenedAt)
+  // The server supplies the initial safety decision. Re-evaluate only after
+  // hydration from the shared client clock, so a server/client millisecond
+  // difference cannot change the initial composer text or controls.
+  const serviceWindow = clock !== null && conversation.serviceWindow.providerOpenedAt
+    ? computeWhatsAppServiceWindow(conversation.serviceWindow.providerOpenedAt, clock)
     : conversation.serviceWindow;
   const serviceWindowOpen = serviceWindow.canSendFreeform;
   const canSend = reply.trim().length > 0 && !isSending && serviceWindowOpen;
@@ -2643,6 +2648,7 @@ export function MultiChatInbox({
 
             <ReplyComposer
               conversation={activeConversation}
+              clock={clock}
               draftSeed={draftSeeds[activeConversation.lead.id]}
               sendingState={sendingByLeadId[activeConversation.lead.id]}
               sendError={errorByLeadId[activeConversation.lead.id]}
