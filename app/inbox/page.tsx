@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { InboxWebVitals } from "@/components/InboxWebVitals";
-import { MultiChatInbox, type MultiChatConversation, type MultiChatSummary } from "@/components/inbox/MultiChatInbox";
+import { HydratedMultiChatInbox } from "@/components/inbox/HydratedMultiChatInbox";
+import type { MultiChatConversation, MultiChatSummary } from "@/components/inbox/MultiChatInbox";
 import { can } from "@/lib/auth/roles";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
@@ -236,7 +237,7 @@ export default async function WhatsAppInboxPage({
           <Link href="/leads" className="inline-flex min-h-10 items-center rounded-xl px-3 py-2 text-command-muted transition hover:bg-command-card hover:text-command-text">Leads</Link>
         </nav>
       </header>
-      <MultiChatInbox
+      <HydratedMultiChatInbox
         conversations={conversations}
         canManageSpam={canManageSpam}
         operator={{ id: auth.profile!.id, fullName: auth.profile!.fullName, role: auth.profile!.role }}
