@@ -174,6 +174,10 @@ check("keeps inbox timestamp labels hydration-safe and deterministic in Singapor
   assert.ok(inbox.includes("if (clock === null) return false;"));
   assert.equal(inbox.includes("const now = new Date();"), false);
   assert.equal(inbox.includes("clock ?? Date.now()"), false);
+  assert.ok(inbox.includes("clock: number | null;"));
+  assert.ok(inbox.includes("clock={clock}"));
+  assert.ok(inbox.includes("clock !== null && conversation.serviceWindow.providerOpenedAt"));
+  assert.ok(inbox.includes("computeWhatsAppServiceWindow(conversation.serviceWindow.providerOpenedAt, clock)"));
   assert.ok(leadContext.includes("timeZone: SINGAPORE_TIME_ZONE"));
   assert.ok(legacyInbox.includes("timeZone: SINGAPORE_TIME_ZONE"));
   assert.ok(priorityPanel.includes("timeZone: SINGAPORE_TIME_ZONE"));
