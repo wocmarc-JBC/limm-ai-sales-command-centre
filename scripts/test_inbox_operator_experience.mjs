@@ -166,11 +166,14 @@ check("preserves strict newest-client ordering and fast chat switching", () => {
   assert.ok(inbox.includes("conversationCacheRef"));
 });
 
-check("keeps timestamp and daily reporting labels deterministic in Singapore time", () => {
-  assert.ok(inbox.includes('import { SINGAPORE_TIME_ZONE, singaporeDateKey } from "@/lib/date-safety"'));
-  assert.ok(inbox.includes("timeZone: SINGAPORE_TIME_ZONE"));
-  assert.ok(inbox.includes("const dateKey = singaporeDateKey(date)"));
-  assert.ok(inbox.includes("const nowKey = singaporeDateKey(now)"));
+check("keeps inbox timestamp labels hydration-safe and deterministic in Singapore time", () => {
+  assert.ok(inbox.includes("const SINGAPORE_UTC_OFFSET_MS = 8 * 60 * 60 * 1000"));
+  assert.ok(inbox.includes("function singaporeDateTimeParts"));
+  assert.ok(inbox.includes("function formatQueueTimestamp(value: string, clock: number | null)"));
+  assert.ok(inbox.includes("formatQueueTimestamp(chat.lastActivityAt, clock)"));
+  assert.ok(inbox.includes("if (clock === null) return false;"));
+  assert.equal(inbox.includes("const now = new Date();"), false);
+  assert.equal(inbox.includes("clock ?? Date.now()"), false);
   assert.ok(leadContext.includes("timeZone: SINGAPORE_TIME_ZONE"));
   assert.ok(legacyInbox.includes("timeZone: SINGAPORE_TIME_ZONE"));
   assert.ok(priorityPanel.includes("timeZone: SINGAPORE_TIME_ZONE"));
