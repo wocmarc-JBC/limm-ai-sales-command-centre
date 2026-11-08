@@ -15,6 +15,7 @@ function check(name, run) {
 }
 
 const inbox = read("components/inbox/MultiChatInbox.tsx");
+const inboxHydrationBoundary = read("components/inbox/HydratedMultiChatInbox.tsx");
 const spamDialog = read("components/inbox/InboxSpamDialog.tsx");
 const inboxPage = read("app/inbox/page.tsx");
 const shell = read("components/ShellChrome.tsx");
@@ -185,6 +186,15 @@ check("keeps inbox timestamp labels hydration-safe and deterministic in Singapor
   assert.ok(leadPage.includes("safeSingaporeDateTimeLabel"));
   assert.ok(operationsPage.includes("safeSingaporeDateTimeLabel"));
   assert.ok(reportsPage.includes("singaporeDateKey(lead.createdAt)"));
+});
+
+check("mounts live inbox state after a deterministic hydration shell", () => {
+  assert.ok(inboxPage.includes('HydratedMultiChatInbox'));
+  assert.equal(inboxPage.includes('<MultiChatInbox'), false);
+  assert.ok(inboxHydrationBoundary.includes('data-testid="inbox-hydration-shell"'));
+  assert.ok(inboxHydrationBoundary.includes('const [hydrated, setHydrated] = useState(false)'));
+  assert.ok(inboxHydrationBoundary.includes('useEffect(() => {'));
+  assert.ok(inboxHydrationBoundary.includes('return <MultiChatInbox {...props} />'));
 });
 
 check("does not touch reply-brain or live integration settings", () => {
