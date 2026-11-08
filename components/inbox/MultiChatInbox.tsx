@@ -39,7 +39,6 @@ import {
 } from "@/lib/operator-advantage";
 import { OPERATOR_COMMAND_EVENT, type OperatorCommand } from "@/lib/operator-commands";
 import { trackOperatorEvent } from "@/lib/operator-product-analytics";
-import { SINGAPORE_TIME_ZONE, singaporeDateKey } from "@/lib/date-safety";
 import type { InboxAssignment, InboxOperator } from "@/lib/operations/contracts";
 import type { RealtimeStatus } from "@/components/inbox/useInboxRealtime";
 import { computeWhatsAppServiceWindow, type WhatsAppServiceWindow } from "@/lib/whatsapp-service-window";
@@ -241,16 +240,43 @@ function withoutRecordKeys<T>(record: Record<string, T>, keys: Set<string>) {
   return next;
 }
 
+const SINGAPORE_UTC_OFFSET_MS = 8 * 60 * 60 * 1000;
+const SINGAPORE_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+type SingaporeDateTimeParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+};
+
+function singaporeDateTimeParts(value: string | number | Date): SingaporeDateTimeParts | null {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return null;
+  const singapore = new Date(timestamp + SINGAPORE_UTC_OFFSET_MS);
+  return {
+    year: singapore.getUTCFullYear(),
+    month: singapore.getUTCMonth(),
+    day: singapore.getUTCDate(),
+    hour: singapore.getUTCHours(),
+    minute: singapore.getUTCMinutes()
+  };
+}
+
+function twoDigits(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function formatSingaporeTime(parts: SingaporeDateTimeParts) {
+  const hour = parts.hour % 12 || 12;
+  return `${twoDigits(hour)}:${twoDigits(parts.minute)} ${parts.hour >= 12 ? "pm" : "am"}`;
+}
+
 function formatTimestamp(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("en-SG", {
-    timeZone: SINGAPORE_TIME_ZONE,
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  const parts = singaporeDateTimeParts(value);
+  if (!parts) return value;
+  return `${twoDigits(parts.day)} ${SINGAPORE_MONTHS[parts.month]}, ${formatSingaporeTime(parts)}`;
 }
 
 function cleanPreview(text: string, max = 86) {
@@ -385,22 +411,16 @@ function chatInitials(chat: MultiChatSummary) {
   return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "C";
 }
 
-function formatQueueTimestamp(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const now = new Date();
-  const dateKey = singaporeDateKey(date);
-  const nowKey = singaporeDateKey(now);
-  const sameDay = dateKey === nowKey;
-  if (sameDay) {
-    return date.toLocaleTimeString("en-SG", { timeZone: SINGAPORE_TIME_ZONE, hour: "2-digit", minute: "2-digit" });
-  }
-  return date.toLocaleDateString("en-SG", {
-    timeZone: SINGAPORE_TIME_ZONE,
-    day: "2-digit",
-    month: "short",
-    year: dateKey.slice(0, 4) === nowKey.slice(0, 4) ? undefined : "2-digit"
-  });
+function formatQueueTimestamp(value: string, clock: number | null) {
+  const parts = singaporeDateTimeParts(value);
+  if (!parts) return value;
+  // Before the client clock starts, server and browser render exactly the same label.
+  const now = clock === null ? null : singaporeDateTimeParts(clock);
+  if (!now) return `${twoDigits(parts.day)} ${SINGAPORE_MONTHS[parts.month]}`;
+  const sameDay = parts.year === now.year && parts.month === now.month && parts.day === now.day;
+  if (sameDay) return formatSingaporeTime(parts);
+  const year = parts.year === now.year ? "" : ` ${String(parts.year).slice(-2)}`;
+  return `${twoDigits(parts.day)} ${SINGAPORE_MONTHS[parts.month]}${year}`;
 }
 
 function formatQueueSyncLabel(lastSyncAt: number | null, clock: number | null, status: "live" | "recovering") {
@@ -413,7 +433,8 @@ function formatQueueSyncLabel(lastSyncAt: number | null, clock: number | null, s
 }
 
 function activeAssignment(chat: MultiChatSummary, clock: number | null) {
-  return Boolean(chat.assignedProfileId && chat.assignmentLeaseExpiresAt && Date.parse(chat.assignmentLeaseExpiresAt) > (clock ?? Date.now()));
+  if (clock === null) return false;
+  return Boolean(chat.assignedProfileId && chat.assignmentLeaseExpiresAt && Date.parse(chat.assignmentLeaseExpiresAt) > clock);
 }
 
 function matchesFilter(chat: MultiChatSummary, filter: InboxViewFilter, clock: number | null, operatorId: string) {
@@ -567,7 +588,7 @@ const ChatRow = memo(function ChatRow({
         <span className="min-w-0 flex-1">
           <span className="flex items-start justify-between gap-3">
             <span className="truncate text-[15px] font-semibold leading-5 tracking-[-0.01em] text-command-text">{chat.displayName || chat.phone}</span>
-            <time className="shrink-0 text-[11px] text-command-subtle" dateTime={chat.lastActivityAt}>{formatQueueTimestamp(chat.lastActivityAt)}</time>
+            <time className="shrink-0 text-[11px] text-command-subtle" dateTime={chat.lastActivityAt}>{formatQueueTimestamp(chat.lastActivityAt, clock)}</time>
           </span>
           <span className="mt-0.5 block truncate text-[13px] leading-5 text-command-muted">{cleanPreview(chat.lastMessagePreview, 72)}</span>
           <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-command-subtle">
