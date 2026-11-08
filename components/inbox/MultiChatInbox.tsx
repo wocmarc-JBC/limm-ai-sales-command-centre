@@ -39,6 +39,7 @@ import {
 } from "@/lib/operator-advantage";
 import { OPERATOR_COMMAND_EVENT, type OperatorCommand } from "@/lib/operator-commands";
 import { trackOperatorEvent } from "@/lib/operator-product-analytics";
+import { SINGAPORE_TIME_ZONE, singaporeDateKey } from "@/lib/date-safety";
 import type { InboxAssignment, InboxOperator } from "@/lib/operations/contracts";
 import type { RealtimeStatus } from "@/components/inbox/useInboxRealtime";
 import { computeWhatsAppServiceWindow, type WhatsAppServiceWindow } from "@/lib/whatsapp-service-window";
@@ -244,6 +245,7 @@ function formatTimestamp(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString("en-SG", {
+    timeZone: SINGAPORE_TIME_ZONE,
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -387,14 +389,17 @@ function formatQueueTimestamp(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   const now = new Date();
-  const sameDay = date.toDateString() === now.toDateString();
+  const dateKey = singaporeDateKey(date);
+  const nowKey = singaporeDateKey(now);
+  const sameDay = dateKey === nowKey;
   if (sameDay) {
-    return date.toLocaleTimeString("en-SG", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString("en-SG", { timeZone: SINGAPORE_TIME_ZONE, hour: "2-digit", minute: "2-digit" });
   }
   return date.toLocaleDateString("en-SG", {
+    timeZone: SINGAPORE_TIME_ZONE,
     day: "2-digit",
     month: "short",
-    year: date.getFullYear() === now.getFullYear() ? undefined : "2-digit"
+    year: dateKey.slice(0, 4) === nowKey.slice(0, 4) ? undefined : "2-digit"
   });
 }
 

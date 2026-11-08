@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "start:local": "next dev",
-    "build": "node scripts/verify_production_schema_gate.mjs && node scripts/test_whatsapp_approved_template_followup.mjs && node scripts/test_whatsapp_auto_template_followup.mjs && next build && node scripts/test_command_core_bundle_budget.mjs && node scripts/test_operator_inbox_bundle_budget.mjs",
+    "build": "node scripts/verify_production_schema_gate.mjs && node scripts/test_whatsapp_approved_template_followup.mjs && node scripts/test_whatsapp_auto_template_followup.mjs && node scripts/test_inbox_operator_experience.mjs && next build && node scripts/test_command_core_bundle_budget.mjs && node scripts/test_operator_inbox_bundle_budget.mjs",
     "start": "next start",
     "lint": "next lint",
     "audit:dependencies": "npm audit --audit-level=low",

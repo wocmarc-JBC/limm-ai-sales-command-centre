@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Lead, LeadMessage } from "@/lib/types";
+import { SINGAPORE_TIME_ZONE } from "@/lib/date-safety";
 
 export type InboxChatSummary = {
   id: string;
@@ -82,6 +83,7 @@ function formatTimestamp(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString("en-SG", {
+    timeZone: SINGAPORE_TIME_ZONE,
     day: "2-digit",
     month: "short",
     hour: "2-digit",

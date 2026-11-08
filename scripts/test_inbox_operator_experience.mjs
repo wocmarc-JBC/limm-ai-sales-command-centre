@@ -20,6 +20,13 @@ const inboxPage = read("app/inbox/page.tsx");
 const shell = read("components/ShellChrome.tsx");
 const actions = read("lib/actions.ts");
 const health = read("app/api/whatsapp/health/route.ts");
+const leadPage = read("app/leads/[id]/page.tsx");
+const operationsPage = read("app/operations/page.tsx");
+const reportsPage = read("app/reports/page.tsx");
+const leadContext = read("components/inbox/InboxLeadContextPanel.tsx");
+const legacyInbox = read("components/WhatsAppSalesInbox.tsx");
+const priorityPanel = read("components/inbox/MarcusPriorityPanel.tsx");
+const teamWorkspace = read("components/inbox/InboxTeamWorkspace.tsx");
 const packageJson = JSON.parse(read("package.json"));
 
 check("publishes the v10.3.0 operator-experience release", () => {
@@ -157,6 +164,20 @@ check("preserves strict newest-client ordering and fast chat switching", () => {
   assert.ok(inbox.includes("Latest chat first"));
   assert.ok(inbox.includes("window.history.replaceState"));
   assert.ok(inbox.includes("conversationCacheRef"));
+});
+
+check("keeps timestamp and daily reporting labels deterministic in Singapore time", () => {
+  assert.ok(inbox.includes('import { SINGAPORE_TIME_ZONE, singaporeDateKey } from "@/lib/date-safety"'));
+  assert.ok(inbox.includes("timeZone: SINGAPORE_TIME_ZONE"));
+  assert.ok(inbox.includes("const dateKey = singaporeDateKey(date)"));
+  assert.ok(inbox.includes("const nowKey = singaporeDateKey(now)"));
+  assert.ok(leadContext.includes("timeZone: SINGAPORE_TIME_ZONE"));
+  assert.ok(legacyInbox.includes("timeZone: SINGAPORE_TIME_ZONE"));
+  assert.ok(priorityPanel.includes("timeZone: SINGAPORE_TIME_ZONE"));
+  assert.ok(teamWorkspace.includes("timeZone: SINGAPORE_TIME_ZONE"));
+  assert.ok(leadPage.includes("safeSingaporeDateTimeLabel"));
+  assert.ok(operationsPage.includes("safeSingaporeDateTimeLabel"));
+  assert.ok(reportsPage.includes("singaporeDateKey(lead.createdAt)"));
 });
 
 check("does not touch reply-brain or live integration settings", () => {

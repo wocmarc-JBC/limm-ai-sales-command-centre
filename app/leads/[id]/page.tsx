@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/ActionButton";
 import { PageHeader } from "@/components/PageHeader";
+import { safeSingaporeDateTimeLabel } from "@/lib/date-safety";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   approveAppointmentBookingAction,
@@ -268,7 +269,7 @@ export default async function LeadDetailPage({
             Route: {humanizeLabel(lead.conversationRoute ?? "sales_lead")} · Sales eligible: {lead.leadEligible === false ? "No" : "Yes"} · Confidence: {Math.round((lead.intentConfidence ?? 0) * 100)}%
           </p>
           <p className="mt-1 text-xs text-command-subtle">
-            Classifier {lead.intentClassifierVersion || "legacy/default"} · {lead.intentClassifiedAt ? new Date(lead.intentClassifiedAt).toLocaleString("en-SG") : "Not classified from live inbound yet"}
+            Classifier {lead.intentClassifierVersion || "legacy/default"} · {lead.intentClassifiedAt ? safeSingaporeDateTimeLabel(lead.intentClassifiedAt) : "Not classified from live inbound yet"}
           </p>
         </div>
         <form action={setLeadConversationIntentOverrideAction} className="grid min-w-72 gap-2 rounded-xl border border-command-line bg-command-bg/55 p-3">
@@ -318,7 +319,7 @@ export default async function LeadDetailPage({
               <div key={message.id} className="rounded-xl border border-command-line bg-command-bg/55 p-4">
                 <div className="flex items-center justify-between gap-3 text-xs text-command-muted">
                   <span>{message.direction === "inbound" ? "Contact" : message.metadata?.manualReply ? "Marcus" : "AI / system"}</span>
-                  <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("en-SG")}</time>
+                  <time dateTime={message.createdAt}>{safeSingaporeDateTimeLabel(message.createdAt)}</time>
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-command-text">{message.body || "Message body not available."}</p>
               </div>
@@ -376,7 +377,7 @@ export default async function LeadDetailPage({
                 <span className="font-semibold uppercase tracking-[0.14em]">
                   {message.direction === "inbound" ? "Client" : message.metadata?.manualReply ? "Marcus" : "AI / system"}
                 </span>
-                <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("en-SG")}</time>
+                <time dateTime={message.createdAt}>{safeSingaporeDateTimeLabel(message.createdAt)}</time>
               </div>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-command-text">{message.body || "Message body not available."}</p>
             </div>

@@ -1,5 +1,6 @@
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
+import { singaporeDateKey } from "@/lib/date-safety";
 import { getShowTestDemoRecordsPreference } from "@/lib/data-visibility-preference";
 import { listApprovalRequests } from "@/lib/data/approvals-repository";
 import { listFollowUps } from "@/lib/data/followups-repository";
@@ -38,7 +39,7 @@ export default async function ReportsPage() {
         <h3 className="mt-1 text-2xl font-semibold">Daily operating guardrails</h3>
         <dl className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
-            ["New leads today", leads.filter((lead) => new Date(lead.createdAt).toDateString() === new Date().toDateString()).length],
+            ["New leads today", leads.filter((lead) => singaporeDateKey(lead.createdAt) === singaporeDateKey(new Date())).length],
             ["Waiting for Marcus", followUpSummaries.filter((item) => item.status === "Needs Marcus reply").length],
             ["Waiting for client", followUpSummaries.filter((item) => item.status === "Waiting for client").length],
             ["Follow-ups due", followUpSummaries.filter((item) => item.status === "Follow-up due").length],
