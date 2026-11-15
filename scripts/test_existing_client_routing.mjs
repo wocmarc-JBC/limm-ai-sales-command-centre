@@ -118,7 +118,79 @@ const pausedGate = classifyConversationIntent({
   lead: lead({ botPaused: true, intentManualOverride: "genuine_new_renovation_lead" }),
   botPaused: true
 });
-check("Human takeover outranks manual and sales intent", pausedGate.primaryIntent === "human_takeover_or_bot_paused" && pausedGate.confidence === 1, JSON.stringify(pausedGate));
+check("Verified manual renovation intent survives human takeover", pausedGate.primaryIntent === "genuine_new_renovation_lead" && pausedGate.leadEligible === true && pausedGate.manualOverrideApplied, JSON.stringify(pausedGate));
+
+const classifiedPausedLead = lead({
+  projectId: undefined,
+  salesStage: "Site Visit Needed",
+  wonDate: null,
+  confirmedValue: 0,
+  botPaused: true,
+  intentManualOverride: null,
+  intentClassifierVersion: "v10.2.0",
+  conversationIntent: "genuine_new_renovation_lead",
+  conversationRoute: "sales_lead",
+  leadEligible: true
+});
+const classifiedPausedGate = classifyConversationIntent({
+  currentMessageText: "Thanks, the property address is 14 Greenwood Crescent.",
+  currentMessageType: "text",
+  lead: classifiedPausedLead,
+  botPaused: true
+});
+check(
+  "Bot pause retains independently classified renovation opportunity",
+  classifiedPausedGate.leadEligible === true &&
+    classifiedPausedGate.conversationRoute === "sales_lead" &&
+    classifiedPausedGate.reasonCodes.includes("verified_sales_intent_preserved_on_handoff"),
+  JSON.stringify(classifiedPausedGate)
+);
+const classifiedPausedDecision = orchestrateWhatsAppConversationReply({
+  inboundMessageText: "Thanks, the property address is 14 Greenwood Crescent.",
+  inboundMessageType: "text",
+  lead: classifiedPausedLead,
+  previousMessages: [],
+  autoReplyEnabled: true,
+  openAiEnabled: false,
+  intentGateDecision: classifiedPausedGate
+});
+check("Preserving sales eligibility never resumes the paused bot", !classifiedPausedDecision.shouldReply, JSON.stringify(classifiedPausedDecision));
+
+const pausedVendorGate = classifyConversationIntent({
+  currentMessageText: "We provide digital locks and home automation products.",
+  currentMessageType: "text",
+  lead: lead({
+    projectId: undefined,
+    salesStage: "New Lead",
+    wonDate: null,
+    confirmedValue: 0,
+    botPaused: true,
+    leadEligible: false,
+    conversationIntent: "vendor_supplier_solicitation",
+    conversationRoute: "vendor_inbox",
+    intentManualOverride: "vendor_supplier_solicitation"
+  }),
+  botPaused: true
+});
+check("Paused supplier manual override stays non-sales", pausedVendorGate.primaryIntent === "vendor_supplier_solicitation" && !pausedVendorGate.leadEligible, JSON.stringify(pausedVendorGate));
+
+const pausedUnclassifiedGate = classifyConversationIntent({
+  currentMessageText: "Hi, how are you?",
+  currentMessageType: "text",
+  lead: lead({
+    projectId: undefined,
+    salesStage: "New Lead",
+    wonDate: null,
+    confirmedValue: 0,
+    botPaused: true,
+    leadEligible: false,
+    conversationIntent: "unclear_intent",
+    conversationRoute: "intent_review",
+    intentManualOverride: null
+  }),
+  botPaused: true
+});
+check("Paused unverified contact remains human-review only", pausedUnclassifiedGate.primaryIntent === "human_takeover_or_bot_paused" && !pausedUnclassifiedGate.leadEligible, JSON.stringify(pausedUnclassifiedGate));
 const pausedDecision = orchestrateWhatsAppConversationReply({
   inboundMessageText: "I want a full HDB renovation and need a quote.",
   inboundMessageType: "text",

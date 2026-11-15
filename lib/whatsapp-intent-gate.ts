@@ -354,13 +354,25 @@ function classifyDeterministically(input: {
   lead?: Lead | null;
   botPaused?: boolean;
 }): { intent: ConversationIntent; confidence: number; reasonCodes: string[]; manualOverrideApplied: boolean } {
-  if (input.botPaused || input.lead?.botPaused) {
-    return { intent: "human_takeover_or_bot_paused", confidence: 1, reasonCodes: ["bot_paused_or_human_takeover"], manualOverrideApplied: false };
-  }
-
+  // Classification controls sales visibility; the independent send guard controls
+  // whether a paused/human-owned conversation may receive automatic replies.
+  // An explicit human intent correction must not be discarded by botPaused.
   const manualOverride = input.lead?.intentManualOverride;
   if (manualOverride && INTENTS.has(manualOverride)) {
     return { intent: manualOverride, confidence: 1, reasonCodes: ["manual_intent_override"], manualOverrideApplied: true };
+  }
+
+  if (input.botPaused || input.lead?.botPaused) {
+    // Never erase a previously verified renovation opportunity merely because
+    // the operator has taken over. The final bot-paused guard still sends nothing.
+    const verifiedSalesIntent = input.lead?.leadEligible === true &&
+      input.lead?.conversationIntent === "genuine_new_renovation_lead" &&
+      Boolean(input.lead?.intentClassifierVersion) &&
+      !isExistingClient(input.lead);
+    if (verifiedSalesIntent) {
+      return { intent: "genuine_new_renovation_lead", confidence: 1, reasonCodes: ["verified_sales_intent_preserved_on_handoff"], manualOverrideApplied: false };
+    }
+    return { intent: "human_takeover_or_bot_paused", confidence: 1, reasonCodes: ["bot_paused_or_human_takeover"], manualOverrideApplied: false };
   }
 
   const text = input.content.normalizedCurrentText;
