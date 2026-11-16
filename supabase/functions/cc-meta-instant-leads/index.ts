@@ -15,15 +15,13 @@ type MetaNotification = {
   object?: string;
   entry?: Array<{
     id?: string | number;
-    changes?: Array<{ field?: string; value?: { page_id?: string | number; form_id?: string | number; leadgen_id?: string | number } }>;
+    changes?: Array<{ field?: string; value?: { page_id?: string | number; form_id?: string | number; leadgen_id?: string | number; ad_id?: string | number; platform?: string } }>;
   }>;
 };
 
 type MetaLead = {
   id?: string;
   form_id?: string;
-  ad_id?: string;
-  platform?: string;
   created_time?: string;
   field_data?: Array<{ name: string; values?: string[] }>;
 };
@@ -67,14 +65,20 @@ async function getPageToken(config: Config, request: typeof fetch) {
   return page.access_token;
 }
 
-async function importLead(config: Config, pageToken: string, leadId: string, request: typeof fetch) {
+async function importLead(config: Config, pageToken: string, leadId: string, attribution: { adId?: string; platform?: string }, request: typeof fetch) {
   const graphUrl = new URL(`https://graph.facebook.com/v27.0/${leadId}`);
-  graphUrl.searchParams.set("fields", "id,form_id,ad_id,platform,created_time,field_data");
+  graphUrl.searchParams.set("fields", "id,form_id,created_time,field_data");
   const result = await request(graphUrl, {
     headers: { Authorization: `Bearer ${pageToken}` },
     signal: AbortSignal.timeout(10_000),
   });
-  if (!result.ok) throw new Error("lead_retrieval_failed");
+  if (!result.ok) {
+    const graphError = await result.json().catch(() => null) as { error?: { code?: number; error_subcode?: number; message?: string } } | null;
+    const error = graphError?.error;
+    const summary = error?.message?.replace(/https?:\/\/\S+|[A-Za-z0-9_-]{24,}/g, "[redacted]").slice(0, 250);
+    console.error(`Meta Lead Ads Graph error: ${error?.code ?? result.status}/${error?.error_subcode ?? 0} ${summary ?? ""}`);
+    throw new Error("lead_retrieval_failed");
+  }
   const lead = await result.json() as MetaLead;
   if (lead.id !== leadId || String(lead.form_id ?? "") !== config.formId) throw new Error("lead_identity_mismatch");
 
@@ -108,7 +112,7 @@ async function importLead(config: Config, pageToken: string, leadId: string, req
       next_action: nextAction, sales_next_action: nextAction,
       is_test: isTest, bot_paused: true, bot_pause_reason: "Meta form enquiry for manual follow-up",
       intake_profile: { propertyType: property, scopeOfWork: scope, budgetExpectation: budget, timeline: timing },
-      attribution: { provider: "meta", formId: config.formId, leadId, adId: lead.ad_id, platform: lead.platform, submittedAt: lead.created_time },
+      attribution: { provider: "meta", formId: config.formId, leadId, ...attribution, submittedAt: lead.created_time },
       attribution_source: "meta_instant_form", attribution_captured_at: new Date().toISOString(),
     }),
     signal: AbortSignal.timeout(10_000),
@@ -134,27 +138,28 @@ export function createHandler(config: Config, request = fetch) {
     }
     try {
       const event = JSON.parse(new TextDecoder().decode(raw), (key, value, context?: { source?: string }) => {
-        if (typeof value === "number" && ["id", "page_id", "form_id", "leadgen_id"].includes(key)) {
+        if (typeof value === "number" && ["id", "page_id", "form_id", "leadgen_id", "ad_id"].includes(key)) {
           return context?.source ?? value;
         }
         return value;
       }) as MetaNotification;
       if (event.object !== "page") return new Response("Ignored");
-      const ids = new Set<string>();
+      const ids = new Map<string, { adId?: string; platform?: string }>();
       for (const entry of event.entry ?? []) {
         if (String(entry.id ?? "") !== config.pageId) continue;
         for (const change of entry.changes ?? []) {
           const value = change.value;
           const leadId = String(value?.leadgen_id ?? "");
           if (change.field === "leadgen" && String(value?.form_id ?? "") === config.formId && (!value?.page_id || String(value.page_id) === config.pageId) && providerId.test(leadId)) {
-            ids.add(leadId);
+            const adId = String(value?.ad_id ?? "");
+            ids.set(leadId, { adId: providerId.test(adId) ? adId : undefined, platform: value?.platform });
           }
         }
       }
       if (ids.size) {
         if (!config.serviceRoleKey || !config.companyId || !config.supabaseUrl) throw new Error("integration_not_configured");
         const pageToken = await getPageToken(config, request);
-        for (const id of ids) await importLead(config, pageToken, id, request);
+        for (const [id, attribution] of ids) await importLead(config, pageToken, id, attribution, request);
       }
       return new Response("Accepted");
     } catch (error) {
