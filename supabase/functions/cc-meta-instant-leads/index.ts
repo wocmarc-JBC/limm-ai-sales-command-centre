@@ -3,7 +3,6 @@ type Config = {
   verifyToken: string;
   pageToken: string;
   systemToken?: string;
-  setupToken?: string;
   pageId: string;
   formId: string;
   companyId: string;
@@ -68,26 +67,6 @@ async function getPageToken(config: Config, request: typeof fetch) {
   return page.access_token;
 }
 
-async function configurePage(config: Config, request: typeof fetch, subscribe: boolean) {
-  try {
-    const token = await getPageToken(config, request);
-    if (!subscribe) return Response.json({ pageTokenAvailable: true });
-    const response = await request(`https://graph.facebook.com/v27.0/${config.pageId}/subscribed_apps`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: new URLSearchParams({ subscribed_fields: "leadgen" }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    const result = await response.json() as { success?: boolean; error?: { code?: number; error_subcode?: number } };
-    if (response.ok && result.success) return Response.json({ subscribed: true });
-    return Response.json({ subscribed: false, reason: "page_subscription_failed", code: result.error?.code, subcode: result.error?.error_subcode }, { status: 502 });
-  } catch (error) {
-    const reason = error instanceof Error && /^(page_token_failed:\d+:\d+|page_token_missing|integration_not_configured)$/.test(error.message)
-      ? error.message : "connection_unavailable";
-    return Response.json({ subscribed: false, reason }, { status: 502 });
-  }
-}
-
 async function importLead(config: Config, pageToken: string, leadId: string, request: typeof fetch) {
   const graphUrl = new URL(`https://graph.facebook.com/v27.0/${leadId}`);
   graphUrl.searchParams.set("fields", "id,form_id,ad_id,platform,created_time,field_data");
@@ -148,13 +127,6 @@ export function createHandler(config: Config, request = fetch) {
       return new Response("Forbidden", { status: 403 });
     }
     if (incoming.method !== "POST") return new Response("Method not allowed", { status: 405 });
-    const action = new URL(incoming.url).searchParams.get("action");
-    if (action === "subscribe" || action === "check") {
-      if (!config.setupToken || incoming.headers.get("Authorization") !== `Bearer ${config.setupToken}` || (action === "subscribe" && !config.appSecret)) {
-        return new Response("Forbidden", { status: 403 });
-      }
-      return configurePage(config, request, action === "subscribe");
-    }
     if (!config.appSecret) return new Response("Integration not configured", { status: 503 });
     const raw = await incoming.arrayBuffer();
     if (!await validSignature(config.appSecret, raw, incoming.headers.get("x-hub-signature-256"))) {
@@ -199,7 +171,7 @@ if ((import.meta as ImportMeta & { main?: boolean }).main) {
   Deno.serve(createHandler({
     appSecret: env("CC_META_LEADS_APP_SECRET"), verifyToken: env("CC_META_LEADS_VERIFY_TOKEN"),
     pageToken: env("CC_META_LEADS_PAGE_TOKEN"), pageId: env("CC_META_LEADS_PAGE_ID"),
-    systemToken: env("CC_META_LEADS_SYSTEM_TOKEN"), setupToken: env("CC_META_LEADS_SETUP_TOKEN"),
+    systemToken: env("CC_META_LEADS_SYSTEM_TOKEN"),
     formId: env("CC_META_LEADS_FORM_ID"), companyId: env("CC_META_LEADS_COMPANY_ID"),
     supabaseUrl: env("SUPABASE_URL"), serviceRoleKey: env("SUPABASE_SERVICE_ROLE_KEY"),
     testLeadId: env("CC_META_LEADS_TEST_LEAD_ID"),
