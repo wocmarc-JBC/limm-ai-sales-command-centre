@@ -68,10 +68,14 @@ async function getPageToken(config: Config, request: typeof fetch) {
 async function importLead(config: Config, pageToken: string, leadId: string, attribution: { adId?: string; platform?: string }, request: typeof fetch) {
   const graphUrl = new URL(`https://graph.facebook.com/v27.0/${leadId}`);
   graphUrl.searchParams.set("fields", "id,form_id,created_time,field_data");
-  const result = await request(graphUrl, {
-    headers: { Authorization: `Bearer ${pageToken}` },
-    signal: AbortSignal.timeout(10_000),
+  const retrieve = (token: string) => request(graphUrl, {
+    headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10_000),
   });
+  let result = await retrieve(pageToken);
+  if (!result.ok && config.systemToken && config.systemToken !== pageToken) {
+    const systemResult = await retrieve(config.systemToken);
+    if (systemResult.ok) result = systemResult;
+  }
   if (!result.ok) {
     const graphError = await result.json().catch(() => null) as { error?: { code?: number; error_subcode?: number; message?: string } } | null;
     const error = graphError?.error;
@@ -91,7 +95,8 @@ async function importLead(config: Config, pageToken: string, leadId: string, att
   const scope = answer("what work would you like us to do");
   const budget = answer("what is your estimated renovation budget");
   const timing = answer("when are you collecting your keys or hoping to start");
-  const isTest = config.testLeadId === leadId || /^<?test lead data\b/i.test(name);
+  const isTest = config.testLeadId === leadId || /^<test lead: dummy data for [^>]+>$/i.test(name)
+    || (name === "LIMM CRM Synthetic QA" && phone === "12025550148");
   const missing = [["Name", name], ["Mobile", phone], ["Property type", property], ["Renovation scope", scope], ["Budget", budget], ["Project timing", timing]]
     .filter(([, value]) => !value).map(([label]) => label);
   const nextAction = "Review the Meta Instant Form submission and follow up about the renovation enquiry.";
@@ -118,6 +123,7 @@ async function importLead(config: Config, pageToken: string, leadId: string, att
     signal: AbortSignal.timeout(10_000),
   });
   if (!write.ok) throw new Error("command_centre_write_failed");
+  console.info("Meta Instant Form intake: lead_write_accepted");
 }
 
 export function createHandler(config: Config, request = fetch) {
