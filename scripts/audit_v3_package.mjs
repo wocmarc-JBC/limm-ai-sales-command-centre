@@ -317,6 +317,7 @@ for (const file of relativePaths.filter((item) => /\.(ts|tsx)$/i.test(item))) {
   const content = fs.readFileSync(path.join(root, file), "utf8");
   if (file === path.join("lib", "data", "supabase-admin.ts")) continue;
   if (file.startsWith(`app${path.sep}api${path.sep}`)) continue;
+  if (file === path.join("supabase", "functions", "cc-meta-instant-leads", "index.ts") && /\bDeno\.serve\(/.test(content)) continue;
   assert(!/SUPABASE_SERVICE_ROLE_KEY/.test(content), `Server service role key referenced in application code: ${file}`);
 }
 
